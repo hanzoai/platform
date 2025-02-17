@@ -44,7 +44,7 @@ importers:
     dependencies:
       '@hanzo/platform':
         specifier: workspace:*
-        version: link:../../pkg/server
+        version: link:../../pkg/platform
       '@hono/node-server':
         specifier: ^1.12.1
         version: 1.12.1
@@ -95,7 +95,7 @@ importers:
         specifier: ^5.4.2
         version: 5.5.3
 
-  app/hanzo:
+  app/dash:
     dependencies:
       '@codemirror/lang-json':
         specifier: ^6.0.1
@@ -112,15 +112,15 @@ importers:
       '@codemirror/view':
         specifier: 6.29.0
         version: 6.29.0
-      '@hanzo/platform':
-        specifier: workspace:*
-        version: link:../../pkg/server
-      '@hanzo/trpc-openapi':
-        specifier: 0.0.4
-        version: 0.0.4(@trpc/server@10.45.2)(zod@3.23.8)
       '@faker-js/faker':
         specifier: ^8.4.1
         version: 8.4.1
+      '@hanzo/platform':
+        specifier: workspace:*
+        version: link:../../pkg/platform
+      '@hanzo/trpc-openapi':
+        specifier: 0.0.4
+        version: 0.0.4(@trpc/server@10.45.2)(zod@3.23.8)
       '@hookform/resolvers':
         specifier: ^3.3.4
         version: 3.9.0(react-hook-form@7.52.1(react@18.2.0))
@@ -177,7 +177,7 @@ importers:
         version: 1.1.0(@types/react-dom@18.3.0)(@types/react@18.3.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@radix-ui/react-slot':
         specifier: ^1.1.0
-        version: 1.1.0(@types/react@18.3.5)(react@18.2.0)
+        version: 1.1.1(@types/react@18.3.5)(react@18.2.0)
       '@radix-ui/react-switch':
         specifier: ^1.0.3
         version: 1.1.0(@types/react-dom@18.3.0)(@types/react@18.3.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -390,7 +390,7 @@ importers:
         version: 2.4.0
       tailwindcss-animate:
         specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.5.3)))
+        version: 1.0.7(tailwindcss@3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.7.2)))
       undici:
         specifier: ^6.19.2
         version: 6.19.4
@@ -472,16 +472,16 @@ importers:
         version: 4.11.0
       tailwindcss:
         specifier: ^3.4.1
-        version: 3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.5.3))
+        version: 3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.7.2))
       tsx:
         specifier: ^4.7.0
         version: 4.16.2
       typescript:
         specifier: ^5.4.2
-        version: 5.5.3
+        version: 5.7.2
       vite-tsconfig-paths:
         specifier: 4.3.2
-        version: 4.3.2(typescript@5.5.3)(vite@5.3.5(@types/node@18.19.42)(terser@5.31.3))
+        version: 4.3.2(typescript@5.7.2)(vite@5.3.5(@types/node@18.19.42)(terser@5.31.3))
       vitest:
         specifier: ^1.6.0
         version: 1.6.0(@types/node@18.19.42)(terser@5.31.3)
@@ -490,7 +490,7 @@ importers:
     dependencies:
       '@hanzo/platform':
         specifier: workspace:*
-        version: link:../../pkg/server
+        version: link:../../pkg/platform
       '@hono/node-server':
         specifier: ^1.12.1
         version: 1.12.1
@@ -544,7 +544,7 @@ importers:
         specifier: ^5.4.2
         version: 5.5.3
 
-  pkg/server:
+  pkg/platform:
     dependencies:
       '@faker-js/faker':
         specifier: ^8.4.1
@@ -708,7 +708,7 @@ importers:
         version: 8.4.40
       tailwindcss:
         specifier: ^3.4.1
-        version: 3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.5.3))
+        version: 3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.7.2))
       tsc-alias:
         specifier: 1.8.10
         version: 1.8.10
@@ -717,7 +717,7 @@ importers:
         version: 4.16.2
       typescript:
         specifier: ^5.4.2
-        version: 5.5.3
+        version: 5.7.2
 
 packages:
 
@@ -914,12 +914,6 @@ packages:
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
     engines: {node: '>=12'}
-
-  '@hanzo/trpc-openapi@0.0.4':
-    resolution: {integrity: sha512-a7VKunKu9arq57bP9MPH7ikJuKfT5SILnNy70vMqf1stm5IrqMG3Y7CIFprFe0DZiw3bwjue0KpETIATBftN6w==}
-    peerDependencies:
-      '@trpc/server': ^10.0.0
-      zod: ^3.14.4
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
@@ -1514,6 +1508,12 @@ packages:
 
   '@gar/promisify@1.1.3':
     resolution: {integrity: sha512-k2Ty1JcVojjJFwrg/ThKi2ujJ7XNLYaFGNB/bWT9wGR+oSMJHMa5w+CUq6p/pVrKeNNgA7pCqEcjSnHVoqJQFw==}
+
+  '@hanzo/trpc-openapi@0.0.4':
+    resolution: {integrity: sha512-7veMbmFgtpixnve9Dg2MBAVQzVtP4ESUho2laigpzuh3M43kz/2roFeN7SSnRy0Oo3v1bhab4kGAmeRwus/nuA==}
+    peerDependencies:
+      '@trpc/server': ^10.0.0
+      zod: ^3.14.4
 
   '@hapi/bourne@3.0.0':
     resolution: {integrity: sha512-Waj1cwPXJDucOib4a3bAISsKJVb15MKi9IvmTI/7ssVEm6sywXGjVJDhl6/umt1pK1ZS7PacXU3A1PmFKHEZ2w==}
@@ -5804,6 +5804,7 @@ packages:
 
   oslo@1.2.0:
     resolution: {integrity: sha512-OoFX6rDsNcOQVAD2gQD/z03u4vEjWZLzJtwkmgfRF+KpQUXwdgEXErD7zNhyowmHwHefP+PM9Pw13pgpHMRlzw==}
+    deprecated: Package is no longer supported. Please see https://oslojs.dev for the successor project.
 
   otpauth@9.3.4:
     resolution: {integrity: sha512-qXv+lpsCUO9ewitLYfeDKbLYt7UUCivnU/fwGK2OqhgrCBsRkTUNKWsgKAhkXG3aistOY+jEeuL90JEBu6W3mQ==}
@@ -7415,7 +7416,7 @@ snapshots:
   '@commitlint/is-ignored@19.2.2':
     dependencies:
       '@commitlint/types': 19.0.3
-      semver: 7.6.2
+      semver: 7.6.3
 
   '@commitlint/lint@19.2.2':
     dependencies:
@@ -7488,19 +7489,6 @@ snapshots:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
     optional: true
-
-  '@hanzo/trpc-openapi@0.0.4(@trpc/server@10.45.2)(zod@3.23.8)':
-    dependencies:
-      '@trpc/server': 10.45.2
-      co-body: 6.2.0
-      h3: 1.12.0
-      lodash.clonedeep: 4.5.0
-      node-mocks-http: 1.15.0
-      openapi-types: 12.1.3
-      zod: 3.23.8
-      zod-to-json-schema: 3.23.2(zod@3.23.8)
-    transitivePeerDependencies:
-      - uWebSockets.js
 
   '@drizzle-team/brocli@0.10.2': {}
 
@@ -7830,6 +7818,19 @@ snapshots:
   '@gar/promisify@1.1.3':
     optional: true
 
+  '@hanzo/trpc-openapi@0.0.4(@trpc/server@10.45.2)(zod@3.23.8)':
+    dependencies:
+      '@trpc/server': 10.45.2
+      co-body: 6.2.0
+      h3: 1.12.0
+      lodash.clonedeep: 4.5.0
+      node-mocks-http: 1.15.0
+      openapi-types: 12.1.3
+      zod: 3.23.8
+      zod-to-json-schema: 3.23.2(zod@3.23.8)
+    transitivePeerDependencies:
+      - uWebSockets.js
+
   '@hapi/bourne@3.0.0': {}
 
   '@hono/node-server@1.12.1': {}
@@ -8016,7 +8017,7 @@ snapshots:
       nopt: 5.0.0
       npmlog: 5.0.1
       rimraf: 3.0.2
-      semver: 7.6.2
+      semver: 7.6.3
       tar: 6.2.1
     transitivePeerDependencies:
       - encoding
@@ -10980,7 +10981,7 @@ snapshots:
       '@one-ini/wasm': 0.1.1
       commander: 10.0.1
       minimatch: 9.0.1
-      semver: 7.6.2
+      semver: 7.6.3
 
   electron-to-chromium@1.5.2: {}
 
@@ -11734,7 +11735,7 @@ snapshots:
       lodash.isstring: 4.0.1
       lodash.once: 4.1.1
       ms: 2.1.3
-      semver: 7.6.2
+      semver: 7.6.3
 
   jss-plugin-camel-case@10.10.0:
     dependencies:
@@ -12591,13 +12592,13 @@ snapshots:
       camelcase-css: 2.0.1
       postcss: 8.4.40
 
-  postcss-load-config@4.0.2(postcss@8.4.40)(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.5.3)):
+  postcss-load-config@4.0.2(postcss@8.4.40)(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.7.2)):
     dependencies:
       lilconfig: 3.1.2
       yaml: 2.4.5
     optionalDependencies:
       postcss: 8.4.40
-      ts-node: 10.9.2(@types/node@18.19.42)(typescript@5.5.3)
+      ts-node: 10.9.2(@types/node@18.19.42)(typescript@5.7.2)
 
   postcss-nested@6.2.0(postcss@8.4.40):
     dependencies:
@@ -13093,8 +13094,7 @@ snapshots:
 
   semver@7.6.2: {}
 
-  semver@7.6.3:
-    optional: true
+  semver@7.6.3: {}
 
   serialize-error@8.1.0:
     dependencies:
@@ -13434,11 +13434,11 @@ snapshots:
 
   tailwind-merge@2.4.0: {}
 
-  tailwindcss-animate@1.0.7(tailwindcss@3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.5.3))):
+  tailwindcss-animate@1.0.7(tailwindcss@3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.7.2))):
     dependencies:
-      tailwindcss: 3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.5.3))
+      tailwindcss: 3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.7.2))
 
-  tailwindcss@3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.5.3)):
+  tailwindcss@3.4.7(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.7.2)):
     dependencies:
       '@alloc/quick-lru': 5.2.0
       arg: 5.0.2
@@ -13457,7 +13457,7 @@ snapshots:
       postcss: 8.4.40
       postcss-import: 15.1.0(postcss@8.4.40)
       postcss-js: 4.0.1(postcss@8.4.40)
-      postcss-load-config: 4.0.2(postcss@8.4.40)(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.5.3))
+      postcss-load-config: 4.0.2(postcss@8.4.40)(ts-node@10.9.2(@types/node@18.19.42)(typescript@5.7.2))
       postcss-nested: 6.2.0(postcss@8.4.40)
       postcss-selector-parser: 6.1.1
       resolve: 1.22.8
@@ -13581,7 +13581,7 @@ snapshots:
 
   ts-mixer@6.0.4: {}
 
-  ts-node@10.9.2(@types/node@18.19.42)(typescript@5.5.3):
+  ts-node@10.9.2(@types/node@18.19.42)(typescript@5.7.2):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.11
@@ -13595,7 +13595,7 @@ snapshots:
       create-require: 1.1.1
       diff: 4.0.2
       make-error: 1.3.6
-      typescript: 5.5.3
+      typescript: 5.7.2
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
     optional: true
@@ -13611,9 +13611,9 @@ snapshots:
       normalize-path: 3.0.0
       plimit-lit: 1.6.1
 
-  tsconfck@3.1.1(typescript@5.5.3):
+  tsconfck@3.1.1(typescript@5.7.2):
     optionalDependencies:
-      typescript: 5.5.3
+      typescript: 5.7.2
 
   tslib@2.6.3: {}
 
@@ -13770,11 +13770,11 @@ snapshots:
       - supports-color
       - terser
 
-  vite-tsconfig-paths@4.3.2(typescript@5.5.3)(vite@5.3.5(@types/node@18.19.42)(terser@5.31.3)):
+  vite-tsconfig-paths@4.3.2(typescript@5.7.2)(vite@5.3.5(@types/node@18.19.42)(terser@5.31.3)):
     dependencies:
       debug: 4.3.7
       globrex: 0.1.2
-      tsconfck: 3.1.1(typescript@5.5.3)
+      tsconfck: 3.1.1(typescript@5.7.2)
     optionalDependencies:
       vite: 5.3.5(@types/node@18.19.42)(terser@5.31.3)
     transitivePeerDependencies:
@@ -13800,7 +13800,7 @@ snapshots:
       '@vitest/utils': 1.6.0
       acorn-walk: 8.3.3
       chai: 4.5.0
-      debug: 4.3.5
+      debug: 4.3.7
       execa: 8.0.1
       local-pkg: 0.5.0
       magic-string: 0.30.10

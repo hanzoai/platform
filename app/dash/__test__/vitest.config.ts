@@ -16,10 +16,7 @@ export default defineConfig({
 	plugins: [tsconfigPaths()],
 	resolve: {
 		alias: {
-			"@hanzo/platform": path.resolve(
-				__dirname,
-				"../../../pkg/server/src",
-			),
+			"@hanzo/platform": path.resolve(__dirname, "../../../pkg/server/src"),
 		},
 	},
 });
