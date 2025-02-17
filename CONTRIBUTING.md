@@ -177,4 +177,4 @@ To add a new template, go to `https://github.com/Dokploy/templates` repository a
 
 ## Docs & Website
 
-To contribute to the Hanzo docs or website, please go to this [repository](https://github.com/Hanzo/website).
+To contribute to the Hanzo docs or website, please go to this [repository](https://github.com/hanzoai/web).
