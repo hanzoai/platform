@@ -84,9 +84,9 @@ export const InvitationEmail = ({
 						<Hr className="border border-solid border-[#eaeaea] my-[26px] mx-0 w-full" />
 						<Text className="text-[#666666] text-[12px] leading-[24px]">
 							This invitation was intended for {toEmail}. This invite was sent
-							from <strong className="text-black">hanzo.ai</strong>. If you
-							were not expecting this invitation, you can ignore this email. If
-							you are concerned about your account's safety, please reply to
+							from <strong className="text-black">hanzo.ai</strong>. If you were
+							not expecting this invitation, you can ignore this email. If you
+							are concerned about your account's safety, please reply to
 						</Text>
 					</Container>
 				</Body>

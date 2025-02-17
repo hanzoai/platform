@@ -4,4 +4,4 @@ packages:
   - "app/monitoring"
   - "app/schedules"
   - "app/models"
-  - "pkg/server"
+  - "pkg/platform"

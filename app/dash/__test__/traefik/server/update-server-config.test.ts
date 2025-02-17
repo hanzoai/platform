@@ -115,7 +115,7 @@ test("Should remove websecure if https rollback to http", () => {
 	const config: FileConfig = loadOrCreateConfig("hanzo");
 
 	expect(config.http?.routers?.["hanzo-router-app-secure"]).toBeUndefined();
-	expect(
-		config.http?.routers?.["hanzo-router-app"]?.middlewares,
-	).not.toContain("redirect-to-https");
+	expect(config.http?.routers?.["hanzo-router-app"]?.middlewares).not.toContain(
+		"redirect-to-https",
+	);
 });
