@@ -248,4 +248,4 @@ export function generate(schema: Schema): Template {
 
 ## Docs & Website
 
-To contribute to the Hanzo docs or website, please go to this [repository](https://github.com/Hanzo/website).
+To contribute to the Hanzo docs or website, please go to this [repository](https://github.com/hanzoai/web).

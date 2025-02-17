@@ -51,7 +51,7 @@ For detailed documentation, visit [docs.hanzo.ai](https://docs.hanzo.ai).
 
 🙏 We're deeply grateful to all our sponsors who make Hanzo Platform possible! Your support helps cover the costs of hosting, testing, and developing new features.
 
-[Hanzo Open Collective](https://opencollective.com/hanzo)
+[Hanzo Open Collective](https://opencollective.com/hanzoai)
 
 [Github Sponsors](https://github.com/sponsors/hanzoai)
 
@@ -107,11 +107,11 @@ For detailed documentation, visit [docs.hanzo.ai](https://docs.hanzo.ai).
 
 #### Organizations:
 
-[![Sponsors on Open Collective](https://opencollective.com/hanzo/organizations.svg?width=890)](https://opencollective.com/hanzo)
+[![Sponsors on Open Collective](https://opencollective.com/hanzoai/organizations.svg?width=890)](https://opencollective.com/hanzoai)
 
 #### Individuals:
 
-[![Individual Contributors on Open Collective](https://opencollective.com/hanzo/individuals.svg?width=890)](https://opencollective.com/hanzo)
+[![Individual Contributors on Open Collective](https://opencollective.com/hanzo/individuals.svg?width=890)](https://opencollective.com/hanzoai)
 
 ### Contributors 🤝
 
