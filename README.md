@@ -1,7 +1,7 @@
 <div align="center">
    <div>
     <a href="https://dokploy.com" target="_blank" rel="noopener">
-        <img style="object-fit: cover;" align="center" width="100%"src=".github/sponsors/logo.png" alt="Dokploy - Open Source Alternative to Vercel, Heroku and Netlify." />
+        <img style="object-fit: cover;" align="center" width="100%"src=".github/sponsors/logo.png" alt="Hanzo Platform - Open Source Alternative to Vercel, Heroku and Netlify." />
     </a>
 </div>
 
