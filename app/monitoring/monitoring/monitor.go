@@ -18,8 +18,8 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
 
-	"github.com/mauriciogm/hanzo/app/monitoring/config"
-	"github.com/mauriciogm/hanzo/app/monitoring/database"
+	"github.com/hanzoai/hanzo/app/monitoring/config"
+	"github.com/hanzoai/hanzo/app/monitoring/database"
 )
 
 type SystemMetrics struct {
