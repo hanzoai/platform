@@ -1,5 +1,5 @@
-import { generatePassword } from "@hanzo/platform/templates/utils";
 import { faker } from "@faker-js/faker";
+import { generatePassword } from "@hanzo/platform/templates/utils";
 import { customAlphabet } from "nanoid";
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz123456789";
