@@ -11,7 +11,7 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./*"],
-			"@dokploy/server/*": ["../../pkg/server/src/*"]
+			"@hanzo/platform/*": ["../../pkg/server/src/*"]
 		}
 	},
 	"exclude": ["node_modules", "dist"]

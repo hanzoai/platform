@@ -9,9 +9,9 @@ import {
 	runMongoBackup,
 	runMySqlBackup,
 	runPostgresBackup,
-} from "@dokploy/server";
-import { db } from "@dokploy/server/dist/db";
-import { backups, server } from "@dokploy/server/dist/db/schema";
+} from "@hanzo/platform";
+import { db } from "@hanzo/platform/dist/db";
+import { backups, server } from "@hanzo/platform/dist/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger.js";
 import { scheduleJob } from "./queue.js";
