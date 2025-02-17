@@ -7,7 +7,7 @@
 			"drizzle/**",
 			".docker",
 			"dist",
-			"packages/server/package.json"
+			"pkg/server/package.json"
 		]
 	},
 	"organizeImports": {

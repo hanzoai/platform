@@ -58,7 +58,7 @@ We use Node v20.9.0
 git clone https://github.com/dokploy/dokploy.git
 cd dokploy
 pnpm install
-cp apps/dokploy/.env.example apps/dokploy/.env
+cp app/dokploy/.env.example app/dokploy/.env
 ```
 
 ## Development

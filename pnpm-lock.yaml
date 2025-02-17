@@ -40,11 +40,11 @@ importers:
         specifier: 4.16.2
         version: 4.16.2
 
-  apps/api:
+  app/api:
     dependencies:
       '@dokploy/server':
         specifier: workspace:*
-        version: link:../../packages/server
+        version: link:../../pkg/server
       '@hono/node-server':
         specifier: ^1.12.1
         version: 1.12.1
@@ -95,7 +95,7 @@ importers:
         specifier: ^5.4.2
         version: 5.5.3
 
-  apps/dokploy:
+  app/dokploy:
     dependencies:
       '@codemirror/lang-json':
         specifier: ^6.0.1
@@ -114,7 +114,7 @@ importers:
         version: 6.29.0
       '@dokploy/server':
         specifier: workspace:*
-        version: link:../../packages/server
+        version: link:../../pkg/server
       '@dokploy/trpc-openapi':
         specifier: 0.0.4
         version: 0.0.4(@trpc/server@10.45.2)(zod@3.23.8)
@@ -486,11 +486,11 @@ importers:
         specifier: ^1.6.0
         version: 1.6.0(@types/node@18.19.42)(terser@5.31.3)
 
-  apps/schedules:
+  app/schedules:
     dependencies:
       '@dokploy/server':
         specifier: workspace:*
-        version: link:../../packages/server
+        version: link:../../pkg/server
       '@hono/node-server':
         specifier: ^1.12.1
         version: 1.12.1
@@ -544,7 +544,7 @@ importers:
         specifier: ^5.4.2
         version: 5.5.3
 
-  packages/server:
+  pkg/server:
     dependencies:
       '@faker-js/faker':
         specifier: ^8.4.1
