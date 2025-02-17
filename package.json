@@ -1,7 +1,7 @@
 {
 	"name": "dokploy",
 	"private": true,
-	"workspaces": ["apps/*", "packages/*"],
+	"workspaces": ["app/*", "pkg/*"],
 	"scripts": {
 		"dokploy:setup": "pnpm --filter=dokploy run setup",
 		"dokploy:dev": "pnpm --filter=dokploy run dev",
@@ -12,7 +12,7 @@
 		"server:script": "pnpm --filter=server run switch:dev",
 		"server:dev": "pnpm --filter=server run dev",
 		"server:build": "pnpm --filter=server run build",
-		"docker:build:canary": "./apps/dokploy/docker/build.sh canary",
+		"docker:build:canary": "./app/dokploy/docker/build.sh canary",
 		"typecheck": "pnpm -r run typecheck",
 		"build": "pnpm -r run build",
 		"format-and-lint": "biome check .",

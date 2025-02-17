@@ -16,12 +16,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 ENV NODE_ENV=production
 RUN pnpm --filter=@dokploy/server build
-RUN pnpm --filter=./apps/dokploy run build
+RUN pnpm --filter=./app/dokploy run build
 
-RUN pnpm --filter=./apps/dokploy --prod deploy /prod/dokploy
+RUN pnpm --filter=./app/dokploy --prod deploy /prod/dokploy
 
-RUN cp -R /usr/src/app/apps/dokploy/.next /prod/dokploy/.next
-RUN cp -R /usr/src/app/apps/dokploy/dist /prod/dokploy/dist
+RUN cp -R /usr/src/app/app/dokploy/.next /prod/dokploy/.next
+RUN cp -R /usr/src/app/app/dokploy/dist /prod/dokploy/dist
 
 FROM base AS dokploy
 WORKDIR /app
