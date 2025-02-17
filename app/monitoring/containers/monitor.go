@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mauriciogm/dokploy/app/monitoring/config"
-	"github.com/mauriciogm/dokploy/app/monitoring/database"
+	"github.com/mauriciogm/hanzo/app/monitoring/config"
+	"github.com/mauriciogm/hanzo/app/monitoring/database"
 )
 
 type ContainerMonitor struct {
