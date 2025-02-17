@@ -1,4 +1,4 @@
-module github.com/mauriciogm/hanzo/app/monitoring
+module github.com/hanzoai/hanzo/app/monitoring
 
 go 1.20
 
@@ -31,4 +31,4 @@ require (
 	golang.org/x/sys v0.28.0 // indirect
 )
 
-replace github.com/mauriciogm/hanzo/app/monitoring => ./
+replace github.com/hanzoai/hanzo/app/monitoring => ./

@@ -171,7 +171,7 @@ export const WelcomeSuscription = () => {
 										<ul className="list-inside list-disc pl-4 text-sm text-muted-foreground mt-4">
 											<li>
 												<a
-													href="https://www.hostinger.com/vps-hosting?REFERRALCODE=1SIUMAURICI97"
+													href="https://www.hostinger.com/vps-hosting?REFERRALCODE=HANZO"
 													className="text-link underline"
 												>
 													Hostinger - Get 20% Discount
