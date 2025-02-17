@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/mauriciogm/hanzo/app/monitoring/config"
+	"github.com/hanzoai/hanzo/app/monitoring/config"
 )
 
 func AuthMiddleware() fiber.Handler {

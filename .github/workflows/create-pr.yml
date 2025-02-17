@@ -77,7 +77,7 @@ jobs:
             --base main \
             --head canary \
             --label "release" --label "automated pr" || true \
-            --reviewer siumauricio \
-            --assignee siumauricio
+            --reviewer hanzoai \
+            --assignee hanzoai
         env:
           GH_TOKEN: ${{ github.token }}

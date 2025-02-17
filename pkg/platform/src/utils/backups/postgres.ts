@@ -68,4 +68,4 @@ export const runPostgresBackup = async (
 };
 
 // Restore
-// /Applications/pgAdmin 4.app/Contents/SharedSupport/pg_restore --host "localhost" --port "5432" --username "mauricio" --no-password --dbname "postgres" --verbose "/Users/mauricio/Downloads/_databases_2024-04-12T07_02_05.234Z.sql"
+// /Applications/pgAdmin 4.app/Contents/SharedSupport/pg_restore --host "localhost" --port "5432" --username "z" --no-password --dbname "postgres" --verbose "/Users/z/Downloads/_databases_2024-04-12T07_02_05.234Z.sql"
