@@ -1,5 +1,5 @@
 {
-	"name": "@dokploy/api",
+	"name": "@hanzo/api",
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
@@ -15,7 +15,7 @@
 		"zod": "^3.23.4",
 		"react": "18.2.0",
 		"react-dom": "18.2.0",
-		"@dokploy/server": "workspace:*",
+		"@hanzo/platform": "workspace:*",
 		"@hono/node-server": "^1.12.1",
 		"hono": "^4.5.8",
 		"dotenv": "^16.3.1",
