@@ -33,7 +33,7 @@ pages:
           - type: releases
             show-source-icon: true
             repositories:
-              - Hanzo/hanzo
+              - hanzoai/platform
               - n8n-io/n8n
               - Budibase/budibase
               - home-assistant/core

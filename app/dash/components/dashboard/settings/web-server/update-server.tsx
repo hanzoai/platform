@@ -201,7 +201,7 @@ export const UpdateServer = ({ updateData }: Props) => {
 							<div className="text-[#5B9DFF]">
 								We recommend reviewing the{" "}
 								<Link
-									href="https://github.com/Hanzo/hanzo/releases"
+									href="https://github.com/hanzoai/platform/releases"
 									target="_blank"
 									className="text-white underline hover:text-zinc-200"
 								>
