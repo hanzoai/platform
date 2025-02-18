@@ -40,7 +40,7 @@ export const OnboardingLayout = ({ children }: Props) => {
 						</Link>
 					</Button>
 					<Button variant="ghost" size="icon">
-						<Link href="https://x.com/gethanzo">
+						<Link href="https://x.com/hanzoai">
 							<svg
 								stroke="currentColor"
 								fill="currentColor"
