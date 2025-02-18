@@ -56,7 +56,7 @@ feat: add new feature
 Before you start, please make the clone based on the `canary` branch, since the `main` branch is the source of truth and should always reflect the latest stable release, also the PRs will be merged to the `canary` branch.
 
 ```bash
-git clone https://github.com/hanzo/hanzo.git
+git clone https://github.com/hanzoai/platform.git
 cd hanzo
 pnpm install
 cp .env.example .env
