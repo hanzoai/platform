@@ -57,7 +57,7 @@ body:
         - "Installation"
         - "Application"
         - "Databases"
-        - "Kompose"
+        - "Hanzo Compose"
         - "Traefik"
         - "Docker"
         - "Remote server"

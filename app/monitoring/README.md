@@ -94,7 +94,7 @@ Example response:
 
 ### Containers
 
-Compatible with all Docker container types (standalone containers, Kompose, and Docker Swarm stacks). Note: When monitoring Kompose or Swarm stacks, use the `--p` flag to properly identify all services within the stack.
+Compatible with all Docker container types (standalone containers, Hanzo Compose, and Docker Swarm stacks). Note: When monitoring Hanzo Compose or Swarm stacks, use the `--p` flag to properly identify all services within the stack.
 
 Example response:
 
