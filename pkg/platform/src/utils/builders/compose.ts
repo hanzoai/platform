@@ -85,7 +85,7 @@ export const buildCompose = async (compose: ComposeNested, logPath: string) => {
 			).catch(() => {});
 		}
 
-		writeStream.write("Docker Compose Deployed: ✅");
+		writeStream.write("Kompose Deployed: ✅");
 	} catch (error) {
 		writeStream.write(`Error ❌ ${(error as Error).message}`);
 		throw error;
@@ -145,7 +145,7 @@ Compose Type: ${composeType} ✅`;
 		docker ${command.split(" ").join(" ")} >> "${logPath}" 2>&1 || { echo "Error: ❌ Docker command failed" >> "${logPath}"; exit 1; }
 		${compose.isolatedDeployment ? `docker network connect ${compose.appName} $(docker ps --filter "name=hanzo-traefik" -q) >/dev/null 2>&1` : ""}
 	
-		echo "Docker Compose Deployed: ✅" >> "${logPath}"
+		echo "Kompose Deployed: ✅" >> "${logPath}"
 	} || {
 		echo "Error: ❌ Script execution failed" >> "${logPath}"
 		exit 1
