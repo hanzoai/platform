@@ -57,7 +57,7 @@ body:
         - "Installation"
         - "Application"
         - "Databases"
-        - "Docker Compose"
+        - "Kompose"
         - "Traefik"
         - "Docker"
         - "Remote server"
