@@ -25,7 +25,7 @@ Hanzo Platform includes multiple features to make your life easier.
 - **Databases**: Create and manage databases with support for MySQL, PostgreSQL, MongoDB, MariaDB, and Redis.
 - **Backups**: Automate backups for databases to an external storage destination.
 - **Kompose**: Native support for Kompose to manage complex applications.
-- **Multi Node**: Scale applications to multiple nodes using Docker Swarm to manage the cluster.
+- **Hyperscale**: Scale applications to unlimited containers using Hanzo to manage the cluster.
 - **Templates**: Deploy open-source templates (Plausible, Pocketbase, Calcom, etc.) with a single click.
 - **Traefik Integration**: Automatically integrates with Traefik for routing and load balancing.
 - **Real-time Monitoring**: Monitor CPU, memory, storage, and network usage for every resource.
