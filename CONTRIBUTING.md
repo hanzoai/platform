@@ -55,7 +55,7 @@ Before you start, please make the clone based on the `canary` branch, since the 
 We use Node v20.9.0
 
 ```bash
-git clone https://github.com/hanzo/hanzo.git
+git clone https://github.com/hanzoai/platform.git
 cd hanzo
 pnpm install
 cp app/hanzo/.env.example app/hanzo/.env
