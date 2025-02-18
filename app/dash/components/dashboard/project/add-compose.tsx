@@ -250,9 +250,7 @@ export const AddCompose = ({ projectId, projectName }: Props) => {
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent>
-											<SelectItem value="docker-compose">
-												Kompose
-											</SelectItem>
+											<SelectItem value="docker-compose">Kompose</SelectItem>
 											<SelectItem value="stack">Stack</SelectItem>
 										</SelectContent>
 									</Select>
