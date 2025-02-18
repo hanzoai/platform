@@ -51,7 +51,7 @@ export const DatabaseBackupEmail = ({
 						<Section className="mt-[32px]">
 							<Img
 								src={
-									"https://raw.githubusercontent.com/Hanzo/hanzo/refs/heads/canary/app/hanzo/logo.png"
+									"https://raw.githubusercontent.com/hanzoai/platform/refs/heads/canary/app/hanzo/logo.png"
 								}
 								width="100"
 								height="50"
