@@ -180,7 +180,7 @@ export const removeAdminByAuthId = async (authId: string) => {
 
 export const getHanzoUrl = async () => {
 	if (IS_CLOUD) {
-		return "https://app.hanzo.ai";
+		return "https://platform.hanzo.ai";
 	}
 	const admin = await findAdmin();
 
