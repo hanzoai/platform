@@ -5,7 +5,7 @@ on:
     branches: [main, canary, "feat/monitoring"]
 
 env:
-  IMAGE_NAME: hanzo/hanzo
+  IMAGE_NAME: hanzoai/platform
 
 jobs:
   docker-amd:
