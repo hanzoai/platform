@@ -5,3 +5,6 @@ packages:
   - "app/schedules"
   - "app/models"
   - "pkg/platform"
+
+catalog:
+  '@hanzo/platform': 1.0.0
