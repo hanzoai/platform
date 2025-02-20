@@ -1,10 +1,6 @@
 packages:
-  - "app/api"
-  - "app/dash"
-  - "app/monitoring"
-  - "app/schedules"
-  - "app/models"
-  - "pkg/platform"
+  - "app/*"
+  - "pkg/*"
 
 catalog:
-  '@hanzo/platform': 1.0.0
+  '@hanzo/platform': 1.0.1

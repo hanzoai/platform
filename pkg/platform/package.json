@@ -1,7 +1,8 @@
 {
   "name": "@hanzo/platform",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -32,6 +33,10 @@
       "require": "./dist/db/schema/index.cjs.js"
     }
   },
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "build": "npm run switch:prod && rm -rf ./dist && tsc --project tsconfig.server.json && tsc-alias -p tsconfig.server.json",
     "build:types": "tsc --emitDeclarationOnly --experimenta-dts",
