@@ -42,7 +42,7 @@ To get started, run the following command on a VPS:
 Want to skip the installation process? [Try the Hanzo Platform](https://platform.hanzo.ai).
 
 ```bash
-curl -sSL https://hanzo.sh | sh
+curl -sL https://hanzo.sh | sh
 ```
 
 For detailed documentation, visit [docs.hanzo.ai](https://docs.hanzo.ai).
