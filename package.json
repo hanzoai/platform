@@ -1,20 +1,20 @@
 {
-	"name": "platform",
+	"name": "hanzo-platform",
 	"private": true,
 	"workspaces": [
 		"app/*",
 		"pkg/*"
 	],
 	"scripts": {
-		"platform:setup": "pnpm --filter=platform run setup",
+		"console:setup": "pnpm --filter=console run setup",
+		"console:dev": "pnpm --filter=console run dev",
+		"console:dev:turbopack": "pnpm --filter=console run dev-turbopack",
+		"console:build": "pnpm --filter=console run build",
+		"console:start": "pnpm --filter=console run start",
+		"test": "pnpm --filter=console run test",
+		"platform:script": "pnpm --filter=platform run switch:dev",
 		"platform:dev": "pnpm --filter=platform run dev",
-		"platform:dev:turbopack": "pnpm --filter=platform run dev-turbopack",
 		"platform:build": "pnpm --filter=platform run build",
-		"platform:start": "pnpm --filter=platform run start",
-		"test": "pnpm --filter=platform run test",
-		"server:script": "pnpm --filter=server run switch:dev",
-		"server:dev": "pnpm --filter=server run dev",
-		"server:build": "pnpm --filter=server run build",
 		"docker:build:canary": "./app/hanzo/docker/build.sh canary",
 		"typecheck": "pnpm -r run typecheck",
 		"build": "pnpm -r run build",
