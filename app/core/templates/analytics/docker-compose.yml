@@ -1,6 +1,6 @@
 services:
-  umami:
-    image: ghcr.io/umami-software/umami:postgresql-v2.14.0
+  analytics:
+    image: ghcr.io/hanzoai/platform:postgresql-v2.14.0
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "curl http://localhost:3000/api/heartbeat"]
@@ -11,7 +11,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://umami:umami@db:5432/umami
+      DATABASE_URL: postgresql://analytics:analytics@db:5432/analytics
       DATABASE_TYPE: postgresql
       APP_SECRET: ${APP_SECRET}
   db:
@@ -26,9 +26,9 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: umami
-      POSTGRES_USER: umami
-      POSTGRES_PASSWORD: umami
+      POSTGRES_DB: analytics
+      POSTGRES_USER: analytics
+      POSTGRES_PASSWORD: analytics
 
 volumes:
   db-data:

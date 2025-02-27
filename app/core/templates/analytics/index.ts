@@ -14,7 +14,7 @@ export function generate(schema: Schema): Template {
 		{
 			host: randomDomain,
 			port: 3000,
-			serviceName: "umami",
+			serviceName: "analytics",
 		},
 	];
 
