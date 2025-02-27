@@ -1,10 +1,7 @@
 {
 	"name": "platform",
 	"private": true,
-	"workspaces": [
-		"app/*",
-		"pkg/*"
-	],
+	"workspaces": ["app/*", "pkg/*"],
 	"scripts": {
 		"hanzo:setup": "pnpm --filter=hanzo run setup",
 		"hanzo:dev": "pnpm --filter=hanzo run dev",
