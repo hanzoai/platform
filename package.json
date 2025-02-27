@@ -6,12 +6,12 @@
 		"pkg/*"
 	],
 	"scripts": {
-		"console:setup": "pnpm --filter=console run setup",
-		"console:dev": "pnpm --filter=console run dev",
-		"console:dev:turbopack": "pnpm --filter=console run dev-turbopack",
-		"console:build": "pnpm --filter=console run build",
-		"console:start": "pnpm --filter=console run start",
-		"test": "pnpm --filter=console run test",
+		"cloud:setup": "pnpm --filter=cloud run setup",
+		"cloud:dev": "pnpm --filter=cloud run dev",
+		"cloud:dev:turbopack": "pnpm --filter=cloud run dev-turbopack",
+		"cloud:build": "pnpm --filter=cloud run build",
+		"cloud:start": "pnpm --filter=cloud run start",
+		"test": "pnpm --filter=cloud run test",
 		"platform:script": "pnpm --filter=platform run switch:dev",
 		"platform:dev": "pnpm --filter=platform run dev",
 		"platform:build": "pnpm --filter=platform run build",
