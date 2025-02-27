@@ -55,7 +55,7 @@ export type TemplateData = {
 	tags: string[];
 
 	/**
-	 * Name of the logo file with extension (e.g. pocketbase.png).
+	 * Name of the logo file with extension (e.g. base.png).
 	 */
 	logo: string;
 

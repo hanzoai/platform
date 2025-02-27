@@ -26,7 +26,7 @@ Hanzo Platform includes multiple features to make your life easier.
 - **Backups**: Automate backups for databases to an external storage destination.
 - **Hanzo Compose**: Native support for Hanzo Compose to manage complex applications.
 - **Hyperscale**: Scale applications to unlimited containers using Hanzo to manage the cluster.
-- **Templates**: Deploy open-source templates (Plausible, Pocketbase, Calcom, etc.) with a single click.
+- **Templates**: Deploy open-source templates (Plausible, Base, Calcom, etc.) with a single click.
 - **Traefik Integration**: Automatically integrates with Traefik for routing and load balancing.
 - **Real-time Monitoring**: Monitor CPU, memory, storage, and network usage for every resource.
 - **Docker Management**: Easily deploy and manage Docker containers.
