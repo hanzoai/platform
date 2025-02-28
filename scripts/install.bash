@@ -116,6 +116,9 @@ install_platform() {
       --update-order stop-first \
       --constraint 'node.role == manager' \
       -e ADVERTISE_ADDR=$advertise_addr \
+      -e DATABASE_URL="postgres://hanzo:amukds4wi9001583845717ad2@hanzo-postgres:5432/hanzo" \
+      -e NODE_ENV=production \
+      -e PORT=3000 \
       hanzoai/platform:latest
 
     GREEN="\033[0;32m"
