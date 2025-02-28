@@ -134,7 +134,7 @@ const Invitation = ({ token, invitation, isCloud }: Props) => {
 							target="_blank"
 							className="flex flex-row items-center gap-2"
 						>
-							<Logo className="size-12" />
+							<Logo className="size-9" />
 						</Link>
 						Invitation
 					</CardTitle>
