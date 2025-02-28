@@ -91,8 +91,8 @@ install_platform() {
 
     echo "Swarm initialized"
 
-    docker network rm -f platform-network 2>/dev/null
-    docker network create --driver overlay --attachable platform-network
+    docker network rm -f hanzo-network 2>/dev/null
+    docker network create --driver overlay --attachable hanzo-network
 
     echo "Network created"
 
@@ -107,7 +107,7 @@ install_platform() {
     docker service create \
       --name platform \
       --replicas 1 \
-      --network platform-network \
+      --network hanzo-network \
       --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
       --mount type=bind,source=/etc/platform,target=/etc/platform \
       --mount type=volume,source=platform-docker-config,target=/root/.docker \
