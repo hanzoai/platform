@@ -19,13 +19,25 @@ fi
 BUILDER=$(docker buildx create --use)
 
 # Build and push the image using the Dockerfile in docker/platform/Dockerfile
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  --pull \
-  --rm \
-  --push \
-  -t "hanzoai/platform:${TAG}" \
-  -f "docker/platform/Dockerfile" \
-  .
+if [ "$BUILD_TYPE" == "canary" ]; then
+  docker buildx build \
+    --platform linux/amd64,linux/arm64 \
+    --pull \
+    --rm \
+    --push \
+    -t "hanzoai/platform:canary" \
+    -f "docker/platform/Dockerfile" \
+    .
+else
+  docker buildx build \
+    --platform linux/amd64,linux/arm64 \
+    --pull \
+    --rm \
+    --push \
+    -t "hanzoai/platform:${TAG}" \
+    -t "hanzoai/platform:latest" \
+    -f "docker/platform/Dockerfile" \
+    .
+fi
 
 docker buildx rm $BUILDER
