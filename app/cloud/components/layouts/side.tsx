@@ -493,13 +493,13 @@ function SidebarLogo() {
 			<div
 				className={cn(
 					"flex aspect-square items-center justify-center rounded-lg transition-all",
-					state === "collapsed" ? "size-6" : "size-10",
+					state === "collapsed" ? "size-5" : "size-7",
 				)}
 			>
 				<Logo
 					className={cn(
 						"transition-all",
-						state === "collapsed" ? "size-6" : "size-10",
+						state === "collapsed" ? "size-5" : "size-7",
 					)}
 				/>
 			</div>
