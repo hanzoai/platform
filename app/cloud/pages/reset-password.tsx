@@ -94,7 +94,7 @@ export default function Home({ token }: Props) {
 			<div className="flex flex-col items-center gap-4 w-full">
 				<CardTitle className="text-2xl font-bold flex flex-row gap-2 items-center">
 					<Link href="/" className="flex flex-row items-center gap-2">
-						<Logo className="size-12" />
+						<Logo className="size-9" />
 					</Link>
 					Reset Password
 				</CardTitle>
