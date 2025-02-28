@@ -4,7 +4,7 @@ interface Props {
 	className?: string;
 }
 
-export const Logo = ({ className = "size-14" }: Props) => {
+export const Logo = ({ className = "size-7" }: Props) => {
 	return (
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
