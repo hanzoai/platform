@@ -2,7 +2,7 @@ FROM node:22-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
-RUN corepack prepare pnpm@10.5.2 –activate
+RUN corepack prepare pnpm@10.5.2 --activate
 
 FROM base AS build
 WORKDIR /usr/src/app
