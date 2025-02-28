@@ -18,7 +18,7 @@
 		"platform:build": "pnpm --filter=platform run build",
 		"docker:build:base": "docker buildx build --platform linux/amd64,linux/arm64 -f docker/base/Dockerfile -t hanzoai/os:latest --push .",
 		"docker:build:canary": "./docker/build.sh canary",
-		"docker:build:prod": "./docker/build.sh production",
+		"docker:build:latest": "./docker/build.sh latest",
 		"typecheck": "pnpm -r run typecheck",
 		"build": "pnpm -r run build",
 		"format-and-lint": "biome check .",
