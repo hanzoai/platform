@@ -23,6 +23,7 @@ RUN apt-get update && \
       g++ \
       pkg-config \
       libsecret-1-dev && \
+      docker.io && \
     rm -rf /var/lib/apt/lists/*
 
 # Install global tools

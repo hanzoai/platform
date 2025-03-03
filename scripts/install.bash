@@ -118,6 +118,7 @@ install_platform() {
       -e ADVERTISE_ADDR=$advertise_addr \
       -e DATABASE_URL="postgres://hanzo:amukds4wi9001583845717ad2@hanzo-postgres:5432/hanzo" \
       -e NODE_ENV=production \
+      -e IS_CLOUD=false \
       -e PORT=3000 \
       hanzoai/platform:latest
 
