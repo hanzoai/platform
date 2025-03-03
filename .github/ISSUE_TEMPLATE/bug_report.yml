@@ -12,8 +12,8 @@ body:
     attributes:
       label: To Reproduce
       description: |
-        A detailed, step-by-step description of how to reproduce the issue is required. 
-        Please ensure your report includes clear instructions using numbered lists. 
+        A detailed, step-by-step description of how to reproduce the issue is required.
+        Please ensure your report includes clear instructions using numbered lists.
 
         If possible, provide a link to a repository or project where the issue can be reproduced.
       placeholder: |
@@ -57,7 +57,7 @@ body:
         - "Installation"
         - "Application"
         - "Databases"
-        - "Hanzo Compose"
+        - "Docker Compose"
         - "Traefik"
         - "Docker"
         - "Remote server"
