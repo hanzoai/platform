@@ -3,4 +3,4 @@ packages:
   - "pkg/*"
 
 catalog:
-  '@hanzo/platform': 1.0.2
+  '@hanzo/core': 1.0.2
