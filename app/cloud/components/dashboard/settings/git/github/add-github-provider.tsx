@@ -17,13 +17,13 @@ import { useEffect, useState } from "react";
 export const AddGithubProvider = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { data } = api.auth.get.useQuery();
-  const [manifestUrl, setManifestUrl] = useState("");
+  const [manifest, setManifest] = useState("");
   const [isOrganization, setIsOrganization] = useState(false);
   const [organizationName, setOrganization] = useState("");
 
   useEffect(() => {
     const origin = window.location.origin;
-    const manifest = {
+    const generatedManifest = {
       redirect_url: `${origin}/api/providers/github/setup?authId=${data?.id}`,
       name: `Hanzo-${format(new Date(), "yyyy-MM-dd")}`,
       url: origin,
@@ -42,17 +42,8 @@ export const AddGithubProvider = () => {
       default_events: ["pull_request", "push"],
     };
 
-    const manifestParam = encodeURIComponent(JSON.stringify(manifest));
-    const baseUrl = isOrganization && organizationName
-      ? `https://github.com/organizations/${organizationName}/settings/apps/new`
-      : "https://github.com/settings/apps/new";
-
-    setManifestUrl(`${baseUrl}?manifest=${manifestParam}&state=gh_init:${data?.id}`);
-  }, [data?.id, isOrganization, organizationName]);
-
-  const handleCreateApp = () => {
-    window.location.href = manifestUrl;
-  };
+    setManifest(JSON.stringify(generatedManifest, null, 4));
+  }, [data?.id]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -76,14 +67,16 @@ export const AddGithubProvider = () => {
                 To integrate your GitHub account with our services, you'll need
                 to create and install a GitHub app. Click below to start.
               </p>
+
               <div className="mt-4 flex flex-col gap-4">
-                <div className="flex flex-row gap-4 items-center">
+                <div className="flex items-center gap-4">
                   <span>Organization?</span>
                   <Switch
                     checked={isOrganization}
                     onCheckedChange={setIsOrganization}
                   />
                 </div>
+
                 {isOrganization && (
                   <Input
                     required
@@ -94,30 +87,46 @@ export const AddGithubProvider = () => {
                 )}
               </div>
 
-              <div className="flex w-full items-center justify-between mt-4">
-                <a
-                  href={
-                    isOrganization && organizationName
-                      ? `https://github.com/organizations/${organizationName}/settings/installations`
-                      : "https://github.com/settings/installations"
-                  }
-                  className={`text-muted-foreground text-sm hover:underline duration-300 ${
-                    isOrganization && !organizationName
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Unsure if you already have an app?
-                </a>
-                <Button
-                  disabled={isOrganization && !organizationName}
-                  onClick={handleCreateApp}
-                >
-                  Create GitHub App
-                </Button>
-              </div>
+              <form
+                action={
+                  isOrganization && organizationName
+                    ? `https://github.com/organizations/${organizationName}/settings/apps/new?state=gh_init:${data?.id}`
+                    : `https://github.com/settings/apps/new?state=gh_init:${data?.id}`
+                }
+                method="post"
+                className="mt-4"
+              >
+                <input
+                  type="hidden"
+                  name="manifest"
+                  value={manifest}
+                />
+
+                <div className="flex w-full items-center justify-between">
+                  <a
+                    href={
+                      isOrganization && organizationName
+                        ? `https://github.com/organizations/${organizationName}/settings/installations`
+                        : "https://github.com/settings/installations"
+                    }
+                    className={`text-muted-foreground text-sm hover:underline duration-300 ${
+                      isOrganization && !organizationName
+                        ? "pointer-events-none opacity-50"
+                        : ""
+                    }`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Unsure if you already have an app?
+                  </a>
+                  <Button
+                    disabled={isOrganization && organizationName.length < 1}
+                    type="submit"
+                  >
+                    Create GitHub App
+                  </Button>
+                </div>
+              </form>
             </div>
           </CardContent>
         </div>
