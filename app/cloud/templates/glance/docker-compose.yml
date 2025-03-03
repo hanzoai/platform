@@ -1,8 +1,0 @@
-services:
-  glance:
-    image: glanceapp/glance
-    volumes:
-      - ../files/app/glance.yml:/app/glance.yml
-    ports:
-      - 8080
-    restart: unless-stopped
