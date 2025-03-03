@@ -1,7 +1,7 @@
 {
 	"name": "hanzo-platform",
-	"version": "4.0.4",
 	"private": true,
+	"version": "4.0.4",
 	"workspaces": ["app/*", "pkg/*"],
 	"scripts": {
 		"cloud:setup": "pnpm --filter=cloud run setup",
@@ -11,9 +11,9 @@
 		"cloud:start": "pnpm --filter=cloud run start",
 		"start": "pnpm --filter=cloud run start",
 		"test": "pnpm --filter=cloud run test",
-		"platform:script": "pnpm --filter=platform run switch:dev",
-		"platform:dev": "pnpm --filter=platform run dev",
-		"platform:build": "pnpm --filter=platform run build",
+		"core:script": "pnpm --filter=core run switch:dev",
+		"core:dev": "pnpm --filter=core run dev",
+		"core:build": "pnpm --filter=core run build",
 		"docker:build:base": "docker buildx build --platform linux/amd64,linux/arm64 -f docker/base/Dockerfile -t hanzoai/os:latest --push .",
 		"docker:build:canary": "./docker/build.sh canary",
 		"docker:build:production": "./docker/build.sh production",
@@ -26,23 +26,20 @@
 		"format-and-lint:fix": "biome check . --write"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "1.9.4",
-		"@types/node": "^18.17.0",
 		"dotenv": "16.4.5",
 		"esbuild": "0.20.2",
-		"lefthook": "1.8.4",
+		"tsx": "4.16.2",
 		"lint-staged": "^15.2.7",
-		"tsx": "4.16.2"
+		"@biomejs/biome": "1.9.4",
+		"lefthook": "1.8.4",
+		"@commitlint/cli": "^19.3.0",
+		"@commitlint/config-conventional": "^19.2.2",
+		"@types/node": "^18.17.0"
 	},
 	"packageManager": "pnpm@10.5.2",
 	"engines": {
 		"node": ">=22",
 		"pnpm": ">=10"
-	},
-	"lint-staged": {
-		"*": [
-			"biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
-		]
 	},
 	"resolutions": {
 		"@types/react": "18.3.5",

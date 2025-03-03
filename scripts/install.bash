@@ -96,8 +96,8 @@ install_platform() {
 
     echo "Network created"
 
-    mkdir -p /etc/platform
-    chmod 777 /etc/platform
+    mkdir -p /etc/hanzo
+    chmod 777 /etc/hanzo
 
     docker pull postgres:16
     docker pull redis:7
@@ -105,12 +105,12 @@ install_platform() {
     docker pull hanzoai/platform:latest
 
     docker service create \
-      --name platform \
+      --name hanzo \
       --replicas 1 \
       --network hanzo-network \
       --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
-      --mount type=bind,source=/etc/platform,target=/etc/platform \
-      --mount type=volume,source=platform-docker-config,target=/root/.docker \
+      --mount type=bind,source=/etc/hanzo,target=/etc/hanzo \
+      --mount type=volume,source=hanzo-docker-config,target=/root/.docker \
       --publish published=3000,target=3000,mode=host \
       --update-parallelism 1 \
       --update-order stop-first \
@@ -146,8 +146,8 @@ install_platform() {
 update_platform() {
     echo "Updating platform..."
     docker pull hanzoai/platform:latest
-    docker service update --image hanzoai/platform:latest platform
-    echo "platform has been updated to the latest version."
+    docker service update --image hanzoai/platform:latest hanzo
+    echo "Hanzo has been updated to the latest version."
 }
 
 if [ "$1" = "update" ]; then
