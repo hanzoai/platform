@@ -49,7 +49,7 @@ export const InvitationEmail = ({
 						<Section className="mt-[32px]">
 							<Img
 								src={
-									"https://raw.githubusercontent.com/Hanzo/hanzo/refs/heads/canary/apps/hanzo/logo.png"
+									"https://raw.githubusercontent.com/hanzoai/platform/refs/heads/canary/apps/hanzo/logo.png"
 								}
 								width="100"
 								height="50"
