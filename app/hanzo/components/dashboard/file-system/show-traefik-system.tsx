@@ -39,7 +39,7 @@ export const ShowTraefikSystem = ({ serverId }: Props) => {
 					<CardHeader className="">
 						<CardTitle className="text-xl flex flex-row gap-2">
 							<FileIcon className="size-6 text-muted-foreground self-center" />
-							Traefik File System
+							Traefik
 						</CardTitle>
 						<CardDescription>
 							Manage all the files and directories in {"'/etc/hanzo/traefik'"}.
