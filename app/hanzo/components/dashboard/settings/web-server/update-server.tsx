@@ -91,7 +91,7 @@ export const UpdateServer = ({ updateData }: Props) => {
 			<DialogContent className="max-w-lg p-6">
 				<div className="flex items-center justify-between mb-8">
 					<DialogTitle className="text-2xl font-semibold">
-						Web Server Update
+						Platform Update
 					</DialogTitle>
 					{hanzoVersion && (
 						<div className="flex items-center gap-1.5 rounded-full px-3 py-1 mr-2 bg-muted">
