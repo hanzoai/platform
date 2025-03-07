@@ -18,7 +18,7 @@
 		"docker:build:canary": "./docker/build.sh canary",
 		"docker:build:production": "./docker/build.sh production",
 		"docker:build:platform": "docker build -f docker/hanzo/Dockerfile -t hanzoai/platform:latest --push .",
-		"docker:build:cloud": "docker build -f docker/cloud/Dockerfile -t hanzoai/cloud:latest --push .",
+		"docker:build:dev": "docker build -f docker/dev/Dockerfile -t hanzoai/platform:dev --push .",
 		"docker:update:platform": "docker pull hanzoai/platform:latest && docker service update --image hanzoai/platform:latest hanzo",
 		"typecheck": "pnpm -r run typecheck",
 		"build": "pnpm -r run build",
