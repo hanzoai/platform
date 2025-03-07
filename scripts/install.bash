@@ -1,25 +1,15 @@
 #!/bin/bash
-
 install_platform() {
-    # Check for root privileges
-    if [ "$(id -u)" != "0" ]; then
-        echo "This script must be run as root" >&2
-        exit 1
-    fi
-
-    # Check for Linux OS
-    if [ "$(uname)" = "Darwin" ]; then
+    if [ "$(uname)" != "Linux" ]; then
         echo "This script must be run on Linux" >&2
         exit 1
     fi
 
-    # Check for docker environment
     if [ -f /.dockerenv ]; then
-        echo "This script must be run on Linux" >&2
+        echo "This script must be run on a non-containerized Linux host" >&2
         exit 1
     fi
 
-    # Check for port conflicts
     if command -v ss >/dev/null 2>&1; then
         if ss -tulnp | grep ':80 ' >/dev/null; then
             echo "Error: something is already running on port 80" >&2
@@ -31,28 +21,67 @@ install_platform() {
         fi
     fi
 
-    # Helper function to check if a command exists
-    command_exists() {
-        command -v "$@" >/dev/null 2>&1
-    }
+    IS_CLOUD=${IS_CLOUD:-false}
+    FORCE=${FORCE:-false}
 
-    # Install Docker if not already installed
-    if command_exists docker; then
-        echo "Docker already installed"
+    if [ "$IS_CLOUD" = "true" ]; then
+        SERVICE_NAME="cloud"
+        echo "Mode: CLOUD"
+        advertise_addr="${ADVERTISE_ADDR:-localhost}"
+        NETWORK_NAME="hanzo-network"
+        if ! docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
+            echo "Warning: Network $NETWORK_NAME not found. Creating it."
+            docker network create --driver overlay --attachable "$NETWORK_NAME"
+        fi
     else
-        echo "Installing Docker..."
-        curl -sSL https://get.docker.com | sh
+        SERVICE_NAME="hanzo"
+        echo "Mode: HANZO"
+        docker swarm leave --force 2>/dev/null
+        get_ip() {
+            local ip
+            ip=$(curl -4s --connect-timeout 5 https://ifconfig.io 2>/dev/null)
+            [ -z "$ip" ] && ip=$(curl -4s --connect-timeout 5 https://icanhazip.com 2>/dev/null)
+            [ -z "$ip" ] && ip=$(curl -4s --connect-timeout 5 https://ipecho.net/plain 2>/dev/null)
+            if [ -n "$ip" ]; then
+                if [[ $ip =~ ^192\.168\. || $ip =~ ^10\. || $ip =~ ^172\.(1[6-9]|2[0-9]|3[0-1])\. ]]; then
+                    echo "$ip"
+                    return 0
+                fi
+            fi
+            local ips
+            ips=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -Ev '^127\.')
+            if [ -n "$ips" ]; then
+                local local_ip
+                local_ip=$(echo "$ips" | grep '^192\.' | head -n 1)
+                [ -n "$local_ip" ] && echo "$local_ip" && return 0
+                local_ip=$(echo "$ips" | head -n 1)
+                [ -n "$local_ip" ] && echo "$local_ip" && return 0
+            fi
+            echo "Error: Could not determine server IP address automatically." >&2
+            echo "Please set ADVERTISE_ADDR manually." >&2
+            exit 1
+        }
+        advertise_addr="${ADVERTISE_ADDR:-$(get_ip)}"
+        echo "IP: $advertise_addr"
+        docker swarm init --advertise-addr "$advertise_addr"
+        if [ $? -ne 0 ]; then
+            echo "Error: Swarm init failed" >&2
+            exit 1
+        fi
+        NETWORK_NAME="$SERVICE_NAME-network"
+        docker network rm -f "$NETWORK_NAME" 2>/dev/null
+        docker network create --driver overlay --attachable "$NETWORK_NAME"
+        echo "Network: $NETWORK_NAME"
     fi
 
-    # Start Docker daemon if not running
     if ! docker info >/dev/null 2>&1; then
-        echo "Docker daemon not running. Attempting to start docker service..."
+        echo "Docker daemon not running. Starting docker..."
         if command -v systemctl >/dev/null 2>&1; then
             systemctl start docker
         elif command -v service >/dev/null 2>&1; then
             service docker start
         else
-            echo "Error: Cannot determine how to start docker daemon." >&2
+            echo "Error: Cannot start docker daemon." >&2
             exit 1
         fi
         sleep 3
@@ -62,169 +91,63 @@ install_platform() {
         fi
     fi
 
-    # Determine if we're in cloud mode
-    IS_CLOUD=${IS_CLOUD:-false}
-    SERVICE_NAME=$([ "$IS_CLOUD" = "true" ] && echo "cloud" || echo "hanzo")
-    echo "Installation mode: $([ "$IS_CLOUD" = "true" ] && echo "CLOUD" || echo "HANZO")"
-    echo "Service name: $SERVICE_NAME"
-
-    # Check if service already exists and remove it if needed
     if docker service inspect "$SERVICE_NAME" >/dev/null 2>&1; then
-        echo "Service $SERVICE_NAME already exists. Removing service..."
+        if [ "$FORCE" != "true" ]; then
+            echo "Service $SERVICE_NAME exists. Updating..."
+            docker pull hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
+            docker service update --image hanzoai/platform:${HANZO_IMAGE_TAG:-latest} "$SERVICE_NAME"
+            exit 0
+        fi
+        echo "Removing existing service..."
         docker service rm "$SERVICE_NAME"
-        sleep 5 # Give the service time to be removed
+        sleep 5
     fi
 
-    # For non-cloud mode, we need to reset the swarm
-    if [ "$IS_CLOUD" != "true" ]; then
-        # Leave any existing swarm
-        docker swarm leave --force 2>/dev/null
-    fi
+    HANZO_DIR="${HANZO_DIR:-$HOME/hanzo}"
+    mkdir -p "$HANZO_DIR"
+    chmod 777 "$HANZO_DIR"
 
-    # Get the server IP
-    get_ip() {
-        local ip=""
-        # Try external services first
-        ip=$(curl -4s --connect-timeout 5 https://ifconfig.io 2>/dev/null)
-        if [ -z "$ip" ]; then
-            ip=$(curl -4s --connect-timeout 5 https://icanhazip.com 2>/dev/null)
-        fi
-        if [ -z "$ip" ]; then
-            ip=$(curl -4s --connect-timeout 5 https://ipecho.net/plain 2>/dev/null)
-        fi
-        # Check if the external IP is in a private range (10.x.x.x, 172.16.x.x-172.31.x.x, 192.168.x.x)
-        if [ -n "$ip" ]; then
-            if [[ $ip =~ ^192\.168\. || $ip =~ ^10\. || $ip =~ ^172\.(1[6-9]|2[0-9]|3[0-1])\. ]]; then
-                echo "$ip"
-                return 0
-            fi
-        fi
-
-        # Fallback: get local IP addresses from hostname -I, excluding 127.0.0.1
-        local ips
-        ips=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -Ev '^127\.')
-        if [ -n "$ips" ]; then
-            # Prioritize addresses starting with 192.
-            local local_ip
-            local_ip=$(echo "$ips" | grep '^192\.' | head -n 1)
-            if [ -n "$local_ip" ]; then
-                echo "$local_ip"
-                return 0
-            fi
-            # Otherwise return the first available IP.
-            local_ip=$(echo "$ips" | head -n 1)
-            if [ -n "$local_ip" ]; then
-                echo "$local_ip"
-                return 0
-            fi
-        fi
-
-        echo "Error: Could not determine server IP address automatically." >&2
-        echo "Please set the ADVERTISE_ADDR environment variable manually." >&2
-        exit 1
-    }
-
-    # Set the advertise address
-    advertise_addr="${ADVERTISE_ADDR:-$(get_ip)}"
-    echo "Using advertise address: $advertise_addr"
-
-    # Initialize Docker Swarm if not already active (needed for both modes)
-    if ! docker info | grep -q 'Swarm: active'; then
-        docker swarm init --advertise-addr "$advertise_addr"
-        if [ $? -ne 0 ]; then
-            echo "Error: Failed to initialize Docker Swarm" >&2
-            exit 1
-        fi
-        echo "Swarm initialized"
-    fi
-
-    # Create or use network based on mode
-    if [ "$IS_CLOUD" != "true" ]; then
-        # For non-cloud mode, create a new network
-        NETWORK_NAME="$SERVICE_NAME-network"
-        docker network rm -f "$NETWORK_NAME" 2>/dev/null
-        docker network create --driver overlay --attachable "$NETWORK_NAME"
-        echo "Network '$NETWORK_NAME' created"
-    else
-        # In cloud mode, use existing hanzo network
-        NETWORK_NAME="hanzo-network"
-        # Ensure the network exists
-        if ! docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
-            docker network create --driver overlay --attachable "$NETWORK_NAME"
-        fi
-        echo "Using network: $NETWORK_NAME"
-    fi
-
-    # Set up directory
     APP_DIR="${APP_DIR:-/etc/$SERVICE_NAME}"
     mkdir -p "$APP_DIR"
     chmod 777 "$APP_DIR"
-    echo "Application directory: $APP_DIR"
 
-    # Pull necessary images
-    echo "Pulling required Docker images..."
+    if [ "$DEV_MODE" = "true" ]; then
+        echo "Dev mode enabled"
+        HANZO_IMAGE_TAG="dev"
+        NODE_ENV="${NODE_ENV:-development}"
+        if [ -d "$(pwd)" ]; then
+            echo "Mounting workspace: $(pwd) -> /workspace"
+            MOUNT_FLAGS="--mount type=bind,source=$(pwd),target=/workspace"
+        fi
+    else
+        MOUNT_FLAGS=""
+    fi
+
+    echo "Pulling images..."
     docker pull postgres:16
     docker pull redis:7
     docker pull traefik:v3.1.2
     docker pull hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
 
-    # Set default database URL if not provided
-    if [ "$IS_CLOUD" != "true" ]; then
-        DEFAULT_DB_URL="postgres://$SERVICE_NAME:amukds4wi9001583845717ad2@$SERVICE_NAME-postgres:5432/$SERVICE_NAME"
-    else
-        DEFAULT_DB_URL="postgres://hanzo:amukds4wi9001583845717ad2@hanzo-postgres:5432/hanzo"
-    fi
+    DEFAULT_DB_URL="postgres://hanzo:amukds4wi9001583845717ad2@hanzo-postgres:5432/hanzo"
     DATABASE_URL="${DATABASE_URL:-$DEFAULT_DB_URL}"
 
-    # Create the service
-    echo "Creating $SERVICE_NAME service..."
-
-    # Determine docker config volume name based on mode
-    if [ "$IS_CLOUD" = "true" ]; then
-        DOCKER_CONFIG_VOLUME="hanzo-docker-config" # Always use hanzo-docker-config in cloud mode
-    else
-        DOCKER_CONFIG_VOLUME="$SERVICE_NAME-docker-config"
-    fi
-
-    # Optional mount for development
-    MOUNT_FLAGS=""
-    if [ "$MOUNT_DEV" = "true" ]; then
-        # In development mode, we mount the source code directory to make live changes
-        DEV_SRC_DIR="${DEV_SRC_DIR:-$(pwd)/app/hanzo}"
-        echo "Mounting development source directory: $DEV_SRC_DIR -> /app"
-        MOUNT_FLAGS="$MOUNT_FLAGS --mount type=bind,source=$DEV_SRC_DIR,target=/app"
-
-        # When in development mode, also mount the node_modules to preserve the build
-        DEV_NODE_MODULES="${DEV_NODE_MODULES:-$(pwd)/app/hanzo/node_modules}"
-        if [ -d "$DEV_NODE_MODULES" ]; then
-            echo "Mounting node_modules: $DEV_NODE_MODULES -> /app/node_modules"
-            MOUNT_FLAGS="$MOUNT_FLAGS --mount type=bind,source=$DEV_NODE_MODULES,target=/app/node_modules"
-        fi
-
-        # Also mount the .next directory if it exists
-        DEV_NEXT_DIR="${DEV_NEXT_DIR:-$(pwd)/app/hanzo/.next}"
-        if [ -d "$DEV_NEXT_DIR" ]; then
-            echo "Mounting .next directory: $DEV_NEXT_DIR -> /app/.next"
-            MOUNT_FLAGS="$MOUNT_FLAGS --mount type=bind,source=$DEV_NEXT_DIR,target=/app/.next"
-        fi
-    fi
-
-    # Create service with all environment variables
+    echo "Creating service: $SERVICE_NAME"
     docker service create \
       --name "$SERVICE_NAME" \
       --replicas 1 \
       --network "$NETWORK_NAME" \
       --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
-      --mount type=bind,source="$APP_DIR",target=/etc/$SERVICE_NAME \
-      --mount type=volume,source="$DOCKER_CONFIG_VOLUME",target=/root/.docker \
+      --mount type=bind,source="$HANZO_DIR",target=/etc/hanzo \
+      --mount type=volume,source=hanzo-docker-config,target=/root/.docker \
       $MOUNT_FLAGS \
-      --publish published=${PORT:-3000},target=${PORT:-3000},mode=host \
+      --publish published=${PORT:-3000},target=3000,mode=host \
       --update-parallelism 1 \
       --update-order stop-first \
       --constraint 'node.role == manager' \
-      $( [ -n "$ADVERTISE_ADDR" ] && echo "-e ADVERTISE_ADDR=$ADVERTISE_ADDR" ) \
-      $( [ -n "$DATABASE_URL" ] && echo "-e DATABASE_URL=$DATABASE_URL" ) \
-      $( [ -n "$NODE_ENV" ] && echo "-e NODE_ENV=$NODE_ENV" ) \
+      -e ADVERTISE_ADDR="$advertise_addr" \
+      -e DATABASE_URL="$DATABASE_URL" \
+      -e NODE_ENV="${NODE_ENV:-production}" \
       -e IS_CLOUD=${IS_CLOUD:-false} \
       $( [ -n "$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" ] && echo "-e NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" ) \
       $( [ -n "$STRIPE_SECRET_KEY" ] && echo "-e STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY" ) \
@@ -241,82 +164,50 @@ install_platform() {
       -e PORT=${PORT:-3000} \
       hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
 
-    GREEN="\033[0;32m"
-    YELLOW="\033[1;33m"
-    BLUE="\033[0;34m"
-    NC="\033[0m"
+    if echo "$advertise_addr" | grep -q ':'; then
+        formatted_addr="[$advertise_addr]"
+    else
+        formatted_addr="$advertise_addr"
+    fi
 
-    # Format IP for URL display
-    format_ip_for_url() {
-        local ip="$1"
-        if echo "$ip" | grep -q ':'; then
-            echo "[${ip}]"
-        else
-            echo "${ip}"
-        fi
-    }
-
-    # Display completion message
-    formatted_addr=$(format_ip_for_url "$advertise_addr")
     echo ""
-    printf "${GREEN}Congratulations, $([ "$IS_CLOUD" = "true" ] && echo "Cloud" || echo "Hanzo") Platform is installed!${NC}\n"
-    printf "${BLUE}Wait 15 seconds for the server to start${NC}\n"
-    printf "${YELLOW}Please go to http://${formatted_addr}:${PORT:-3000}${NC}\n\n"
+    echo -e "\033[0;32mSuccess! $([ "$IS_CLOUD" = "true" ] && echo "Hanzo Cloud" || echo "Hanzo Platform") installed.\033[0m"
+    echo -e "\033[0;34mWait 15 seconds for startup...\033[0m"
+    echo -e "\033[1;33mAccess at: http://${formatted_addr}:${PORT:-3000}\033[0m"
+    echo ""
 }
 
 update_platform() {
-    # Determine if we're in cloud mode for update
     IS_CLOUD=${IS_CLOUD:-false}
-    SERVICE_NAME=$([ "$IS_CLOUD" = "true" ] && echo "cloud" || echo "hanzo")
-
-    echo "Updating $([ "$IS_CLOUD" = "true" ] && echo "Cloud" || echo "Hanzo") platform..."
+    if [ "$IS_CLOUD" = "true" ]; then
+        SERVICE_NAME="cloud"
+    else
+        SERVICE_NAME="hanzo"
+    fi
+    echo "Updating $SERVICE_NAME..."
     docker pull hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
     docker service update --image hanzoai/platform:${HANZO_IMAGE_TAG:-latest} "$SERVICE_NAME"
-    echo "$([ "$IS_CLOUD" = "true" ] && echo "Cloud" || echo "Hanzo") has been updated to the latest version."
+    echo "Update complete."
 }
 
-# Main script execution
 if [ "$1" = "update" ]; then
     update_platform
 else
     install_platform
 fi
 
-# Usage information (hidden, only shown with help flag)
 if [ "$1" = "help" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "Usage: $0 [update]"
     echo ""
-    echo "Environment variables:"
-    echo "  IS_CLOUD                Set to 'true' for cloud mode (default: false)"
-    echo "  ADVERTISE_ADDR          IP address to advertise (default: auto-detected)"
-    echo "  PORT                    Port to expose service on (default: 3000)"
-    echo "  DATABASE_URL            Custom database URL"
-    echo "  NODE_ENV                Node environment (default: production)"
-    echo "  HANZO_IMAGE_TAG         Docker image tag to use (default: latest)"
-    echo "  APP_DIR                 Application directory (default: /etc/hanzo or /etc/cloud)"
+    echo "Options:"
+    echo "  FORCE=true      Force recreation"
+    echo "  IS_CLOUD=true   Cloud mode (only runs hanzoai/platform container)"
+    echo "  DEV_MODE=true   Development mode (mounts current directory)"
     echo ""
-    echo "Development options:"
-    echo "  MOUNT_DEV               Set to 'true' to enable development mode with live code changes"
-    echo "  DEV_SRC_DIR             Source directory to mount (default: ./app/hanzo)"
-    echo "  DEV_NODE_MODULES        Node modules directory (default: ./app/hanzo/node_modules)"
-    echo "  DEV_NEXT_DIR            Next.js build directory (default: ./app/hanzo/.next)"
-    echo ""
-    echo "Authentication variables:"
-    echo "  GITHUB_CLIENT_ID        GitHub OAuth client ID"
-    echo "  GITHUB_CLIENT_SECRET    GitHub OAuth client secret"
-    echo "  GOOGLE_CLIENT_ID        Google OAuth client ID"
-    echo "  GOOGLE_CLIENT_SECRET    Google OAuth client secret"
-    echo ""
-    echo "Payment variables:"
-    echo "  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY    Stripe public key"
-    echo "  STRIPE_SECRET_KEY                     Stripe secret key"
-    echo "  STRIPE_WEBHOOK_SECRET                 Stripe webhook secret"
-    echo ""
-    echo "Email variables:"
-    echo "  SMTP_FROM_ADDRESS       Email sender address"
-    echo "  SMTP_SERVER             SMTP server hostname"
-    echo "  SMTP_PORT               SMTP server port"
-    echo "  SMTP_USERNAME           SMTP authentication username"
-    echo "  SMTP_PASSWORD           SMTP authentication password"
+    echo "Variables:"
+    echo "  ADVERTISE_ADDR  Server IP"
+    echo "  PORT            Service port (default: 3000)"
+    echo "  DATABASE_URL    Database connection"
+    echo "  HANZO_IMAGE_TAG Docker tag (default: latest)"
     exit 0
 fi
