@@ -21,7 +21,7 @@ const stripePromise = loadStripe(
 
 // Type guard to check if default_price is of type Price
 const isPriceObject = (price: any): price is { unit_amount: number } => {
-	return typeof price === 'object' && price !== null && 'unit_amount' in price;
+	return typeof price === "object" && price !== null && "unit_amount" in price;
 };
 
 export const ShowBilling = () => {
@@ -29,8 +29,8 @@ export const ShowBilling = () => {
 	const { data: admin } = api.user.get.useQuery();
 	const { data, isLoading } = api.stripe.getProducts.useQuery();
 	const { data: prices } = api.stripe.getPrices.useQuery();
-	console.log("prices=", prices)
-	console.log("products=", data?.products)
+	console.log("prices=", prices);
+	console.log("products=", data?.products);
 	const { mutateAsync: createCheckoutSession } =
 		api.stripe.createCheckoutSession.useMutation();
 	const { mutateAsync: createCustomerPortalSession } =
@@ -40,7 +40,12 @@ export const ShowBilling = () => {
 	const [additionalBases, setAdditionalBases] = useState(0);
 	const [additionalApps, setAdditionalApps] = useState(0);
 
-	const handleCheckout = async (productId: string, priceId: string, serverQuantity: number, isAnnual: boolean) => {
+	const handleCheckout = async (
+		productId: string,
+		priceId: string,
+		serverQuantity: number,
+		isAnnual: boolean,
+	) => {
 		const stripe = await stripePromise;
 		try {
 			const session = await createCheckoutSession({
@@ -49,15 +54,15 @@ export const ShowBilling = () => {
 				serverQuantity,
 				isAnnual,
 			});
-			console.log("session=", session)
-			
+			console.log("session=", session);
+
 			if (!session?.sessionId) {
-				throw new Error('Failed to create checkout session');
+				throw new Error("Failed to create checkout session");
 			}
 
 			await stripe?.redirectToCheckout({ sessionId: session.sessionId });
 		} catch (error) {
-			console.error('Checkout error:', error);
+			console.error("Checkout error:", error);
 			// Handle error appropriately
 		}
 	};
@@ -94,9 +99,16 @@ export const ShowBilling = () => {
 									<h3 className="font-semibold text-lg">{product.name}</h3>
 									<p className="text-muted-foreground">{product.description}</p>
 									<p className="text-xl font-bold mt-2">
-										${((typeof product.default_price === 'object' && product.default_price?.unit_amount ? product.default_price.unit_amount : 0) / 100).toFixed(2)} / mo
+										$
+										{(
+											(typeof product.default_price === "object" &&
+											product.default_price?.unit_amount
+												? product.default_price.unit_amount
+												: 0) / 100
+										).toFixed(2)}{" "}
+										/ mo
 									</p>
-{/* 
+									{/* 
 									<div className="my-4">
 										<span>
 											AI Credits (${aiCredits}): ${aiCredits}
@@ -141,15 +153,18 @@ export const ShowBilling = () => {
 									<Button
 										className="mt-4 w-full"
 										onClick={() => {
-											if (!product.default_price || typeof product.default_price !== 'object') {
-												console.error('Invalid price object');
+											if (
+												!product.default_price ||
+												typeof product.default_price !== "object"
+											) {
+												console.error("Invalid price object");
 												return;
 											}
 											handleCheckout(
 												product.id,
 												product.default_price.id,
 												1,
-												false
+												false,
 											);
 										}}
 									>
