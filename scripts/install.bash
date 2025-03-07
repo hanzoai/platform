@@ -1,5 +1,11 @@
 #!/bin/bash
 
+set -a
+if [ -f .env ]; then
+    source .env
+fi
+set +a
+
 install_platform() {
     if [ "$(uname)" != "Linux" ]; then
         echo "This script must be run on Linux" >&2
