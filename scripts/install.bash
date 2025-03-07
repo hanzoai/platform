@@ -1,9 +1,7 @@
 #!/bin/bash
-
+# Source environment variables from .env if present.
 set -a
-if [ -f .env ]; then
-    source .env
-fi
+[ -f .env ] && source .env
 set +a
 
 install_platform() {
@@ -15,6 +13,7 @@ install_platform() {
         echo "This script must be run on a non-containerized Linux host" >&2
         exit 1
     fi
+
     # For non-cloud mode, check for port conflicts.
     if [ "$IS_CLOUD" != "true" ] && command -v ss >/dev/null 2>&1; then
         if ss -tulnp | grep ':80 ' >/dev/null; then
@@ -29,7 +28,6 @@ install_platform() {
 
     FORCE=${FORCE:-false}
 
-    # Set mode and network
     if [ "$IS_CLOUD" = "true" ]; then
         SERVICE_NAME="cloud"
         echo "Mode: CLOUD"
@@ -80,7 +78,7 @@ install_platform() {
         echo "Network: $NETWORK_NAME"
     fi
 
-    # Process DEV_MODE: set image tag and mount workspace if applicable.
+    # Process DEV_MODE: choose image tag and mount workspace if in development.
     if [ "$DEV_MODE" = "true" ]; then
         echo "Dev mode enabled"
         HANZO_IMAGE_TAG="dev"
@@ -92,17 +90,6 @@ install_platform() {
     else
         MOUNT_FLAGS=""
     fi
-
-    # Build list of allowed env variables to pass through.
-    [ -z "$ADVERTISE_ADDR" ] && ADVERTISE_ADDR="$advertise_addr"
-    allowed_vars="ADVERTISE_ADDR DATABASE_URL NODE_ENV IS_CLOUD NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET SMTP_FROM_ADDRESS SMTP_SERVER SMTP_PORT SMTP_USERNAME SMTP_PASSWORD PORT"
-    extra_env=""
-    for var in $allowed_vars; do
-        value="${!var}"
-        if [ -n "$value" ]; then
-            extra_env="$extra_env -e $var=$value"
-        fi
-    done
 
     if ! docker info >/dev/null 2>&1; then
         echo "Docker daemon not running. Starting docker..."
@@ -121,38 +108,18 @@ install_platform() {
         fi
     fi
 
-    # Check if service exists; update if it does.
+    # Remove existing service to apply all environment changes.
     if docker service inspect "$SERVICE_NAME" >/dev/null 2>&1; then
         if [ "$FORCE" != "true" ]; then
-            echo "Service $SERVICE_NAME exists. Updating..."
-            docker pull hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
-            docker service update --image hanzoai/platform:${HANZO_IMAGE_TAG:-latest} "$SERVICE_NAME"
-            exit 0
+            echo "Service $SERVICE_NAME exists. Removing and recreating..."
+            docker service rm "$SERVICE_NAME"
+            sleep 5
         fi
-        echo "Removing existing service..."
-        docker service rm "$SERVICE_NAME"
-        sleep 5
     fi
 
-    HANZO_DIR="${HANZO_DIR:-$HOME/hanzo}"
-    mkdir -p "$HANZO_DIR"
-    chmod 777 "$HANZO_DIR"
+    # Set defaults for APP_DIR and DOCKER_CONFIG_VOLUME.
     APP_DIR="${APP_DIR:-/etc/$SERVICE_NAME}"
-    mkdir -p "$APP_DIR"
-    chmod 777 "$APP_DIR"
-
-    if [ "$IS_CLOUD" = "true" ]; then
-        docker pull hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
-    else
-        echo "Pulling images..."
-        docker pull postgres:16
-        docker pull redis:7
-        docker pull traefik:v3.1.2
-        docker pull hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
-    fi
-
-    DEFAULT_DB_URL="postgres://hanzo:amukds4wi9001583845717ad2@hanzo-postgres:5432/hanzo"
-    DATABASE_URL="${DATABASE_URL:-$DEFAULT_DB_URL}"
+    DOCKER_CONFIG_VOLUME="${DOCKER_CONFIG_VOLUME:-hanzo-docker-config}"
 
     echo "Creating service: $SERVICE_NAME"
     docker service create \
@@ -160,14 +127,30 @@ install_platform() {
       --replicas 1 \
       --network "$NETWORK_NAME" \
       --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
-      --mount type=bind,source="$HANZO_DIR",target=/etc/hanzo \
-      --mount type=volume,source=hanzo-docker-config,target=/root/.docker \
+      --mount type=bind,source="$APP_DIR",target=/etc/$SERVICE_NAME \
+      --mount type=volume,source="$DOCKER_CONFIG_VOLUME",target=/root/.docker \
       $MOUNT_FLAGS \
       --publish published=${PORT:-3000},target=3000,mode=host \
       --update-parallelism 1 \
       --update-order stop-first \
       --constraint 'node.role == manager' \
-      $extra_env \
+      $( [ -n "$ADVERTISE_ADDR" ] && echo "-e ADVERTISE_ADDR=$ADVERTISE_ADDR" ) \
+      $( [ -n "$DATABASE_URL" ] && echo "-e DATABASE_URL=$DATABASE_URL" ) \
+      $( [ -n "$NODE_ENV" ] && echo "-e NODE_ENV=$NODE_ENV" ) \
+      -e IS_CLOUD=${IS_CLOUD:-false} \
+      $( [ -n "$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" ] && echo "-e NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" ) \
+      $( [ -n "$STRIPE_SECRET_KEY" ] && echo "-e STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY" ) \
+      $( [ -n "$STRIPE_WEBHOOK_SECRET" ] && echo "-e STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET" ) \
+      $( [ -n "$GITHUB_CLIENT_ID" ] && echo "-e GITHUB_CLIENT_ID=$GITHUB_CLIENT_ID" ) \
+      $( [ -n "$GITHUB_CLIENT_SECRET" ] && echo "-e GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET" ) \
+      $( [ -n "$GOOGLE_CLIENT_ID" ] && echo "-e GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" ) \
+      $( [ -n "$GOOGLE_CLIENT_SECRET" ] && echo "-e GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" ) \
+      $( [ -n "$SMTP_FROM_ADDRESS" ] && echo "-e SMTP_FROM_ADDRESS=$SMTP_FROM_ADDRESS" ) \
+      $( [ -n "$SMTP_SERVER" ] && echo "-e SMTP_SERVER=$SMTP_SERVER" ) \
+      $( [ -n "$SMTP_PORT" ] && echo "-e SMTP_PORT=$SMTP_PORT" ) \
+      $( [ -n "$SMTP_USERNAME" ] && echo "-e SMTP_USERNAME=$SMTP_USERNAME" ) \
+      $( [ -n "$SMTP_PASSWORD" ] && echo "-e SMTP_PASSWORD=$SMTP_PASSWORD" ) \
+      -e PORT=${PORT:-3000} \
       hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
 
     if echo "$advertise_addr" | grep -q ':'; then
@@ -189,10 +172,10 @@ update_platform() {
     else
         SERVICE_NAME="hanzo"
     fi
-    echo "Updating $SERVICE_NAME..."
-    docker pull hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
-    docker service update --image hanzoai/platform:${HANZO_IMAGE_TAG:-latest} "$SERVICE_NAME"
-    echo "Update complete."
+    echo "Updating $SERVICE_NAME: Removing and recreating service to capture all environment changes..."
+    docker service rm "$SERVICE_NAME"
+    sleep 5
+    install_platform
 }
 
 if [ "$1" = "update" ]; then
@@ -209,7 +192,7 @@ if [ "$1" = "help" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  IS_CLOUD=true   Cloud mode (only runs hanzoai/platform container)"
     echo "  DEV_MODE=true   Development mode (mounts current directory)"
     echo ""
-    echo "Variables:"
+    echo "Variables (to be defined in .env or exported):"
     echo "  ADVERTISE_ADDR  Server IP"
     echo "  PORT            Service port (default: 3000)"
     echo "  DATABASE_URL    Database connection"
