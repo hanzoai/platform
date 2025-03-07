@@ -22,9 +22,7 @@
 		"docker:update:platform": "docker pull hanzoai/platform:latest && docker service update --image hanzoai/platform:latest hanzo",
 		"typecheck": "pnpm -r run typecheck",
 		"build": "pnpm -r run build",
-		"format-and-lint": "biome check .",
-		"check": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true",
-		"format-and-lint:fix": "biome check . --write"
+		"check": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
 	},
 	"devDependencies": {
 		"dotenv": "16.4.5",
