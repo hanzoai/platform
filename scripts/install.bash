@@ -4,6 +4,38 @@ set -a
 [ -f .env ] && source .env
 set +a
 
+# Determine the user to run the container as.
+if [ -n "$SUDO_UID" ] && [ -n "$SUDO_GID" ]; then
+  USER_ARG="$SUDO_UID:$SUDO_GID"
+else
+  USER_ARG="$(id -u):$(id -g)"
+fi
+
+# Get the local network IP address.
+get_ip() {
+    local ip
+    ip=$(curl -4s --connect-timeout 5 https://ifconfig.io 2>/dev/null)
+    [ -z "$ip" ] && ip=$(curl -4s --connect-timeout 5 https://icanhazip.com 2>/dev/null)
+    [ -z "$ip" ] && ip=$(curl -4s --connect-timeout 5 https://ipecho.net/plain 2>/dev/null)
+    if [ -n "$ip" ]; then
+        if [[ $ip =~ ^192\.168\. || $ip =~ ^10\. || $ip =~ ^172\.(1[6-9]|2[0-9]|3[0-1])\. ]]; then
+            echo "$ip"
+            return 0
+        fi
+    fi
+    local ips
+    ips=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -Ev '^127\.')
+    if [ -n "$ips" ]; then
+        local local_ip
+        local_ip=$(echo "$ips" | grep '^192\.' | head -n 1)
+        [ -n "$local_ip" ] && echo "$local_ip" && return 0
+        local_ip=$(echo "$ips" | head -n 1)
+        [ -n "$local_ip" ] && echo "$local_ip" && return 0
+    fi
+    # Fallback to loopback if nothing else (but ideally you should set ADVERTISE_ADDR)
+    echo "127.0.0.1"
+}
+
 install_platform() {
     if [ "$(uname)" != "Linux" ]; then
         echo "This script must be run on Linux" >&2
@@ -28,10 +60,13 @@ install_platform() {
 
     FORCE=${FORCE:-false}
 
+    # In both modes, determine the advertise address using ADVERTISE_ADDR if set,
+    # otherwise use the local network IP.
+    advertise_addr="${ADVERTISE_ADDR:-$(get_ip)}"
+
     if [ "$IS_CLOUD" = "true" ]; then
         SERVICE_NAME="cloud"
         echo "Mode: CLOUD"
-        advertise_addr="${ADVERTISE_ADDR:-localhost}"
         NETWORK_NAME="hanzo-network"
         if ! docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
             echo "Creating network $NETWORK_NAME"
@@ -41,31 +76,6 @@ install_platform() {
         SERVICE_NAME="hanzo"
         echo "Mode: HANZO"
         docker swarm leave --force 2>/dev/null
-        get_ip() {
-            local ip
-            ip=$(curl -4s --connect-timeout 5 https://ifconfig.io 2>/dev/null)
-            [ -z "$ip" ] && ip=$(curl -4s --connect-timeout 5 https://icanhazip.com 2>/dev/null)
-            [ -z "$ip" ] && ip=$(curl -4s --connect-timeout 5 https://ipecho.net/plain 2>/dev/null)
-            if [ -n "$ip" ]; then
-                if [[ $ip =~ ^192\.168\. || $ip =~ ^10\. || $ip =~ ^172\.(1[6-9]|2[0-9]|3[0-1])\. ]]; then
-                    echo "$ip"
-                    return 0
-                fi
-            fi
-            local ips
-            ips=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -Ev '^127\.')
-            if [ -n "$ips" ]; then
-                local local_ip
-                local_ip=$(echo "$ips" | grep '^192\.' | head -n 1)
-                [ -n "$local_ip" ] && echo "$local_ip" && return 0
-                local_ip=$(echo "$ips" | head -n 1)
-                [ -n "$local_ip" ] && echo "$local_ip" && return 0
-            fi
-            echo "Error: Could not determine server IP address automatically." >&2
-            echo "Please set ADVERTISE_ADDR manually." >&2
-            exit 1
-        }
-        advertise_addr="${ADVERTISE_ADDR:-$(get_ip)}"
         echo "IP: $advertise_addr"
         docker swarm init --advertise-addr "$advertise_addr"
         if [ $? -ne 0 ]; then
@@ -124,6 +134,7 @@ install_platform() {
     echo "Creating service: $SERVICE_NAME"
     docker service create \
       --name "$SERVICE_NAME" \
+      --user "$USER_ARG" \
       --replicas 1 \
       --network "$NETWORK_NAME" \
       --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
@@ -134,7 +145,7 @@ install_platform() {
       --update-parallelism 1 \
       --update-order stop-first \
       --constraint 'node.role == manager' \
-      $( [ -n "$ADVERTISE_ADDR" ] && echo "-e ADVERTISE_ADDR=$ADVERTISE_ADDR" ) \
+      $( [ -n "$ADVERTISE_ADDR" ] && echo "-e ADVERTISE_ADDR=$advertise_addr" ) \
       $( [ -n "$DATABASE_URL" ] && echo "-e DATABASE_URL=$DATABASE_URL" ) \
       $( [ -n "$NODE_ENV" ] && echo "-e NODE_ENV=$NODE_ENV" ) \
       -e IS_CLOUD=${IS_CLOUD:-false} \
@@ -193,7 +204,7 @@ if [ "$1" = "help" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  DEV_MODE=true   Development mode (mounts current directory)"
     echo ""
     echo "Variables (to be defined in .env or exported):"
-    echo "  ADVERTISE_ADDR  Server IP"
+    echo "  ADVERTISE_ADDR  Server IP (if not set, determined automatically)"
     echo "  PORT            Service port (default: 3000)"
     echo "  DATABASE_URL    Database connection"
     echo "  HANZO_IMAGE_TAG Docker tag (default: latest)"
