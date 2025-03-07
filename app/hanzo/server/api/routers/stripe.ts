@@ -20,7 +20,7 @@ export const stripeRouter = createTRPCRouter({
 		});
 
 		const products = await stripe.products.list({
-			expand: ["data.default_price"],
+			expand: ["data.default_price", "data.prices"],
 			active: true,
 		});
 
@@ -40,22 +40,42 @@ export const stripeRouter = createTRPCRouter({
 		return {
 			products: products.data,
 			subscriptions: subscriptions.data,
+			test: 'test'
+		};
+	}),
+	getPrices: adminProcedure.query(async ({ ctx }) => {
+		const user = await findUserById(ctx.user.ownerId);
+		const stripeCustomerId = user.stripeCustomerId;
+
+		const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+			apiVersion: "2024-09-30.acacia",
+		});
+
+		const prices = await stripe.prices.list({
+			expand: ["data.product"],
+			active: true,
+		});
+
+		return {
+			prices: prices.data,
 		};
 	}),
 	createCheckoutSession: adminProcedure
 		.input(
 			z.object({
 				productId: z.string(),
+				priceId: z.string(),
 				serverQuantity: z.number().min(1),
 				isAnnual: z.boolean(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			console.log("input=", input)
 			const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 				apiVersion: "2024-09-30.acacia",
 			});
 
-			const items = getStripeItems(input.serverQuantity, input.isAnnual);
+			const items = getStripeItems(input.serverQuantity, input.isAnnual, input.priceId);
 			const user = await findUserById(ctx.user.id);
 
 			let stripeCustomerId = user.stripeCustomerId;
@@ -77,6 +97,7 @@ export const stripeRouter = createTRPCRouter({
 				...(stripeCustomerId && {
 					customer: stripeCustomerId,
 				}),
+				customer_email: user.email,
 				metadata: {
 					adminId: user.id,
 				},
