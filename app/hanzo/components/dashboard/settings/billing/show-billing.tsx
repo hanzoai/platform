@@ -19,10 +19,18 @@ const stripePromise = loadStripe(
 	process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
 );
 
+// Type guard to check if default_price is of type Price
+const isPriceObject = (price: any): price is { unit_amount: number } => {
+	return typeof price === 'object' && price !== null && 'unit_amount' in price;
+};
+
 export const ShowBilling = () => {
 	const { data: servers } = api.server.count.useQuery();
 	const { data: admin } = api.user.get.useQuery();
 	const { data, isLoading } = api.stripe.getProducts.useQuery();
+	const { data: prices } = api.stripe.getPrices.useQuery();
+	console.log("prices=", prices)
+	console.log("products=", data?.products)
 	const { mutateAsync: createCheckoutSession } =
 		api.stripe.createCheckoutSession.useMutation();
 	const { mutateAsync: createCustomerPortalSession } =
@@ -32,16 +40,26 @@ export const ShowBilling = () => {
 	const [additionalBases, setAdditionalBases] = useState(0);
 	const [additionalApps, setAdditionalApps] = useState(0);
 
-	const handleCheckout = async (productId: string) => {
+	const handleCheckout = async (productId: string, priceId: string, serverQuantity: number, isAnnual: boolean) => {
 		const stripe = await stripePromise;
-		createCheckoutSession({
-			productId,
-			aiCredits,
-			additionalBases,
-			additionalApps,
-		}).then(async (session) => {
+		try {
+			const session = await createCheckoutSession({
+				productId,
+				priceId,
+				serverQuantity,
+				isAnnual,
+			});
+			console.log("session=", session)
+			
+			if (!session?.sessionId) {
+				throw new Error('Failed to create checkout session');
+			}
+
 			await stripe?.redirectToCheckout({ sessionId: session.sessionId });
-		});
+		} catch (error) {
+			console.error('Checkout error:', error);
+			// Handle error appropriately
+		}
 	};
 
 	const maxServers = admin?.user.serversQuantity ?? 1;
@@ -76,9 +94,9 @@ export const ShowBilling = () => {
 									<h3 className="font-semibold text-lg">{product.name}</h3>
 									<p className="text-muted-foreground">{product.description}</p>
 									<p className="text-xl font-bold mt-2">
-										${(product.default_price.unit_amount / 100).toFixed(2)} / mo
+										${((typeof product.default_price === 'object' && product.default_price?.unit_amount ? product.default_price.unit_amount : 0) / 100).toFixed(2)} / mo
 									</p>
-
+{/* 
 									<div className="my-4">
 										<span>
 											AI Credits (${aiCredits}): ${aiCredits}
@@ -88,7 +106,7 @@ export const ShowBilling = () => {
 											max={500}
 											step={1}
 											value={[aiCredits]}
-											onValueChange={(val) => setAiCredits(val[0])}
+											onValueChange={(val) => setAiCredits(val[0] ?? 10)}
 										/>
 									</div>
 
@@ -102,7 +120,7 @@ export const ShowBilling = () => {
 											max={10}
 											step={1}
 											value={[additionalBases]}
-											onValueChange={(val) => setAdditionalBases(val[0])}
+											onValueChange={(val) => setAdditionalBases(val[0] ?? 0)}
 										/>
 									</div>
 
@@ -116,13 +134,24 @@ export const ShowBilling = () => {
 											max={100}
 											step={1}
 											value={[additionalApps]}
-											onValueChange={(val) => setAdditionalApps(val[0])}
+											onValueChange={(val) => setAdditionalApps(val[0] ?? 0)}
 										/>
-									</div>
+									</div> */}
 
 									<Button
 										className="mt-4 w-full"
-										onClick={() => handleCheckout(product.id)}
+										onClick={() => {
+											if (!product.default_price || typeof product.default_price !== 'object') {
+												console.error('Invalid price object');
+												return;
+											}
+											handleCheckout(
+												product.id,
+												product.default_price.id,
+												1,
+												false
+											);
+										}}
 									>
 										Subscribe
 									</Button>
