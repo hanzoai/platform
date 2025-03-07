@@ -28,7 +28,7 @@ export const StepThree = ({ templateInfo }: StepProps) => {
 							</p>
 						</div>
 						<div className="space-y-2">
-							<h3 className="text-sm font-semibold">Docker Compose</h3>
+							<h3 className="text-sm font-semibold">Compose</h3>
 							<CodeEditor
 								lineWrapping
 								value={templateInfo?.details?.dockerCompose}

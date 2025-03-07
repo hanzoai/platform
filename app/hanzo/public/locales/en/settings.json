@@ -10,8 +10,8 @@
 	"settings.server.domain.form.certificateOptions.none": "None",
 	"settings.server.domain.form.certificateOptions.letsencrypt": "Let's Encrypt",
 
-	"settings.server.webServer.title": "Web Server",
-	"settings.server.webServer.description": "Reload or clean the web server.",
+	"settings.server.webServer.title": "Platform",
+	"settings.server.webServer.description": "Reload or clean Hanzo Platform.",
 	"settings.server.webServer.actions": "Actions",
 	"settings.server.webServer.reload": "Reload",
 	"settings.server.webServer.watchLogs": "View Logs",
