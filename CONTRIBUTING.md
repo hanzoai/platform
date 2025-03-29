@@ -61,9 +61,9 @@ pnpm install
 cp app/hanzo/.env.example app/hanzo/.env
 ```
 
-## Development
+## Requirements
 
-Is required to have **Docker** installed on your machine.
+- [Docker](/GUIDES.md#docker)
 
 ### Setup
 
