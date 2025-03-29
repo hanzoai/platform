@@ -1,41 +1,55 @@
+/**
+ * Cluster service for managing Docker Swarm nodes
+ */
+
+/**
+ * Represents a Docker Swarm node
+ */
 export interface DockerNode {
-	ID: string;
-	Version: {
-		Index: number;
-	};
-	CreatedAt: string;
-	UpdatedAt: string;
-	Spec: {
-		Name: string;
-		Labels: Record<string, string>;
-		Role: "worker" | "manager";
-		Availability: "active" | "pause" | "drain";
-	};
-	Description: {
-		Hostname: string;
-		Platform: {
-			Architecture: string;
-			OS: string;
-		};
-		Resources: {
-			NanoCPUs: number;
-			MemoryBytes: number;
-		};
-		Engine: {
-			EngineVersion: string;
-			Plugins: Array<{
-				Type: string;
-				Name: string;
-			}>;
-		};
-	};
-	Status: {
-		State: "unknown" | "down" | "ready" | "disconnected";
-		Message: string;
-		Addr: string;
-	};
-	ManagerStatus?: {
-		Leader: boolean;
-		Addr: string;
-	};
+  ID: string;
+  Status: {
+    State: string;
+  };
+  Spec: {
+    Role: string;
+    Availability: string;
+  };
+  Description: {
+    Hostname: string;
+  };
 }
+
+/**
+ * Get all nodes in the swarm
+ */
+export const getAllNodes = async (): Promise<DockerNode[]> => {
+  // Stub implementation
+  return [];
+};
+
+/**
+ * Remove a node from the swarm
+ */
+export const removeNode = async (nodeId: string): Promise<boolean> => {
+  // Stub implementation
+  console.log(`Would remove node ${nodeId} from swarm`);
+  return true;
+};
+
+/**
+ * Drain a node in the swarm
+ */
+export const drainNode = async (nodeId: string): Promise<boolean> => {
+  // Stub implementation
+  console.log(`Would drain node ${nodeId} in swarm`);
+  return true;
+};
+
+/**
+ * Activate a node in the swarm
+ */
+export const activateNode = async (nodeId: string): Promise<boolean> => {
+  // Stub implementation
+  console.log(`Would activate node ${nodeId} in swarm`);
+  return true;
+};
