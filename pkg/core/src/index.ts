@@ -17,10 +17,10 @@ export * from "./services/mount";
 export * from "./services/certificate";
 export * from "./services/redirect";
 export * from "./services/security";
-export * from "./services/preview-deployment";
+// Removed preview-deployment
 export * from "./services/port";
 export * from "./services/redis";
-export * from "./services/compose";
+// Removed compose service
 export * from "./services/registry";
 export * from "./services/notification";
 export * from "./services/ssh-key";
@@ -47,6 +47,7 @@ export * from "./utils/backups/mongo";
 export * from "./utils/backups/mysql";
 export * from "./utils/backups/postgres";
 export * from "./utils/backups/utils";
+export * from "./utils/databases/rebuild";
 
 export * from "./utils/notifications/build-error";
 export * from "./utils/notifications/build-success";
@@ -57,7 +58,7 @@ export * from "./utils/notifications/docker-cleanup";
 export * from "./utils/notifications/server-threshold";
 
 export * from "./utils/builders/index";
-export * from "./utils/builders/compose";
+// Removed builders/compose
 export * from "./utils/builders/docker-file";
 export * from "./utils/builders/drop";
 export * from "./utils/builders/heroku";
@@ -68,16 +69,16 @@ export * from "./utils/builders/utils";
 
 export * from "./utils/cluster/upload";
 
-export * from "./utils/docker/compose";
+// Removed docker/compose
 export * from "./utils/docker/collision";
 export * from "./utils/docker/domain";
 export * from "./utils/docker/utils";
 export * from "./utils/docker/types";
-export * from "./utils/docker/compose/configs";
-export * from "./utils/docker/compose/network";
-export * from "./utils/docker/compose/secrets";
-export * from "./utils/docker/compose/service";
-export * from "./utils/docker/compose/volume";
+// Removed docker/compose/configs
+// Removed docker/compose/network
+// Removed docker/compose/secrets
+// Removed docker/compose/service
+// Removed docker/compose/volume
 
 export * from "./utils/filesystem/directory";
 export * from "./utils/filesystem/ssh";

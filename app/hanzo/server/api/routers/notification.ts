@@ -23,7 +23,6 @@ import {
 	apiUpdateSlack,
 	apiUpdateTelegram,
 	notifications,
-	server,
 	users_temp,
 } from "@/server/db/schema";
 import {
@@ -360,22 +359,10 @@ export const notificationRouter = createTRPCRouter({
 					organizationId = result?.[0]?.id;
 					ServerName = "Hanzo";
 				} else {
-					const result = await db
-						.select()
-						.from(server)
-						.where(
-							sql`${server.metricsConfig}::jsonb -> 'server' ->> 'token' = ${input.Token}`,
-						);
-
-					if (!result?.[0]?.organizationId) {
-						throw new TRPCError({
-							code: "BAD_REQUEST",
-							message: "Token not found",
-						});
-					}
-
-					organizationId = result?.[0]?.organizationId;
-					ServerName = "Remote";
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "Remote server monitoring is not supported",
+					});
 				}
 
 				await sendServerThresholdNotifications(organizationId, {

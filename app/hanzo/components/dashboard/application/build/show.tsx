@@ -25,6 +25,7 @@ enum BuildType {
 	paketo_buildpacks = "paketo_buildpacks",
 	nixpacks = "nixpacks",
 	static = "static",
+	railpack = "railpack",
 }
 
 const mySchema = z.discriminatedUnion("buildType", [
@@ -53,6 +54,9 @@ const mySchema = z.discriminatedUnion("buildType", [
 	z.object({
 		buildType: z.literal("static"),
 	}),
+	z.object({
+		buildType: z.literal("railpack"),
+	}),
 ]);
 
 type AddTemplate = z.infer<typeof mySchema>;
@@ -74,7 +78,7 @@ export const ShowBuildChooseForm = ({ applicationId }: Props) => {
 
 	const form = useForm<AddTemplate>({
 		defaultValues: {
-			buildType: BuildType.nixpacks,
+			buildType: BuildType.railpack,
 		},
 		resolver: zodResolver(mySchema),
 	});
@@ -165,6 +169,14 @@ export const ShowBuildChooseForm = ({ applicationId }: Props) => {
 												value={field.value}
 												className="flex flex-col space-y-1"
 											>
+												<FormItem className="flex items-center space-x-3 space-y-0">
+													<FormControl>
+														<RadioGroupItem value="railpack" />
+													</FormControl>
+													<FormLabel className="font-normal">
+														Railpack (Recommended)
+													</FormLabel>
+												</FormItem>
 												<FormItem className="flex items-center space-x-3 space-y-0">
 													<FormControl>
 														<RadioGroupItem value="dockerfile" />

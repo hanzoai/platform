@@ -17,11 +17,7 @@ function getProviderName(apiUrl: string) {
 	if (apiUrl.includes("localhost:11434") || apiUrl.includes("ollama"))
 		return "ollama";
 	if (apiUrl.includes("api.deepinfra.com")) return "deepinfra";
-<<<<<<< HEAD:pkg/platform/src/utils/ai/select-ai-provider.ts
 	return "custom";
-=======
-	throw new Error(`Unsupported AI provider for URL: ${apiUrl}`);
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/utils/ai/select-ai-provider.ts
 }
 
 export function selectAIProvider(config: { apiUrl: string; apiKey: string }) {
@@ -71,7 +67,6 @@ export function selectAIProvider(config: { apiUrl: string; apiKey: string }) {
 				baseURL: config.apiUrl,
 				apiKey: config.apiKey,
 			});
-<<<<<<< HEAD:pkg/platform/src/utils/ai/select-ai-provider.ts
 		case "custom":
 			return createOpenAICompatible({
 				name: "custom",
@@ -80,13 +75,10 @@ export function selectAIProvider(config: { apiUrl: string; apiKey: string }) {
 					Authorization: `Bearer ${config.apiKey}`,
 				},
 			});
-=======
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/utils/ai/select-ai-provider.ts
 		default:
 			throw new Error(`Unsupported AI provider: ${providerName}`);
 	}
 }
-<<<<<<< HEAD:pkg/platform/src/utils/ai/select-ai-provider.ts
 
 export const getProviderHeaders = (
 	apiUrl: string,
@@ -112,11 +104,10 @@ export const getProviderHeaders = (
 		Authorization: `Bearer ${apiKey}`,
 	};
 };
+
 export interface Model {
 	id: string;
 	object: string;
 	created: number;
 	owned_by: string;
 }
-=======
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/utils/ai/select-ai-provider.ts
