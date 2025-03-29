@@ -103,7 +103,7 @@ export const getConfig = async (
 
 export const getContainersByAppNameMatch = async (
 	appName: string,
-	appType?: "stack" | "docker-compose",
+	appType?: "stack",
 	serverId?: string,
 ) => {
 	try {
@@ -111,10 +111,7 @@ export const getContainersByAppNameMatch = async (
 		const cmd =
 			"docker ps -a --format 'CONTAINER ID : {{.ID}} | Name: {{.Names}} | State: {{.State}}'";
 
-		const command =
-			appType === "docker-compose"
-				? `${cmd} --filter='label=com.docker.compose.project=${appName}'`
-				: `${cmd} | grep '^.*Name: ${appName}'`;
+		const command = `${cmd} | grep '^.*Name: ${appName}'`;
 		if (serverId) {
 			const { stdout, stderr } = await execAsyncRemote(serverId, command);
 
@@ -291,9 +288,7 @@ export const getContainersByAppLabel = async (
 		const command =
 			type === "swarm"
 				? `docker ps --filter "label=com.docker.swarm.service.name=${appName}" --format 'CONTAINER ID : {{.ID}} | Name: {{.Names}} | State: {{.State}}'`
-				: type === "standalone"
-					? `docker ps --filter "name=${appName}" --format 'CONTAINER ID : {{.ID}} | Name: {{.Names}} | State: {{.State}}'`
-					: `docker ps --filter "label=com.docker.compose.project=${appName}" --format 'CONTAINER ID : {{.ID}} | Name: {{.Names}} | State: {{.State}}'`;
+				: `docker ps --filter "name=${appName}" --format 'CONTAINER ID : {{.ID}} | Name: {{.Names}} | State: {{.State}}'`;
 		if (serverId) {
 			const result = await execAsyncRemote(serverId, command);
 			stdout = result.stdout;

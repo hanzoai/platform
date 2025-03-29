@@ -2,26 +2,16 @@ import type { IncomingMessage } from "node:http";
 import * as bcrypt from "bcrypt";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-<<<<<<< HEAD:pkg/platform/src/lib/auth.ts
-import { organization, twoFactor, apiKey } from "better-auth/plugins";
-import { and, desc, eq } from "drizzle-orm";
-import { db } from "../db";
-import * as schema from "../db/schema";
-import { sendEmail } from "../verification/send-verification-email";
-import { IS_CLOUD } from "../constants";
-import { getPublicIpWithFallback } from "../wss/utils";
-import { updateUser } from "../services/user";
-import { getUserByToken } from "../services/admin";
-import { APIError } from "better-auth/api";
-=======
 import { apiKey, organization, twoFactor } from "better-auth/plugins";
 import { and, desc, eq } from "drizzle-orm";
 import { IS_CLOUD } from "../constants";
 import { db } from "../db";
 import * as schema from "../db/schema";
 import { sendEmail } from "../verification/send-verification-email";
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/lib/auth.ts
-
+import { getPublicIpWithFallback } from "../wss/utils";
+import { updateUser } from "../services/user";
+import { getUserByToken } from "../services/admin";
+import { APIError } from "better-auth/api";
 const { handler, api } = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: "pg",
@@ -30,11 +20,7 @@ const { handler, api } = betterAuth({
 	logger: {
 		disabled: process.env.NODE_ENV === "production",
 	},
-<<<<<<< HEAD:pkg/platform/src/lib/auth.ts
-	appName: "Dokploy",
-=======
 	appName: "Hanzo",
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/lib/auth.ts
 	socialProviders: {
 		github: {
 			clientId: process.env.GITHUB_CLIENT_ID as string,
@@ -45,7 +31,6 @@ const { handler, api } = betterAuth({
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
 		},
 	},
-<<<<<<< HEAD:pkg/platform/src/lib/auth.ts
 	...(!IS_CLOUD && {
 		async trustedOrigins() {
 			const admin = await db.query.member.findFirst({
@@ -66,8 +51,6 @@ const { handler, api } = betterAuth({
 			return [];
 		},
 	}),
-=======
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/lib/auth.ts
 	emailVerification: {
 		sendOnSignUp: true,
 		autoSignInAfterVerification: true,
@@ -108,13 +91,12 @@ const { handler, api } = betterAuth({
 	databaseHooks: {
 		user: {
 			create: {
-<<<<<<< HEAD:pkg/platform/src/lib/auth.ts
 				before: async (_user, context) => {
 					if (!IS_CLOUD) {
-						const xDokployToken =
-							context?.request?.headers?.get("x-dokploy-token");
-						if (xDokployToken) {
-							const user = await getUserByToken(xDokployToken);
+						const xHanzoToken =
+							context?.request?.headers?.get("x-hanzo-token");
+						if (xHanzoToken) {
+							const user = await getUserByToken(xHanzoToken);
 							if (!user) {
 								throw new APIError("BAD_REQUEST", {
 									message: "User not found",
@@ -132,22 +114,18 @@ const { handler, api } = betterAuth({
 						}
 					}
 				},
-=======
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/lib/auth.ts
 				after: async (user) => {
 					const isAdminPresent = await db.query.member.findFirst({
 						where: eq(schema.member.role, "owner"),
 					});
 
-<<<<<<< HEAD:pkg/platform/src/lib/auth.ts
 					if (!IS_CLOUD) {
 						await updateUser(user.id, {
 							serverIp: await getPublicIpWithFallback(),
 						});
 					}
 
-=======
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/lib/auth.ts
+
 					if (IS_CLOUD || !isAdminPresent) {
 						await db.transaction(async (tx) => {
 							const organization = await tx
@@ -192,13 +170,10 @@ const { handler, api } = betterAuth({
 			},
 		},
 	},
-<<<<<<< HEAD:pkg/platform/src/lib/auth.ts
 	session: {
 		expiresIn: 60 * 60 * 24 * 3,
 		updateAge: 60 * 60 * 24,
 	},
-=======
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/lib/auth.ts
 	user: {
 		modelName: "users_temp",
 		additionalFields: {
@@ -226,22 +201,14 @@ const { handler, api } = betterAuth({
 					const host =
 						process.env.NODE_ENV === "development"
 							? "http://localhost:3000"
-<<<<<<< HEAD:pkg/platform/src/lib/auth.ts
-							: "https://dokploy.com";
-=======
 							: "https://hanzo.ai";
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/lib/auth.ts
 					const inviteLink = `${host}/invitation?token=${data.id}`;
 
 					await sendEmail({
 						email: data.email,
 						subject: "Invitation to join organization",
 						text: `
-<<<<<<< HEAD:pkg/platform/src/lib/auth.ts
-					<p>You are invited to join ${data.organization.name} on Dokploy. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
-=======
 					<p>You are invited to join ${data.organization.name} on Hanzo. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/lib/auth.ts
 					`,
 					});
 				}

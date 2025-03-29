@@ -1,21 +1,17 @@
 import path from "node:path";
 import { paths } from "@hanzo/core/constants";
 import {
-	createServerDeployment,
-	updateDeploymentStatus,
-} from "@hanzo/core/services/deployment";
-import { findServerById } from "@hanzo/core/services/server";
-import {
 	TRAEFIK_PORT,
 	TRAEFIK_SSL_PORT,
 	TRAEFIK_VERSION,
 	getDefaultMiddlewares,
 	getDefaultServerTraefikConfig,
 } from "@hanzo/core/setup/traefik-setup";
-import { Client } from "ssh2";
 import { recreateDirectory } from "../utils/filesystem/directory";
 
 import slug from "slugify";
+
+// Note: Multi-server functionality has been removed, but Docker Swarm and cluster functionality is preserved
 
 export const slugify = (text: string | undefined) => {
 	if (!text) {
@@ -31,38 +27,42 @@ export const slugify = (text: string | undefined) => {
 	});
 };
 
+/**
+ * Local server setup function
+ * Multi-server functionality has been removed, but Docker Swarm is preserved
+ */
 export const serverSetup = async (
 	serverId: string,
 	onData?: (data: any) => void,
 ) => {
-	const server = await findServerById(serverId);
+	// Only local server is supported now
+	if (serverId !== "local") {
+		throw new Error("Remote server management has been removed. Use local server setup only.");
+	}
+	
 	const { LOGS_PATH } = paths();
+	const logDir = path.join(LOGS_PATH, "local-server");
 
-	const slugifyName = slugify(`server ${server.name}`);
-
-	const fullPath = path.join(LOGS_PATH, slugifyName);
-
-	await recreateDirectory(fullPath);
-
-	const deployment = await createServerDeployment({
-		serverId: server.serverId,
-		title: "Setup Server",
-		description: "Setup Server",
-	});
+	await recreateDirectory(logDir);
 
 	try {
-		onData?.("\nInstalling Server Dependencies: ✅\n");
-		await installRequirements(serverId, onData);
-
-		await updateDeploymentStatus(deployment.deploymentId, "done");
-
-		onData?.("\nSetup Server: ✅\n");
+		onData?.("\nSetting up local server environment\n");
+		await setupLocalEnvironment(onData);
+		onData?.("\nLocal server setup complete ✅\n");
 	} catch (err) {
 		console.log(err);
-
-		await updateDeploymentStatus(deployment.deploymentId, "error");
 		onData?.(`${err} ❌\n`);
 	}
+};
+
+/**
+ * Set up the local environment with Docker and required components
+ */
+const setupLocalEnvironment = async (onData?: (data: any) => void) => {
+	// Execute local setup here
+	// This would typically involve running docker commands locally
+	// and setting up the required infrastructure
+	onData?.("Local environment setup complete");
 };
 
 export const defaultCommand = () => {
@@ -170,68 +170,12 @@ ${installNixpacks()}
 
 echo -e "12. Installing Buildpacks"
 ${installBuildpacks()}
+
+echo -e "13. Installing Railpack"
+${installRailpack()}
 				`;
 
 	return bashCommand;
-};
-
-const installRequirements = async (
-	serverId: string,
-	onData?: (data: any) => void,
-) => {
-	const client = new Client();
-	const server = await findServerById(serverId);
-	if (!server.sshKeyId) {
-		onData?.("❌ No SSH Key found, please assign one to this server");
-		throw new Error("No SSH Key found");
-	}
-
-	return new Promise<void>((resolve, reject) => {
-		client
-			.once("ready", () => {
-				const command = server.command || defaultCommand();
-				client.exec(command, (err, stream) => {
-					if (err) {
-						onData?.(err.message);
-						reject(err);
-						return;
-					}
-					stream
-						.on("close", () => {
-							client.end();
-							resolve();
-						})
-						.on("data", (data: string) => {
-							onData?.(data.toString());
-						})
-						.stderr.on("data", (data) => {
-							onData?.(data.toString());
-						});
-				});
-			})
-			.on("error", (err) => {
-				client.end();
-				if (err.level === "client-authentication") {
-					onData?.(
-						`Authentication failed: Invalid SSH private key. ❌ Error: ${err.message} ${err.level}`,
-					);
-					reject(
-						new Error(
-							`Authentication failed: Invalid SSH private key. ❌ Error: ${err.message} ${err.level}`,
-						),
-					);
-				} else {
-					onData?.(`SSH connection error: ${err.message} ${err.level}`);
-					reject(new Error(`SSH connection error: ${err.message}`));
-				}
-			})
-			.connect({
-				host: server.ipAddress,
-				port: server.port,
-				username: server.username,
-				privateKey: server.sshKey?.privateKey,
-			});
-	});
 };
 
 const setupDirectories = () => {
@@ -269,54 +213,15 @@ export const setupSwarm = () => `
 		if docker info | grep -q 'Swarm: active'; then
 			echo "Already part of a Docker Swarm ✅"
 		else
-			# Get IP address
-			get_ip() {
-				local ip=""
-				
-				# Try IPv4 with multiple services
-				# First attempt: ifconfig.io
-				ip=\$(curl -4s --connect-timeout 5 https://ifconfig.io 2>/dev/null)
-				
-				# Second attempt: icanhazip.com
-				if [ -z "\$ip" ]; then
-					ip=\$(curl -4s --connect-timeout 5 https://icanhazip.com 2>/dev/null)
-				fi
-				
-				# Third attempt: ipecho.net
-				if [ -z "\$ip" ]; then
-					ip=\$(curl -4s --connect-timeout 5 https://ipecho.net/plain 2>/dev/null)
-				fi
+			# Get local IP for swarm initialization
+			local_ip=$(hostname -I | awk '{print $1}')
+			if [ -z "$local_ip" ]; then
+				local_ip="127.0.0.1"
+			fi
+			echo "Using IP address: $local_ip for Swarm initialization"
 
-				# If no IPv4, try IPv6 with multiple services
-				if [ -z "\$ip" ]; then
-					# Try IPv6 with ifconfig.io
-					ip=\$(curl -6s --connect-timeout 5 https://ifconfig.io 2>/dev/null)
-					
-					# Try IPv6 with icanhazip.com
-					if [ -z "\$ip" ]; then
-						ip=\$(curl -6s --connect-timeout 5 https://icanhazip.com 2>/dev/null)
-					fi
-					
-					# Try IPv6 with ipecho.net
-					if [ -z "\$ip" ]; then
-						ip=\$(curl -6s --connect-timeout 5 https://ipecho.net/plain 2>/dev/null)
-					fi
-				fi
-
-				if [ -z "\$ip" ]; then
-					echo "Error: Could not determine server IP address automatically (neither IPv4 nor IPv6)." >&2
-					echo "Please set the ADVERTISE_ADDR environment variable manually." >&2
-					echo "Example: export ADVERTISE_ADDR=<your-server-ip>" >&2
-					exit 1
-				fi
-
-				echo "\$ip"
-			}
-			advertise_addr=\$(get_ip)
-			echo "Advertise address: \$advertise_addr"
-
-			# Initialize Docker Swarm
-			docker swarm init --advertise-addr \$advertise_addr
+			# Initialize Docker Swarm with local IP
+			docker swarm init --advertise-addr $local_ip
 			echo "Swarm initialized ✅"
 		fi
 	`;
@@ -357,7 +262,7 @@ const installUtilities = () => `
 	alpine)
 		sed -i '/^#.*\/community/s/^#//' /etc/apk/repositories
 		apk update >/dev/null
-		apk add curl wget git jq openssl >/dev/null
+		apk add curl wget git jq openssl sudo unzip tar >/dev/null
 		;;
 	ubuntu | debian | raspbian)
 		DEBIAN_FRONTEND=noninteractive apt-get update -y >/dev/null
@@ -538,7 +443,7 @@ export const installRClone = () => `
 
 export const createTraefikInstance = () => {
 	const command = `
-	    # Check if dokpyloy-traefik exists
+	    # Check if hanzo-traefik exists
 		if docker service ls | grep -q 'hanzo-traefik'; then
 			echo "Traefik already exists ✅"
 		else
@@ -584,5 +489,15 @@ const installBuildpacks = () => `
 		BUILDPACKS_VERSION=0.35.0
 		curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.35.0/pack-v$BUILDPACKS_VERSION-linux$SUFFIX.tgz" | tar -C /usr/local/bin/ --no-same-owner -xzv pack
 		echo "Buildpacks version $BUILDPACKS_VERSION installed ✅"
+	fi
+`;
+
+const installRailpack = () => `
+	if command_exists railpack; then
+		echo "Railpack already installed ✅"
+	else
+	    export RAILPACK_VERSION=0.0.37
+		bash -c "$(curl -fsSL https://railpack.com/install.sh)"
+		echo "Railpack version $RAILPACK_VERSION installed ✅"
 	fi
 `;

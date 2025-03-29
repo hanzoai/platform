@@ -159,10 +159,7 @@ table application {
   command text
   refreshToken text
   sourceType sourceType [not null, default: 'github']
-<<<<<<< HEAD:pkg/platform/src/db/schema/schema.dbml
   cleanCache boolean [default: false]
-=======
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/db/schema/schema.dbml
   repository text
   owner text
   branch text
@@ -510,11 +507,7 @@ table notification {
   appDeploy boolean [not null, default: false]
   appBuildError boolean [not null, default: false]
   databaseBackup boolean [not null, default: false]
-<<<<<<< HEAD:pkg/platform/src/db/schema/schema.dbml
-  dokployRestart boolean [not null, default: false]
-=======
   hanzoRestart boolean [not null, default: false]
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/db/schema/schema.dbml
   dockerCleanup boolean [not null, default: false]
   serverThreshold boolean [not null, default: false]
   notificationType notificationType [not null]
@@ -733,11 +726,7 @@ table user {
   enableDockerCleanup boolean [not null, default: false]
   enableLogRotation boolean [not null, default: false]
   enablePaidFeatures boolean [not null, default: false]
-<<<<<<< HEAD:pkg/platform/src/db/schema/schema.dbml
-  metricsConfig jsonb [not null, default: `{"server":{"type":"Dokploy","refreshRate":60,"port":4500,"token":"","retentionDays":2,"cronJob":"","urlCallback":"","thresholds":{"cpu":0,"memory":0}},"containers":{"refreshRate":60,"services":{"include":[],"exclude":[]}}}`]
-=======
   metricsConfig jsonb [not null, default: `{"server":{"type":"Hanzo","refreshRate":60,"port":4500,"token":"","retentionDays":2,"cronJob":"","urlCallback":"","thresholds":{"cpu":0,"memory":0}},"containers":{"refreshRate":60,"services":{"include":[],"exclude":[]}}}`]
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/db/schema/schema.dbml
   cleanupCacheApplications boolean [not null, default: false]
   cleanupCacheOnPreviews boolean [not null, default: false]
   cleanupCacheOnCompose boolean [not null, default: false]
