@@ -1,24 +1,13 @@
-<<<<<<< HEAD:pkg/platform/src/services/ai.ts
-import { db } from "@dokploy/server/db";
-import { ai } from "@dokploy/server/db/schema";
-import { selectAIProvider } from "@dokploy/server/utils/ai/select-ai-provider";
-=======
 import { db } from "@hanzo/core/db";
 import { ai } from "@hanzo/core/db/schema";
 import { selectAIProvider } from "@hanzo/core/utils/ai/select-ai-provider";
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/services/ai.ts
 import { TRPCError } from "@trpc/server";
 import { generateObject } from "ai";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { IS_CLOUD } from "../constants";
-<<<<<<< HEAD:pkg/platform/src/services/ai.ts
-import { findServerById } from "./server";
-import { findOrganizationById } from "./admin";
-=======
 import { findOrganizationById } from "./admin";
 import { findServerById } from "./server";
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/services/ai.ts
 
 export const getAiSettingsByOrganizationId = async (organizationId: string) => {
 	const aiSettings = await db.query.ai.findMany({

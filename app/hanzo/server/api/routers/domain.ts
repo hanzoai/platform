@@ -1,7 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
 	apiCreateDomain,
-	apiFindCompose,
 	apiFindDomain,
 	apiFindOneApplication,
 	apiUpdateDomain,

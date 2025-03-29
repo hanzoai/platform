@@ -1,76 +1,42 @@
 import { Button } from "@/components/ui/button";
-
-import { UpdateServerIp } from "@/components/dashboard/settings/web-server/update-server-ip";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { api } from "@/utils/api";
+import { ShieldIcon } from "lucide-react";
 import { useTranslation } from "next-i18next";
 import { toast } from "sonner";
-import { ShowModalLogs } from "../../web-server/show-modal-logs";
-import { TerminalModal } from "../../web-server/terminal-modal";
-import { GPUSupportModal } from "../gpu-support-modal";
 
 export const ShowHanzoActions = () => {
-	const { t } = useTranslation("settings");
-	const { mutateAsync: reloadServer, isLoading } =
-		api.settings.reloadServer.useMutation();
+    const { t } = useTranslation("settings");
+    const { mutate: restart, isLoading } = api.server.restartHanzo.useMutation({
+        onSuccess: () => {
+            toast.success(t("settings.server.actions.restart.success"));
+        },
+        onError: (error) => {
+            toast.error(
+                t("settings.server.actions.restart.error", { error: error.message })
+            );
+        },
+    });
 
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild disabled={isLoading}>
-				<Button isLoading={isLoading} variant="outline">
-					{t("settings.server.webServer.server.label")}
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent className="w-56" align="start">
-				<DropdownMenuLabel>
-					{t("settings.server.webServer.actions")}
-				</DropdownMenuLabel>
-				<DropdownMenuSeparator />
-				<DropdownMenuGroup>
-					<DropdownMenuItem
-						onClick={async () => {
-							await reloadServer()
-								.then(async () => {
-									toast.success("Server Reloaded");
-								})
-								.catch(() => {
-									toast.success("Server Reloaded");
-								});
-						}}
-						className="cursor-pointer"
-					>
-						<span>{t("settings.server.webServer.reload")}</span>
-					</DropdownMenuItem>
-					<TerminalModal serverId="local">
-						<span>{t("settings.common.enterTerminal")}</span>
-					</TerminalModal>
-					<ShowModalLogs appName="hanzo">
-						<DropdownMenuItem
-							className="cursor-pointer"
-							onSelect={(e) => e.preventDefault()}
-						>
-							{t("settings.server.webServer.watchLogs")}
-						</DropdownMenuItem>
-					</ShowModalLogs>
-					<GPUSupportModal />
-					<UpdateServerIp>
-						<DropdownMenuItem
-							className="cursor-pointer"
-							onSelect={(e) => e.preventDefault()}
-						>
-							{t("settings.server.webServer.updateServerIp")}
-						</DropdownMenuItem>
-					</UpdateServerIp>
-				</DropdownMenuGroup>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-};
+    return (
+        <div className="flex flex-col space-y-2 rounded-md border p-4">
+            <span className="text-sm font-medium">
+                {t("settings.server.actions.hanzo.title")}
+            </span>
+            <span className="text-xs text-muted-foreground">
+                {t("settings.server.actions.hanzo.description")}
+            </span>
+            <div className="mt-2 flex gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => restart()}
+                    disabled={isLoading}
+                    className="flex gap-1"
+                >
+                    <ShieldIcon className="h-4 w-4" />
+                    {t("settings.server.actions.restart.label")}
+                </Button>
+            </div>
+        </div>
+    );
+}; 
