@@ -1,43 +1,22 @@
-import { chmodSync, existsSync, mkdirSync } from "node:fs";
-import { paths } from "../constants";
+// Paths configuration for Hanzo setup
 
-const createDirectoryIfNotExist = (dirPath: string) => {
-	if (!existsSync(dirPath)) {
-		mkdirSync(dirPath, { recursive: true });
-		console.log(`Directory created: ${dirPath}`);
-	}
-};
-
-export const setupDirectories = () => {
-	const {
-		APPLICATIONS_PATH,
-		BASE_PATH,
-		CERTIFICATES_PATH,
-		DYNAMIC_TRAEFIK_PATH,
-		LOGS_PATH,
-		MAIN_TRAEFIK_PATH,
-		MONITORING_PATH,
-		SSH_PATH,
-	} = paths();
-	const directories = [
-		BASE_PATH,
-		MAIN_TRAEFIK_PATH,
-		DYNAMIC_TRAEFIK_PATH,
-		LOGS_PATH,
-		APPLICATIONS_PATH,
-		SSH_PATH,
-		CERTIFICATES_PATH,
-		MONITORING_PATH,
-	];
-
-	for (const dir of directories) {
-		try {
-			createDirectoryIfNotExist(dir);
-			if (dir === SSH_PATH) {
-				chmodSync(SSH_PATH, "700");
-			}
-		} catch (error) {
-			console.log(error, " On path: ", dir);
-		}
-	}
+/**
+ * Returns paths for various directories used by Hanzo
+ * @param isServer Whether paths are for server (absolute) or client (relative)
+ */
+export const paths = (isServer = false) => {
+  const base = isServer ? "/etc/hanzo" : "./data";
+  
+  return {
+    APPLICATIONS_PATH: `${base}/applications`,
+    BACKUPS_PATH: `${base}/backups`,
+    SSH_PATH: `${base}/ssh`,
+    LOGS_PATH: `${base}/logs`,
+    STATIC_PATH: `${base}/static`,
+    COMPOSE_PATH: `${base}/compose`,
+    DATABASE_PATH: `${base}/database`,
+    DOMAINS_PATH: `${base}/domains`,
+    MONITORING_PATH: `${base}/monitoring`,
+    CONFIG_PATH: `${base}/config`,
+  };
 };

@@ -1,12 +1,12 @@
 import path from "node:path";
-import { paths } from "@hanzo/core/constants";
+import { paths } from "./config-paths";
 import {
 	TRAEFIK_PORT,
 	TRAEFIK_SSL_PORT,
 	TRAEFIK_VERSION,
 	getDefaultMiddlewares,
 	getDefaultServerTraefikConfig,
-} from "@hanzo/core/setup/traefik-setup";
+} from "./traefik-setup";
 import { recreateDirectory } from "../utils/filesystem/directory";
 
 import slug from "slugify";
@@ -39,7 +39,7 @@ export const serverSetup = async (
 	if (serverId !== "local") {
 		throw new Error("Remote server management has been removed. Use local server setup only.");
 	}
-	
+
 	const { LOGS_PATH } = paths();
 	const logDir = path.join(LOGS_PATH, "local-server");
 
