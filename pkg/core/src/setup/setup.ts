@@ -23,7 +23,16 @@ export const getRemoteDocker = async (serverId?: string) => {
     exec: async (command: string, args: string[] = []) => ({ stdout: "", stderr: "" }),
     swarmInspect: async () => ({ JoinTokens: { Worker: "worker-token", Manager: "manager-token" } }),
     version: async () => ({ Version: "24.0.5" }),
-    listNodes: async () => []
+    listNodes: async () => [],
+    getContainer: (id: string) => ({
+      inspect: async () => ({}),
+      start: async () => ({}),
+      stop: async () => ({}),
+      remove: async () => ({})
+    }),
+    createContainer: async (options: any) => ({ id: "container-id", start: async () => ({}) }),
+    listContainers: async (options?: any) => ([]),
+    pull: async (image: string) => ({})
   };
 };
 
