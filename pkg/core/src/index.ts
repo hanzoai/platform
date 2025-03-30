@@ -40,7 +40,9 @@ export * from "./services/compose";
 
 // Utility functions
 export * from "./utils/scheduling/backup";
-export { rebuildDatabase } from "./utils/databases/rebuild";
+// Explicitly import and rename to avoid conflicts
+import { rebuildDatabase as rebuildDatabaseUtil } from "./utils/databases/rebuild";
+export { rebuildDatabaseUtil as rebuildDatabase };
 
 // Setup
 export * from "./setup/config-paths";
