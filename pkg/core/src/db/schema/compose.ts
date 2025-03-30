@@ -7,6 +7,7 @@ import { pgTable, text } from "drizzle-orm/pg-core";
 export const compose = pgTable("compose", {
     composeId: text("composeId"),
     appName: text("appName"),
+    serverId: text("serverId"),
 });
 
 // Provide empty implementations for other exports that might be used

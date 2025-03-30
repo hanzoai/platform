@@ -163,7 +163,7 @@ export const aiRouter = createTRPCRouter({
 			// Compose functionality has been removed
 			throw new TRPCError({
 				code: "BAD_REQUEST",
-				message: "Docker Compose deployment functionality has been removed",
+				message: "Compose deployment functionality has been removed",
 			});
 		}),
 });

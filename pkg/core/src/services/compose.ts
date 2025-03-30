@@ -149,6 +149,41 @@ export interface Compose {
   lastDeployedAt: string | null;
   status: "idle" | "deploying" | "deployed" | "error";
   errorMessage: string | null;
+
+  // Fields for Compose file management
+  composeFile?: string;
+  composePath?: string;
+  composeType?: string;
+
+  // Source type fields
+  sourceType?: "git" | "custom" | "template" | "raw";
+
+  // For git providers
+  repository?: string;
+  owner?: string;
+  branch?: string;
+  githubId?: string;
+
+  // For GitLab provider
+  gitlabId?: string;
+  gitlabPathNamespace?: string;
+  gitlabBranch?: string;
+
+  // For Bitbucket provider
+  bitbucketRepository?: string;
+  bitbucketOwner?: string;
+  bitbucketBranch?: string;
+  bitbucketId?: string;
+
+  // For custom git setup
+  customGitUrl?: string;
+  customGitBranch?: string;
+  customGitSSHKeyId?: string;
+
+  // Deployment configuration
+  isolatedDeployment?: boolean;
+  randomize?: boolean;
+  suffix?: string;
 }
 
 // Mock implementation for development
@@ -175,7 +210,7 @@ export const createCompose = async (
   // In a real implementation, this would insert into the database
   const id = `compose_${Date.now()}`;
   const now = new Date().toISOString();
-  
+
   const newCompose: Compose = {
     id,
     name,
@@ -188,9 +223,9 @@ export const createCompose = async (
     status: "idle",
     errorMessage: null,
   };
-  
+
   mockComposes.push(newCompose);
-  
+
   return newCompose;
 };
 
@@ -204,13 +239,26 @@ export const updateCompose = async (
   // In a real implementation, this would update the database
   const index = mockComposes.findIndex(compose => compose.id === id);
   if (index === -1) return null;
-  
+
+  const existingCompose = mockComposes[index];
+
+  if (!existingCompose) return null;
+
+  // Ensure all required fields are preserved
   mockComposes[index] = {
-    ...mockComposes[index],
+    ...existingCompose,
     ...data,
+    id: existingCompose.id, // Keep the existing ID
+    createdAt: existingCompose.createdAt, // Keep the existing createdAt
+    name: data.name ?? existingCompose.name, // Ensure name is not undefined
+    specification: data.specification ?? existingCompose.specification, // Ensure specification is not undefined
+    serverId: data.serverId ?? existingCompose.serverId // Ensure serverId is not undefined
   };
-  
-  return mockComposes[index];
+
+  if (mockComposes && index >= 0 && index < mockComposes.length) {
+    return mockComposes[index];
+  }
+  return null;
 };
 
 /**
@@ -231,7 +279,7 @@ export const listComposes = async (serverId?: string): Promise<Compose[]> => {
   if (serverId) {
     return mockComposes.filter(compose => compose.serverId === serverId);
   }
-  
+
   return mockComposes;
 };
 
@@ -249,26 +297,26 @@ export const deployCompose = async (
   // In a real implementation, this would deploy to a server
   const composeData = await findComposeById(composeId);
   if (!composeData) return null;
-  
+
   // Update status to deploying
   await updateCompose(composeId, { status: "deploying" });
-  
+
   try {
     // Simulate deployment
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // Update status to deployed
-    await updateCompose(composeId, { 
-      status: "deployed", 
-      lastDeployedAt: new Date().toISOString() 
+    await updateCompose(composeId, {
+      status: "deployed",
+      lastDeployedAt: new Date().toISOString()
     });
-    
+
     return findComposeById(composeId);
   } catch (error) {
     // Update status to error
-    await updateCompose(composeId, { 
-      status: "error", 
-      errorMessage: error instanceof Error ? error.message : String(error) 
+    await updateCompose(composeId, {
+      status: "error",
+      errorMessage: error instanceof Error ? error.message : String(error)
     });
     return findComposeById(composeId);
   }
@@ -288,20 +336,20 @@ export const stopCompose = async (
   // In a real implementation, this would stop containers on a server
   const composeData = await findComposeById(composeId);
   if (!composeData) return null;
-  
+
   try {
     // Simulate stopping
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // Update status to idle
     await updateCompose(composeId, { status: "idle" });
-    
+
     return findComposeById(composeId);
   } catch (error) {
     // Update status to error
-    await updateCompose(composeId, { 
-      status: "error", 
-      errorMessage: error instanceof Error ? error.message : String(error) 
+    await updateCompose(composeId, {
+      status: "error",
+      errorMessage: error instanceof Error ? error.message : String(error)
     });
     return findComposeById(composeId);
   }
