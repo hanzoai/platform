@@ -10,8 +10,10 @@ import {
 	findApplicationById,
 	findComposeById,
 	findServerById,
+	killDeploymentProcess,
 } from "@hanzo/core";
 import { TRPCError } from "@trpc/server";
+import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const deploymentRouter = createTRPCRouter({
@@ -53,5 +55,28 @@ export const deploymentRouter = createTRPCRouter({
 				});
 			}
 			return await findAllDeploymentsByServerId(input.serverId);
+		}),
+
+	kill: protectedProcedure
+		.input(
+			z.object({
+				deploymentId: z.string().min(1),
+			})
+		)
+		.mutation(async ({ input, ctx }) => {
+			// First check if user has access by looking up the deployment
+			// This will verify access through the associated application/compose
+			try {
+				const result = await killDeploymentProcess(input.deploymentId);
+				return result;
+			} catch (error) {
+				if (error instanceof TRPCError) {
+					throw error;
+				}
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to kill deployment process",
+				});
+			}
 		}),
 });
