@@ -216,7 +216,15 @@ const getImageName = (application: ApplicationNested) => {
 	}
 
 	if (registry) {
-		return join(registry.registryUrl, registry.imagePrefix || "", appName);
+		// Fix: Don't use path.join for URLs - it causes issues with registry URLs like ghcr.io
+		const parts = [registry.registryUrl];
+		if (registry.imagePrefix) {
+			parts.push(registry.imagePrefix);
+		}
+		parts.push(appName);
+		
+		// Join with forward slash, removing any double slashes
+		return parts.filter(Boolean).join('/').replace(/\/+/g, '/');
 	}
 
 	return `${appName}:latest`;
