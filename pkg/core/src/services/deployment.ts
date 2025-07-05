@@ -16,7 +16,7 @@ import {
 	updateApplicationStatus,
 } from "./application";
 
-import { execAsyncRemote } from "@hanzo/core/utils/process/execAsync";
+import { execAsyncRemote, killProcess, killRemoteProcess } from "@hanzo/core/utils/process/execAsync";
 
 export type Deployment = typeof deployments.$inferSelect;
 
@@ -267,6 +267,72 @@ export const createServerDeployment = async ({
 		throw new TRPCError({
 			code: "BAD_REQUEST",
 			message: `Error creating server deployment: ${error instanceof Error ? error.message : String(error)}`,
+		});
+	}
+};
+
+/**
+ * Kill a deployment process
+ * @param deploymentId - The deployment ID to kill
+ * @returns The updated deployment
+ */
+export const killDeploymentProcess = async (deploymentId: string) => {
+	const deployment = await db.query.deployments.findFirst({
+		where: eq(deployments.deploymentId, deploymentId),
+		with: {
+			application: true,
+		},
+	});
+
+	if (!deployment) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Deployment not found",
+		});
+	}
+
+	if (!deployment.pid) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "No process ID found for this deployment",
+		});
+	}
+
+	if (deployment.status !== "running") {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Deployment is not running",
+		});
+	}
+
+	try {
+		// Kill the process
+		if (deployment.application?.serverId) {
+			await killRemoteProcess(deployment.application.serverId, deployment.pid);
+		} else {
+			await killProcess(deployment.pid);
+		}
+
+		// Update deployment status
+		const updatedDeployment = await db
+			.update(deployments)
+			.set({
+				status: "error",
+				errorMessage: "Process killed by user",
+			})
+			.where(eq(deployments.deploymentId, deploymentId))
+			.returning();
+
+		// Update application status if applicable
+		if (deployment.applicationId) {
+			await updateApplicationStatus(deployment.applicationId, "error");
+		}
+
+		return updatedDeployment[0];
+	} catch (error) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: `Failed to kill process: ${error instanceof Error ? error.message : "Unknown error"}`,
 		});
 	}
 };
