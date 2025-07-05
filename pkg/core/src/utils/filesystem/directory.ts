@@ -30,8 +30,21 @@ export const recreateDirectoryRemote = async (
 export const removeDirectoryIfExistsContent = async (
 	path: string,
 ): Promise<void> => {
-	if (fs.existsSync(path) && fs.readdirSync(path).length !== 0) {
-		await execAsync(`rm -rf ${path}`);
+	// Critical security fix: Validate path to prevent accidental deletion of current directory
+	if (!path || path.trim() === "" || path.trim() === "/" || path.trim() === ".") {
+		console.error(`[CRITICAL] Attempted to delete invalid path: '${path}'`);
+		throw new Error("Invalid path: Cannot delete root or current directory");
+	}
+	
+	// Additional validation: ensure path is absolute and within expected directories
+	const normalizedPath = path.trim();
+	if (!normalizedPath.startsWith("/")) {
+		console.error(`[CRITICAL] Path must be absolute: '${path}'`);
+		throw new Error("Path must be absolute");
+	}
+	
+	if (fs.existsSync(normalizedPath) && fs.readdirSync(normalizedPath).length !== 0) {
+		await execAsync(`rm -rf ${normalizedPath}`);
 	}
 };
 
