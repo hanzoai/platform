@@ -1,0 +1,96 @@
+# Hanzo Platform - Development Mode with Hot Reload
+# For active development with source code mounting
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: hanzo
+      POSTGRES_PASSWORD: hanzo123
+      POSTGRES_DB: hanzo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hanzo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Platform Development Server
+  platform-dev:
+    image: node:22-alpine
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    environment:
+      # Database
+      DATABASE_URL: postgresql://hanzo:hanzo123@postgres:5432/hanzo
+      REDIS_URL: redis://redis:6379
+      
+      # Development settings
+      NODE_ENV: development
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: dev-secret-key-not-for-production
+      
+      # Platform settings
+      PLATFORM_URL: http://localhost:3000
+      
+      # Admin credentials
+      ADMIN_EMAIL: admin@localhost
+      ADMIN_PASSWORD: admin
+      
+      # Enable features
+      DISABLE_SIGNUP: "false"
+      ENABLE_MCP: "true"
+      
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Mount source code
+      - .:/app:cached
+      
+      # Docker socket
+      - /var/run/docker.sock:/var/run/docker.sock
+      
+      # Node modules cache
+      - node_modules:/app/node_modules
+      - pnpm_store:/app/.pnpm-store
+      
+    command: >
+      sh -c "
+        apk add --no-cache git docker-cli &&
+        npm install -g pnpm@10.0.0 &&
+        pnpm install &&
+        pnpm core:build &&
+        cd app/hanzo &&
+        pnpm run migration:run &&
+        cd /app &&
+        pnpm hanzo:dev
+      "
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  node_modules:
+  pnpm_store:
