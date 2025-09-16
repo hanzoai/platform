@@ -1,10 +1,10 @@
-import { generateRandomHash } from "@hanzo/core";
+import type { ComposeSpecification } from "@dokploy/server";
 import {
 	addSuffixToAllNetworks,
+	addSuffixToNetworksRoot,
 	addSuffixToServiceNetworks,
-} from "@hanzo/core";
-import { addSuffixToNetworksRoot } from "@hanzo/core";
-import type { ComposeSpecification } from "@hanzo/core";
+	generateRandomHash,
+} from "@dokploy/server";
 import { load } from "js-yaml";
 import { expect, test } from "vitest";
 
@@ -266,13 +266,13 @@ services:
         aliases:
           - app
       backend:
-      hanzo-network:
+      dokploy-network:
 
   worker:
     image: worker:latest
     networks:
       - backend
-      - hanzo-network
+      - dokploy-network
 
 networks:
   frontend:
@@ -284,7 +284,7 @@ networks:
     driver_opts:
       com.docker.network.bridge.enable_icc: "true"
 
-  hanzo-network:
+  dokploy-network:
     driver: bridge
 
 `;
@@ -300,13 +300,13 @@ services:
         aliases:
           - app
       backend-testhash:
-      hanzo-network:
+      dokploy-network:
 
   worker:
     image: worker:latest
     networks:
       - backend-testhash
-      - hanzo-network
+      - dokploy-network
 
 networks:
   frontend-testhash:
@@ -318,14 +318,14 @@ networks:
     driver_opts:
       com.docker.network.bridge.enable_icc: "true"
   
-  hanzo-network:
+  dokploy-network:
     driver: bridge
 
 
   
 `);
 
-test("Expect don't add suffix to hanzo-network in compose file with multiple services and complex network configurations", () => {
+test("Expect don't add suffix to dokploy-network in compose file with multiple services and complex network configurations", () => {
 	const composeData = load(composeFile4) as ComposeSpecification;
 
 	const suffix = "testhash";

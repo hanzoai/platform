@@ -1,14 +1,17 @@
-import { db } from "@hanzo/core/db";
-import { type apiCreateMariaDB, backups, mariadb } from "@hanzo/core/db/schema";
-import { buildAppName } from "@hanzo/core/db/schema";
-import { generatePassword } from "@hanzo/core/templates/utils";
-import { buildMariadb } from "@hanzo/core/utils/databases/mariadb";
-import { pullImage } from "@hanzo/core/utils/docker/utils";
+import { db } from "@dokploy/server/db";
+import {
+	type apiCreateMariaDB,
+	backups,
+	buildAppName,
+	mariadb,
+} from "@dokploy/server/db/schema";
+import { generatePassword } from "@dokploy/server/templates";
+import { buildMariadb } from "@dokploy/server/utils/databases/mariadb";
+import { pullImage } from "@dokploy/server/utils/docker/utils";
+import { execAsyncRemote } from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq, getTableColumns } from "drizzle-orm";
 import { validUniqueServerAppName } from "./project";
-
-import { execAsyncRemote } from "@hanzo/core/utils/process/execAsync";
 
 export type Mariadb = typeof mariadb.$inferSelect;
 
@@ -53,12 +56,17 @@ export const findMariadbById = async (mariadbId: string) => {
 	const result = await db.query.mariadb.findFirst({
 		where: eq(mariadb.mariadbId, mariadbId),
 		with: {
-			project: true,
+			environment: {
+				with: {
+					project: true,
+				},
+			},
 			mounts: true,
 			server: true,
 			backups: {
 				with: {
 					destination: true,
+					deployments: true,
 				},
 			},
 		},

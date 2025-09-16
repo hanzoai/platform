@@ -1,3 +1,8 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 import {
 	AlertDialog,
 	AlertDialogContent,
@@ -19,11 +24,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { api } from "@/utils/api";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
 
 const PasswordSchema = z.object({
 	password: z.string().min(8, {
@@ -63,7 +63,7 @@ export const Disable2FA = () => {
 			toast.success("2FA disabled successfully");
 			utils.user.get.invalidate();
 			setIsOpen(false);
-		} catch (_error) {
+		} catch {
 			form.setError("password", {
 				message: "Connection error. Please try again.",
 			});

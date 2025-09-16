@@ -1,19 +1,23 @@
 import path from "node:path";
-import { paths } from "@hanzo/core/constants";
-import { db } from "@hanzo/core/db";
+import { paths } from "@dokploy/server/constants";
+import { db } from "@dokploy/server/db";
 import {
-	type ServiceType,
 	type apiCreateMount,
 	mounts,
-} from "@hanzo/core/db/schema";
+	type ServiceType,
+} from "@dokploy/server/db/schema";
 import {
 	createFile,
+	encodeBase64,
 	getCreateFileCommand,
-} from "@hanzo/core/utils/docker/utils";
-import { removeFileOrDirectory } from "@hanzo/core/utils/filesystem/directory";
-import { execAsyncRemote } from "@hanzo/core/utils/process/execAsync";
+} from "@dokploy/server/utils/docker/utils";
+import { removeFileOrDirectory } from "@dokploy/server/utils/filesystem/directory";
+import {
+	execAsync,
+	execAsyncRemote,
+} from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
-import { type SQL, eq, sql } from "drizzle-orm";
+import { eq, type SQL, sql } from "drizzle-orm";
 
 export type Mount = typeof mounts.$inferSelect;
 
@@ -101,13 +105,69 @@ export const findMountById = async (mountId: string) => {
 	const mount = await db.query.mounts.findFirst({
 		where: eq(mounts.mountId, mountId),
 		with: {
-			application: true,
-			postgres: true,
-			mariadb: true,
-			mongo: true,
-			mysql: true,
-			redis: true,
-			compose: true,
+			application: {
+				with: {
+					environment: {
+						with: {
+							project: true,
+						},
+					},
+				},
+			},
+			postgres: {
+				with: {
+					environment: {
+						with: {
+							project: true,
+						},
+					},
+				},
+			},
+			mariadb: {
+				with: {
+					environment: {
+						with: {
+							project: true,
+						},
+					},
+				},
+			},
+			mongo: {
+				with: {
+					environment: {
+						with: {
+							project: true,
+						},
+					},
+				},
+			},
+			mysql: {
+				with: {
+					environment: {
+						with: {
+							project: true,
+						},
+					},
+				},
+			},
+			redis: {
+				with: {
+					environment: {
+						with: {
+							project: true,
+						},
+					},
+				},
+			},
+			compose: {
+				with: {
+					environment: {
+						with: {
+							project: true,
+						},
+					},
+				},
+			},
 		},
 	});
 	if (!mount) {
@@ -116,20 +176,42 @@ export const findMountById = async (mountId: string) => {
 			message: "Mount not found",
 		});
 	}
+	return mount;
+};
 
-	// Add serverId to compose if it's present but doesn't have serverId
-	if (mount.compose && !('serverId' in mount.compose)) {
-		(mount.compose as ComposeWithServerId).serverId = null;
+export const findMountOrganizationId = async (mountId: string) => {
+	const mount = await findMountById(mountId);
+
+	if (mount.application) {
+		return mount.application.environment.project.organizationId;
+	}
+	if (mount.postgres) {
+		return mount.postgres.environment.project.organizationId;
+	}
+	if (mount.mariadb) {
+		return mount.mariadb.environment.project.organizationId;
+	}
+	if (mount.mongo) {
+		return mount.mongo.environment.project.organizationId;
+	}
+	if (mount.mysql) {
+		return mount.mysql.environment.project.organizationId;
+	}
+	if (mount.redis) {
+		return mount.redis.environment.project.organizationId;
 	}
 
-	return mount;
+	if (mount.compose) {
+		return mount.compose.environment.project.organizationId;
+	}
+	return null;
 };
 
 export const updateMount = async (
 	mountId: string,
 	mountData: Partial<Mount>,
 ) => {
-	return await db.transaction(async (tx) => {
+	const mount = await db.transaction(async (tx) => {
 		const mount = await tx
 			.update(mounts)
 			.set({
@@ -146,12 +228,13 @@ export const updateMount = async (
 			});
 		}
 
-		if (mount.type === "file") {
-			await deleteFileMount(mountId);
-			await createFileMount(mountId);
-		}
-		return mount;
+		return await findMountById(mountId);
 	});
+
+	if (mount.type === "file") {
+		await updateFileMount(mountId);
+	}
+	return mount;
 };
 
 export const findMountsByApplicationId = async (
@@ -203,6 +286,26 @@ export const deleteMount = async (mountId: string) => {
 	return deletedMount[0];
 };
 
+export const updateFileMount = async (mountId: string) => {
+	const mount = await findMountById(mountId);
+	if (!mount || !mount.filePath) return;
+	const basePath = await getBaseFilesPath(mountId);
+	const fullPath = path.join(basePath, mount.filePath);
+
+	try {
+		const serverId = await getServerId(mount);
+		const encodedContent = encodeBase64(mount.content || "");
+		const command = `echo "${encodedContent}" | base64 -d > ${fullPath}`;
+		if (serverId) {
+			await execAsyncRemote(serverId, command);
+		} else {
+			await execAsync(command);
+		}
+	} catch {
+		console.log("Error updating file mount");
+	}
+};
+
 export const deleteFileMount = async (mountId: string) => {
 	const mount = await findMountById(mountId);
 	if (!mount.filePath) return;
@@ -217,7 +320,7 @@ export const deleteFileMount = async (mountId: string) => {
 		} else {
 			await removeFileOrDirectory(fullPath);
 		}
-	} catch (_error) { }
+	} catch {}
 };
 
 export const getBaseFilesPath = async (mountId: string) => {
@@ -230,42 +333,36 @@ export const getBaseFilesPath = async (mountId: string) => {
 	if (mount.serviceType === "application" && mount.application) {
 		const { APPLICATIONS_PATH } = paths(!!mount.application.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.application.appName || "";
+		appName = mount.application.appName;
 	} else if (mount.serviceType === "postgres" && mount.postgres) {
 		const { APPLICATIONS_PATH } = paths(!!mount.postgres.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.postgres.appName || "";
+		appName = mount.postgres.appName;
 	} else if (mount.serviceType === "mariadb" && mount.mariadb) {
 		const { APPLICATIONS_PATH } = paths(!!mount.mariadb.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.mariadb.appName || "";
+		appName = mount.mariadb.appName;
 	} else if (mount.serviceType === "mongo" && mount.mongo) {
 		const { APPLICATIONS_PATH } = paths(!!mount.mongo.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.mongo.appName || "";
+		appName = mount.mongo.appName;
 	} else if (mount.serviceType === "mysql" && mount.mysql) {
 		const { APPLICATIONS_PATH } = paths(!!mount.mysql.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.mysql.appName || "";
+		appName = mount.mysql.appName;
 	} else if (mount.serviceType === "redis" && mount.redis) {
 		const { APPLICATIONS_PATH } = paths(!!mount.redis.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.redis.appName || "";
+		appName = mount.redis.appName;
 	} else if (mount.serviceType === "compose" && mount.compose) {
 		const { COMPOSE_PATH } = paths(!!mount.compose.serverId);
-		appName = mount.compose.appName || "";
+		appName = mount.compose.appName;
 		absoluteBasePath = path.resolve(COMPOSE_PATH);
 	}
 	directoryPath = path.join(absoluteBasePath, appName, "files");
 
 	return directoryPath;
 };
-
-export interface ComposeWithServerId {
-	composeId: string | null;
-	appName: string | null;
-	serverId: string | null;
-}
 
 type MountNested = Awaited<ReturnType<typeof findMountById>>;
 export const getServerId = async (mount: MountNested) => {
