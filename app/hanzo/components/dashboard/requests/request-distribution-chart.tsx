@@ -1,11 +1,4 @@
 import {
-	type ChartConfig,
-	ChartContainer,
-	ChartTooltip,
-	ChartTooltipContent,
-} from "@/components/ui/chart";
-import { api } from "@/utils/api";
-import {
 	Area,
 	AreaChart,
 	CartesianGrid,
@@ -13,6 +6,20 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
+import {
+	type ChartConfig,
+	ChartContainer,
+	ChartTooltip,
+	ChartTooltipContent,
+} from "@/components/ui/chart";
+import { api } from "@/utils/api";
+
+export interface RequestDistributionChartProps {
+	dateRange?: {
+		from: Date | undefined;
+		to: Date | undefined;
+	};
+}
 
 const chartConfig = {
 	views: {
@@ -24,10 +31,22 @@ const chartConfig = {
 	},
 } satisfies ChartConfig;
 
-export const RequestDistributionChart = () => {
-	const { data: stats } = api.settings.readStats.useQuery(undefined, {
-		refetchInterval: 1333,
-	});
+export const RequestDistributionChart = ({
+	dateRange,
+}: RequestDistributionChartProps) => {
+	const { data: stats } = api.settings.readStats.useQuery(
+		{
+			dateRange: dateRange
+				? {
+						start: dateRange.from?.toISOString(),
+						end: dateRange.to?.toISOString(),
+					}
+				: undefined,
+		},
+		{
+			refetchInterval: 1333,
+		},
+	);
 
 	return (
 		<ResponsiveContainer width="100%" height={200}>

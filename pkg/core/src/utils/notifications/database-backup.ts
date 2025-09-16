@@ -8,6 +8,7 @@ import {
 	sendDiscordNotification,
 	sendEmailNotification,
 	sendGotifyNotification,
+	sendNtfyNotification,
 	sendSlackNotification,
 	sendTelegramNotification,
 } from "./utils";
@@ -42,11 +43,12 @@ export const sendDatabaseBackupNotifications = async ({
 			telegram: true,
 			slack: true,
 			gotify: true,
+			ntfy: true,
 		},
 	});
 
 	for (const notification of notificationList) {
-		const { email, discord, telegram, slack, gotify } = notification;
+		const { email, discord, telegram, slack, gotify, ntfy } = notification;
 
 		if (email) {
 			const template = await renderAsync(
@@ -142,6 +144,21 @@ export const sendDatabaseBackupNotifications = async ({
 					`${decorate("📂", `Database Name: ${databaseName}`)}` +
 					`${decorate("🕒", `Date: ${date.toLocaleString()}`)}` +
 					`${type === "error" && errorMessage ? decorate("❌", `Error:\n${errorMessage}`) : ""}`,
+			);
+		}
+
+		if (ntfy) {
+			await sendNtfyNotification(
+				ntfy,
+				`Database Backup ${type === "success" ? "Successful" : "Failed"}`,
+				`${type === "success" ? "white_check_mark" : "x"}`,
+				"",
+				`🛠Project: ${projectName}\n` +
+					`⚙️Application: ${applicationName}\n` +
+					`❔Type: ${databaseType}\n` +
+					`📂Database Name: ${databaseName}` +
+					`🕒Date: ${date.toLocaleString()}\n` +
+					`${type === "error" && errorMessage ? `❌Error:\n${errorMessage}` : ""}`,
 			);
 		}
 

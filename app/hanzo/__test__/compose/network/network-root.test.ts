@@ -1,6 +1,5 @@
-import { generateRandomHash } from "@hanzo/core";
-import { addSuffixToNetworksRoot } from "@hanzo/core";
-import type { ComposeSpecification } from "@hanzo/core";
+import type { ComposeSpecification } from "@dokploy/server";
+import { addSuffixToNetworksRoot, generateRandomHash } from "@dokploy/server";
 import { load } from "js-yaml";
 import { expect, test } from "vitest";
 
@@ -287,13 +286,13 @@ services:
   web:
     image: nginx:latest
     networks:
-      - hanzo-network
+      - dokploy-network
 
 networks:
-  hanzo-network:
+  dokploy-network:
 `;
 
-test("It shoudn't add suffix to hanzo-network", () => {
+test("It shoudn't add suffix to dokploy-network", () => {
 	const composeData = load(composeFile7) as ComposeSpecification;
 
 	const suffix = generateRandomHash();
@@ -305,6 +304,6 @@ test("It shoudn't add suffix to hanzo-network", () => {
 
 	expect(networks).toBeDefined();
 	for (const networkKey of Object.keys(networks)) {
-		expect(networkKey).toContain("hanzo-network");
+		expect(networkKey).toContain("dokploy-network");
 	}
 });

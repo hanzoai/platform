@@ -1,3 +1,15 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+	AlertTriangle,
+	Mail,
+	MessageCircleMore,
+	PenBoxIcon,
+	PlusIcon,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 import {
 	DiscordIcon,
 	SlackIcon,
@@ -27,18 +39,6 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-	AlertTriangle,
-	Mail,
-	MessageCircleMore,
-	PenBoxIcon,
-	PlusIcon,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
 
 const notificationBaseSchema = z.object({
 	name: z.string().min(1, {
@@ -101,6 +101,15 @@ export const notificationSchema = z.discriminatedUnion("type", [
 			decoration: z.boolean().default(true),
 		})
 		.merge(notificationBaseSchema),
+	z
+		.object({
+			type: z.literal("ntfy"),
+			serverUrl: z.string().min(1, { message: "Server URL is required" }),
+			topic: z.string().min(1, { message: "Topic is required" }),
+			accessToken: z.string().min(1, { message: "Access Token is required" }),
+			priority: z.number().min(1).max(5).default(3),
+		})
+		.merge(notificationBaseSchema),
 ]);
 
 export const notificationsMap = {
@@ -123,6 +132,10 @@ export const notificationsMap = {
 	gotify: {
 		icon: <MessageCircleMore size={29} className="text-muted-foreground" />,
 		label: "Gotify",
+	},
+	ntfy: {
+		icon: <MessageCircleMore size={29} className="text-muted-foreground" />,
+		label: "ntfy",
 	},
 };
 
@@ -155,6 +168,8 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 		api.notification.testEmailConnection.useMutation();
 	const { mutateAsync: testGotifyConnection, isLoading: isLoadingGotify } =
 		api.notification.testGotifyConnection.useMutation();
+	const { mutateAsync: testNtfyConnection, isLoading: isLoadingNtfy } =
+		api.notification.testNtfyConnection.useMutation();
 	const slackMutation = notificationId
 		? api.notification.updateSlack.useMutation()
 		: api.notification.createSlack.useMutation();
@@ -170,6 +185,9 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 	const gotifyMutation = notificationId
 		? api.notification.updateGotify.useMutation()
 		: api.notification.createGotify.useMutation();
+	const ntfyMutation = notificationId
+		? api.notification.updateNtfy.useMutation()
+		: api.notification.createNtfy.useMutation();
 
 	const form = useForm<NotificationSchema>({
 		defaultValues: {
@@ -266,6 +284,20 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 					name: notification.name,
 					dockerCleanup: notification.dockerCleanup,
 				});
+			} else if (notification.notificationType === "ntfy") {
+				form.reset({
+					appBuildError: notification.appBuildError,
+					appDeploy: notification.appDeploy,
+					dokployRestart: notification.dokployRestart,
+					databaseBackup: notification.databaseBackup,
+					type: notification.notificationType,
+					accessToken: notification.ntfy?.accessToken,
+					topic: notification.ntfy?.topic,
+					priority: notification.ntfy?.priority,
+					serverUrl: notification.ntfy?.serverUrl,
+					name: notification.name,
+					dockerCleanup: notification.dockerCleanup,
+				});
 			}
 		} else {
 			form.reset();
@@ -278,6 +310,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 		discord: discordMutation,
 		email: emailMutation,
 		gotify: gotifyMutation,
+		ntfy: ntfyMutation,
 	};
 
 	const onSubmit = async (data: NotificationSchema) => {
@@ -366,6 +399,21 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				notificationId: notificationId || "",
 				gotifyId: notification?.gotifyId || "",
 			});
+		} else if (data.type === "ntfy") {
+			promise = ntfyMutation.mutateAsync({
+				appBuildError: appBuildError,
+				appDeploy: appDeploy,
+				dokployRestart: dokployRestart,
+				databaseBackup: databaseBackup,
+				serverUrl: data.serverUrl,
+				accessToken: data.accessToken,
+				topic: data.topic,
+				priority: data.priority,
+				name: data.name,
+				dockerCleanup: dockerCleanup,
+				notificationId: notificationId || "",
+				ntfyId: notification?.ntfyId || "",
+			});
 		}
 
 		if (promise) {
@@ -408,7 +456,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 					</Button>
 				)}
 			</DialogTrigger>
-			<DialogContent className="max-h-screen  overflow-y-auto sm:max-w-3xl">
+			<DialogContent className="sm:max-w-3xl">
 				<DialogHeader>
 					<DialogTitle>
 						{notificationId ? "Update" : "Add"} Notification
@@ -872,6 +920,83 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 										/>
 									</>
 								)}
+
+								{type === "ntfy" && (
+									<>
+										<FormField
+											control={form.control}
+											name="serverUrl"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Server URL</FormLabel>
+													<FormControl>
+														<Input placeholder="https://ntfy.sh" {...field} />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="topic"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Topic</FormLabel>
+													<FormControl>
+														<Input placeholder="deployments" {...field} />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="accessToken"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Access Token</FormLabel>
+													<FormControl>
+														<Input
+															placeholder="AzxcvbnmKjhgfdsa..."
+															{...field}
+														/>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="priority"
+											defaultValue={3}
+											render={({ field }) => (
+												<FormItem className="w-full">
+													<FormLabel>Priority</FormLabel>
+													<FormControl>
+														<Input
+															placeholder="3"
+															{...field}
+															onChange={(e) => {
+																const value = e.target.value;
+																if (value) {
+																	const port = Number.parseInt(value);
+																	if (port > 0 && port <= 5) {
+																		field.onChange(port);
+																	}
+																}
+															}}
+															type="number"
+														/>
+													</FormControl>
+													<FormDescription>
+														Message priority (1-5, default: 3)
+													</FormDescription>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+									</>
+								)}
 							</div>
 						</div>
 						<div className="flex flex-col gap-4">
@@ -904,7 +1029,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 									control={form.control}
 									name="appBuildError"
 									render={({ field }) => (
-										<FormItem className=" flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
+										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
 											<div className="space-y-0.5">
 												<FormLabel>App Build Error</FormLabel>
 												<FormDescription>
@@ -925,7 +1050,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 									control={form.control}
 									name="databaseBackup"
 									render={({ field }) => (
-										<FormItem className=" flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
+										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
 											<div className="space-y-0.5">
 												<FormLabel>Database Backup</FormLabel>
 												<FormDescription>
@@ -946,7 +1071,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 									control={form.control}
 									name="dockerCleanup"
 									render={({ field }) => (
-										<FormItem className=" flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
+										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
 											<div className="space-y-0.5">
 												<FormLabel>Docker Cleanup</FormLabel>
 												<FormDescription>
@@ -969,7 +1094,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 										control={form.control}
 										name="hanzoRestart"
 										render={({ field }) => (
-											<FormItem className=" flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
+											<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
 												<div className="space-y-0.5">
 													<FormLabel>Hanzo Restart</FormLabel>
 													<FormDescription>
@@ -992,7 +1117,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 										control={form.control}
 										name="serverThreshold"
 										render={({ field }) => (
-											<FormItem className=" flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
+											<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
 												<div className="space-y-0.5">
 													<FormLabel>Server Threshold</FormLabel>
 													<FormDescription>
@@ -1021,7 +1146,8 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 								isLoadingTelegram ||
 								isLoadingDiscord ||
 								isLoadingEmail ||
-								isLoadingGotify
+								isLoadingGotify ||
+								isLoadingNtfy
 							}
 							variant="secondary"
 							onClick={async () => {
@@ -1058,9 +1184,16 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 											priority: form.getValues("priority"),
 											decoration: form.getValues("decoration"),
 										});
+									} else if (type === "ntfy") {
+										await testNtfyConnection({
+											serverUrl: form.getValues("serverUrl"),
+											topic: form.getValues("topic"),
+											accessToken: form.getValues("accessToken"),
+											priority: form.getValues("priority"),
+										});
 									}
 									toast.success("Connection Success");
-								} catch (_err) {
+								} catch {
 									toast.error("Error testing the provider");
 								}
 							}}
