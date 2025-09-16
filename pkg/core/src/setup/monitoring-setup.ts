@@ -1,39 +1,42 @@
-// import { findServerById } from "@hanzo/core/services/server";
+import { findServerById } from "@dokploy/server/services/server";
 import type { ContainerCreateOptions } from "dockerode";
-import { IS_CLOUD, docker } from "../constants";
+import { IS_CLOUD } from "../constants";
 import { findUserById } from "../services/admin";
-import { getHanzoImageTag } from "../services/settings";
-import { pullImage } from "../utils/docker/utils";
-import { execAsync } from "../utils/process/execAsync";
-import { getRemoteDocker } from "./setup";
+import { getDokployImageTag } from "../services/settings";
+import { pullImage, pullRemoteImage } from "../utils/docker/utils";
+import { execAsync, execAsyncRemote } from "../utils/process/execAsync";
+import { getRemoteDocker } from "../utils/servers/remote-docker";
 
-/**
- * Stub implementation to maintain compatibility
- * Multi-server functionality has been removed
- */
-export const setupMonitoring = async (_serverId: string) => {
-	console.warn("Multi-server functionality has been removed. Use setupWebMonitoring instead.");
-	// Forward to web monitoring setup with default settings
-	const containerName = "hanzo-monitoring";
-	let imageName = "hanzo/monitoring:latest";
+export const setupMonitoring = async (serverId: string) => {
+	const server = await findServerById(serverId);
+
+	const containerName = "dokploy-monitoring";
+	let imageName = "dokploy/monitoring:latest";
 
 	if (
-		(getHanzoImageTag() !== "latest" ||
+		(getDokployImageTag() !== "latest" ||
 			process.env.NODE_ENV === "development") &&
 		!IS_CLOUD
 	) {
-		imageName = "hanzo/monitoring:canary";
+		imageName = "dokploy/monitoring:canary";
 	}
 
 	const settings: ContainerCreateOptions = {
 		name: containerName,
-		Env: [`METRICS_CONFIG=${JSON.stringify({})}`],
+		Env: [`METRICS_CONFIG=${JSON.stringify(server?.metricsConfig)}`],
 		Image: imageName,
 		HostConfig: {
+			// Memory: 100 * 1024 * 1024, // 100MB en bytes
+			// PidMode: "host",
+			// CapAdd: ["NET_ADMIN", "SYS_ADMIN"],
+			// Privileged: true,
+			RestartPolicy: {
+				Name: "always",
+			},
 			PortBindings: {
-				[`4500/tcp`]: [
+				[`${server.metricsConfig.server.port}/tcp`]: [
 					{
-						HostPort: "4500",
+						HostPort: server.metricsConfig.server.port.toString(),
 					},
 				],
 			},
@@ -42,20 +45,23 @@ export const setupMonitoring = async (_serverId: string) => {
 				"/sys:/host/sys:ro",
 				"/etc/os-release:/etc/os-release:ro",
 				"/proc:/host/proc:ro",
-				"/etc/hanzo/monitoring/monitoring.db:/app/monitoring.db",
+				"/etc/dokploy/monitoring/monitoring.db:/app/monitoring.db",
 			],
 			NetworkMode: "host",
 		},
 		ExposedPorts: {
-			[`4500/tcp`]: {},
+			[`${server.metricsConfig.server.port}/tcp`]: {},
 		},
 	};
-
+	const docker = await getRemoteDocker(serverId);
 	try {
-		await execAsync(
-			"mkdir -p /etc/hanzo/monitoring && touch /etc/hanzo/monitoring/monitoring.db",
+		await execAsyncRemote(
+			serverId,
+			"mkdir -p /etc/dokploy/monitoring && touch /etc/dokploy/monitoring/monitoring.db",
 		);
-		await pullImage(imageName);
+		if (serverId) {
+			await pullRemoteImage(imageName, serverId);
+		}
 
 		// Check if container exists
 		const container = docker.getContainer(containerName);
@@ -63,7 +69,7 @@ export const setupMonitoring = async (_serverId: string) => {
 			await container.inspect();
 			await container.remove({ force: true });
 			console.log("Removed existing container");
-		} catch (_error) {
+		} catch {
 			// Container doesn't exist, continue
 		}
 
@@ -80,15 +86,15 @@ export const setupMonitoring = async (_serverId: string) => {
 export const setupWebMonitoring = async (userId: string) => {
 	const user = await findUserById(userId);
 
-	const containerName = "hanzo-monitoring";
-	let imageName = "hanzo/monitoring:latest";
+	const containerName = "dokploy-monitoring";
+	let imageName = "dokploy/monitoring:latest";
 
 	if (
-		(getHanzoImageTag() !== "latest" ||
+		(getDokployImageTag() !== "latest" ||
 			process.env.NODE_ENV === "development") &&
 		!IS_CLOUD
 	) {
-		imageName = "hanzo/monitoring:canary";
+		imageName = "dokploy/monitoring:canary";
 	}
 
 	const settings: ContainerCreateOptions = {
@@ -100,6 +106,9 @@ export const setupWebMonitoring = async (userId: string) => {
 			// PidMode: "host",
 			// CapAdd: ["NET_ADMIN", "SYS_ADMIN"],
 			// Privileged: true,
+			RestartPolicy: {
+				Name: "always",
+			},
 			PortBindings: {
 				[`${user?.metricsConfig?.server?.port}/tcp`]: [
 					{
@@ -112,7 +121,7 @@ export const setupWebMonitoring = async (userId: string) => {
 				"/sys:/host/sys:ro",
 				"/etc/os-release:/etc/os-release:ro",
 				"/proc:/host/proc:ro",
-				"/etc/hanzo/monitoring/monitoring.db:/app/monitoring.db",
+				"/etc/dokploy/monitoring/monitoring.db:/app/monitoring.db",
 			],
 			// NetworkMode: "host",
 		},
@@ -120,27 +129,22 @@ export const setupWebMonitoring = async (userId: string) => {
 			[`${user?.metricsConfig?.server?.port}/tcp`]: {},
 		},
 	};
-
 	const docker = await getRemoteDocker();
 	try {
 		await execAsync(
-			"mkdir -p /etc/hanzo/monitoring && touch /etc/hanzo/monitoring/monitoring.db",
+			"mkdir -p /etc/dokploy/monitoring && touch /etc/dokploy/monitoring/monitoring.db",
 		);
-		// Use direct method instead of utility to avoid dependency issues
-		await docker.pull(imageName);
+		await pullImage(imageName);
 
+		const container = docker.getContainer(containerName);
 		try {
-			// Check if container exists
-			const container = docker.getContainer(containerName);
 			await container.inspect();
 			await container.remove({ force: true });
 			console.log("Removed existing container");
-		} catch (_error) {
-			// Container doesn't exist, continue
-		}
+		} catch {}
 
-		// Create and start the container
-		const newContainer = await docker.createContainer(settings);
+		await docker.createContainer(settings);
+		const newContainer = docker.getContainer(containerName);
 		await newContainer.start();
 
 		console.log("Monitoring Started ");

@@ -1,3 +1,5 @@
+import { Database, FolderUp, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { DialogAction } from "@/components/shared/dialog-action";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,8 +10,6 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
-import { Database, FolderUp, Loader2, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { HandleDestinations } from "./handle-destinations";
 
 export const ShowDestinations = () => {
@@ -55,10 +55,18 @@ export const ShowDestinations = () => {
 													key={destination.destinationId}
 													className="flex items-center justify-between bg-sidebar p-1 w-full rounded-lg"
 												>
-													<div className="flex items-center justify-between  p-3.5 rounded-lg bg-background border  w-full">
-														<span className="text-sm">
-															{index + 1}. {destination.name}
-														</span>
+													<div className="flex items-center justify-between p-3.5 rounded-lg bg-background border  w-full">
+														<div className="flex flex-col gap-1">
+															<span className="text-sm">
+																{index + 1}. {destination.name}
+															</span>
+															<span className="text-xs text-muted-foreground">
+																Created at:{" "}
+																{new Date(
+																	destination.createdAt,
+																).toLocaleDateString()}
+															</span>
+														</div>
 														<div className="flex flex-row gap-1">
 															<HandleDestinations
 																destinationId={destination.destinationId}

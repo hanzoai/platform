@@ -1,10 +1,15 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { docker } from "@hanzo/core/constants";
+import { docker } from "@dokploy/server/constants";
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@hanzo/core/utils/process/execAsync";
+} from "@dokploy/server/utils/process/execAsync";
+import {
+	initializeStandaloneTraefik,
+	initializeTraefikService,
+	type TraefikOptions,
+} from "../setup/traefik-setup";
 
 export interface IUpdateData {
 	latestVersion: string | null;
@@ -16,17 +21,17 @@ export const DEFAULT_UPDATE_DATA: IUpdateData = {
 	updateAvailable: false,
 };
 
-/** Returns current Hanzo docker image tag or `latest` by default. */
-export const getHanzoImageTag = () => {
+/** Returns current Dokploy docker image tag or `latest` by default. */
+export const getDokployImageTag = () => {
 	return process.env.RELEASE_TAG || "latest";
 };
 
-export const getHanzoImage = () => {
-	return `hanzoai/platform:${getHanzoImageTag()}`;
+export const getDokployImage = () => {
+	return `dokploy/dokploy:${getDokployImageTag()}`;
 };
 
 export const pullLatestRelease = async () => {
-	const stream = await docker.pull(getHanzoImage());
+	const stream = await docker.pull(getDokployImage());
 	await new Promise((resolve, reject) => {
 		docker.modem.followProgress(stream, (err, res) =>
 			err ? reject(err) : resolve(res),
@@ -34,10 +39,10 @@ export const pullLatestRelease = async () => {
 	});
 };
 
-/** Returns Hanzo docker service image digest */
+/** Returns Dokploy docker service image digest */
 export const getServiceImageDigest = async () => {
 	const { stdout } = await execAsync(
-		"docker service inspect hanzo --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'",
+		"docker service inspect dokploy --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'",
 	);
 
 	const currentDigest = stdout.trim().split("@")[1];
@@ -57,12 +62,11 @@ export const getUpdateData = async (): Promise<IUpdateData> => {
 	} catch {
 		// Docker service might not exist locally
 		// You can run the # Installation command for docker service create mentioned in the below docs to test it locally:
-		// https://docs.hanzo.ai/docs/core/manual-installation
+		// https://docs.dokploy.com/docs/core/manual-installation
 		return DEFAULT_UPDATE_DATA;
 	}
 
-	const baseUrl =
-		"https://hub.docker.com/v2/repositories/hanzoai/platform/tags";
+	const baseUrl = "https://hub.docker.com/v2/repositories/dokploy/dokploy/tags";
 	let url: string | null = `${baseUrl}?page_size=100`;
 	let allResults: { digest: string; name: string }[] = [];
 	while (url) {
@@ -80,7 +84,7 @@ export const getUpdateData = async (): Promise<IUpdateData> => {
 		url = data?.next;
 	}
 
-	const imageTag = getHanzoImageTag();
+	const imageTag = getDokployImageTag();
 	const searchedDigest = allResults.find((t) => t.name === imageTag)?.digest;
 
 	if (!searchedDigest) {
@@ -242,5 +246,173 @@ export const cleanupFullDocker = async (serverId?: string | null) => {
 					`);
 	} catch (error) {
 		console.log(error);
+	}
+};
+
+export const getDockerResourceType = async (
+	resourceName: string,
+	serverId?: string,
+) => {
+	try {
+		let result = "";
+		const command = `
+RESOURCE_NAME="${resourceName}"
+if docker service inspect "$RESOURCE_NAME" >/dev/null 2>&1; then
+	echo "service"
+elif docker inspect "$RESOURCE_NAME" >/dev/null 2>&1; then
+	echo "standalone"
+else
+	echo "unknown"
+fi`;
+
+		if (serverId) {
+			const { stdout } = await execAsyncRemote(serverId, command);
+			result = stdout.trim();
+		} else {
+			const { stdout } = await execAsync(command);
+			result = stdout.trim();
+		}
+		if (result === "service") {
+			return "service";
+		}
+		if (result === "standalone") {
+			return "standalone";
+		}
+		return "unknown";
+	} catch (error) {
+		console.error(error);
+		return "unknown";
+	}
+};
+
+export const reloadDockerResource = async (
+	resourceName: string,
+	serverId?: string,
+) => {
+	const resourceType = await getDockerResourceType(resourceName, serverId);
+	let command = "";
+	if (resourceType === "service") {
+		command = `docker service update --force ${resourceName}`;
+	} else if (resourceType === "standalone") {
+		command = `docker restart ${resourceName}`;
+	} else {
+		throw new Error("Resource type not found");
+	}
+	if (serverId) {
+		await execAsyncRemote(serverId, command);
+	} else {
+		await execAsync(command);
+	}
+};
+
+export const readEnvironmentVariables = async (
+	resourceName: string,
+	serverId?: string,
+) => {
+	const resourceType = await getDockerResourceType(resourceName, serverId);
+	let command = "";
+	if (resourceType === "service") {
+		command = `docker service inspect ${resourceName} --format '{{json .Spec.TaskTemplate.ContainerSpec.Env}}'`;
+	} else if (resourceType === "standalone") {
+		command = `docker container inspect ${resourceName} --format '{{json .Config.Env}}'`;
+	}
+	let result = "";
+	if (serverId) {
+		const { stdout } = await execAsyncRemote(serverId, command);
+		result = stdout.trim();
+	} else {
+		const { stdout } = await execAsync(command);
+		result = stdout.trim();
+	}
+	if (result === "null") {
+		return "";
+	}
+	return JSON.parse(result)?.join("\n");
+};
+
+export const readPorts = async (
+	resourceName: string,
+	serverId?: string,
+): Promise<
+	{ targetPort: number; publishedPort: number; protocol?: string }[]
+> => {
+	const resourceType = await getDockerResourceType(resourceName, serverId);
+	let command = "";
+	if (resourceType === "service") {
+		command = `docker service inspect ${resourceName} --format '{{json .Spec.EndpointSpec.Ports}}'`;
+	} else if (resourceType === "standalone") {
+		command = `docker container inspect ${resourceName} --format '{{json .NetworkSettings.Ports}}'`;
+	} else {
+		throw new Error("Resource type not found");
+	}
+	let result = "";
+	if (serverId) {
+		const { stdout } = await execAsyncRemote(serverId, command);
+		result = stdout.trim();
+	} else {
+		const { stdout } = await execAsync(command);
+		result = stdout.trim();
+	}
+
+	if (result === "null") {
+		return [];
+	}
+
+	const parsedResult = JSON.parse(result);
+
+	if (resourceType === "service") {
+		return parsedResult
+			.map((port: any) => ({
+				targetPort: port.TargetPort,
+				publishedPort: port.PublishedPort,
+				protocol: port.Protocol,
+			}))
+			.filter((port: any) => port.targetPort !== 80 && port.targetPort !== 443);
+	}
+	const ports: {
+		targetPort: number;
+		publishedPort: number;
+		protocol?: string;
+	}[] = [];
+	for (const key in parsedResult) {
+		if (Object.hasOwn(parsedResult, key)) {
+			const containerPortMapppings = parsedResult[key];
+			const protocol = key.split("/")[1];
+			const targetPort = Number.parseInt(key.split("/")[0] ?? "0", 10);
+
+			containerPortMapppings.forEach((mapping: any) => {
+				ports.push({
+					targetPort: targetPort,
+					publishedPort: Number.parseInt(mapping.HostPort, 10),
+					protocol: protocol,
+				});
+			});
+		}
+	}
+	return ports.filter(
+		(port: any) => port.targetPort !== 80 && port.targetPort !== 443,
+	);
+};
+
+export const writeTraefikSetup = async (input: TraefikOptions) => {
+	const resourceType = await getDockerResourceType(
+		"dokploy-traefik",
+		input.serverId,
+	);
+
+	if (resourceType === "service") {
+		await initializeTraefikService({
+			env: input.env,
+			additionalPorts: input.additionalPorts,
+			serverId: input.serverId,
+		});
+	} else if (resourceType === "standalone") {
+		await initializeStandaloneTraefik({
+			env: input.env,
+			additionalPorts: input.additionalPorts,
+			serverId: input.serverId,
+		});
+	} else {
+		throw new Error("Traefik resource type not found");
 	}
 };

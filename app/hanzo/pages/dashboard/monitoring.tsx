@@ -1,14 +1,14 @@
+import { IS_CLOUD } from "@dokploy/server/constants";
+import { validateRequest } from "@dokploy/server/lib/auth";
+import { Loader2 } from "lucide-react";
+import type { GetServerSidePropsContext } from "next";
+import type { ReactElement } from "react";
 import { ContainerFreeMonitoring } from "@/components/dashboard/monitoring/free/container/show-free-container-monitoring";
 import { ShowPaidMonitoring } from "@/components/dashboard/monitoring/paid/servers/show-paid-monitoring";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { Card } from "@/components/ui/card";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { api } from "@/utils/api";
-import { IS_CLOUD } from "@hanzo/core/constants";
-import { validateRequest } from "@hanzo/core/lib/auth";
-import { Loader2 } from "lucide-react";
-import type { GetServerSidePropsContext } from "next";
-import type { ReactElement } from "react";
 
 const BASE_URL = "http://localhost:3001/metrics";
 
@@ -26,7 +26,7 @@ const Dashboard = () => {
 			{/* <AlertBlock>
 				You are watching the <strong>Free</strong> plan.{" "}
 				<a
-					href="https://hanzo.ai#pricing"
+					href="https://dokploy.com#pricing"
 					target="_blank"
 					className="underline"
 					rel="noreferrer"
@@ -73,7 +73,7 @@ const Dashboard = () => {
 					) : (
 						<Card className="h-full bg-sidebar  p-2.5 rounded-xl">
 							<div className="rounded-xl bg-background shadow-md p-6">
-								<ContainerFreeMonitoring appName="hanzo" />
+								<ContainerFreeMonitoring appName="dokploy" />
 							</div>
 						</Card>
 					)}

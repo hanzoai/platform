@@ -1,4 +1,5 @@
 "use client";
+import type { inferRouterOutputs } from "@trpc/server";
 import {
 	Activity,
 	BarChartHorizontalBigIcon,
@@ -10,6 +11,7 @@ import {
 	ChevronRight,
 	ChevronsUpDown,
 	CircleHelp,
+	Clock,
 	CreditCard,
 	Database,
 	Folder,
@@ -28,17 +30,15 @@ import {
 	User,
 	Users,
 } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type * as React from "react";
 import { useEffect, useState } from "react";
-
+import { toast } from "sonner";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
 	BreadcrumbLink,
 	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
 	Collapsible,
@@ -78,10 +78,6 @@ import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import type { AppRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
-import type { inferRouterOutputs } from "@trpc/server";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { toast } from "sonner";
 import { AddOrganization } from "../dashboard/organization/handle-organization";
 import { DialogAction } from "../shared/dialog-action";
 import { Logo } from "../shared/logo";
@@ -97,10 +93,7 @@ type SingleNavItem = {
 	title: string;
 	url: string;
 	icon?: LucideIcon;
-	isEnabled?: (opts: {
-		auth?: AuthQueryOutput;
-		isCloud: boolean;
-	}) => boolean;
+	isEnabled?: (opts: { auth?: AuthQueryOutput; isCloud: boolean }) => boolean;
 };
 
 // NavItem type
@@ -126,10 +119,7 @@ type ExternalLink = {
 	name: string;
 	url: string;
 	icon: React.ComponentType<{ className?: string }>;
-	isEnabled?: (opts: {
-		auth?: AuthQueryOutput;
-		isCloud: boolean;
-	}) => boolean;
+	isEnabled?: (opts: { auth?: AuthQueryOutput; isCloud: boolean }) => boolean;
 };
 
 // Menu type
@@ -162,7 +152,15 @@ const MENU: Menu = {
 		},
 		{
 			isSingle: true,
-			title: "Traefik",
+			title: "Schedules",
+			url: "/dashboard/schedules",
+			icon: Clock,
+			// Only enabled in non-cloud environments
+			isEnabled: ({ isCloud, auth }) => !isCloud && auth?.role === "owner",
+		},
+		{
+			isSingle: true,
+			title: "Traefik File System",
 			url: "/dashboard/traefik",
 			icon: GalleryVerticalEnd,
 			// Only enabled for admins and users with access to Traefik files in non-cloud environments
@@ -260,11 +258,42 @@ const MENU: Menu = {
 	settings: [
 		{
 			isSingle: true,
-			title: "Platform",
+			title: "Web Server",
 			url: "/dashboard/settings/server",
 			icon: Activity,
 			// Only enabled for admins in non-cloud environments
 			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && !isCloud),
+		},
+		{
+			isSingle: true,
+			title: "Profile",
+			url: "/dashboard/settings/profile",
+			icon: User,
+		},
+		{
+			isSingle: true,
+			title: "Remote Servers",
+			url: "/dashboard/settings/servers",
+			icon: Server,
+			// Only enabled for admins
+			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+		},
+		{
+			isSingle: true,
+			title: "Users",
+			icon: Users,
+			url: "/dashboard/settings/users",
+			// Only enabled for admins
+			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+		},
+		{
+			isSingle: true,
+			title: "SSH Keys",
+			icon: KeyRound,
+			url: "/dashboard/settings/ssh-keys",
+			// Only enabled for admins and users with access to SSH keys
+			isEnabled: ({ auth }) =>
+				!!(auth?.role === "owner" || auth?.canAccessToSSHKeys),
 		},
 		{
 			title: "AI",
@@ -298,31 +327,7 @@ const MENU: Menu = {
 			// Only enabled for admins
 			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 		},
-		{
-			isSingle: true,
-			title: "Servers",
-			url: "/dashboard/settings/servers",
-			icon: Server,
-			// Only enabled for admins
-			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
-		},
-		{
-			isSingle: true,
-			title: "Users",
-			icon: Users,
-			url: "/dashboard/settings/users",
-			// Only enabled for admins
-			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
-		},
-		{
-			isSingle: true,
-			title: "Keys",
-			icon: KeyRound,
-			url: "/dashboard/settings/ssh-keys",
-			// Only enabled for admins and users with access to SSH keys
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.canAccessToSSHKeys),
-		},
+
 		{
 			isSingle: true,
 			title: "Certificates",
@@ -360,17 +365,17 @@ const MENU: Menu = {
 	help: [
 		{
 			name: "Documentation",
-			url: "https://docs.hanzo.ai/docs/core",
+			url: "https://docs.dokploy.com/docs/core",
 			icon: BookIcon,
 		},
 		{
 			name: "Support",
-			url: "https://discord.gg/XthHQQj",
+			url: "https://discord.gg/2tBnJ3jDJc",
 			icon: CircleHelp,
 		},
 		{
 			name: "Sponsor",
-			url: "https://opencollective.com/hanzo",
+			url: "https://opencollective.com/dokploy",
 			icon: ({ className }) => (
 				<HeartIcon
 					className={cn(
@@ -491,7 +496,6 @@ function SidebarLogo() {
 	const { state } = useSidebar();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 	const { data: user } = api.user.get.useQuery();
-	// const { data: hanzoVersion } = api.settings.getHanzoVersion.useQuery();
 	const { data: session } = authClient.useSession();
 
 	const {
@@ -763,10 +767,9 @@ export default function Page({ children }: Props) {
 		setIsLoaded(true);
 	}, []);
 
-	const router = useRouter();
 	const pathname = usePathname();
-	const _currentPath = router.pathname;
 	const { data: auth } = api.user.get.useQuery();
+	const { data: dokployVersion } = api.settings.getDokployVersion.useQuery();
 
 	const includesProjects = pathname?.includes("/dashboard/project");
 	const { data: isCloud } = api.settings.isCloud.useQuery();
@@ -903,7 +906,7 @@ export default function Page({ children }: Props) {
 					</SidebarGroup>
 					<SidebarGroup>
 						<SidebarGroupLabel>Settings</SidebarGroupLabel>
-						<SidebarMenu className="gap-2">
+						<SidebarMenu className="gap-1">
 							{filteredSettings.map((item) => {
 								const isSingle = item.isSingle !== false;
 								const isActive = isSingle
@@ -1010,21 +1013,29 @@ export default function Page({ children }: Props) {
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 							))}
-							{!isCloud && auth?.role === "owner" && (
-								<SidebarMenuItem>
-									<SidebarMenuButton asChild>
-										<UpdateServerButton />
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-							)}
 						</SidebarMenu>
 					</SidebarGroup>
 				</SidebarContent>
 				<SidebarFooter>
-					<SidebarMenu>
+					<SidebarMenu className="flex flex-col gap-2">
+						{!isCloud && auth?.role === "owner" && (
+							<SidebarMenuItem>
+								<UpdateServerButton />
+							</SidebarMenuItem>
+						)}
 						<SidebarMenuItem>
 							<UserNav />
 						</SidebarMenuItem>
+						{dokployVersion && (
+							<>
+								<div className="px-3 text-xs text-muted-foreground text-center group-data-[collapsible=icon]:hidden">
+									Version {dokployVersion}
+								</div>
+								<div className="hidden text-xs text-muted-foreground text-center group-data-[collapsible=icon]:block">
+									{dokployVersion}
+								</div>
+							</>
+						)}
 					</SidebarMenu>
 				</SidebarFooter>
 				<SidebarRail />
@@ -1048,10 +1059,6 @@ export default function Page({ children }: Props) {
 												</Link>
 											</BreadcrumbLink>
 										</BreadcrumbItem>
-										<BreadcrumbSeparator className="block" />
-										<BreadcrumbItem>
-											<BreadcrumbPage>{activeItem?.title}</BreadcrumbPage>
-										</BreadcrumbItem>
 									</BreadcrumbList>
 								</Breadcrumb>
 							</div>
@@ -1059,7 +1066,7 @@ export default function Page({ children }: Props) {
 					</header>
 				)}
 
-				<div className="flex flex-col w-full gap-4 p-4 pt-0">{children}</div>
+				<div className="flex flex-col w-full p-4 pt-0">{children}</div>
 			</SidebarInset>
 		</SidebarProvider>
 	);
