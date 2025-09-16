@@ -98,7 +98,7 @@ export const getConfig = async (
 		const config = JSON.parse(stdout);
 
 		return config;
-	} catch (_error) {}
+	} catch {}
 };
 
 export const getContainersByAppNameMatch = async (
@@ -153,7 +153,7 @@ export const getContainersByAppNameMatch = async (
 		});
 
 		return containers || [];
-	} catch (_error) {}
+	} catch {}
 
 	return [];
 };
@@ -211,7 +211,7 @@ export const getStackContainersByAppName = async (
 		});
 
 		return containers || [];
-	} catch (_error) {}
+	} catch {}
 
 	return [];
 };
@@ -271,7 +271,7 @@ export const getServiceContainersByAppName = async (
 		});
 
 		return containers || [];
-	} catch (_error) {}
+	} catch {}
 
 	return [];
 };
@@ -326,7 +326,7 @@ export const getContainersByAppLabel = async (
 		});
 
 		return containers || [];
-	} catch (_error) {}
+	} catch {}
 
 	return [];
 };
@@ -345,7 +345,7 @@ export const containerRestart = async (containerId: string) => {
 		const config = JSON.parse(stdout);
 
 		return config;
-	} catch (_error) {}
+	} catch {}
 };
 
 export const getSwarmNodes = async (serverId?: string) => {
@@ -374,7 +374,7 @@ export const getSwarmNodes = async (serverId?: string) => {
 			.split("\n")
 			.map((line) => JSON.parse(line));
 		return nodesArray;
-	} catch (_error) {}
+	} catch {}
 };
 
 export const getNodeInfo = async (nodeId: string, serverId?: string) => {
@@ -400,7 +400,7 @@ export const getNodeInfo = async (nodeId: string, serverId?: string) => {
 		const nodeInfo = JSON.parse(stdout);
 
 		return nodeInfo;
-	} catch (_error) {}
+	} catch {}
 };
 
 export const getNodeApplications = async (serverId?: string) => {
@@ -432,17 +432,17 @@ export const getNodeApplications = async (serverId?: string) => {
 			.filter((service) => !service.Name.startsWith("hanzo-"));
 
 		return appArray;
-	} catch (_error) {}
+	} catch {}
 };
 
 export const getApplicationInfo = async (
-	appName: string,
+	appNames: string[],
 	serverId?: string,
 ) => {
 	try {
 		let stdout = "";
 		let stderr = "";
-		const command = `docker service ps ${appName} --format '{{json .}}' --no-trunc`;
+		const command = `docker service ps ${appNames.join(" ")} --format '{{json .}}' --no-trunc`;
 
 		if (serverId) {
 			const result = await execAsyncRemote(serverId, command);
@@ -465,5 +465,5 @@ export const getApplicationInfo = async (
 			.map((line) => JSON.parse(line));
 
 		return appArray;
-	} catch (_error) {}
+	} catch {}
 };

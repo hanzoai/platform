@@ -1,17 +1,21 @@
 import path from "node:path";
-import { paths } from "./config-paths";
+import { paths } from "@dokploy/server/constants";
 import {
+	createServerDeployment,
+	updateDeploymentStatus,
+} from "@dokploy/server/services/deployment";
+import { findServerById } from "@dokploy/server/services/server";
+import {
+	getDefaultMiddlewares,
+	getDefaultServerTraefikConfig,
+	TRAEFIK_HTTP3_PORT,
 	TRAEFIK_PORT,
 	TRAEFIK_SSL_PORT,
 	TRAEFIK_VERSION,
-	getDefaultMiddlewares,
-	getDefaultServerTraefikConfig,
-} from "./traefik-setup";
-import { recreateDirectory } from "../utils/filesystem/directory";
-
+} from "@dokploy/server/setup/traefik-setup";
 import slug from "slugify";
-
-// Note: Multi-server functionality has been removed, but Docker Swarm and cluster functionality is preserved
+import { Client } from "ssh2";
+import { recreateDirectory } from "../utils/filesystem/directory";
 
 export const slugify = (text: string | undefined) => {
 	if (!text) {
@@ -27,42 +31,38 @@ export const slugify = (text: string | undefined) => {
 	});
 };
 
-/**
- * Local server setup function
- * Multi-server functionality has been removed, but Docker Swarm is preserved
- */
 export const serverSetup = async (
 	serverId: string,
 	onData?: (data: any) => void,
 ) => {
-	// Only local server is supported now
-	if (serverId !== "local") {
-		throw new Error("Remote server management has been removed. Use local server setup only.");
-	}
-
+	const server = await findServerById(serverId);
 	const { LOGS_PATH } = paths();
-	const logDir = path.join(LOGS_PATH, "local-server");
 
-	await recreateDirectory(logDir);
+	const slugifyName = slugify(`server ${server.name}`);
+
+	const fullPath = path.join(LOGS_PATH, slugifyName);
+
+	await recreateDirectory(fullPath);
+
+	const deployment = await createServerDeployment({
+		serverId: server.serverId,
+		title: "Setup Server",
+		description: "Setup Server",
+	});
 
 	try {
-		onData?.("\nSetting up local server environment\n");
-		await setupLocalEnvironment(onData);
-		onData?.("\nLocal server setup complete ✅\n");
+		onData?.("\nInstalling Server Dependencies: ✅\n");
+		await installRequirements(serverId, onData);
+
+		await updateDeploymentStatus(deployment.deploymentId, "done");
+
+		onData?.("\nSetup Server: ✅\n");
 	} catch (err) {
 		console.log(err);
+
+		await updateDeploymentStatus(deployment.deploymentId, "error");
 		onData?.(`${err} ❌\n`);
 	}
-};
-
-/**
- * Set up the local environment with Docker and required components
- */
-const setupLocalEnvironment = async (onData?: (data: any) => void) => {
-	// Execute local setup here
-	// This would typically involve running docker commands locally
-	// and setting up the required infrastructure
-	onData?.("Local environment setup complete");
 };
 
 export const defaultCommand = () => {
@@ -75,7 +75,7 @@ CURRENT_USER=$USER
 
 echo "Installing requirements for: OS: $OS_TYPE"
 if [ $EUID != 0 ]; then
-	echo "Please run this script as root or with sudo ❌" 
+	echo "Please run this script as root or with sudo ❌"
 	exit
 fi
 
@@ -115,7 +115,7 @@ if [ "$OS_TYPE" = 'amzn' ]; then
 fi
 
 case "$OS_TYPE" in
-arch | ubuntu | debian | raspbian | centos | fedora | rhel | ol | rocky | sles | opensuse-leap | opensuse-tumbleweed | almalinux | amzn | alpine) ;;
+arch | ubuntu | debian | raspbian | centos | fedora | rhel | ol | rocky | sles | opensuse-leap | opensuse-tumbleweed | almalinux | opencloudos | amzn | alpine) ;;
 *)
 	echo "This script only supports Debian, Redhat, Arch Linux, Alpine Linux, or SLES based operating systems for now."
 	exit
@@ -178,6 +178,65 @@ ${installRailpack()}
 	return bashCommand;
 };
 
+const installRequirements = async (
+	serverId: string,
+	onData?: (data: any) => void,
+) => {
+	const client = new Client();
+	const server = await findServerById(serverId);
+	if (!server.sshKeyId) {
+		onData?.("❌ No SSH Key found, please assign one to this server");
+		throw new Error("No SSH Key found");
+	}
+
+	return new Promise<void>((resolve, reject) => {
+		client
+			.once("ready", () => {
+				const command = server.command || defaultCommand();
+				client.exec(command, (err, stream) => {
+					if (err) {
+						onData?.(err.message);
+						reject(err);
+						return;
+					}
+					stream
+						.on("close", () => {
+							client.end();
+							resolve();
+						})
+						.on("data", (data: string) => {
+							onData?.(data.toString());
+						})
+						.stderr.on("data", (data) => {
+							onData?.(data.toString());
+						});
+				});
+			})
+			.on("error", (err) => {
+				client.end();
+				if (err.level === "client-authentication") {
+					onData?.(
+						`Authentication failed: Invalid SSH private key. ❌ Error: ${err.message} ${err.level}`,
+					);
+					reject(
+						new Error(
+							`Authentication failed: Invalid SSH private key. ❌ Error: ${err.message} ${err.level}`,
+						),
+					);
+				} else {
+					onData?.(`SSH connection error: ${err.message} ${err.level}`);
+					reject(new Error(`SSH connection error: ${err.message}`));
+				}
+			})
+			.connect({
+				host: server.ipAddress,
+				port: server.port,
+				username: server.username,
+				privateKey: server.sshKey?.privateKey,
+			});
+	});
+};
+
 const setupDirectories = () => {
 	const { SSH_PATH } = paths(true);
 	const directories = Object.values(paths(true));
@@ -196,15 +255,15 @@ const setupDirectories = () => {
 };
 
 const setupMainDirectory = () => `
-	# Check if the /etc/hanzo directory exists
-	if [ -d /etc/hanzo ]; then
-		echo "/etc/hanzo already exists ✅"
+	# Check if the /etc/dokploy directory exists
+	if [ -d /etc/dokploy ]; then
+		echo "/etc/dokploy already exists ✅"
 	else
-		# Create the /etc/hanzo directory
-		mkdir -p /etc/hanzo
-		chmod 777 /etc/hanzo
-		
-		echo "Directory /etc/hanzo created ✅"
+		# Create the /etc/dokploy directory
+		mkdir -p /etc/dokploy
+		chmod 777 /etc/dokploy
+
+		echo "Directory /etc/dokploy created ✅"
 	fi
 `;
 
@@ -213,29 +272,68 @@ export const setupSwarm = () => `
 		if docker info | grep -q 'Swarm: active'; then
 			echo "Already part of a Docker Swarm ✅"
 		else
-			# Get local IP for swarm initialization
-			local_ip=$(hostname -I | awk '{print $1}')
-			if [ -z "$local_ip" ]; then
-				local_ip="127.0.0.1"
-			fi
-			echo "Using IP address: $local_ip for Swarm initialization"
+			# Get IP address
+			get_ip() {
+				local ip=""
 
-			# Initialize Docker Swarm with local IP
-			docker swarm init --advertise-addr $local_ip
+				# Try IPv4 with multiple services
+				# First attempt: ifconfig.io
+				ip=\$(curl -4s --connect-timeout 5 https://ifconfig.io 2>/dev/null)
+
+				# Second attempt: icanhazip.com
+				if [ -z "\$ip" ]; then
+					ip=\$(curl -4s --connect-timeout 5 https://icanhazip.com 2>/dev/null)
+				fi
+
+				# Third attempt: ipecho.net
+				if [ -z "\$ip" ]; then
+					ip=\$(curl -4s --connect-timeout 5 https://ipecho.net/plain 2>/dev/null)
+				fi
+
+				# If no IPv4, try IPv6 with multiple services
+				if [ -z "\$ip" ]; then
+					# Try IPv6 with ifconfig.io
+					ip=\$(curl -6s --connect-timeout 5 https://ifconfig.io 2>/dev/null)
+
+					# Try IPv6 with icanhazip.com
+					if [ -z "\$ip" ]; then
+						ip=\$(curl -6s --connect-timeout 5 https://icanhazip.com 2>/dev/null)
+					fi
+
+					# Try IPv6 with ipecho.net
+					if [ -z "\$ip" ]; then
+						ip=\$(curl -6s --connect-timeout 5 https://ipecho.net/plain 2>/dev/null)
+					fi
+				fi
+
+				if [ -z "\$ip" ]; then
+					echo "Error: Could not determine server IP address automatically (neither IPv4 nor IPv6)." >&2
+					echo "Please set the ADVERTISE_ADDR environment variable manually." >&2
+					echo "Example: export ADVERTISE_ADDR=<your-server-ip>" >&2
+					exit 1
+				fi
+
+				echo "\$ip"
+			}
+			advertise_addr=\$(get_ip)
+			echo "Advertise address: \$advertise_addr"
+
+			# Initialize Docker Swarm
+			docker swarm init --advertise-addr \$advertise_addr
 			echo "Swarm initialized ✅"
 		fi
 	`;
 
 const setupNetwork = () => `
-	# Check if the hanzo-network already exists
-	if docker network ls | grep -q 'hanzo-network'; then
-		echo "Network hanzo-network already exists ✅"
+	# Check if the dokploy-network already exists
+	if docker network ls | grep -q 'dokploy-network'; then
+		echo "Network dokploy-network already exists ✅"
 	else
-		# Create the hanzo-network if it doesn't exist
-		if docker network create --driver overlay --attachable hanzo-network; then
+		# Create the dokploy-network if it doesn't exist
+		if docker network create --driver overlay --attachable dokploy-network; then
 			echo "Network created ✅"
 		else
-			echo "Failed to create hanzo-network ❌" >&2
+			echo "Failed to create dokploy-network ❌" >&2
 			exit 1
 		fi
 	fi
@@ -257,20 +355,20 @@ const installUtilities = () => `
 
 	case "$OS_TYPE" in
 	arch)
-		pacman -Sy --noconfirm --needed curl wget git jq openssl >/dev/null || true
+		pacman -Sy --noconfirm --needed curl wget git git-lfs jq openssl >/dev/null || true
 		;;
 	alpine)
 		sed -i '/^#.*\/community/s/^#//' /etc/apk/repositories
 		apk update >/dev/null
-		apk add curl wget git jq openssl sudo unzip tar >/dev/null
+		apk add curl wget git git-lfs jq openssl sudo unzip tar >/dev/null
 		;;
 	ubuntu | debian | raspbian)
 		DEBIAN_FRONTEND=noninteractive apt-get update -y >/dev/null
-		DEBIAN_FRONTEND=noninteractive apt-get install -y unzip curl wget git jq openssl >/dev/null
+		DEBIAN_FRONTEND=noninteractive apt-get install -y unzip curl wget git git-lfs jq openssl >/dev/null
 		;;
-	centos | fedora | rhel | ol | rocky | almalinux | amzn)
+	centos | fedora | rhel | ol | rocky | almalinux | opencloudos | amzn)
 		if [ "$OS_TYPE" = "amzn" ]; then
-			dnf install -y wget git jq openssl >/dev/null
+			dnf install -y wget git git-lfs jq openssl >/dev/null
 		else
 			if ! command -v dnf >/dev/null; then
 				yum install -y dnf >/dev/null
@@ -278,12 +376,12 @@ const installUtilities = () => `
 			if ! command -v curl >/dev/null; then
 				dnf install -y curl >/dev/null
 			fi
-			dnf install -y wget git jq openssl unzip >/dev/null
+			dnf install -y wget git git-lfs jq openssl unzip >/dev/null
 		fi
 		;;
 	sles | opensuse-leap | opensuse-tumbleweed)
 		zypper refresh >/dev/null
-		zypper install -y curl wget git jq openssl >/dev/null
+		zypper install -y curl wget git git-lfs jq openssl >/dev/null
 		;;
 	*)
 		echo "This script only supports Debian, Redhat, Arch Linux, or SLES based operating systems for now."
@@ -299,7 +397,7 @@ if [ -x "$(command -v snap)" ]; then
     SNAP_DOCKER_INSTALLED=$(snap list docker >/dev/null 2>&1 && echo "true" || echo "false")
     if [ "$SNAP_DOCKER_INSTALLED" = "true" ]; then
         echo " - Docker is installed via snap."
-        echo "   Please note that Hanzo does not support Docker installed via snap."
+        echo "   Please note that Dokploy does not support Docker installed via snap."
         echo "   Please remove Docker with snap (snap remove docker) and reexecute this script."
         exit 1
     fi
@@ -318,6 +416,28 @@ if ! [ -x "$(command -v docker)" ]; then
             fi
             systemctl start docker >/dev/null 2>&1
             systemctl enable docker >/dev/null 2>&1
+            ;;
+	"opencloudos")
+            # Special handling for OpenCloud OS
+            echo " - Installing Docker for OpenCloud OS..."
+            dnf install -y docker >/dev/null 2>&1
+            if ! [ -x "$(command -v docker)" ]; then
+                echo " - Docker could not be installed automatically. Please visit https://docs.docker.com/engine/install/ and install Docker manually to continue."
+                exit 1
+            fi
+            
+            # Remove --live-restore parameter from Docker configuration if it exists
+            if [ -f "/etc/sysconfig/docker" ]; then
+                echo " - Removing --live-restore parameter from Docker configuration..."
+                sed -i 's/--live-restore[^[:space:]]*//' /etc/sysconfig/docker >/dev/null 2>&1
+                sed -i 's/--live-restore//' /etc/sysconfig/docker >/dev/null 2>&1
+                # Clean up any double spaces that might be left
+                sed -i 's/  */ /g' /etc/sysconfig/docker >/dev/null 2>&1
+            fi
+            
+            systemctl enable docker >/dev/null 2>&1
+            systemctl start docker >/dev/null 2>&1
+            echo " - Docker configured for OpenCloud OS"
             ;;
         "alpine")
             apk add docker docker-cli-compose >/dev/null 2>&1
@@ -340,11 +460,10 @@ if ! [ -x "$(command -v docker)" ]; then
             ;;
         "amzn")
             dnf install docker -y >/dev/null 2>&1
-            # Fix: DOCKER_CONFIG should be a directory, not a file
-            DOCKER_CONFIG_DIR=/usr/local/lib/docker
-            mkdir -p $DOCKER_CONFIG_DIR/cli-plugins >/dev/null 2>&1
-            curl -sL https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o $DOCKER_CONFIG_DIR/cli-plugins/docker-compose >/dev/null 2>&1
-            chmod +x $DOCKER_CONFIG_DIR/cli-plugins/docker-compose >/dev/null 2>&1
+            DOCKER_CONFIG=/usr/local/lib/docker
+            mkdir -p $DOCKER_CONFIG/cli-plugins >/dev/null 2>&1
+            curl -sL https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o $DOCKER_CONFIG/cli-plugins/docker-compose >/dev/null 2>&1
+            chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose >/dev/null 2>&1
             systemctl start docker >/dev/null 2>&1
             systemctl enable docker >/dev/null 2>&1
             if ! [ -x "$(command -v docker)" ]; then
@@ -407,13 +526,13 @@ const createTraefikConfig = () => {
 	const config = getDefaultServerTraefikConfig();
 
 	const command = `
-	if [ -f "/etc/hanzo/traefik/dynamic/acme.json" ]; then
-		chmod 600 "/etc/hanzo/traefik/dynamic/acme.json"
+	if [ -f "/etc/dokploy/traefik/dynamic/acme.json" ]; then
+		chmod 600 "/etc/dokploy/traefik/dynamic/acme.json"
 	fi
-	if [ -f "/etc/hanzo/traefik/traefik.yml" ]; then
+	if [ -f "/etc/dokploy/traefik/traefik.yml" ]; then
 		echo "Traefik config already exists ✅"
 	else
-		echo "${config}" > /etc/hanzo/traefik/traefik.yml
+		echo "${config}" > /etc/dokploy/traefik/traefik.yml
 	fi
 	`;
 
@@ -423,10 +542,10 @@ const createTraefikConfig = () => {
 const createDefaultMiddlewares = () => {
 	const config = getDefaultMiddlewares();
 	const command = `
-	if [ -f "/etc/hanzo/traefik/dynamic/middlewares.yml" ]; then
+	if [ -f "/etc/dokploy/traefik/dynamic/middlewares.yml" ]; then
 		echo "Middlewares config already exists ✅"
 	else
-		echo "${config}" > /etc/hanzo/traefik/dynamic/middlewares.yml
+		echo "${config}" > /etc/dokploy/traefik/dynamic/middlewares.yml
 	fi
 	`;
 	return command;
@@ -444,24 +563,31 @@ export const installRClone = () => `
 
 export const createTraefikInstance = () => {
 	const command = `
-	    # Check if hanzo-traefik exists
-		if docker service ls | grep -q 'hanzo-traefik'; then
+	    # Check if dokpyloy-traefik exists
+		if docker service inspect dokploy-traefik > /dev/null 2>&1; then
+			echo "Migrating Traefik to Standalone..."
+			docker service rm dokploy-traefik
+			sleep 8
+			echo "Traefik migrated to Standalone ✅"
+		fi
+
+		if docker inspect dokploy-traefik > /dev/null 2>&1; then
 			echo "Traefik already exists ✅"
 		else
-			# Create the hanzo-traefik service
+			# Create the dokploy-traefik container
 			TRAEFIK_VERSION=${TRAEFIK_VERSION}
-			docker service create \
-				--name hanzo-traefik \
-				--replicas 1 \
-				--constraint 'node.role==manager' \
-				--network hanzo-network \
-				--mount type=bind,src=/etc/hanzo/traefik/traefik.yml,dst=/etc/traefik/traefik.yml \
-				--mount type=bind,src=/etc/hanzo/traefik/dynamic,dst=/etc/hanzo/traefik/dynamic \
-				--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
-				--label traefik.enable=true \
-				--publish mode=host,target=${TRAEFIK_SSL_PORT},published=${TRAEFIK_SSL_PORT} \
-				--publish mode=host,target=${TRAEFIK_PORT},published=${TRAEFIK_PORT} \
+			docker run -d \
+				--name dokploy-traefik \
+				--restart always \
+				-v /etc/dokploy/traefik/traefik.yml:/etc/traefik/traefik.yml \
+				-v /etc/dokploy/traefik/dynamic:/etc/dokploy/traefik/dynamic \
+				-v /var/run/docker.sock:/var/run/docker.sock \
+				-p ${TRAEFIK_SSL_PORT}:${TRAEFIK_SSL_PORT} \
+				-p ${TRAEFIK_PORT}:${TRAEFIK_PORT} \
+				-p ${TRAEFIK_HTTP3_PORT}:${TRAEFIK_HTTP3_PORT}/udp \
 				traefik:v$TRAEFIK_VERSION
+
+			docker network connect dokploy-network dokploy-traefik;
 			echo "Traefik version $TRAEFIK_VERSION installed ✅"
 		fi
 	`;
@@ -473,9 +599,19 @@ const installNixpacks = () => `
 	if command_exists nixpacks; then
 		echo "Nixpacks already installed ✅"
 	else
-	    export NIXPACKS_VERSION=1.29.1
+	    export NIXPACKS_VERSION=1.39.0
         bash -c "$(curl -fsSL https://nixpacks.com/install.sh)"
 		echo "Nixpacks version $NIXPACKS_VERSION installed ✅"
+	fi
+`;
+
+const installRailpack = () => `
+	if command_exists railpack; then
+		echo "Railpack already installed ✅"
+	else
+	    export RAILPACK_VERSION=0.2.2
+		bash -c "$(curl -fsSL https://railpack.com/install.sh)"
+		echo "Railpack version $RAILPACK_VERSION installed ✅"
 	fi
 `;
 
@@ -490,15 +626,5 @@ const installBuildpacks = () => `
 		BUILDPACKS_VERSION=0.35.0
 		curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.35.0/pack-v$BUILDPACKS_VERSION-linux$SUFFIX.tgz" | tar -C /usr/local/bin/ --no-same-owner -xzv pack
 		echo "Buildpacks version $BUILDPACKS_VERSION installed ✅"
-	fi
-`;
-
-const installRailpack = () => `
-	if command_exists railpack; then
-		echo "Railpack already installed ✅"
-	else
-	    export RAILPACK_VERSION=0.0.37
-		bash -c "$(curl -fsSL https://railpack.com/install.sh)"
-		echo "Railpack version $RAILPACK_VERSION installed ✅"
 	fi
 `;

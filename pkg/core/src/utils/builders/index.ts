@@ -1,6 +1,5 @@
 import { createWriteStream } from "node:fs";
-import { join } from "node:path";
-import type { InferResultType } from "@hanzo/core/types/with";
+import type { InferResultType } from "@dokploy/server/types/with";
 import type { CreateServiceOptions } from "dockerode";
 import { uploadImage, uploadImageRemoteCommand } from "../cluster/upload";
 import {
@@ -31,7 +30,7 @@ export type ApplicationNested = InferResultType<
 		redirects: true;
 		ports: true;
 		registry: true;
-		project: true;
+		environment: { with: { project: true } };
 	}
 >;
 
@@ -149,7 +148,8 @@ export const mechanizeDockerContainer = async (
 	const filesMount = generateFileMounts(appName, application);
 	const envVariables = prepareEnvironmentVariables(
 		env,
-		application.project.env,
+		application.environment.project.env,
+		application.environment.env,
 	);
 
 	const image = getImageName(application);
@@ -184,6 +184,7 @@ export const mechanizeDockerContainer = async (
 		RollbackConfig,
 		EndpointSpec: {
 			Ports: ports.map((port) => ({
+				PublishMode: port.publishMode,
 				Protocol: port.protocol,
 				TargetPort: port.targetPort,
 				PublishedPort: port.publishedPort,
@@ -195,6 +196,7 @@ export const mechanizeDockerContainer = async (
 	try {
 		const service = docker.getService(appName);
 		const inspect = await service.inspect();
+
 		await service.update({
 			version: Number.parseInt(inspect.Version.Index),
 			...settings,
@@ -203,34 +205,30 @@ export const mechanizeDockerContainer = async (
 				ForceUpdate: inspect.Spec.TaskTemplate.ForceUpdate + 1,
 			},
 		});
-	} catch (_error) {
+	} catch {
 		await docker.createService(settings);
 	}
 };
 
 const getImageName = (application: ApplicationNested) => {
 	const { appName, sourceType, dockerImage, registry } = application;
-
+	const imageName = `${appName}:latest`;
 	if (sourceType === "docker") {
 		return dockerImage || "ERROR-NO-IMAGE-PROVIDED";
 	}
 
 	if (registry) {
-		// Fix: Don't use path.join for URLs - it causes issues with registry URLs like ghcr.io
-		const parts = [registry.registryUrl];
-		if (registry.imagePrefix) {
-			parts.push(registry.imagePrefix);
-		}
-		parts.push(appName);
-		
-		// Join with forward slash, removing any double slashes
-		return parts.filter(Boolean).join('/').replace(/\/+/g, '/');
+		const { registryUrl, imagePrefix, username } = registry;
+		const registryTag = imagePrefix
+			? `${registryUrl}/${imagePrefix}/${imageName}`
+			: `${registryUrl}/${username}/${imageName}`;
+		return registryTag;
 	}
 
-	return `${appName}:latest`;
+	return imageName;
 };
 
-const getAuthConfig = (application: ApplicationNested) => {
+export const getAuthConfig = (application: ApplicationNested) => {
 	const { registry, username, password, sourceType, registryUrl } = application;
 
 	if (sourceType === "docker") {

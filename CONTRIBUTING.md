@@ -52,7 +52,7 @@ feat: add new feature
 
 Before you start, please make the clone based on the `canary` branch, since the `main` branch is the source of truth and should always reflect the latest stable release, also the PRs will be merged to the `canary` branch.
 
-We use Node v20.9.0
+We use Node v20.16.0 and recommend this specific version. If you have nvm installed, you can run `nvm install 20.16.0 && nvm use` in the root directory.
 
 ```bash
 git clone https://github.com/hanzoai/platform.git
@@ -87,6 +87,9 @@ pnpm run hanzo:dev
 
 Go to http://localhost:3000 to see the development server
 
+> [!NOTE]
+> This project uses Biome. If your editor is configured to use another formatter such as Prettier, it's recommended to either change it to use Biome or turn it off.
+
 ## Build
 
 ```bash
@@ -115,10 +118,10 @@ In the case you lost your password, you can reset it using the following command
 pnpm run reset-password
 ```
 
-If you want to test the webhooks on development mode using localtunnel, make sure to install `localtunnel`
+If you want to test the webhooks on development mode using localtunnel, make sure to install [`localtunnel`](https://localtunnel.app/)
 
 ```bash
-bunx lt --port 3000
+pnpm dlx localtunnel --port 3000
 ```
 
 If you run into permission issues of docker run the following command
@@ -145,14 +148,12 @@ curl -sSL https://railpack.com/install.sh | sh
 
 ```bash
 # Install Buildpacks
-curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.32.1/pack-v0.32.1-linux.tgz" | tar -C /usr/local/bin/ --no-same-owner -xzv pack
+curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.35.0/pack-v0.35.0-linux.tgz" | tar -C /usr/local/bin/ --no-same-owner -xzv pack
 ```
-
-
 
 ## Pull Request
 
-- The `main` branch is the source of truth and should always reflect the latest stable release.
+- The `canary` branch is the source of truth and should always reflect the latest stable release.
 - Create a new branch for each feature or bug fix.
 - Make sure to add tests for your changes.
 - Make sure to update the documentation for any changes Go to the [docs.hanzo.ai](https://docs.hanzo.ai) website to see the changes.
@@ -161,12 +162,17 @@ curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.32.1/pack-v0.
 - If your pull request fixes an open issue, please reference the issue in the pull request description.
 - Once your pull request is merged, you will be automatically added as a contributor to the project.
 
+**Important Considerations for Pull Requests:**
+
+- **Focus and Scope:** Each Pull Request should ideally address a single, well-defined problem or introduce one new feature. This greatly facilitates review and reduces the chances of introducing unintended side effects.
+- **Avoid Unfocused Changes:** Please avoid submitting Pull Requests that contain only minor changes such as whitespace adjustments, IDE-generated formatting, or removal of unused variables, unless these are part of a larger, clearly defined refactor or a dedicated "cleanup" Pull Request that addresses a specific `good first issue` or maintenance task.
+- **Issue Association:** For any significant change, it's highly recommended to open an issue first to discuss the proposed solution with the community and maintainers. This ensures alignment and avoids duplicated effort. If your PR resolves an existing issue, please link it in the description (e.g., `Fixes #123`, `Closes #456`).
+
 Thank you for your contribution!
 
 ## Templates
 
 To add a new template, go to `https://github.com/Dokploy/templates` repository and read the README.md file.
-
 
 ### Recommendations
 

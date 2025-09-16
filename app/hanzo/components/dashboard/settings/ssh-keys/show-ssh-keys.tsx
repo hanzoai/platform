@@ -1,3 +1,6 @@
+import { formatDistanceToNow } from "date-fns";
+import { KeyRound, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { DialogAction } from "@/components/shared/dialog-action";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,9 +11,6 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
-import { formatDistanceToNow } from "date-fns";
-import { KeyRound, Loader2, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { HandleSSHKeys } from "./handle-ssh-keys";
 
 export const ShowDestinations = () => {
@@ -56,7 +56,7 @@ export const ShowDestinations = () => {
 													key={sshKey.sshKeyId}
 													className="flex items-center justify-between bg-sidebar p-1 w-full rounded-lg"
 												>
-													<div className="flex items-center justify-between  p-3.5 rounded-lg bg-background border  w-full">
+													<div className="flex items-center justify-between p-3.5 rounded-lg bg-background border  w-full">
 														<div className="flex items-center justify-between">
 															<div className="flex flex-col">
 																<span className="text-sm font-medium">

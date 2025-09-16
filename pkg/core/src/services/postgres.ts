@@ -1,18 +1,17 @@
-import { db } from "@hanzo/core/db";
+import { db } from "@dokploy/server/db";
 import {
 	type apiCreatePostgres,
 	backups,
+	buildAppName,
 	postgres,
-} from "@hanzo/core/db/schema";
-import { buildAppName } from "@hanzo/core/db/schema";
-import { generatePassword } from "@hanzo/core/templates/utils";
-import { buildPostgres } from "@hanzo/core/utils/databases/postgres";
-import { pullImage } from "@hanzo/core/utils/docker/utils";
+} from "@dokploy/server/db/schema";
+import { generatePassword } from "@dokploy/server/templates";
+import { buildPostgres } from "@dokploy/server/utils/databases/postgres";
+import { pullImage } from "@dokploy/server/utils/docker/utils";
+import { execAsyncRemote } from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq, getTableColumns } from "drizzle-orm";
 import { validUniqueServerAppName } from "./project";
-
-import { execAsyncRemote } from "@hanzo/core/utils/process/execAsync";
 
 export type Postgres = typeof postgres.$inferSelect;
 
@@ -52,12 +51,17 @@ export const findPostgresById = async (postgresId: string) => {
 	const result = await db.query.postgres.findFirst({
 		where: eq(postgres.postgresId, postgresId),
 		with: {
-			project: true,
+			environment: {
+				with: {
+					project: true,
+				},
+			},
 			mounts: true,
 			server: true,
 			backups: {
 				with: {
 					destination: true,
+					deployments: true,
 				},
 			},
 		},

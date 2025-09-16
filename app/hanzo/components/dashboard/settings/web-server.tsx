@@ -1,3 +1,5 @@
+import { ServerIcon } from "lucide-react";
+import { useTranslation } from "next-i18next";
 import {
 	Card,
 	CardContent,
@@ -6,9 +8,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
-import { ServerIcon } from "lucide-react";
-import { useTranslation } from "next-i18next";
-import { ShowHanzoActions } from "./servers/actions/show-hanzo-actions";
+import { ShowDokployActions } from "./servers/actions/show-dokploy-actions";
 import { ShowStorageActions } from "./servers/actions/show-storage-actions";
 import { ShowTraefikActions } from "./servers/actions/show-traefik-actions";
 import { ToggleDockerCleanup } from "./servers/actions/toggle-docker-cleanup";
@@ -18,7 +18,7 @@ export const WebServer = () => {
 	const { t } = useTranslation("settings");
 	const { data } = api.user.get.useQuery();
 
-	const { data: hanzoVersion } = api.settings.getHanzoVersion.useQuery();
+	const { data: dokployVersion } = api.settings.getDokployVersion.useQuery();
 
 	return (
 		<div className="w-full">
@@ -44,7 +44,7 @@ export const WebServer = () => {
 					</CardHeader> */}
 					<CardContent className="space-y-6 py-6 border-t">
 						<div className="grid md:grid-cols-2 gap-4">
-							<ShowHanzoActions />
+							<ShowDokployActions />
 							<ShowTraefikActions />
 							<ShowStorageActions />
 
@@ -56,7 +56,7 @@ export const WebServer = () => {
 								Server IP: {data?.user.serverIp}
 							</span>
 							<span className="text-sm text-muted-foreground">
-								Version: {hanzoVersion}
+								Version: {dokployVersion}
 							</span>
 
 							<ToggleDockerCleanup />

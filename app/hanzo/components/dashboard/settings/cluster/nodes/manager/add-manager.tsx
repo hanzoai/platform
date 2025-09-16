@@ -1,3 +1,7 @@
+import copy from "copy-to-clipboard";
+import { CopyIcon, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { AlertBlock } from "@/components/shared/alert-block";
 import { CardContent } from "@/components/ui/card";
 import {
 	DialogDescription,
@@ -5,21 +9,27 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { api } from "@/utils/api";
-import copy from "copy-to-clipboard";
-import { CopyIcon } from "lucide-react";
-import { toast } from "sonner";
 
-export const AddManager = () => {
-	const { data } = api.cluster.addManager.useQuery();
+interface Props {
+	serverId?: string;
+}
+
+export const AddWorker = ({ serverId }: Props) => {
+	const { data, isLoading, error, isError } = api.cluster.addWorker.useQuery({
+		serverId,
+	});
 
 	return (
-		<>
-			<div>
-				<CardContent className="sm:max-w-4xl max-h-screen overflow-y-auto flex flex-col gap-4 px-0">
-					<DialogHeader>
-						<DialogTitle>Add a new manager</DialogTitle>
-						<DialogDescription>Add a new manager</DialogDescription>
-					</DialogHeader>
+		<CardContent className="sm:max-w-4xl   flex flex-col gap-4 px-0">
+			<DialogHeader>
+				<DialogTitle>Add a new worker</DialogTitle>
+				<DialogDescription>Add a new worker</DialogDescription>
+			</DialogHeader>
+			{isError && <AlertBlock type="error">{error?.message}</AlertBlock>}
+			{isLoading ? (
+				<Loader2 className="w-full animate-spin text-muted-foreground" />
+			) : (
+				<>
 					<div className="flex flex-col gap-2.5 text-sm">
 						<span>1. Go to your new server and run the following command</span>
 						<span className="bg-muted rounded-lg p-2 flex justify-between">
@@ -41,9 +51,10 @@ export const AddManager = () => {
 
 					<div className="flex flex-col gap-2.5 text-sm">
 						<span>
-							2. Run the following command to add the node(manager) to your
+							2. Run the following command to add the node(worker) to your
 							cluster
 						</span>
+
 						<span className="bg-muted rounded-lg p-2  flex">
 							{data?.command}
 							<button
@@ -58,8 +69,8 @@ export const AddManager = () => {
 							</button>
 						</span>
 					</div>
-				</CardContent>
-			</div>
-		</>
+				</>
+			)}
+		</CardContent>
 	);
 };
