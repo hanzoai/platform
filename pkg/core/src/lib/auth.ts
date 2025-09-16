@@ -2,25 +2,23 @@ import type { IncomingMessage } from "node:http";
 import * as bcrypt from "bcrypt";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { apiKey, organization, twoFactor } from "better-auth/plugins";
+import { APIError } from "better-auth/api";
+import { admin, apiKey, organization, twoFactor } from "better-auth/plugins";
 import { and, desc, eq } from "drizzle-orm";
 import { IS_CLOUD } from "../constants";
 import { db } from "../db";
 import * as schema from "../db/schema";
+import { getUserByToken } from "../services/admin";
+import { updateUser } from "../services/user";
 import { sendEmail } from "../verification/send-verification-email";
 import { getPublicIpWithFallback } from "../wss/utils";
-import { updateUser } from "../services/user";
-import { getUserByToken } from "../services/admin";
-import { APIError } from "better-auth/api";
+
 const { handler, api } = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: "pg",
 		schema: schema,
 	}),
-	logger: {
-		disabled: process.env.NODE_ENV === "production",
-	},
-	appName: "Hanzo",
+	appName: "Dokploy",
 	socialProviders: {
 		github: {
 			clientId: process.env.GITHUB_CLIENT_ID as string,
@@ -31,12 +29,27 @@ const { handler, api } = betterAuth({
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
 		},
 	},
+	logger: {
+		disabled: process.env.NODE_ENV === "production",
+	},
 	...(!IS_CLOUD && {
-		trustedOrigins: (request: Request) => {
-			return [
-				"http://localhost:3000",
-				"http://127.0.0.1:3000"
-			];
+		async trustedOrigins() {
+			const admin = await db.query.member.findFirst({
+				where: eq(schema.member.role, "owner"),
+				with: {
+					user: true,
+				},
+			});
+
+			if (admin) {
+				return [
+					...(admin.user.serverIp
+						? [`http://${admin.user.serverIp}:3000`]
+						: []),
+					...(admin.user.host ? [`https://${admin.user.host}`] : []),
+				];
+			}
+			return [];
 		},
 	}),
 	emailVerification: {
@@ -81,10 +94,10 @@ const { handler, api } = betterAuth({
 			create: {
 				before: async (_user, context) => {
 					if (!IS_CLOUD) {
-						const xHanzoToken =
-							context?.request?.headers?.get("x-hanzo-token");
-						if (xHanzoToken) {
-							const user = await getUserByToken(xHanzoToken);
+						const xDokployToken =
+							context?.request?.headers?.get("x-dokploy-token");
+						if (xDokployToken) {
+							const user = await getUserByToken(xDokployToken);
 							if (!user) {
 								throw new APIError("BAD_REQUEST", {
 									message: "User not found",
@@ -112,7 +125,6 @@ const { handler, api } = betterAuth({
 							serverIp: await getPublicIpWithFallback(),
 						});
 					}
-
 
 					if (IS_CLOUD || !isAdminPresent) {
 						await db.transaction(async (tx) => {
@@ -175,9 +187,13 @@ const { handler, api } = betterAuth({
 				// required: true,
 				input: false,
 			},
+			allowImpersonation: {
+				fieldName: "allowImpersonation",
+				type: "boolean",
+				defaultValue: false,
+			},
 		},
 	},
-
 	plugins: [
 		apiKey({
 			enableMetadata: true,
@@ -189,33 +205,39 @@ const { handler, api } = betterAuth({
 					const host =
 						process.env.NODE_ENV === "development"
 							? "http://localhost:3000"
-							: "https://hanzo.ai";
+							: "https://app.dokploy.com";
 					const inviteLink = `${host}/invitation?token=${data.id}`;
 
 					await sendEmail({
 						email: data.email,
 						subject: "Invitation to join organization",
 						text: `
-					<p>You are invited to join ${data.organization.name} on Hanzo. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
+					<p>You are invited to join ${data.organization.name} on Dokploy. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
 					`,
 					});
 				}
 			},
 		}),
+		...(IS_CLOUD
+			? [
+					admin({
+						adminUserIds: [process.env.USER_ADMIN_ID as string],
+					}),
+				]
+			: []),
 	],
 });
 
 export const auth = {
 	handler,
-	api,
-	createApiKey: (params: any) => (api as any).apiKey.create(params),
+	createApiKey: api.createApiKey,
 };
 
 export const validateRequest = async (request: IncomingMessage) => {
 	const apiKey = request.headers["x-api-key"] as string;
 	if (apiKey) {
 		try {
-			const { valid, key, error } = await (api as any).apiKey.verify({
+			const { valid, key, error } = await api.verifyApiKey({
 				body: {
 					key: apiKey,
 				},
@@ -279,11 +301,7 @@ export const validateRequest = async (request: IncomingMessage) => {
 
 			const mockSession = {
 				session: {
-					user: {
-						id: apiKeyRecord.user.id,
-						email: apiKeyRecord.user.email,
-						name: apiKeyRecord.user.name,
-					},
+					userId: apiKeyRecord.user.id,
 					activeOrganizationId: organizationId || "",
 				},
 				user: {
@@ -338,10 +356,8 @@ export const validateRequest = async (request: IncomingMessage) => {
 			},
 		});
 
-		// Set defaults for properties that might be missing
-		session.session.activeOrganizationId = session.session.activeOrganizationId || "";
 		session.user.role = member?.role || "member";
-		if (member?.organization?.ownerId) {
+		if (member) {
 			session.user.ownerId = member.organization.ownerId;
 		} else {
 			session.user.ownerId = session.user.id;

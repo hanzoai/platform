@@ -1,3 +1,34 @@
+import { IS_CLOUD } from "@dokploy/server/constants";
+import {
+	apiCreateAi,
+	apiUpdateAi,
+	deploySuggestionSchema,
+} from "@dokploy/server/db/schema/ai";
+import {
+	createDomain,
+	createMount,
+	findEnvironmentById,
+} from "@dokploy/server/index";
+import {
+	deleteAiSettings,
+	getAiSettingById,
+	getAiSettingsByOrganizationId,
+	saveAiSettings,
+	suggestVariants,
+} from "@dokploy/server/services/ai";
+import { createComposeByTemplate } from "@dokploy/server/services/compose";
+import { findProjectById } from "@dokploy/server/services/project";
+import {
+	addNewService,
+	checkServiceAccess,
+} from "@dokploy/server/services/user";
+import {
+	getProviderHeaders,
+	getProviderName,
+	type Model,
+} from "@dokploy/server/utils/ai/select-ai-provider";
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
 import { slugify } from "@/lib/slug";
 import {
 	adminProcedure,
@@ -5,25 +36,6 @@ import {
 	protectedProcedure,
 } from "@/server/api/trpc";
 import { generatePassword } from "@/templates/utils";
-import { IS_CLOUD } from "@hanzo/core/constants";
-import {
-	apiCreateAi,
-	apiUpdateAi,
-	deploySuggestionSchema,
-} from "@hanzo/core/db/schema/ai";
-import { createDomain, createMount } from "@hanzo/core/index";
-import {
-	deleteAiSettings,
-	getAiSettingById,
-	getAiSettingsByOrganizationId,
-	saveAiSettings,
-	suggestVariants,
-} from "@hanzo/core/services/ai";
-// Removed compose service
-import { findProjectById } from "@hanzo/core/services/project";
-import { addNewService, checkServiceAccess } from "@hanzo/core/services/user";
-import { TRPCError } from "@trpc/server";
-import { z } from "zod";
 
 export const aiRouter = createTRPCRouter({
 	one: protectedProcedure
@@ -40,15 +52,24 @@ export const aiRouter = createTRPCRouter({
 		}),
 
 	getModels: protectedProcedure
-		.input(z.object({ apiUrl: z.string().min(1), apiKey: z.string().min(1) }))
+		.input(z.object({ apiUrl: z.string().min(1), apiKey: z.string() }))
 		.query(async ({ input }) => {
 			try {
-				// Simplified model fetching without provider headers
-				const headers = {
-					'Authorization': `Bearer ${input.apiKey}`,
-					'Content-Type': 'application/json'
-				};
-				const response = await fetch(`${input.apiUrl}/models`, { headers });
+				const providerName = getProviderName(input.apiUrl);
+				const headers = getProviderHeaders(input.apiUrl, input.apiKey);
+				let response = null;
+				switch (providerName) {
+					case "ollama":
+						response = await fetch(`${input.apiUrl}/api/tags`, { headers });
+						break;
+					default:
+						if (!input.apiKey)
+							throw new TRPCError({
+								code: "BAD_REQUEST",
+								message: "API key must contain at least 1 character(s)",
+							});
+						response = await fetch(`${input.apiUrl}/models`, { headers });
+				}
 
 				if (!response.ok) {
 					const errorText = await response.text();
@@ -72,11 +93,11 @@ export const aiRouter = createTRPCRouter({
 						object: "model",
 						created: Date.now(),
 						owned_by: "provider",
-					}));
+					})) as Model[];
 				}
 
 				if (res.data) {
-					return res.data;
+					return res.data as Model[];
 				}
 
 				const possibleModels =
@@ -86,7 +107,7 @@ export const aiRouter = createTRPCRouter({
 					object: "model",
 					created: Date.now(),
 					owned_by: "provider",
-				}));
+				})) as Model[];
 			} catch (error) {
 				throw new TRPCError({
 					code: "BAD_REQUEST",
@@ -160,10 +181,68 @@ export const aiRouter = createTRPCRouter({
 	deploy: protectedProcedure
 		.input(deploySuggestionSchema)
 		.mutation(async ({ ctx, input }) => {
-			// Compose functionality has been removed
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: "Compose deployment functionality has been removed",
+			const environment = await findEnvironmentById(input.environmentId);
+			const project = await findProjectById(environment.projectId);
+			if (ctx.user.role === "member") {
+				await checkServiceAccess(
+					ctx.session.activeOrganizationId,
+					environment.projectId,
+					"create",
+				);
+			}
+
+			if (IS_CLOUD && !input.serverId) {
+				throw new TRPCError({
+					code: "UNAUTHORIZED",
+					message: "You need to use a server to create a compose",
+				});
+			}
+
+			const projectName = slugify(`${project.name} ${input.id}`);
+
+			const compose = await createComposeByTemplate({
+				...input,
+				composeFile: input.dockerCompose,
+				env: input.envVariables,
+				serverId: input.serverId,
+				name: input.name,
+				sourceType: "raw",
+				appName: `${projectName}-${generatePassword(6)}`,
+				isolatedDeployment: true,
+				environmentId: input.environmentId,
 			});
+
+			if (input.domains && input.domains?.length > 0) {
+				for (const domain of input.domains) {
+					await createDomain({
+						...domain,
+						domainType: "compose",
+						certificateType: "none",
+						composeId: compose.composeId,
+					});
+				}
+			}
+			if (input.configFiles && input.configFiles?.length > 0) {
+				for (const mount of input.configFiles) {
+					await createMount({
+						filePath: mount.filePath,
+						mountPath: "",
+						content: mount.content,
+						serviceId: compose.composeId,
+						serviceType: "compose",
+						type: "file",
+					});
+				}
+			}
+
+			if (ctx.user.role === "member") {
+				await addNewService(
+					ctx.session.activeOrganizationId,
+					ctx.user.ownerId,
+					compose.composeId,
+				);
+			}
+
+			return null;
 		}),
 });

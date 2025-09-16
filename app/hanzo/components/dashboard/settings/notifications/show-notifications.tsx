@@ -1,3 +1,5 @@
+import { Bell, Loader2, Mail, MessageCircleMore, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import {
 	DiscordIcon,
 	SlackIcon,
@@ -13,8 +15,6 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
-import { Bell, Loader2, Mail, MessageCircleMore, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { HandleNotifications } from "./handle-notifications";
 
 export const ShowNotifications = () => {
@@ -61,7 +61,7 @@ export const ShowNotifications = () => {
 													key={notification.notificationId}
 													className="flex items-center justify-between bg-sidebar p-1 w-full rounded-lg"
 												>
-													<div className="flex items-center justify-between  p-3.5 rounded-lg bg-background border  w-full">
+													<div className="flex items-center justify-between p-3.5 rounded-lg bg-background border  w-full">
 														<span className="text-sm flex flex-row items-center gap-4">
 															{notification.notificationType === "slack" && (
 																<div className="flex  items-center justify-center rounded-lg">
@@ -84,6 +84,11 @@ export const ShowNotifications = () => {
 																</div>
 															)}
 															{notification.notificationType === "gotify" && (
+																<div className="flex  items-center justify-center rounded-lg ">
+																	<MessageCircleMore className="size-6 text-muted-foreground" />
+																</div>
+															)}
+															{notification.notificationType === "ntfy" && (
 																<div className="flex  items-center justify-center rounded-lg ">
 																	<MessageCircleMore className="size-6 text-muted-foreground" />
 																</div>

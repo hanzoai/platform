@@ -7,11 +7,9 @@
  * need to use are documented accordingly near the end.
  */
 
-// import { getServerAuthSession } from "@/server/auth";
-import { db } from "@/server/db";
-import { validateRequest } from "@hanzo/core/lib/auth";
-import type { OpenApiMeta } from "@hanzo/trpc-openapi";
-import { TRPCError, initTRPC } from "@trpc/server";
+import { validateRequest } from "@dokploy/server/lib/auth";
+import type { OpenApiMeta } from "@dokploy/trpc-openapi";
+import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
 import {
 	experimental_createMemoryUploadHandler,
@@ -21,6 +19,9 @@ import {
 import type { Session, User } from "better-auth";
 import superjson from "superjson";
 import { ZodError } from "zod";
+// import { getServerAuthSession } from "@/server/auth";
+import { db } from "@/server/db";
+
 /**
  * 1. CONTEXT
  *
@@ -30,8 +31,10 @@ import { ZodError } from "zod";
  */
 
 interface CreateContextOptions {
-	user: (User & { rol: "member" | "admin" | "owner"; ownerId: string }) | null;
-	session: (Session & { activeOrganizationId: string }) | null;
+	user: (User & { role: "member" | "admin" | "owner"; ownerId: string }) | null;
+	session:
+		| (Session & { activeOrganizationId: string; impersonatedBy?: string })
+		| null;
 	req: CreateNextContextOptions["req"];
 	res: CreateNextContextOptions["res"];
 }
@@ -83,7 +86,7 @@ export const createTRPCContext = async (opts: CreateNextContextOptions) => {
 			? {
 					...user,
 					email: user.email,
-					rol: user.role as "owner" | "member" | "admin",
+					role: user.role as "owner" | "member" | "admin",
 					id: user.id,
 					ownerId: user.ownerId,
 				}
@@ -180,7 +183,7 @@ export const uploadProcedure = async (opts: any) => {
 };
 
 export const cliProcedure = t.procedure.use(({ ctx, next }) => {
-	if (!ctx.session || !ctx.user || ctx.user.rol !== "owner") {
+	if (!ctx.session || !ctx.user || ctx.user.role !== "owner") {
 		throw new TRPCError({ code: "UNAUTHORIZED" });
 	}
 	return next({
@@ -194,7 +197,7 @@ export const cliProcedure = t.procedure.use(({ ctx, next }) => {
 });
 
 export const adminProcedure = t.procedure.use(({ ctx, next }) => {
-	if (!ctx.session || !ctx.user || ctx.user.rol !== "owner") {
+	if (!ctx.session || !ctx.user || ctx.user.role !== "owner") {
 		throw new TRPCError({ code: "UNAUTHORIZED" });
 	}
 	return next({

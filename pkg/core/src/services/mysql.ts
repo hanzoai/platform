@@ -1,14 +1,17 @@
-import { db } from "@hanzo/core/db";
-import { type apiCreateMySql, backups, mysql } from "@hanzo/core/db/schema";
-import { buildAppName } from "@hanzo/core/db/schema";
-import { generatePassword } from "@hanzo/core/templates/utils";
-import { buildMysql } from "@hanzo/core/utils/databases/mysql";
-import { pullImage } from "@hanzo/core/utils/docker/utils";
+import { db } from "@dokploy/server/db";
+import {
+	type apiCreateMySql,
+	backups,
+	buildAppName,
+	mysql,
+} from "@dokploy/server/db/schema";
+import { generatePassword } from "@dokploy/server/templates";
+import { buildMysql } from "@dokploy/server/utils/databases/mysql";
+import { pullImage } from "@dokploy/server/utils/docker/utils";
+import { execAsyncRemote } from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq, getTableColumns } from "drizzle-orm";
 import { validUniqueServerAppName } from "./project";
-
-import { execAsyncRemote } from "@hanzo/core/utils/process/execAsync";
 
 export type MySql = typeof mysql.$inferSelect;
 
@@ -53,12 +56,17 @@ export const findMySqlById = async (mysqlId: string) => {
 	const result = await db.query.mysql.findFirst({
 		where: eq(mysql.mysqlId, mysqlId),
 		with: {
-			project: true,
+			environment: {
+				with: {
+					project: true,
+				},
+			},
 			mounts: true,
 			server: true,
 			backups: {
 				with: {
 					destination: true,
+					deployments: true,
 				},
 			},
 		},

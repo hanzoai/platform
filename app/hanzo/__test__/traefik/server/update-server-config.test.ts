@@ -5,16 +5,19 @@ vi.mock("node:fs", () => ({
 	default: fs,
 }));
 
-import type { FileConfig, User } from "@hanzo/core";
+import type { FileConfig, User } from "@dokploy/server";
 import {
 	createDefaultServerTraefikConfig,
 	loadOrCreateConfig,
 	updateServerTraefik,
-} from "@hanzo/core";
+} from "@dokploy/server";
 import { beforeEach, expect, test, vi } from "vitest";
 
 const baseAdmin: User = {
+	https: false,
 	enablePaidFeatures: false,
+	allowImpersonation: false,
+	role: "user",
 	metricsConfig: {
 		containers: {
 			refreshRate: 20,
@@ -24,7 +27,7 @@ const baseAdmin: User = {
 			},
 		},
 		server: {
-			type: "Hanzo",
+			type: "Dokploy",
 			cronJob: "",
 			port: 4500,
 			refreshRate: 20,
@@ -47,7 +50,7 @@ const baseAdmin: User = {
 	letsEncryptEmail: null,
 	sshPrivateKey: null,
 	enableDockerCleanup: false,
-	enableLogRotation: false,
+	logCleanupCron: null,
 	serversQuantity: 0,
 	stripeCustomerId: "",
 	stripeSubscriptionId: "",
@@ -72,10 +75,9 @@ beforeEach(() => {
 });
 
 test("Should read the configuration file", () => {
-	const config: FileConfig = loadOrCreateConfig("hanzo");
-
-	expect(config.http?.routers?.["hanzo-router-app"]?.service).toBe(
-		"hanzo-service-app",
+	const config: FileConfig = loadOrCreateConfig("dokploy");
+	expect(config.http?.routers?.["dokploy-router-app"]?.service).toBe(
+		"dokploy-service-app",
 	);
 });
 
@@ -83,14 +85,15 @@ test("Should apply redirect-to-https", () => {
 	updateServerTraefik(
 		{
 			...baseAdmin,
+			https: true,
 			certificateType: "letsencrypt",
 		},
 		"example.com",
 	);
 
-	const config: FileConfig = loadOrCreateConfig("hanzo");
+	const config: FileConfig = loadOrCreateConfig("dokploy");
 
-	expect(config.http?.routers?.["hanzo-router-app"]?.middlewares).toContain(
+	expect(config.http?.routers?.["dokploy-router-app"]?.middlewares).toContain(
 		"redirect-to-https",
 	);
 });
@@ -98,17 +101,17 @@ test("Should apply redirect-to-https", () => {
 test("Should change only host when no certificate", () => {
 	updateServerTraefik(baseAdmin, "example.com");
 
-	const config: FileConfig = loadOrCreateConfig("hanzo");
+	const config: FileConfig = loadOrCreateConfig("dokploy");
 
-	expect(config.http?.routers?.["hanzo-router-app-secure"]).toBeUndefined();
+	expect(config.http?.routers?.["dokploy-router-app-secure"]).toBeUndefined();
 });
 
 test("Should not touch config without host", () => {
-	const originalConfig: FileConfig = loadOrCreateConfig("hanzo");
+	const originalConfig: FileConfig = loadOrCreateConfig("dokploy");
 
 	updateServerTraefik(baseAdmin, null);
 
-	const config: FileConfig = loadOrCreateConfig("hanzo");
+	const config: FileConfig = loadOrCreateConfig("dokploy");
 
 	expect(originalConfig).toEqual(config);
 });
@@ -121,10 +124,10 @@ test("Should remove websecure if https rollback to http", () => {
 
 	updateServerTraefik({ ...baseAdmin, certificateType: "none" }, "example.com");
 
-	const config: FileConfig = loadOrCreateConfig("hanzo");
+	const config: FileConfig = loadOrCreateConfig("dokploy");
 
-	expect(config.http?.routers?.["hanzo-router-app-secure"]).toBeUndefined();
-	expect(config.http?.routers?.["hanzo-router-app"]?.middlewares).not.toContain(
-		"redirect-to-https",
-	);
+	expect(config.http?.routers?.["dokploy-router-app-secure"]).toBeUndefined();
+	expect(
+		config.http?.routers?.["dokploy-router-app"]?.middlewares,
+	).not.toContain("redirect-to-https");
 });

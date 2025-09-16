@@ -1,14 +1,18 @@
-import { db } from "@hanzo/core/db";
-import { type apiCreateMongo, backups, mongo } from "@hanzo/core/db/schema";
-import { buildAppName } from "@hanzo/core/db/schema";
-import { generatePassword } from "@hanzo/core/templates/utils";
-import { buildMongo } from "@hanzo/core/utils/databases/mongo";
-import { pullImage } from "@hanzo/core/utils/docker/utils";
+import { db } from "@dokploy/server/db";
+import {
+	type apiCreateMongo,
+	backups,
+	buildAppName,
+	compose,
+	mongo,
+} from "@dokploy/server/db/schema";
+import { generatePassword } from "@dokploy/server/templates";
+import { buildMongo } from "@dokploy/server/utils/databases/mongo";
+import { pullImage } from "@dokploy/server/utils/docker/utils";
+import { execAsyncRemote } from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq, getTableColumns } from "drizzle-orm";
 import { validUniqueServerAppName } from "./project";
-
-import { execAsyncRemote } from "@hanzo/core/utils/process/execAsync";
 
 export type Mongo = typeof mongo.$inferSelect;
 
@@ -49,12 +53,17 @@ export const findMongoById = async (mongoId: string) => {
 	const result = await db.query.mongo.findFirst({
 		where: eq(mongo.mongoId, mongoId),
 		with: {
-			project: true,
+			environment: {
+				with: {
+					project: true,
+				},
+			},
 			mounts: true,
 			server: true,
 			backups: {
 				with: {
 					destination: true,
+					deployments: true,
 				},
 			},
 		},
@@ -98,6 +107,25 @@ export const findMongoByBackupId = async (backupId: string) => {
 		throw new TRPCError({
 			code: "NOT_FOUND",
 			message: "Mongo not found",
+		});
+	}
+	return result[0];
+};
+
+export const findComposeByBackupId = async (backupId: string) => {
+	const result = await db
+		.select({
+			...getTableColumns(compose),
+		})
+		.from(compose)
+		.innerJoin(backups, eq(compose.composeId, backups.composeId))
+		.where(eq(backups.backupId, backupId))
+		.limit(1);
+
+	if (!result || !result[0]) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Compose not found",
 		});
 	}
 	return result[0];
