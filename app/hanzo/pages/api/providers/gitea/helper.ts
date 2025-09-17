@@ -1,4 +1,4 @@
-import { findGiteaById } from "@dokploy/server";
+import { findGiteaById } from "@hanzo/core";
 import type { NextApiResponse } from "next";
 
 export interface Gitea {

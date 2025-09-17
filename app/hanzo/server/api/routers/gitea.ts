@@ -7,7 +7,7 @@ import {
 	testGiteaConnection,
 	updateGitea,
 	updateGitProvider,
-} from "@dokploy/server";
+} from "@hanzo/core";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { db } from "@/server/db";

@@ -1,4 +1,4 @@
-import type { findEnvironmentsByProjectId } from "@dokploy/server";
+import type { findEnvironmentsByProjectId } from "@hanzo/core";
 import {
 	ChevronDownIcon,
 	PencilIcon,

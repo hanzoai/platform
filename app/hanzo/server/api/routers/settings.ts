@@ -42,7 +42,7 @@ import {
 	writeMainConfig,
 	writeTraefikConfigInPath,
 	writeTraefikSetup,
-} from "@dokploy/server";
+} from "@hanzo/core";
 import { generateOpenApiDocument } from "@dokploy/trpc-openapi";
 import { TRPCError } from "@trpc/server";
 import { eq, sql } from "drizzle-orm";

@@ -1,4 +1,4 @@
-import { paths } from "@dokploy/server/constants";
+import { paths } from "@hanzo/core/constants";
 import { relations } from "drizzle-orm";
 import {
 	boolean,

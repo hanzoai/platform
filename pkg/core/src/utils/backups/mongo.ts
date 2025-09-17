@@ -1,11 +1,11 @@
-import type { BackupSchedule } from "@dokploy/server/services/backup";
+import type { BackupSchedule } from "@hanzo/core/services/backup";
 import {
 	createDeploymentBackup,
 	updateDeploymentStatus,
-} from "@dokploy/server/services/deployment";
-import type { Mongo } from "@dokploy/server/services/mongo";
-import { findEnvironmentById } from "@dokploy/server/services/environment";
-import { findProjectById } from "@dokploy/server/services/project";
+} from "@hanzo/core/services/deployment";
+import type { Mongo } from "@hanzo/core/services/mongo";
+import { findEnvironmentById } from "@hanzo/core/services/environment";
+import { findProjectById } from "@hanzo/core/services/project";
 import { sendDatabaseBackupNotifications } from "../notifications/database-backup";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
 import { getBackupCommand, getS3Credentials, normalizeS3Path } from "./utils";
