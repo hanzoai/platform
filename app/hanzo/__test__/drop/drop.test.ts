@@ -1,24 +1,16 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-<<<<<<<< HEAD:app/hanzo/__test__/drop/drop.test.test.ts
-import { paths } from "@hanzo/core/constants";
-const { APPLICATIONS_PATH } = paths();
-import type { ApplicationNested } from "@hanzo/core";
-import { unzipDrop } from "@hanzo/core";
+
 import AdmZip from "adm-zip";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-vi.mock("@hanzo/core/constants", async (importOriginal) => {
-========
 import type { ApplicationNested } from "@hanzo/core";
 import { unzipDrop } from "@hanzo/core";
 import { paths } from "@hanzo/core/constants";
-import AdmZip from "adm-zip";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const { APPLICATIONS_PATH } = paths();
+
 vi.mock("@hanzo/core/constants", async (importOriginal) => {
->>>>>>>> upstream/main:app/hanzo/__test__/drop/drop.test.ts
 	const actual = await importOriginal();
 	return {
 		// @ts-ignore
@@ -40,18 +32,15 @@ const baseApp: ApplicationNested = {
 	applicationId: "",
 	previewLabels: [],
 	herokuVersion: "",
-<<<<<<<< HEAD:app/hanzo/__test__/drop/drop.test.test.ts
-========
-	giteaBranch: "",
-	giteaBuildPath: "",
-	previewRequireCollaboratorPermissions: false,
-	giteaId: "",
-	giteaOwner: "",
-	giteaRepository: "",
-	cleanCache: false,
-	watchPaths: [],
-	enableSubmodules: false,
->>>>>>>> upstream/main:app/hanzo/__test__/drop/drop.test.ts
+        giteaBranch: "",
+        giteaBuildPath: "",
+        previewRequireCollaboratorPermissions: false,
+        giteaId: "",
+        giteaOwner: "",
+        giteaRepository: "",
+        cleanCache: false,
+        watchPaths: [],
+        enableSubmodules: false,
 	applicationStatus: "done",
 	triggerType: "push",
 	appName: "",
