@@ -1,0 +1,322 @@
+ WARN  Unsupported engine: wanted: {"node":"^20.9.0"} (current: {"node":"v22.16.0","pnpm":"10.5.2"})
+
+ RUN  v1.6.0 /home/z/platform/app/hanzo
+
+ ❯ __test__/drop/drop.test.test.ts  (0 test)
+ ❯ __test__/drop/drop.test.ts  (0 test)
+ ❯ __test__/compose/compose.test.ts  (0 test)
+ ❯ __test__/env/environment.test.ts  (0 test)
+ ❯ __test__/templates/helpers.template.test.ts  (0 test)
+ ❯ __test__/compose/network/network.test.ts  (0 test)
+ ❯ __test__/compose/volume/volume.test.ts  (0 test)
+ ❯ __test__/compose/service/service-depends-on.test.ts  (0 test)
+ ❯ __test__/compose/volume/volume-root.test.ts  (0 test)
+ ❯ __test__/compose/secrets/secret.test.ts  (0 test)
+ ❯ __test__/compose/secrets/secret-services.test.ts  (0 test)
+ ❯ __test__/utils/backups.test.ts  (0 test)
+ ❯ __test__/compose/volume/volume-services.test.ts  (0 test)
+ ❯ __test__/compose/volume/volume-2.test.ts  (0 test)
+ ❯ __test__/templates/config.template.test.ts  (0 test)
+ ❯ __test__/compose/config/config-service.test.ts  (0 test)
+ ❯ __test__/compose/service/service.test.ts  (0 test)
+ ❯ __test__/compose/secrets/secret-root.test.ts  (0 test)
+ ❯ __test__/compose/network/network-service.test.ts  (0 test)
+ ❯ __test__/compose/service/service-links.test.ts  (0 test)
+ ❯ __test__/compose/service/sevice-volumes-from.test.ts  (0 test)
+ ❯ __test__/compose/network/network-root.test.ts  (0 test)
+ ❯ __test__/compose/config/config.test.ts  (0 test)
+ ❯ __test__/compose/config/config-root.test.ts  (0 test)
+ ❯ __test__/traefik/traefik.test.ts  (0 test)
+ ❯ __test__/compose/service/service-extends.test.ts  (0 test)
+ ❯ __test__/deploy/github.test.ts  (0 test)
+ ❯ __test__/traefik/server/update-server-config.test.ts  (0 test)
+ ❯ __test__/compose/service/service-names.test.ts  (0 test)
+ ❯ __test__/compose/service/service-container-name.test.ts  (0 test)
+ ✓ __test__/compose/domain/network-root.test.ts  (4 tests) 2ms
+ ✓ __test__/compose/domain/network-service.test.ts  (4 tests) 1ms
+ ✓ __test__/requests/request.test.ts  (5 tests) 3ms
+ ❯ __test__/env/shared.test.ts  (15 tests | 5 failed) 9ms
+   ❯ __test__/env/shared.test.ts > prepareEnvironmentVariables (self references) > resolves self references correctly
+     → expected [ 'ENVIRONMENT=staging', …(2) ] to deeply equal [ 'ENVIRONMENT=staging', …(2) ]
+   ❯ __test__/env/shared.test.ts > prepareEnvironmentVariables (self references) > throws on undefined self references
+     → expected [Function] to throw an error
+   ❯ __test__/env/shared.test.ts > prepareEnvironmentVariables (self references) > allows overriding and still resolving from self
+     → expected [ 'ENVIRONMENT=production', …(1) ] to deeply equal [ 'ENVIRONMENT=production', …(1) ]
+   ❯ __test__/env/shared.test.ts > prepareEnvironmentVariables (self references) > resolves multiple self references inside one value
+     → expected [ 'ENVIRONMENT=staging', …(2) ] to deeply equal [ 'ENVIRONMENT=staging', …(2) ]
+   ❯ __test__/env/shared.test.ts > prepareEnvironmentVariables (self references) > handles quotes with self references
+     → expected [ 'ENVIRONMENT=production', …(2) ] to deeply equal [ 'ENVIRONMENT=production', …(2) ]
+ ❯ __test__/compose/domain/labels.test.ts  (12 tests | 5 failed) 8ms
+   ❯ __test__/compose/domain/labels.test.ts > createDomainLabels > should add stripPath middleware when stripPath is enabled
+     → expected [ …(4) ] to include 'traefik.http.middlewares.stripprefix-…'
+   ❯ __test__/compose/domain/labels.test.ts > createDomainLabels > should add internalPath middleware when internalPath is set
+     → expected [ …(4) ] to include 'traefik.http.middlewares.addprefix-te…'
+   ❯ __test__/compose/domain/labels.test.ts > createDomainLabels > should combine HTTPS redirect with internalPath middleware in correct order
+     → expected [ …(5) ] to include 'traefik.http.routers.test-app-1-web.m…'
+   ❯ __test__/compose/domain/labels.test.ts > createDomainLabels > should combine all middlewares in correct order
+     → expected [ …(5) ] to include 'traefik.http.middlewares.stripprefix-…'
+   ❯ __test__/compose/domain/labels.test.ts > createDomainLabels > should not add middleware definitions for websecure entrypoint
+     → expected [ …(4) ] to include 'traefik.http.routers.test-app-1-webse…'
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 30 ⎯⎯⎯⎯⎯⎯
+
+ FAIL  __test__/drop/drop.test.test.ts [ __test__/drop/drop.test.test.ts ]
+Error: Transform failed with 1 error:
+/home/z/platform/app/hanzo/__test__/drop/drop.test.test.ts:3:0: ERROR: Unexpected "<<"
+ ❯ failureErrorWithLog ../../node_modules/.pnpm/esbuild@0.21.5/node_modules/esbuild/lib/main.js:1472:15
+ ❯ ../../node_modules/.pnpm/esbuild@0.21.5/node_modules/esbuild/lib/main.js:755:50
+ ❯ responseCallbacks.<computed> ../../node_modules/.pnpm/esbuild@0.21.5/node_modules/esbuild/lib/main.js:622:9
+ ❯ handleIncomingPacket ../../node_modules/.pnpm/esbuild@0.21.5/node_modules/esbuild/lib/main.js:677:12
+ ❯ Socket.readFromStdout ../../node_modules/.pnpm/esbuild@0.21.5/node_modules/esbuild/lib/main.js:600:7
+ ❯ Socket.emit node:events:518:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/40]⎯
+
+ FAIL  __test__/drop/drop.test.ts [ __test__/drop/drop.test.ts ]
+Error: Transform failed with 1 error:
+/home/z/platform/app/hanzo/__test__/drop/drop.test.ts:3:0: ERROR: Unexpected "<<"
+ ❯ failureErrorWithLog ../../node_modules/.pnpm/esbuild@0.21.5/node_modules/esbuild/lib/main.js:1472:15
+ ❯ ../../node_modules/.pnpm/esbuild@0.21.5/node_modules/esbuild/lib/main.js:755:50
+ ❯ responseCallbacks.<computed> ../../node_modules/.pnpm/esbuild@0.21.5/node_modules/esbuild/lib/main.js:622:9
+ ❯ handleIncomingPacket ../../node_modules/.pnpm/esbuild@0.21.5/node_modules/esbuild/lib/main.js:677:12
+ ❯ Socket.readFromStdout ../../node_modules/.pnpm/esbuild@0.21.5/node_modules/esbuild/lib/main.js:600:7
+ ❯ Socket.emit node:events:518:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/40]⎯
+
+ FAIL  __test__/compose/compose.test.ts [ __test__/compose/compose.test.ts ]
+ FAIL  __test__/traefik/traefik.test.ts [ __test__/traefik/traefik.test.ts ]
+ FAIL  __test__/compose/config/config-root.test.ts [ __test__/compose/config/config-root.test.ts ]
+ FAIL  __test__/compose/config/config.test.ts [ __test__/compose/config/config.test.ts ]
+ FAIL  __test__/compose/network/network-root.test.ts [ __test__/compose/network/network-root.test.ts ]
+ FAIL  __test__/compose/network/network-service.test.ts [ __test__/compose/network/network-service.test.ts ]
+ FAIL  __test__/compose/network/network.test.ts [ __test__/compose/network/network.test.ts ]
+ FAIL  __test__/compose/secrets/secret-services.test.ts [ __test__/compose/secrets/secret-services.test.ts ]
+ FAIL  __test__/compose/secrets/secret.test.ts [ __test__/compose/secrets/secret.test.ts ]
+ FAIL  __test__/compose/service/service-depends-on.test.ts [ __test__/compose/service/service-depends-on.test.ts ]
+ FAIL  __test__/compose/service/service-extends.test.ts [ __test__/compose/service/service-extends.test.ts ]
+ FAIL  __test__/compose/service/service-links.test.ts [ __test__/compose/service/service-links.test.ts ]
+ FAIL  __test__/compose/service/service.test.ts [ __test__/compose/service/service.test.ts ]
+ FAIL  __test__/compose/service/sevice-volumes-from.test.ts [ __test__/compose/service/sevice-volumes-from.test.ts ]
+ FAIL  __test__/compose/volume/volume-root.test.ts [ __test__/compose/volume/volume-root.test.ts ]
+ FAIL  __test__/compose/volume/volume-services.test.ts [ __test__/compose/volume/volume-services.test.ts ]
+ FAIL  __test__/compose/volume/volume.test.ts [ __test__/compose/volume/volume.test.ts ]
+Error: Failed to load url @dokploy/server (resolved id: @dokploy/server) in /home/z/platform/app/hanzo/__test__/compose/volume/volume-2.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@5.3.5_@types+node@18.19.42_terser@5.39.0/node_modules/vite/dist/node/chunks/dep-mCdpKltl.js:51599:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/40]⎯
+
+ FAIL  __test__/deploy/github.test.ts [ __test__/deploy/github.test.ts ]
+Error: Failed to load url @/pages/api/deploy/[refreshToken] (resolved id: @/pages/api/deploy/[refreshToken]) in /home/z/platform/app/hanzo/__test__/deploy/github.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@5.3.5_@types+node@18.19.42_terser@5.39.0/node_modules/vite/dist/node/chunks/dep-mCdpKltl.js:51599:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/40]⎯
+
+ FAIL  __test__/env/environment.test.ts [ __test__/env/environment.test.ts ]
+Error: Failed to load url @dokploy/server/index (resolved id: @dokploy/server/index) in /home/z/platform/app/hanzo/__test__/env/environment.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@5.3.5_@types+node@18.19.42_terser@5.39.0/node_modules/vite/dist/node/chunks/dep-mCdpKltl.js:51599:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/40]⎯
+
+ FAIL  __test__/templates/config.template.test.ts [ __test__/templates/config.template.test.ts ]
+ FAIL  __test__/templates/helpers.template.test.ts [ __test__/templates/helpers.template.test.ts ]
+Error: Failed to load url @dokploy/server/templates/processors (resolved id: @dokploy/server/templates/processors) in /home/z/platform/app/hanzo/__test__/templates/helpers.template.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@5.3.5_@types+node@18.19.42_terser@5.39.0/node_modules/vite/dist/node/chunks/dep-mCdpKltl.js:51599:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/40]⎯
+
+ FAIL  __test__/utils/backups.test.ts [ __test__/utils/backups.test.ts ]
+Error: Failed to load url @dokploy/server/utils/backups/utils (resolved id: @dokploy/server/utils/backups/utils) in /home/z/platform/app/hanzo/__test__/utils/backups.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@5.3.5_@types+node@18.19.42_terser@5.39.0/node_modules/vite/dist/node/chunks/dep-mCdpKltl.js:51599:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/40]⎯
+
+ FAIL  __test__/compose/config/config-service.test.ts [ __test__/compose/config/config-service.test.ts ]
+ FAIL  __test__/compose/secrets/secret-root.test.ts [ __test__/compose/secrets/secret-root.test.ts ]
+ FAIL  __test__/compose/service/service-container-name.test.ts [ __test__/compose/service/service-container-name.test.ts ]
+ FAIL  __test__/compose/service/service-names.test.ts [ __test__/compose/service/service-names.test.ts ]
+ FAIL  __test__/compose/volume/volume-2.test.ts [ __test__/compose/volume/volume-2.test.ts ]
+ FAIL  __test__/traefik/server/update-server-config.test.ts [ __test__/traefik/server/update-server-config.test.ts ]
+Error: Failed to load url @dokploy/server (resolved id: @dokploy/server) in /home/z/platform/app/hanzo/__test__/compose/volume/volume-2.test.ts. Does the file exist?
+ ❯ loadAndTransform ../../node_modules/.pnpm/vite@5.3.5_@types+node@18.19.42_terser@5.39.0/node_modules/vite/dist/node/chunks/dep-mCdpKltl.js:51599:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/40]⎯
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  __test__/env/shared.test.ts > prepareEnvironmentVariables (self references) > resolves self references correctly
+AssertionError: expected [ 'ENVIRONMENT=staging', …(2) ] to deeply equal [ 'ENVIRONMENT=staging', …(2) ]
+
+- Expected
++ Received
+
+  Array [
+    "ENVIRONMENT=staging",
+    "DATABASE_URL=postgres://postgres:postgres@localhost:5432/project_db",
+-   "SELF_REF=staging",
++   "SELF_REF=${{ENVIRONMENT}}",
+  ]
+
+ ❯ __test__/env/shared.test.ts:191:20
+    189|   const resolved = prepareEnvironmentVariables(serviceEnv, "");
+    190| 
+    191|   expect(resolved).toEqual([
+       |                    ^
+    192|    "ENVIRONMENT=staging",
+    193|    "DATABASE_URL=postgres://postgres:postgres@localhost:5432/project_d…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/40]⎯
+
+ FAIL  __test__/env/shared.test.ts > prepareEnvironmentVariables (self references) > throws on undefined self references
+AssertionError: expected [Function] to throw an error
+
+- Expected: 
+null
+
++ Received: 
+undefined
+
+ ❯ __test__/env/shared.test.ts:203:61
+    201| `;
+    202| 
+    203|   expect(() => prepareEnvironmentVariables(serviceEnv, "")).toThrow(
+       |                                                             ^
+    204|    "Invalid service environment variable: UNDEFINED_VAR",
+    205|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/40]⎯
+
+ FAIL  __test__/env/shared.test.ts > prepareEnvironmentVariables (self references) > allows overriding and still resolving from self
+AssertionError: expected [ 'ENVIRONMENT=production', …(1) ] to deeply equal [ 'ENVIRONMENT=production', …(1) ]
+
+- Expected
++ Received
+
+  Array [
+    "ENVIRONMENT=production",
+-   "OVERRIDE_ENV=production",
++   "OVERRIDE_ENV=${{ENVIRONMENT}}",
+  ]
+
+ ❯ __test__/env/shared.test.ts:216:20
+    214|   const resolved = prepareEnvironmentVariables(serviceEnv, "");
+    215| 
+    216|   expect(resolved).toEqual([
+       |                    ^
+    217|    "ENVIRONMENT=production",
+    218|    "OVERRIDE_ENV=production",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/40]⎯
+
+ FAIL  __test__/env/shared.test.ts > prepareEnvironmentVariables (self references) > resolves multiple self references inside one value
+AssertionError: expected [ 'ENVIRONMENT=staging', …(2) ] to deeply equal [ 'ENVIRONMENT=staging', …(2) ]
+
+- Expected
++ Received
+
+  Array [
+    "ENVIRONMENT=staging",
+    "APP_NAME=MyApp",
+-   "COMPLEX=MyApp-staging-MyApp",
++   "COMPLEX=${{APP_NAME}}-${{ENVIRONMENT}}-${{APP_NAME}}",
+  ]
+
+ ❯ __test__/env/shared.test.ts:231:20
+    229|   const resolved = prepareEnvironmentVariables(serviceEnv, "");
+    230| 
+    231|   expect(resolved).toEqual([
+       |                    ^
+    232|    "ENVIRONMENT=staging",
+    233|    "APP_NAME=MyApp",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/40]⎯
+
+ FAIL  __test__/env/shared.test.ts > prepareEnvironmentVariables (self references) > handles quotes with self references
+AssertionError: expected [ 'ENVIRONMENT=production', …(2) ] to deeply equal [ 'ENVIRONMENT=production', …(2) ]
+
+- Expected
++ Received
+
+  Array [
+    "ENVIRONMENT=production",
+-   "QUOTED='production'",
+-   "MIXED=\"Double production\"",
++   "QUOTED='${{ENVIRONMENT}}'",
++   "MIXED=\"Double ${{ENVIRONMENT}}\"",
+  ]
+
+ ❯ __test__/env/shared.test.ts:247:20
+    245|   const resolved = prepareEnvironmentVariables(serviceEnv, "");
+    246| 
+    247|   expect(resolved).toEqual([
+       |                    ^
+    248|    "ENVIRONMENT=production",
+    249|    "QUOTED='production'",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/40]⎯
+
+ FAIL  __test__/compose/domain/labels.test.ts > createDomainLabels > should add stripPath middleware when stripPath is enabled
+AssertionError: expected [ …(4) ] to include 'traefik.http.middlewares.stripprefix-…'
+ ❯ __test__/compose/domain/labels.test.ts:119:18
+    117|   const labels = await createDomainLabels(appName, stripPathDomain, "w…
+    118| 
+    119|   expect(labels).toContain(
+       |                  ^
+    120|    "traefik.http.middlewares.stripprefix-test-app-1.stripprefix.prefix…
+    121|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/40]⎯
+
+ FAIL  __test__/compose/domain/labels.test.ts > createDomainLabels > should add internalPath middleware when internalPath is set
+AssertionError: expected [ …(4) ] to include 'traefik.http.middlewares.addprefix-te…'
+ ❯ __test__/compose/domain/labels.test.ts:144:21
+    142| 
+    143|   // Middleware definition should only appear in web entrypoint
+    144|   expect(webLabels).toContain(
+       |                     ^
+    145|    "traefik.http.middlewares.addprefix-test-app-1.addprefix.prefix=/he…
+    146|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/40]⎯
+
+ FAIL  __test__/compose/domain/labels.test.ts > createDomainLabels > should combine HTTPS redirect with internalPath middleware in correct order
+AssertionError: expected [ …(5) ] to include 'traefik.http.routers.test-app-1-web.m…'
+ ❯ __test__/compose/domain/labels.test.ts:174:21
+    172| 
+    173|   // Web entrypoint should have both middlewares with redirect first
+    174|   expect(webLabels).toContain(
+       |                     ^
+    175|    "traefik.http.routers.test-app-1-web.middlewares=redirect-to-https@…
+    176|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/40]⎯
+
+ FAIL  __test__/compose/domain/labels.test.ts > createDomainLabels > should combine all middlewares in correct order
+AssertionError: expected [ …(5) ] to include 'traefik.http.middlewares.stripprefix-…'
+ ❯ __test__/compose/domain/labels.test.ts:203:21
+    201| 
+    202|   // Should have all middleware definitions (only in web)
+    203|   expect(webLabels).toContain(
+       |                     ^
+    204|    "traefik.http.middlewares.stripprefix-test-app-1.stripprefix.prefix…
+    205|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/40]⎯
+
+ FAIL  __test__/compose/domain/labels.test.ts > createDomainLabels > should not add middleware definitions for websecure entrypoint
+AssertionError: expected [ …(4) ] to include 'traefik.http.routers.test-app-1-webse…'
+ ❯ __test__/compose/domain/labels.test.ts:238:27
+    236| 
+    237|   // But should reference the middlewares
+    238|   expect(websecureLabels).toContain(
+       |                           ^
+    239|    "traefik.http.routers.test-app-1-websecure.middlewares=stripprefix-…
+    240|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/40]⎯
+
+ Test Files  32 failed | 3 passed (35)
+      Tests  10 failed | 30 passed (40)
+   Start at  23:14:12
+   Duration  2.86s (transform 4.39s, setup 1ms, collect 7.95s, tests 23ms, environment 5ms, prepare 5.26s)
+

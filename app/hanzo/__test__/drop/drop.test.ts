@@ -1,24 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-<<<<<<<< HEAD:app/hanzo/__test__/drop/drop.test.test.ts
-import { paths } from "@hanzo/core/constants";
-const { APPLICATIONS_PATH } = paths();
 import type { ApplicationNested } from "@hanzo/core";
 import { unzipDrop } from "@hanzo/core";
-import AdmZip from "adm-zip";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-
-vi.mock("@hanzo/core/constants", async (importOriginal) => {
-========
-import type { ApplicationNested } from "@dokploy/server";
-import { unzipDrop } from "@dokploy/server";
-import { paths } from "@dokploy/server/constants";
+import { paths } from "@hanzo/core/constants";
 import AdmZip from "adm-zip";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const { APPLICATIONS_PATH } = paths();
-vi.mock("@dokploy/server/constants", async (importOriginal) => {
->>>>>>>> upstream/main:app/hanzo/__test__/drop/drop.test.ts
+vi.mock("@hanzo/core/constants", async (importOriginal) => {
 	const actual = await importOriginal();
 	return {
 		// @ts-ignore
