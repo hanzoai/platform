@@ -13,7 +13,8 @@
       "Bash(while read file)",
       "Bash(do git add \"$file\")",
       "Bash(done)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
