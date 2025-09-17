@@ -1,4 +1,4 @@
-import { createGithub } from "@dokploy/server";
+import { createGithub } from "@hanzo/core";
 import { eq } from "drizzle-orm";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { Octokit } from "octokit";

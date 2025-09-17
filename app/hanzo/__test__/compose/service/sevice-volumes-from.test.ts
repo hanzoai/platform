@@ -1,5 +1,5 @@
-import type { ComposeSpecification } from "@dokploy/server";
-import { addSuffixToServiceNames, generateRandomHash } from "@dokploy/server";
+import type { ComposeSpecification } from "@hanzo/core";
+import { addSuffixToServiceNames, generateRandomHash } from "@hanzo/core";
 import { load } from "js-yaml";
 import { expect, test } from "vitest";
 
