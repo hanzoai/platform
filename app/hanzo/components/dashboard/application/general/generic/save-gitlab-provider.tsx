@@ -306,15 +306,14 @@ export const SaveGitlabProvider = ({ applicationId }: Props) => {
 																			{repo.owner.username}
 																		</span>
 																	</span>
-																	<CheckIcon
-																		className={cn(
-																			"ml-auto h-4 w-4",
-																			repo.url ===
-																				field.value.gitlabPathNamespace
-																				? "opacity-100"
-																				: "opacity-0",
-																		)}
-																	/>
+                                                                                                                               <CheckIcon
+                                                                                                                               className={cn(
+                                                                                                                               "ml-auto h-4 w-4",
+                                                                                                                               repo.id === field.value.id
+                                                                                                                               ? "opacity-100"
+                                                                                                                               : "opacity-0",
+                                                                                                                               )}
+                                                                                                                               />
 																</CommandItem>
 															);
 														})}

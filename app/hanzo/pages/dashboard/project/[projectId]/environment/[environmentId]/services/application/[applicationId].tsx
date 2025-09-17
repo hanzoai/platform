@@ -54,24 +54,7 @@ import {
 import { UseKeyboardNav } from "@/hooks/use-keyboard-nav";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
-<<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/application/[applicationId].tsx
-import { validateRequest } from "@hanzo/core/lib/auth";
-import { createServerSideHelpers } from "@trpc/react-query/server";
-import copy from "copy-to-clipboard";
-import { GlobeIcon, HelpCircle, ServerOff } from "lucide-react";
-import type {
-	GetServerSidePropsContext,
-	InferGetServerSidePropsType,
-} from "next";
-import Head from "next/head";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { type ReactElement, useEffect, useState } from "react";
-import { toast } from "sonner";
-import superjson from "superjson";
-========
->>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/application/[applicationId].tsx
-
+<
 type TabState =
 	| "projects"
 	| "settings"
@@ -127,11 +110,7 @@ const Service = (
 			/>
 			<Head>
 				<title>
-<<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/application/[applicationId].tsx
-					Application: {data?.name} - {data?.project.name} | Hanzo
-========
-					Application: {data?.name} - {data?.environment.project.name} | Dokploy
->>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/application/[applicationId].tsx
+                                        Application: {data?.name} - {data?.environment.project.name} | Dokploy
 				</title>
 			</Head>
 			<div className="w-full">
@@ -244,32 +223,21 @@ const Service = (
 								>
 									<div className="flex flex-row items-center justify-between w-full overflow-auto">
 										<TabsList className="flex gap-8 max-md:gap-4 justify-start">
-											<TabsTrigger value="general">General</TabsTrigger>
-											<TabsTrigger value="environment">Environment</TabsTrigger>
-<<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/application/[applicationId].tsx
-========
-											<TabsTrigger value="domains">Domains</TabsTrigger>
-											<TabsTrigger value="preview-deployments">
-												Preview Deployments
-											</TabsTrigger>
-											<TabsTrigger value="schedules">Schedules</TabsTrigger>
-											<TabsTrigger value="volume-backups">
-												Volume Backups
-											</TabsTrigger>
-											<TabsTrigger value="deployments">Deployments</TabsTrigger>
-											<TabsTrigger value="logs">Logs</TabsTrigger>
->>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/application/[applicationId].tsx
-											{((data?.serverId && isCloud) || !data?.server) && (
-												<TabsTrigger value="monitoring">Monitoring</TabsTrigger>
-											)}
-											<TabsTrigger value="logs">Logs</TabsTrigger>
-											<TabsTrigger value="deployments">Deployments</TabsTrigger>
-											<TabsTrigger value="preview-deployments">
-												Preview Deployments
-											</TabsTrigger>
-											<TabsTrigger value="domains">Domains</TabsTrigger>
-											<TabsTrigger value="advanced">Advanced</TabsTrigger>
-										</TabsList>
+                                                                                        <TabsTrigger value="general">General</TabsTrigger>
+                                                                                        <TabsTrigger value="environment">Environment</TabsTrigger>
+                                                                                        {((data?.serverId && isCloud) || !data?.server) && (
+                                                                                                <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
+                                                                                        )}
+                                                                                        <TabsTrigger value="logs">Logs</TabsTrigger>
+                                                                                        <TabsTrigger value="deployments">Deployments</TabsTrigger>
+                                                                                        <TabsTrigger value="preview-deployments">
+                                                                                                Preview Deployments
+                                                                                        </TabsTrigger>
+                                                                                        <TabsTrigger value="domains">Domains</TabsTrigger>
+                                                                                        <TabsTrigger value="schedules">Schedules</TabsTrigger>
+                                                                                        <TabsTrigger value="volume-backups">Volume Backups</TabsTrigger>
+                                                                                        <TabsTrigger value="advanced">Advanced</TabsTrigger>
+                                                                                </TabsList>
 									</div>
 
 									<TabsContent value="general">

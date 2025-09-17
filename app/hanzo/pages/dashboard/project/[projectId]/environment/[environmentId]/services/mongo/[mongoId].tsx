@@ -1,20 +1,18 @@
-<<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/mongo/[mongoId].tsx
-import { ShowResources } from "@/components/dashboard/application/advanced/show-resources";
-import { ShowVolumes } from "@/components/dashboard/application/advanced/volumes/show-volumes";
-========
 import { validateRequest } from "@hanzo/core/lib/auth";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import { HelpCircle, ServerOff } from "lucide-react";
 import type {
-	GetServerSidePropsContext,
-	InferGetServerSidePropsType,
+        GetServerSidePropsContext,
+        InferGetServerSidePropsType,
 } from "next";
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { type ReactElement, useState } from "react";
 import superjson from "superjson";
->>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/mongo/[mongoId].tsx
+
+import { ShowResources } from "@/components/dashboard/application/advanced/show-resources";
+import { ShowVolumes } from "@/components/dashboard/application/advanced/volumes/show-volumes";
 import { ShowEnvironment } from "@/components/dashboard/application/environment/show-enviroment";
 import { ShowDockerLogs } from "@/components/dashboard/application/logs/show";
 import { DeleteService } from "@/components/dashboard/compose/delete-service";
@@ -32,39 +30,24 @@ import { BreadcrumbSidebar } from "@/components/shared/breadcrumb-sidebar";
 import { StatusTooltip } from "@/components/shared/status-tooltip";
 import { Badge } from "@/components/ui/badge";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
+        Card,
+        CardContent,
+        CardDescription,
+        CardHeader,
+        CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
+        Tooltip,
+        TooltipContent,
+        TooltipProvider,
+        TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { UseKeyboardNav } from "@/hooks/use-keyboard-nav";
 import { cn } from "@/lib/utils";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
-<<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/mongo/[mongoId].tsx
-import { validateRequest } from "@hanzo/core/lib/auth";
-import { createServerSideHelpers } from "@trpc/react-query/server";
-import { HelpCircle, ServerOff } from "lucide-react";
-import type {
-	GetServerSidePropsContext,
-	InferGetServerSidePropsType,
-} from "next";
-import Head from "next/head";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { type ReactElement, useState } from "react";
-import superjson from "superjson";
-========
->>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/mongo/[mongoId].tsx
 
 type TabState = "projects" | "monitoring" | "settings" | "backups" | "advanced";
 
@@ -102,11 +85,7 @@ const Mongo = (
 			/>
 			<Head>
 				<title>
-<<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/mongo/[mongoId].tsx
-					Database: {data?.name} - {data?.project.name} | Hanzo
-========
 					Database: {data?.name} - {data?.environment?.project?.name} | Dokploy
->>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/mongo/[mongoId].tsx
 				</title>
 			</Head>
 			<div className="w-full">
