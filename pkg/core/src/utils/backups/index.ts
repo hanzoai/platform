@@ -1,7 +1,7 @@
 import path from "node:path";
-import { member } from "@dokploy/server/db/schema";
-import type { BackupSchedule } from "@dokploy/server/services/backup";
-import { getAllServers } from "@dokploy/server/services/server";
+import { member } from "@hanzo/core/db/schema";
+import type { BackupSchedule } from "@hanzo/core/services/backup";
+import { getAllServers } from "@hanzo/core/services/server";
 import { eq } from "drizzle-orm";
 import { scheduleJob } from "node-schedule";
 import { db } from "../../db/index";

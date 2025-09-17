@@ -1,9 +1,9 @@
-import { db } from "@dokploy/server/db";
+import { db } from "@hanzo/core/db";
 import {
 	type apiCreateEnvironment,
 	type apiDuplicateEnvironment,
 	environments,
-} from "@dokploy/server/db/schema";
+} from "@hanzo/core/db/schema";
 import { TRPCError } from "@trpc/server";
 import { asc, eq } from "drizzle-orm";
 

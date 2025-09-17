@@ -1,4 +1,4 @@
-import { updateGitea } from "@dokploy/server";
+import { updateGitea } from "@hanzo/core";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { findGitea, type Gitea, redirectWithError } from "./helper";
 

@@ -23,17 +23,17 @@ import {
 	runWebServerBackup,
 	scheduleBackup,
 	updateBackupById,
-} from "@dokploy/server";
-import { findDestinationById } from "@dokploy/server/services/destination";
-import { runComposeBackup } from "@dokploy/server/utils/backups/compose";
+} from "@hanzo/core";
+import { findDestinationById } from "@hanzo/core/services/destination";
+import { runComposeBackup } from "@hanzo/core/utils/backups/compose";
 import {
 	getS3Credentials,
 	normalizeS3Path,
-} from "@dokploy/server/utils/backups/utils";
+} from "@hanzo/core/utils/backups/utils";
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@dokploy/server/utils/process/execAsync";
+} from "@hanzo/core/utils/process/execAsync";
 import {
 	restoreComposeBackup,
 	restoreMariadbBackup,
@@ -41,7 +41,7 @@ import {
 	restoreMySqlBackup,
 	restorePostgresBackup,
 	restoreWebServerBackup,
-} from "@dokploy/server/utils/restore";
+} from "@hanzo/core/utils/restore";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
