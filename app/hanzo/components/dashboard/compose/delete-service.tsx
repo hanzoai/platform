@@ -1,4 +1,4 @@
-import type { ServiceType } from "@dokploy/server/db/schema";
+import type { ServiceType } from "@hanzo/core/db/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import copy from "copy-to-clipboard";
 import { Copy, Trash2 } from "lucide-react";

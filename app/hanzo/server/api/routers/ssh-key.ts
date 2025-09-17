@@ -4,7 +4,7 @@ import {
 	generateSSHKey,
 	removeSSHKeyById,
 	updateSSHKeyById,
-} from "@dokploy/server";
+} from "@hanzo/core";
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
