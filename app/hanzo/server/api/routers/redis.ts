@@ -16,7 +16,7 @@ import {
 	stopService,
 	stopServiceRemote,
 	updateRedisById,
-} from "@dokploy/server";
+} from "@hanzo/core";
 
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";

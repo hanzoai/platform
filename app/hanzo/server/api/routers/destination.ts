@@ -6,7 +6,7 @@ import {
 	IS_CLOUD,
 	removeDestinationById,
 	updateDestinationById,
-} from "@dokploy/server";
+} from "@hanzo/core";
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import {

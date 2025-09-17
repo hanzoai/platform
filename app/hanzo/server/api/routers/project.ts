@@ -30,7 +30,7 @@ import {
 	findUserById,
 	IS_CLOUD,
 	updateProjectById,
-} from "@dokploy/server";
+} from "@hanzo/core";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";

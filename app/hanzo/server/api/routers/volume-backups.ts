@@ -8,17 +8,17 @@ import {
 	runVolumeBackup,
 	scheduleVolumeBackup,
 	updateVolumeBackup,
-} from "@dokploy/server";
-import { db } from "@dokploy/server/db";
+} from "@hanzo/core";
+import { db } from "@hanzo/core/db";
 import {
 	createVolumeBackupSchema,
 	updateVolumeBackupSchema,
 	volumeBackups,
-} from "@dokploy/server/db/schema";
+} from "@hanzo/core/db/schema";
 import {
 	execAsyncRemote,
 	execAsyncStream,
-} from "@dokploy/server/utils/process/execAsync";
+} from "@hanzo/core/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";

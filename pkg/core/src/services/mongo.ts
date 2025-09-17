@@ -1,15 +1,15 @@
-import { db } from "@dokploy/server/db";
+import { db } from "@hanzo/core/db";
 import {
 	type apiCreateMongo,
 	backups,
 	buildAppName,
 	compose,
 	mongo,
-} from "@dokploy/server/db/schema";
-import { generatePassword } from "@dokploy/server/templates";
-import { buildMongo } from "@dokploy/server/utils/databases/mongo";
-import { pullImage } from "@dokploy/server/utils/docker/utils";
-import { execAsyncRemote } from "@dokploy/server/utils/process/execAsync";
+} from "@hanzo/core/db/schema";
+import { generatePassword } from "@hanzo/core/templates";
+import { buildMongo } from "@hanzo/core/utils/databases/mongo";
+import { pullImage } from "@hanzo/core/utils/docker/utils";
+import { execAsyncRemote } from "@hanzo/core/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq, getTableColumns } from "drizzle-orm";
 import { validUniqueServerAppName } from "./project";
