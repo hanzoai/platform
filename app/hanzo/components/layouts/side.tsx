@@ -365,7 +365,7 @@ const MENU: Menu = {
 	help: [
 		{
 			name: "Documentation",
-			url: "https://docs.dokploy.com/docs/core",
+			url: "https://docs.hanzo.com/docs/core",
 			icon: BookIcon,
 		},
 		{
@@ -375,7 +375,7 @@ const MENU: Menu = {
 		},
 		{
 			name: "Sponsor",
-			url: "https://opencollective.com/dokploy",
+			url: "https://opencollective.com/hanzo",
 			icon: ({ className }) => (
 				<HeartIcon
 					className={cn(
@@ -769,7 +769,7 @@ export default function Page({ children }: Props) {
 
 	const pathname = usePathname();
 	const { data: auth } = api.user.get.useQuery();
-	const { data: dokployVersion } = api.settings.getHanzo PlatformVersion.useQuery();
+	const { data: hanzoVersion } = api.settings.getHanzo PlatformVersion.useQuery();
 
 	const includesProjects = pathname?.includes("/dashboard/project");
 	const { data: isCloud } = api.settings.isCloud.useQuery();
@@ -1026,13 +1026,13 @@ export default function Page({ children }: Props) {
 						<SidebarMenuItem>
 							<UserNav />
 						</SidebarMenuItem>
-						{dokployVersion && (
+						{hanzoVersion && (
 							<>
 								<div className="px-3 text-xs text-muted-foreground text-center group-data-[collapsible=icon]:hidden">
-									Version {dokployVersion}
+									Version {hanzoVersion}
 								</div>
 								<div className="hidden text-xs text-muted-foreground text-center group-data-[collapsible=icon]:block">
-									{dokployVersion}
+									{hanzoVersion}
 								</div>
 							</>
 						)}

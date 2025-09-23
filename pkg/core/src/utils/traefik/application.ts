@@ -162,7 +162,7 @@ export const readMonitoringConfig = async (readAll = false) => {
 						trimmed.endsWith("}")
 					) {
 						const log = JSON.parse(trimmed);
-						if (log.ServiceName !== "dokploy-service-app@file") {
+						if (log.ServiceName !== "hanzo-service-app@file") {
 							content += `${line}\n`;
 							validCount++;
 							if (validCount >= 500) {

@@ -16,7 +16,7 @@ const app = new Hono();
 
 // Initialize Inngest client
 export const inngest = new Inngest({
-	id: "dokploy-deployments",
+	id: "hanzo-deployments",
 	name: "Hanzo Platform Deployment Service",
 });
 
