@@ -210,7 +210,7 @@ export const HandleBackup = ({
 
 	const form = useForm<z.infer<typeof Schema>>({
 		defaultValues: {
-			database: databaseType === "web-server" ? "dokploy" : "",
+			database: databaseType === "web-server" ? "hanzo" : "",
 			destinationId: "",
 			enabled: true,
 			prefix: "/",
@@ -246,7 +246,7 @@ export const HandleBackup = ({
 			database: backup?.database
 				? backup?.database
 				: databaseType === "web-server"
-					? "dokploy"
+					? "hanzo"
 					: "",
 			destinationId: backup?.destinationId ?? "",
 			enabled: backup?.enabled ?? true,
@@ -570,7 +570,7 @@ export const HandleBackup = ({
 											<FormControl>
 												<Input
 													disabled={databaseType === "web-server"}
-													placeholder={"dokploy"}
+													placeholder={"hanzo"}
 													{...field}
 												/>
 											</FormControl>
