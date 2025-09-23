@@ -306,18 +306,27 @@ export const prepareEnvironmentVariables = (
 		while (previousValue !== resolvedValue && resolvedValue.includes("${{")) {
 			previousValue = resolvedValue;
 			resolvedValue = resolvedValue.replace(/\$\{\{(.*?)\}\}/g, (match, ref) => {
+				// Avoid infinite recursion for direct self-references
+				if (ref === currentKey) {
+					return match; // Keep the placeholder to avoid infinite recursion
+				}
+
 				// Check if this references already resolved variables
 				if (resolvedServiceVars[ref] !== undefined) {
+					// If the resolved value still contains placeholders, use the original
+					if (resolvedServiceVars[ref].includes("${{")) {
+						if (serviceVars[ref] !== undefined) {
+							return serviceVars[ref];
+						}
+					}
 					return resolvedServiceVars[ref];
 				}
+
 				// Check if this references original service variables
 				if (serviceVars[ref] !== undefined) {
-					// Avoid infinite recursion for self-references
-					if (ref === currentKey) {
-						return match; // Keep the placeholder to avoid infinite recursion
-					}
 					return serviceVars[ref];
 				}
+
 				return match; // Keep unresolved placeholders
 			});
 		}
@@ -331,14 +340,30 @@ export const prepareEnvironmentVariables = (
 		return resolvedValue;
 	};
 
-	// First pass: resolve all values and store them
+	// Process variables in multiple passes to handle forward references
+	// First, copy all raw values
 	for (const [key, value] of Object.entries(serviceVars)) {
-		resolvedServiceVars[key] = resolveValue(value, key);
+		resolvedServiceVars[key] = value;
 	}
 
-	// Second pass: re-resolve with all values available (handles forward references)
-	for (const [key, value] of Object.entries(serviceVars)) {
-		resolvedServiceVars[key] = resolveValue(value, key);
+	// Then resolve all references iteratively
+	let hasChanges = true;
+	let iterations = 0;
+	const maxIterations = 10; // Prevent infinite loops
+
+	while (hasChanges && iterations < maxIterations) {
+		hasChanges = false;
+		iterations++;
+
+		for (const [key, originalValue] of Object.entries(serviceVars)) {
+			const currentValue = resolvedServiceVars[key];
+			const newValue = resolveValue(currentValue, key);
+
+			if (newValue !== currentValue) {
+				resolvedServiceVars[key] = newValue;
+				hasChanges = true;
+			}
+		}
 	}
 
 	// Convert to array format

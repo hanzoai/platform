@@ -1,6 +1,6 @@
-import { logger } from "@hanzo/core/lib/logger";
-import type { BackupSchedule } from "@hanzo/core/services/backup";
-import type { Destination } from "@hanzo/core/services/destination";
+import { logger } from "../../lib/logger";
+import type { BackupSchedule } from "../../services/backup";
+import type { Destination } from "../../services/destination";
 import { scheduledJobs, scheduleJob } from "node-schedule";
 import { keepLatestNBackups } from ".";
 import { runComposeBackup } from "./compose";
