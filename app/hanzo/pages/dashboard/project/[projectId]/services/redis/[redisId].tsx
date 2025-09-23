@@ -104,7 +104,7 @@ const Redis = (
 <<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/redis/[redisId].tsx
 					Database: {data?.name} - {data?.project.name} | Hanzo
 ========
-					Database: {data?.name} - {data?.environment?.project?.name} | Dokploy
+					Database: {data?.name} - {data?.environment?.project?.name} | Hanzo Platform
 >>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/redis/[redisId].tsx
 				</title>
 			</Head>

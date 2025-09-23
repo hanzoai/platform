@@ -16,7 +16,7 @@ import { ShowModalLogs } from "../../web-server/show-modal-logs";
 import { TerminalModal } from "../../web-server/terminal-modal";
 import { GPUSupportModal } from "../gpu-support-modal";
 
-export const ShowDokployActions = () => {
+export const ShowHanzo PlatformActions = () => {
 	const { t } = useTranslation("settings");
 	const { mutateAsync: reloadServer, isLoading } =
 		api.settings.reloadServer.useMutation();

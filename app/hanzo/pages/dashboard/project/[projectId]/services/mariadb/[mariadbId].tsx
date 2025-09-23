@@ -107,7 +107,7 @@ const Mariadb = (
 						Database: {data?.name} - {data?.project.name} | Hanzo
 ========
 						Database: {data?.name} - {data?.environment?.project?.name} |
-						Dokploy
+						Hanzo Platform
 >>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/mariadb/[mariadbId].tsx
 					</title>
 				</Head>
