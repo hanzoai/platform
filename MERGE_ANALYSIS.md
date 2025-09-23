@@ -1,23 +1,23 @@
-# Hanzo Platform vs Dokploy Merge Analysis
+# Hanzo Platform vs Hanzo Merge Analysis
 
 ## Current Versions
-- **Hanzo Platform**: v4.0.4 (based on Dokploy fork)
-- **Dokploy**: v0.23.6 (latest as of analysis)
+- **Hanzo Platform**: v4.0.4 (based on Hanzo fork)
+- **Hanzo**: v0.23.6 (latest as of analysis)
 
 ## 1. Repository Structure Changes
 
 ### Hanzo Changes (Package Restructuring)
-The main structural change in Hanzo is the reorganization from Dokploy's structure:
-- `apps/dokploy/` → `app/hanzo/`
+The main structural change in Hanzo is the reorganization from Hanzo's structure:
+- `apps/hanzo/` → `app/hanzo/`
 - `apps/server/` → `app/api/`
 - `packages/` → `pkg/`
 - Added new apps: `console`, `monitoring`, `schedules`
 
 ### Key Differences
 ```
-Dokploy Structure:          Hanzo Structure:
+Hanzo Structure:          Hanzo Structure:
 apps/                       app/
-  dokploy/                    hanzo/
+  hanzo/                    hanzo/
   server/                     api/
                               console/
                               monitoring/
@@ -30,11 +30,11 @@ packages/                   pkg/
 ### Visual Changes
 - Custom logo implementation in `app/hanzo/components/shared/logo.tsx`
 - Updated SVG icon with Hanzo branding
-- Changed package name from "dokploy" to "hanzo-platform"
+- Changed package name from "hanzo" to "hanzo-platform"
 
 ### Package.json Changes
-- Scripts renamed: `dokploy:*` → `hanzo:*`
-- Docker image names: `dokploy/*` → `hanzoai/*`
+- Scripts renamed: `hanzo:*` → `hanzo:*`
+- Docker image names: `hanzo/*` → `hanzoai/*`
 - Repository references updated
 
 ### Key Branding Files Modified
@@ -43,7 +43,7 @@ packages/                   pkg/
 3. Docker configurations - Image names
 4. Various test files - Updated references
 
-## 3. Recent Dokploy Updates (Since Hanzo Fork)
+## 3. Recent Hanzo Updates (Since Hanzo Fork)
 
 ### Critical Fixes
 1. **v0.23.6** - Fix: Prevent removal of current directory in deployment logs
@@ -59,7 +59,7 @@ packages/                   pkg/
 ### New Features
 1. Kill process functionality for deployments
 2. Enhanced database backup notifications
-3. Dokploy cloud endpoints support
+3. Hanzo cloud endpoints support
 4. Better UI readability for Node applications
 5. Improved error handling in various components
 
@@ -69,7 +69,7 @@ packages/                   pkg/
 
 1. **Create a feature branch**
    ```bash
-   git checkout -b merge-dokploy-v0.23.6
+   git checkout -b merge-hanzo-v0.23.6
    ```
 
 2. **Merge upstream changes selectively**
@@ -147,7 +147,7 @@ packages/                   pkg/
 ## 7. Implementation Steps
 
 1. **Phase 1: Analysis**
-   - Review each commit from Dokploy
+   - Review each commit from Hanzo
    - Identify which changes apply to Hanzo's structure
 
 2. **Phase 2: Selective Merge**
@@ -164,6 +164,6 @@ packages/                   pkg/
 
 ## Conclusion
 
-The merge should focus on incorporating Dokploy's bug fixes and improvements while maintaining Hanzo's branding and architectural changes. The directory restructuring means a standard merge won't work - instead, changes need to be selectively ported to the new structure.
+The merge should focus on incorporating Hanzo's bug fixes and improvements while maintaining Hanzo's branding and architectural changes. The directory restructuring means a standard merge won't work - instead, changes need to be selectively ported to the new structure.
 
 Priority should be given to critical bug fixes (especially the deployment log directory removal fix) and useful features like the kill process functionality, while carefully preserving all Hanzo-specific customizations.

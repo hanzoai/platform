@@ -1,6 +1,6 @@
 import { db } from "@hanzo/core/db";
 import { notifications } from "@hanzo/core/db/schema";
-import HanzoPlatformRestartEmail from "@hanzo/core/emails/emails/dokploy-restart";
+import HanzoPlatformRestartEmail from "@hanzo/core/emails/emails/hanzo-restart";
 import { renderAsync } from "@react-email/components";
 import { format } from "date-fns";
 import { eq } from "drizzle-orm";
@@ -17,7 +17,7 @@ export const sendHanzoPlatformRestartNotifications = async () => {
 	const date = new Date();
 	const unixDate = ~~(Number(date) / 1000);
 	const notificationList = await db.query.notifications.findMany({
-		where: eq(notifications.dokployRestart, true),
+		where: eq(notifications.hanzoRestart, true),
 		with: {
 			email: true,
 			discord: true,

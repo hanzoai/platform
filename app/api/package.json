@@ -1,5 +1,5 @@
 {
-	"name": "@dokploy/api",
+	"name": "@hanzo/api",
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
@@ -10,7 +10,7 @@
 	},
 	"dependencies": {
 		"inngest": "3.40.1",
-		"@dokploy/server": "workspace:*",
+		"@hanzo/server": "workspace:*",
 		"@hono/node-server": "^1.14.3",
 		"@hono/zod-validator": "0.3.0",
 		"@nerimity/mimiqueue": "1.2.3",

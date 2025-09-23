@@ -42,7 +42,7 @@ importers:
 
   apps/api:
     dependencies:
-      '@dokploy/server':
+      '@hanzo/server':
         specifier: workspace:*
         version: link:../../packages/server
       '@hono/node-server':
@@ -98,7 +98,7 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
 
-  apps/dokploy:
+  apps/hanzo:
     dependencies:
       '@ai-sdk/anthropic':
         specifier: ^2.0.5
@@ -139,10 +139,10 @@ importers:
       '@codemirror/view':
         specifier: 6.29.0
         version: 6.29.0
-      '@dokploy/server':
+      '@hanzo/server':
         specifier: workspace:*
         version: link:../../packages/server
-      '@dokploy/trpc-openapi':
+      '@hanzo/trpc-openapi':
         specifier: 0.0.4
         version: 0.0.4(@trpc/server@10.45.2)(@types/node@18.19.104)(zod@3.25.32)
       '@faker-js/faker':
@@ -536,7 +536,7 @@ importers:
 
   apps/schedules:
     dependencies:
-      '@dokploy/server':
+      '@hanzo/server':
         specifier: workspace:*
         version: link:../../packages/server
       '@hono/node-server':
@@ -1074,7 +1074,7 @@ packages:
     resolution: {integrity: sha512-/yCrWGCoA1SVKOks25EGadP9Pnj0oAIHGpl2wH2M2Y46dPM2ueb8wyCVOD7O3WCTkaJ0IkKvzhl1JY7+uCT2Dw==}
     engines: {node: '>=v18'}
 
-  '@dokploy/trpc-openapi@0.0.4':
+  '@hanzo/trpc-openapi@0.0.4':
     resolution: {integrity: sha512-a7VKunKu9arq57bP9MPH7ikJuKfT5SILnNy70vMqf1stm5IrqMG3Y7CIFprFe0DZiw3bwjue0KpETIATBftN6w==}
     peerDependencies:
       '@trpc/server': ^10.0.0
@@ -8143,7 +8143,7 @@ snapshots:
       '@types/conventional-commits-parser': 5.0.1
       chalk: 5.4.1
 
-  '@dokploy/trpc-openapi@0.0.4(@trpc/server@10.45.2)(@types/node@18.19.104)(zod@3.25.32)':
+  '@hanzo/trpc-openapi@0.0.4(@trpc/server@10.45.2)(@types/node@18.19.104)(zod@3.25.32)':
     dependencies:
       '@trpc/server': 10.45.2
       co-body: 6.2.0

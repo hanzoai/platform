@@ -172,7 +172,7 @@ Thank you for your contribution!
 
 ## Templates
 
-To add a new template, go to `https://github.com/Dokploy/templates` repository and read the README.md file.
+To add a new template, go to `https://github.com/Hanzo/templates` repository and read the README.md file.
 
 ### Recommendations
 

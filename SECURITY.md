@@ -1,10 +1,10 @@
-# Dokploy Security Policy
+# Hanzo Security Policy
 
-At Dokploy, security is a top priority. We appreciate the help of security researchers and the community in identifying and reporting vulnerabilities.
+At Hanzo, security is a top priority. We appreciate the help of security researchers and the community in identifying and reporting vulnerabilities.
 
 ## How to Report a Vulnerability
 
-If you have discovered a security vulnerability in Dokploy, we ask that you report it responsibly by following these guidelines:
+If you have discovered a security vulnerability in Hanzo, we ask that you report it responsibly by following these guidelines:
 
 1.  **Contact us:** Send an email to [security@hanzo.ai](mailto:security@hanzo.ai).
 2.  **Provide clear details:** Include as much information as possible to help us understand and reproduce the vulnerability. This should include:
@@ -25,4 +25,4 @@ If you have discovered a security vulnerability in Dokploy, we ask that you repo
 
 We are committed to working with you quickly and responsibly to address any legitimate security vulnerability.
 
-Thank you for helping us keep Dokploy secure for everyone.
+Thank you for helping us keep Hanzo secure for everyone.
