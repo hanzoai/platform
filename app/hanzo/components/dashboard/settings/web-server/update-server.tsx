@@ -47,7 +47,7 @@ export const UpdateServer = ({
 	);
 	const { mutateAsync: getUpdateData, isLoading } =
 		api.settings.getUpdateData.useMutation();
-	const { data: dokployVersion } = api.settings.getHanzo PlatformVersion.useQuery();
+	const { data: hanzoVersion } = api.settings.getHanzo PlatformVersion.useQuery();
 	const { data: releaseTag } = api.settings.getReleaseTag.useQuery();
 	const [latestVersion, setLatestVersion] = useState(
 		updateData?.latestVersion ?? "",
@@ -131,11 +131,11 @@ export const UpdateServer = ({
 					<DialogTitle className="text-2xl font-semibold">
 						Web Server Update
 					</DialogTitle>
-					{dokployVersion && (
+					{hanzoVersion && (
 						<div className="flex items-center gap-1.5 rounded-full px-3 py-1 mr-2 bg-muted">
 							<Server className="h-4 w-4 text-muted-foreground" />
 							<span className="text-sm text-muted-foreground">
-								{dokployVersion} | {releaseTag}
+								{hanzoVersion} | {releaseTag}
 							</span>
 						</div>
 					)}
@@ -237,7 +237,7 @@ export const UpdateServer = ({
 							<div className="text-[#5B9DFF]">
 								We recommend reviewing the{" "}
 								<Link
-									href="https://github.com/Hanzo Platform/dokploy/releases"
+									href="https://github.com/Hanzo Platform/hanzo/releases"
 									target="_blank"
 									className="text-white underline hover:text-zinc-200"
 								>

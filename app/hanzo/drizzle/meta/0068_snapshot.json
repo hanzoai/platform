@@ -881,7 +881,7 @@
           "primaryKey": false,
           "notNull": true,
 <<<<<<< HEAD:app/cloud/drizzle/meta/0068_snapshot.json
-          "default": "'{\"server\":{\"type\":\"Dokploy\",\"refreshRate\":60,\"port\":4500,\"token\":\"\",\"retentionDays\":2,\"cronJob\":\"\",\"urlCallback\":\"\",\"thresholds\":{\"cpu\":0,\"memory\":0}},\"containers\":{\"refreshRate\":60,\"services\":{\"include\":[],\"exclude\":[]}}}'::jsonb"
+          "default": "'{\"server\":{\"type\":\"Hanzo\",\"refreshRate\":60,\"port\":4500,\"token\":\"\",\"retentionDays\":2,\"cronJob\":\"\",\"urlCallback\":\"\",\"thresholds\":{\"cpu\":0,\"memory\":0}},\"containers\":{\"refreshRate\":60,\"services\":{\"include\":[],\"exclude\":[]}}}'::jsonb"
 =======
           "default": "'{\"server\":{\"type\":\"Hanzo\",\"refreshRate\":60,\"port\":4500,\"token\":\"\",\"retentionDays\":2,\"cronJob\":\"\",\"urlCallback\":\"\",\"thresholds\":{\"cpu\":0,\"memory\":0}},\"containers\":{\"refreshRate\":60,\"services\":{\"include\":[],\"exclude\":[]}}}'::jsonb"
 >>>>>>> 923b06f1 (Add AI, organizations and other updates.):app/hanzo/drizzle/meta/0068_snapshot.json
@@ -3325,8 +3325,8 @@
           "default": false
         },
 <<<<<<< HEAD:app/cloud/drizzle/meta/0068_snapshot.json
-        "dokployRestart": {
-          "name": "dokployRestart",
+        "hanzoRestart": {
+          "name": "hanzoRestart",
 =======
         "hanzoRestart": {
           "name": "hanzoRestart",

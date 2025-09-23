@@ -1,9 +1,9 @@
-import { db } from "@dokploy/server/db";
+import { db } from "@hanzo/server/db";
 import {
 	type apiCreateGithub,
 	github,
 	gitProvider,
-} from "@dokploy/server/db/schema";
+} from "@hanzo/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { authGithub } from "../utils/providers/github";

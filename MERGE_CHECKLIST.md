@@ -1,4 +1,4 @@
-# Dokploy to Hanzo Platform Merge Checklist
+# Hanzo to Hanzo Platform Merge Checklist
 
 ## Pre-Merge Verification
 
@@ -46,7 +46,7 @@
 ## Path Translation Required
 
 ### Directory Mappings
-- [ ] `apps/dokploy/` → `app/hanzo/`
+- [ ] `apps/hanzo/` → `app/hanzo/`
 - [ ] `apps/server/` → `app/api/`
 - [ ] `packages/server/` → `pkg/core/`
 - [ ] `packages/` → `pkg/`
