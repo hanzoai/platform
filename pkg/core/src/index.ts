@@ -40,6 +40,7 @@ export * from "./services/compose";
 
 // Utility functions
 export * from "./utils/scheduling/backup";
+export { initCronJobs, keepLatestNBackups } from "./utils/backups/index";
 export { normalizeS3Path } from "./utils/backups/utils";
 // Explicitly import and rename to avoid conflicts
 import { rebuildDatabase as rebuildDatabaseUtil } from "./utils/databases/rebuild";
