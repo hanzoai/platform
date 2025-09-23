@@ -1,15 +1,5 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-<<<<<<<< HEAD:app/hanzo/__test__/drop/drop.test.test.ts
-import { paths } from "@hanzo/core/constants";
-const { APPLICATIONS_PATH } = paths();
-import type { ApplicationNested } from "@hanzo/core";
-import { unzipDrop } from "@hanzo/core";
-import AdmZip from "adm-zip";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-
-vi.mock("@hanzo/core/constants", async (importOriginal) => {
-========
 import type { ApplicationNested } from "@hanzo/core";
 import { unzipDrop } from "@hanzo/core";
 import { paths } from "@hanzo/core/constants";
@@ -17,8 +7,8 @@ import AdmZip from "adm-zip";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const { APPLICATIONS_PATH } = paths();
+
 vi.mock("@hanzo/core/constants", async (importOriginal) => {
->>>>>>>> upstream/main:app/hanzo/__test__/drop/drop.test.ts
 	const actual = await importOriginal();
 	return {
 		// @ts-ignore
@@ -40,203 +30,244 @@ const baseApp: ApplicationNested = {
 	applicationId: "",
 	previewLabels: [],
 	herokuVersion: "",
-<<<<<<<< HEAD:app/hanzo/__test__/drop/drop.test.test.ts
-========
 	giteaBranch: "",
 	giteaBuildPath: "",
 	previewRequireCollaboratorPermissions: false,
 	giteaId: "",
 	giteaOwner: "",
 	giteaRepository: "",
-	cleanCache: false,
-	watchPaths: [],
-	enableSubmodules: false,
->>>>>>>> upstream/main:app/hanzo/__test__/drop/drop.test.ts
-	applicationStatus: "done",
-	triggerType: "push",
-	appName: "",
-	autoDeploy: true,
-	serverId: "",
-	registryUrl: "",
-	branch: null,
-	dockerBuildStage: "",
-	isPreviewDeploymentsActive: false,
-	previewBuildArgs: null,
-	previewCertificateType: "none",
-	previewEnv: null,
-	previewHttps: false,
-	previewPath: "/",
-	previewPort: 3000,
-	previewLimit: 0,
-	previewWildcard: "",
-	environment: {
-		env: "",
-		environmentId: "",
-		name: "",
-		createdAt: "",
-		description: "",
-		projectId: "",
-		project: {
-			env: "",
-			organizationId: "",
-			name: "",
-			description: "",
-			createdAt: "",
-			projectId: "",
-		},
-	},
-	buildArgs: null,
-	buildPath: "/",
-	gitlabPathNamespace: "",
-	buildType: "nixpacks",
-	bitbucketBranch: "",
-	bitbucketBuildPath: "",
-	bitbucketId: "",
-	bitbucketRepository: "",
-	bitbucketOwner: "",
-	githubId: "",
-	gitlabProjectId: 0,
-	gitlabBranch: "",
-	gitlabBuildPath: "",
-	gitlabId: "",
-	gitlabRepository: "",
-	gitlabOwner: "",
-	command: null,
-	cpuLimit: null,
-	cpuReservation: null,
+	gitUrl: "",
 	createdAt: "",
-	customGitBranch: "",
-	customGitBuildPath: "",
-	customGitSSHKeyId: null,
-	customGitUrl: "",
-	description: "",
-	dockerfile: null,
-	dockerImage: null,
-	dropBuildPath: null,
+	serverId: null,
+	name: "backend-drop",
 	environmentId: "",
-	enabled: null,
-	env: null,
-	healthCheckSwarm: null,
-	labelsSwarm: null,
-	memoryLimit: null,
-	memoryReservation: null,
-	modeSwarm: null,
-	mounts: [],
-	name: "",
-	networkSwarm: null,
-	owner: null,
-	password: null,
-	placementSwarm: null,
-	ports: [],
-	publishDirectory: null,
-	isStaticSpa: null,
-	redirects: [],
+	autoDeploy: false,
 	refreshToken: "",
-	registry: null,
-	registryId: null,
-	replicas: 1,
+	sourceType: "drop",
 	repository: null,
-	restartPolicySwarm: null,
-	rollbackConfigSwarm: null,
-	security: [],
-	sourceType: "git",
-	subtitle: null,
+	owner: null,
+	branch: null,
+	buildPath: "/",
+	gitlabProjectId: 0,
+	gitlabRepository: null,
+	gitlabOwner: null,
+	gitlabBranch: null,
+	gitlabBuildPath: null,
+	gitlabPathNamespace: null,
+	bitbucketRepository: null,
+	bitbucketOwner: null,
+	bitbucketBranch: null,
+	bitbucketBuildPath: null,
+	customGitUrl: null,
+	customGitBranch: null,
+	customGitBuildPath: null,
+	customGitSSHKeyId: null,
+	dockerfile: null,
+	buildArgs: null,
+	customBuildCommand: null,
+	customRunCommand: null,
+	customStartCommand: null,
+	installCommand: null,
+	buildCommand: null,
+	startCommand: null,
+	memoryReservation: null,
+	memoryLimit: null,
+	cpuReservation: null,
+	cpuLimit: null,
 	title: null,
-	updateConfigSwarm: null,
-	username: null,
-	dockerContextPath: null,
-	rollbackActive: false,
+	enabled: false,
+	subtitle: null,
+	dockerImage: null,
+	command: null,
+	env: null,
+	replicas: 1,
+	mounts: [],
+	ports: [],
+	volumes: [],
+	redirects: [],
+	security: [],
+	github: null,
+	gitlab: null,
+	bitbucket: null,
+	git: null,
+	gitea: null,
+	registry: null,
+	domains: [],
+	deployments: [],
+	project: {
+		servers: [],
+		projectId: "project123",
+		name: "My Project",
+		environmentId: "environment123",
+	},
+	previewPath: null,
+	previewCertificateType: "none",
+	previewCustomCertResolver: null,
+	previewHttps: false,
+	previewPort: null,
+	previewWildcard: "",
+	// drop specific fields
+	dropBuildPath: "/",
+	composePath: "",
+	composeStatus: "",
+	projectPath: "",
+	cpuArchitecture: "arm64",
+	tmpVolumeSize: "1gb",
+	logRunId: "",
+	buildType: "nixpacks",
+	previewEnv: "",
+	healthCheckSwarm: "",
+	restartPolicySwarm: "",
+	restartPolicyCompose: "",
+	placementConstraints: "",
+	updateConfigSwarm: "",
+	rollbackConfigSwarm: "",
+	modeSwarm: "",
+	labelsSwarm: "",
+	labelsCompose: "",
+	previewDeployments: [],
+	cpuReservationCompose: null,
+	cpuLimitCompose: null,
+	memoryReservationCompose: null,
+	memoryLimitCompose: null,
+	networkSwarm: null,
+	logMaxSizeCompose: "10mb",
+	logMaxFilesCompose: 1,
+	environment: {
+		environmentId: "environment123",
+		name: "production",
+		description: null,
+		env: null,
+		createdAt: "",
+		projectId: "",
+		users: [],
+	},
+	description: null,
+	dockerContext: null,
+	publishDirectory: null,
+	previewLabelsSwarm: "",
+	previewLabelsCompose: "",
 };
 
-describe("unzipDrop using real zip files", () => {
-	// const { APPLICATIONS_PATH } = paths();
+const testDir = "./__test__/drop/zips";
+
+describe("unzipDrop", () => {
 	beforeAll(async () => {
-		await fs.rm(APPLICATIONS_PATH, { recursive: true, force: true });
+		await fs.mkdir(path.join(testDir, "output"), { recursive: true });
 	});
 
 	afterAll(async () => {
-		await fs.rm(APPLICATIONS_PATH, { recursive: true, force: true });
+		await fs.rm(path.join(testDir, "output"), { recursive: true });
 	});
 
-	it("should correctly extract a zip with a single root folder", async () => {
-		baseApp.appName = "single-file";
-		// const appName = "single-file";
-		try {
-			const outputPath = path.join(APPLICATIONS_PATH, baseApp.appName, "code");
-			const zip = new AdmZip("./__test__/drop/zips/single-file.zip");
-			console.log(`Output Path: ${outputPath}`);
-			const zipBuffer = zip.toBuffer() as Buffer<ArrayBuffer>;
-			const file = new File([zipBuffer], "single.zip");
-			await unzipDrop(file, baseApp);
-			const files = await fs.readdir(outputPath, { withFileTypes: true });
-			expect(files.some((f) => f.name === "test.txt")).toBe(true);
-		} catch (err) {
-			console.log(err);
-		} finally {
-		}
+	it("should unzip a Vite build file correctly", async () => {
+		const zipPath = path.join(testDir, "vite-build.zip");
+		const zipFile = await fs.readFile(zipPath);
+
+		const result = await unzipDrop(
+			baseApp,
+			new File([zipFile], "vite-build.zip"),
+		);
+
+		expect(result).toBeTruthy();
+
+		const appDir = path.join(
+			APPLICATIONS_PATH,
+			baseApp.applicationId,
+			"code",
+		);
+		const outputFiles = await fs.readdir(appDir);
+
+		expect(outputFiles).toContain("index.html");
+		expect(outputFiles).toContain("favicon.ico");
+	});
+
+	it("should validate zip contains an index.html file", async () => {
+		const zip = new AdmZip();
+		zip.addFile("test.txt", Buffer.from("test content"));
+
+		const zipBuffer = zip.toBuffer();
+
+		await expect(
+			unzipDrop(baseApp, new File([zipBuffer], "test.zip")),
+		).rejects.toThrow("No index.html file found");
+	});
+
+	it("should extract from root if only one directory exists", async () => {
+		const zipPath = path.join(testDir, "vite-nested-build.zip");
+		const zipFile = await fs.readFile(zipPath);
+
+		const result = await unzipDrop(
+			baseApp,
+			new File([zipFile], "vite-nested-build.zip"),
+		);
+
+		expect(result).toBeTruthy();
+
+		const appDir = path.join(
+			APPLICATIONS_PATH,
+			baseApp.applicationId,
+			"code",
+		);
+		const outputFiles = await fs.readdir(appDir);
+
+		expect(outputFiles).toContain("index.html");
+		expect(outputFiles).toContain("favicon.ico");
+		expect(outputFiles).not.toContain("dist");
+	});
+
+	it("should reject zip files larger than 50MB", async () => {
+		const largeBuffer = Buffer.alloc(51 * 1024 * 1024); // 51MB
+		const largeFile = new File([largeBuffer], "large.zip");
+
+		await expect(unzipDrop(baseApp, largeFile)).rejects.toThrow(
+			"File size exceeds 50MB limit",
+		);
+	});
+
+	it("should handle Next.js builds correctly", async () => {
+		const zipPath = path.join(testDir, "nextjs-build.zip");
+		const zipFile = await fs.readFile(zipPath);
+
+		const result = await unzipDrop(
+			baseApp,
+			new File([zipFile], "nextjs-build.zip"),
+		);
+
+		expect(result).toBeTruthy();
+
+		const appDir = path.join(
+			APPLICATIONS_PATH,
+			baseApp.applicationId,
+			"code",
+		);
+		const outputFiles = await fs.readdir(appDir);
+
+		expect(outputFiles).toContain("404.html");
+		expect(outputFiles).toContain("favicon.ico");
+		expect(outputFiles).toContain("_next");
+	});
+
+	it("should handle React builds correctly", async () => {
+		const zipPath = path.join(testDir, "react-build.zip");
+		const zipFile = await fs.readFile(zipPath);
+
+		const result = await unzipDrop(
+			baseApp,
+			new File([zipFile], "react-build.zip"),
+		);
+
+		expect(result).toBeTruthy();
+
+		const appDir = path.join(
+			APPLICATIONS_PATH,
+			baseApp.applicationId,
+			"code",
+		);
+		const outputFiles = await fs.readdir(appDir);
+
+		expect(outputFiles).toContain("index.html");
+		expect(outputFiles).toContain("static");
+		expect(outputFiles).toContain("favicon.ico");
 	});
 });
-
-// 	it("should correctly extract a zip with a single root folder and a subfolder", async () => {
-// 		baseApp.appName = "folderwithfile";
-// 		// const appName = "folderwithfile";
-// 		const outputPath = path.join(APPLICATIONS_PATH, baseApp.appName, "code");
-// 		const zip = new AdmZip("./__test__/drop/zips/folder-with-file.zip");
-
-// 		const zipBuffer = zip.toBuffer();
-// 		const file = new File([zipBuffer], "single.zip");
-// 		await unzipDrop(file, baseApp);
-
-// 		const files = await fs.readdir(outputPath, { withFileTypes: true });
-// 		expect(files.some((f) => f.name === "folder1.txt")).toBe(true);
-// 	});
-
-// 	it("should correctly extract a zip with multiple root folders", async () => {
-// 		baseApp.appName = "two-folders";
-// 		// const appName = "two-folders";
-// 		const outputPath = path.join(APPLICATIONS_PATH, baseApp.appName, "code");
-// 		const zip = new AdmZip("./__test__/drop/zips/two-folders.zip");
-
-// 		const zipBuffer = zip.toBuffer();
-// 		const file = new File([zipBuffer], "single.zip");
-// 		await unzipDrop(file, baseApp);
-
-// 		const files = await fs.readdir(outputPath, { withFileTypes: true });
-
-// 		expect(files.some((f) => f.name === "folder1")).toBe(true);
-// 		expect(files.some((f) => f.name === "folder2")).toBe(true);
-// 	});
-
-// 	it("should correctly extract a zip with a single root with a file", async () => {
-// 		baseApp.appName = "nested";
-// 		// const appName = "nested";
-// 		const outputPath = path.join(APPLICATIONS_PATH, baseApp.appName, "code");
-// 		const zip = new AdmZip("./__test__/drop/zips/nested.zip");
-
-// 		const zipBuffer = zip.toBuffer();
-// 		const file = new File([zipBuffer], "single.zip");
-// 		await unzipDrop(file, baseApp);
-
-// 		const files = await fs.readdir(outputPath, { withFileTypes: true });
-
-// 		expect(files.some((f) => f.name === "folder1")).toBe(true);
-// 		expect(files.some((f) => f.name === "folder2")).toBe(true);
-// 		expect(files.some((f) => f.name === "folder3")).toBe(true);
-// 	});
-
-// 	it("should correctly extract a zip with a single root with a folder", async () => {
-// 		baseApp.appName = "folder-with-sibling-file";
-// 		// const appName = "folder-with-sibling-file";
-// 		const outputPath = path.join(APPLICATIONS_PATH, baseApp.appName, "code");
-// 		const zip = new AdmZip("./__test__/drop/zips/folder-with-sibling-file.zip");
-
-// 		const zipBuffer = zip.toBuffer();
-// 		const file = new File([zipBuffer], "single.zip");
-// 		await unzipDrop(file, baseApp);
-
-// 		const files = await fs.readdir(outputPath, { withFileTypes: true });
-
-// 		expect(files.some((f) => f.name === "folder1")).toBe(true);
-// 		expect(files.some((f) => f.name === "test.txt")).toBe(true);
-// 	});
-// });

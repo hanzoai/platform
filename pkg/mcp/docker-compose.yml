@@ -1,0 +1,29 @@
+services:
+  hanzo-mcp-http:
+    build: .
+    container_name: hanzo-mcp-http
+    ports:
+      - "${EXTERNAL_PORT:-3000}:3000"
+    environment:
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-http}
+      - HANZO_URL=${HANZO_URL:-https://your-hanzo-server.com/api}
+      - HANZO_AUTH_TOKEN=${HANZO_AUTH_TOKEN:-your_token_here}
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  hanzo-mcp-stdio:
+    build: .
+    container_name: hanzo-mcp-stdio
+    environment:
+      - HANZO_URL=${HANZO_URL:-https://your-hanzo-server.com/api}
+      - HANZO_AUTH_TOKEN=${HANZO_AUTH_TOKEN:-your_token_here}
+    restart: "no"
+    stdin_open: true
+    tty: true
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    driver: bridge
