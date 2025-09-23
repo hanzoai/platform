@@ -67,8 +67,8 @@ export const AddCertificate = () => {
 	const { data: servers } = api.server.withSSHKey.useQuery();
 	const hasServers = servers && servers.length > 0;
 	// Show dropdown logic based on cloud environment
-	// Cloud: show only if there are remote servers (no Dokploy option)
-	// Self-hosted: show only if there are remote servers (Dokploy is default, hide if no remote servers)
+	// Cloud: show only if there are remote servers (no Hanzo Platform option)
+	// Self-hosted: show only if there are remote servers (Hanzo Platform is default, hide if no remote servers)
 	const shouldShowServerDropdown = hasServers;
 
 	const form = useForm<AddCertificate>({
@@ -204,7 +204,7 @@ export const AddCertificate = () => {
 										>
 											<SelectTrigger>
 												<SelectValue
-													placeholder={!isCloud ? "Dokploy" : "Select a Server"}
+													placeholder={!isCloud ? "Hanzo Platform" : "Select a Server"}
 												/>
 											</SelectTrigger>
 											<SelectContent>
@@ -212,7 +212,7 @@ export const AddCertificate = () => {
 													{!isCloud && (
 														<SelectItem value="dokploy">
 															<span className="flex items-center gap-2 justify-between w-full">
-																<span>Dokploy</span>
+																<span>Hanzo Platform</span>
 																<span className="text-muted-foreground text-xs self-center">
 																	Default
 																</span>

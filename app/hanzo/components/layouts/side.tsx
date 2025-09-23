@@ -769,7 +769,7 @@ export default function Page({ children }: Props) {
 
 	const pathname = usePathname();
 	const { data: auth } = api.user.get.useQuery();
-	const { data: dokployVersion } = api.settings.getDokployVersion.useQuery();
+	const { data: dokployVersion } = api.settings.getHanzo PlatformVersion.useQuery();
 
 	const includesProjects = pathname?.includes("/dashboard/project");
 	const { data: isCloud } = api.settings.isCloud.useQuery();

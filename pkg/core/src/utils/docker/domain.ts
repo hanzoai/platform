@@ -251,11 +251,11 @@ export const addDomainToCompose = async (
 			}
 			labels.unshift(...httpLabels);
 			if (!compose.isolatedDeployment) {
-				if (!labels.includes("traefik.docker.network=dokploy-network")) {
-					labels.unshift("traefik.docker.network=dokploy-network");
+				if (!labels.includes("traefik.docker.network=hanzo-network")) {
+					labels.unshift("traefik.docker.network=hanzo-network");
 				}
-				if (!labels.includes("traefik.swarm.network=dokploy-network")) {
-					labels.unshift("traefik.swarm.network=dokploy-network");
+				if (!labels.includes("traefik.swarm.network=hanzo-network")) {
+					labels.unshift("traefik.swarm.network=hanzo-network");
 				}
 			}
 		}

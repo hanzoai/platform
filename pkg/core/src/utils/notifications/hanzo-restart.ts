@@ -1,6 +1,6 @@
 import { db } from "@hanzo/core/db";
 import { notifications } from "@hanzo/core/db/schema";
-import DokployRestartEmail from "@hanzo/core/emails/emails/dokploy-restart";
+import HanzoPlatformRestartEmail from "@hanzo/core/emails/emails/dokploy-restart";
 import { renderAsync } from "@react-email/components";
 import { format } from "date-fns";
 import { eq } from "drizzle-orm";
@@ -13,7 +13,7 @@ import {
 	sendTelegramNotification,
 } from "./utils";
 
-export const sendDokployRestartNotifications = async () => {
+export const sendHanzoPlatformRestartNotifications = async () => {
 	const date = new Date();
 	const unixDate = ~~(Number(date) / 1000);
 	const notificationList = await db.query.notifications.findMany({
@@ -33,9 +33,9 @@ export const sendDokployRestartNotifications = async () => {
 
 		if (email) {
 			const template = await renderAsync(
-				DokployRestartEmail({ date: date.toLocaleString() }),
+				HanzoPlatformRestartEmail({ date: date.toLocaleString() }),
 			).catch();
-			await sendEmailNotification(email, "Dokploy Server Restarted", template);
+			await sendEmailNotification(email, "Hanzo Platform Server Restarted", template);
 		}
 
 		if (discord) {
@@ -44,7 +44,7 @@ export const sendDokployRestartNotifications = async () => {
 
 			try {
 				await sendDiscordNotification(discord, {
-					title: decorate(">", "`✅` Dokploy Server Restarted"),
+					title: decorate(">", "`✅` Hanzo Platform Server Restarted"),
 					color: 0x57f287,
 					fields: [
 						{
@@ -65,7 +65,7 @@ export const sendDokployRestartNotifications = async () => {
 					],
 					timestamp: date.toISOString(),
 					footer: {
-						text: "Dokploy Restart Notification",
+						text: "Hanzo Platform Restart Notification",
 					},
 				});
 			} catch (error) {
@@ -79,7 +79,7 @@ export const sendDokployRestartNotifications = async () => {
 			try {
 				await sendGotifyNotification(
 					gotify,
-					decorate("✅", "Dokploy Server Restarted"),
+					decorate("✅", "Hanzo Platform Server Restarted"),
 					`${decorate("🕒", `Date: ${date.toLocaleString()}`)}`,
 				);
 			} catch (error) {
@@ -91,7 +91,7 @@ export const sendDokployRestartNotifications = async () => {
 			try {
 				await sendNtfyNotification(
 					ntfy,
-					"Dokploy Server Restarted",
+					"Hanzo Platform Server Restarted",
 					"white_check_mark",
 					"",
 					`🕒Date: ${date.toLocaleString()}`,
@@ -105,7 +105,7 @@ export const sendDokployRestartNotifications = async () => {
 			try {
 				await sendTelegramNotification(
 					telegram,
-					`<b>✅ Dokploy Server Restarted</b>\n\n<b>Date:</b> ${format(date, "PP")}\n<b>Time:</b> ${format(date, "pp")}`,
+					`<b>✅ Hanzo Platform Server Restarted</b>\n\n<b>Date:</b> ${format(date, "PP")}\n<b>Time:</b> ${format(date, "pp")}`,
 				);
 			} catch (error) {
 				console.log(error);
@@ -120,7 +120,7 @@ export const sendDokployRestartNotifications = async () => {
 					attachments: [
 						{
 							color: "#00FF00",
-							pretext: ":white_check_mark: *Dokploy Server Restarted*",
+							pretext: ":white_check_mark: *Hanzo Platform Server Restarted*",
 							fields: [
 								{
 									title: "Time",

@@ -8,7 +8,7 @@ import {
 	initializeNetwork,
 	initSchedules,
 	initVolumeBackupsCronJobs,
-	sendDokployRestartNotifications,
+	sendHanzo PlatformRestartNotifications,
 	setupDirectories,
 } from "@hanzo/core";
 import { config } from "dotenv";
@@ -53,7 +53,7 @@ void app.prepare().then(async () => {
 			await initCronJobs();
 			await initSchedules();
 			await initVolumeBackupsCronJobs();
-			await sendDokployRestartNotifications();
+			await sendHanzo PlatformRestartNotifications();
 		}
 
 		if (IS_CLOUD && process.env.NODE_ENV === "production") {
