@@ -12,7 +12,7 @@ mkdir -p $HOME/.ssh && \\
 chmod 700 $HOME/.ssh && \\
 touch $HOME/.ssh/authorized_keys && \\
 chmod 600 $HOME/.ssh/authorized_keys && \\
-cat /etc/hanzo/ssh/auto_generated-dokploy-local.pub >> $HOME/.ssh/authorized_keys && \\
+cat /etc/hanzo/ssh/auto_generated-hanzo-local.pub >> $HOME/.ssh/authorized_keys && \\
 echo "✓ Hanzo Platform SSH key added successfully. Reopen the terminal in Hanzo Platform to reconnect."
 # ----------------------------------------`;
 

@@ -2,10 +2,10 @@
 
 ## Current Version
 - **Hanzo Platform**: v4.0.6 (updated from v4.0.4)
-- **Based on Dokploy**: v0.20.8
-- **Latest Dokploy**: v0.23.6
+- **Based on Hanzo**: v0.20.8
+- **Latest Hanzo**: v0.23.6
 
-## Updates Applied from Dokploy
+## Updates Applied from Hanzo
 
 ### ✅ Critical Security Fixes
 1. **Deployment log cleanup** - Prevents accidental deletion of current directory
@@ -23,7 +23,7 @@
 
 ## Features NOT in Hanzo Platform
 
-These features exist in Dokploy but were intentionally removed or not implemented:
+These features exist in Hanzo but were intentionally removed or not implemented:
 
 1. **Docker Compose Management** - No dedicated compose stack management
 2. **Gitea Integration** - Only GitHub, GitLab, Bitbucket supported
@@ -96,7 +96,7 @@ The platform is deployed at:
 1. ✅ **Security updates applied** - Platform is secure
 2. ✅ **MCP ready** - Can be used with AI assistants
 3. ⚠️ **Missing features** - Consider if you need compose/rollback features
-4. 🔄 **Regular updates** - Check Dokploy monthly for security fixes
+4. 🔄 **Regular updates** - Check Hanzo monthly for security fixes
 
 ## Next Steps
 

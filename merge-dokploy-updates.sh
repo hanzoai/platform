@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Merge Dokploy Updates into Hanzo Platform
-# This script helps selectively merge Dokploy updates while preserving Hanzo customizations
+# Merge Hanzo Updates into Hanzo Platform
+# This script helps selectively merge Hanzo updates while preserving Hanzo customizations
 
 set -e
 
-echo "🔄 Starting Dokploy merge process..."
+echo "🔄 Starting Hanzo merge process..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -21,7 +21,7 @@ if [ "$current_branch" != "main" ]; then
 fi
 
 # Create merge branch
-merge_branch="merge-dokploy-v0.23.6"
+merge_branch="merge-hanzo-v0.23.6"
 echo -e "${GREEN}Creating merge branch: $merge_branch${NC}"
 git checkout -b $merge_branch || {
     echo -e "${YELLOW}Branch already exists, checking out...${NC}"
@@ -64,14 +64,14 @@ echo -e "${GREEN}Patches generated in ./patches directory${NC}"
 
 # Files that need manual path translation
 echo -e "${YELLOW}Files that need path translation:${NC}"
-echo "- apps/dokploy/* → app/hanzo/*"
+echo "- apps/hanzo/* → app/hanzo/*"
 echo "- apps/server/* → app/api/*"
 echo "- packages/* → pkg/*"
 
 # Create mapping file
 cat > path-mappings.txt << 'EOF'
-# Path mappings from Dokploy to Hanzo structure
-apps/dokploy/ → app/hanzo/
+# Path mappings from Hanzo to Hanzo structure
+apps/hanzo/ → app/hanzo/
 apps/server/ → app/api/
 packages/ → pkg/
 EOF
@@ -93,7 +93,7 @@ fi
 temp_patch="/tmp/translated_$(basename $patch_file)"
 
 # Translate paths
-sed -e 's|apps/dokploy/|app/hanzo/|g' \
+sed -e 's|apps/hanzo/|app/hanzo/|g' \
     -e 's|apps/server/|app/api/|g' \
     -e 's|packages/|pkg/|g' \
     "$patch_file" > "$temp_patch"
