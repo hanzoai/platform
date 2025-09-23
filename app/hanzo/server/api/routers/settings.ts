@@ -10,8 +10,8 @@ import {
 	execAsync,
 	findServerById,
 	findUserById,
-	getDokployImage,
-	getDokployImageTag,
+	getHanzo PlatformImage,
+	getHanzo PlatformImageTag,
 	getLogCleanupStatus,
 	getUpdateData,
 	IS_CLOUD,
@@ -111,7 +111,7 @@ export const settingsRouter = createTRPCRouter({
 		.input(apiServerSchema)
 		.mutation(async ({ input }) => {
 			try {
-				await reloadDockerResource("dokploy-traefik", input?.serverId);
+				await reloadDockerResource("hanzo-traefik", input?.serverId);
 			} catch (err) {
 				console.error(err);
 			}
@@ -121,9 +121,9 @@ export const settingsRouter = createTRPCRouter({
 	toggleDashboard: adminProcedure
 		.input(apiEnableDashboard)
 		.mutation(async ({ input }) => {
-			const ports = await readPorts("dokploy-traefik", input.serverId);
+			const ports = await readPorts("hanzo-traefik", input.serverId);
 			const env = await readEnvironmentVariables(
-				"dokploy-traefik",
+				"hanzo-traefik",
 				input.serverId,
 			);
 			const preparedEnv = prepareEnvironmentVariables(env);
@@ -398,18 +398,18 @@ export const settingsRouter = createTRPCRouter({
 			"update",
 			"--force",
 			"--image",
-			getDokployImage(),
+			getHanzo PlatformImage(),
 			"dokploy",
 		]);
 
 		return true;
 	}),
 
-	getDokployVersion: protectedProcedure.query(() => {
+	getHanzo PlatformVersion: protectedProcedure.query(() => {
 		return packageInfo.version;
 	}),
 	getReleaseTag: protectedProcedure.query(() => {
-		return getDokployImageTag();
+		return getHanzo PlatformImageTag();
 	}),
 	readDirectories: protectedProcedure
 		.input(apiServerSchema)
@@ -529,7 +529,7 @@ export const settingsRouter = createTRPCRouter({
 			});
 
 			openApiDocument.info = {
-				title: "Dokploy API",
+				title: "Hanzo Platform API",
 				description: "Endpoints for dokploy",
 				version: "1.0.0",
 			};
@@ -560,7 +560,7 @@ export const settingsRouter = createTRPCRouter({
 		.input(apiServerSchema)
 		.query(async ({ input }) => {
 			const envVars = await readEnvironmentVariables(
-				"dokploy-traefik",
+				"hanzo-traefik",
 				input?.serverId,
 			);
 			return envVars;
@@ -570,7 +570,7 @@ export const settingsRouter = createTRPCRouter({
 		.input(z.object({ env: z.string(), serverId: z.string().optional() }))
 		.mutation(async ({ input }) => {
 			const envs = prepareEnvironmentVariables(input.env);
-			const ports = await readPorts("dokploy-traefik", input?.serverId);
+			const ports = await readPorts("hanzo-traefik", input?.serverId);
 
 			await writeTraefikSetup({
 				env: envs,
@@ -583,7 +583,7 @@ export const settingsRouter = createTRPCRouter({
 	haveTraefikDashboardPortEnabled: adminProcedure
 		.input(apiServerSchema)
 		.query(async ({ input }) => {
-			const ports = await readPorts("dokploy-traefik", input?.serverId);
+			const ports = await readPorts("hanzo-traefik", input?.serverId);
 			return ports.some((port) => port.targetPort === 8080);
 		}),
 
@@ -687,7 +687,7 @@ export const settingsRouter = createTRPCRouter({
 			if (input.enable) {
 				const config = {
 					accessLog: {
-						filePath: "/etc/dokploy/traefik/dynamic/access.log",
+						filePath: "/etc/hanzo/traefik/dynamic/access.log",
 						format: "json",
 						bufferingSize: 100,
 						filters: {
@@ -807,7 +807,7 @@ export const settingsRouter = createTRPCRouter({
 					});
 				}
 				const env = await readEnvironmentVariables(
-					"dokploy-traefik",
+					"hanzo-traefik",
 					input?.serverId,
 				);
 				const preparedEnv = prepareEnvironmentVariables(env);
@@ -832,7 +832,7 @@ export const settingsRouter = createTRPCRouter({
 	getTraefikPorts: adminProcedure
 		.input(apiServerSchema)
 		.query(async ({ input }) => {
-			const ports = await readPorts("dokploy-traefik", input?.serverId);
+			const ports = await readPorts("hanzo-traefik", input?.serverId);
 			return ports;
 		}),
 	updateLogCleanup: adminProcedure
@@ -855,7 +855,7 @@ export const settingsRouter = createTRPCRouter({
 		return getLogCleanupStatus();
 	}),
 
-	getDokployCloudIps: adminProcedure.query(async () => {
+	getHanzo PlatformCloudIps: adminProcedure.query(async () => {
 		if (!IS_CLOUD) {
 			return [];
 		}
