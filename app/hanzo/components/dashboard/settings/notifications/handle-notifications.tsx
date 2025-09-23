@@ -288,7 +288,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				form.reset({
 					appBuildError: notification.appBuildError,
 					appDeploy: notification.appDeploy,
-					dokployRestart: notification.dokployRestart,
+					hanzoRestart: notification.hanzoRestart,
 					databaseBackup: notification.databaseBackup,
 					type: notification.notificationType,
 					accessToken: notification.ntfy?.accessToken,
@@ -403,7 +403,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 			promise = ntfyMutation.mutateAsync({
 				appBuildError: appBuildError,
 				appDeploy: appDeploy,
-				dokployRestart: dokployRestart,
+				hanzoRestart: hanzoRestart,
 				databaseBackup: databaseBackup,
 				serverUrl: data.serverUrl,
 				accessToken: data.accessToken,

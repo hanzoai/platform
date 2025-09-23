@@ -94,7 +94,7 @@ export const scheduleRouter = createTRPCRouter({
 					"application",
 					"compose",
 					"server",
-					"dokploy-server",
+					"hanzo-server",
 				]),
 			}),
 		)
@@ -103,7 +103,7 @@ export const scheduleRouter = createTRPCRouter({
 				application: eq(schedules.applicationId, input.id),
 				compose: eq(schedules.composeId, input.id),
 				server: eq(schedules.serverId, input.id),
-				"dokploy-server": eq(schedules.userId, input.id),
+				"hanzo-server": eq(schedules.userId, input.id),
 			};
 			return db.query.schedules.findMany({
 				where: where[input.scheduleType],

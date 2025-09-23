@@ -1,10 +1,10 @@
-import { db } from "@dokploy/server/db";
+import { db } from "@hanzo/server/db";
 import {
 	type apiCreatePreviewDeployment,
 	deployments,
 	organization,
 	previewDeployments,
-} from "@dokploy/server/db/schema";
+} from "@hanzo/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { generatePassword } from "../templates";

@@ -8,7 +8,7 @@
  */
 
 import { validateRequest } from "@hanzo/core/lib/auth";
-import type { OpenApiMeta } from "@dokploy/trpc-openapi";
+import type { OpenApiMeta } from "@hanzo/trpc-openapi";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
 import {
