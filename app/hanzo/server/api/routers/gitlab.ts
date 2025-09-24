@@ -7,7 +7,7 @@ import {
 	testGitlabConnection,
 	updateGitlab,
 	updateGitProvider,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { db } from "@/server/db";

@@ -1,5 +1,5 @@
-import type { findProjectById } from "@hanzo/core";
-import { validateRequest } from "@hanzo/core/lib/auth";
+import type { findProjectById } from "@hanzo/platform";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import {
 	Ban,

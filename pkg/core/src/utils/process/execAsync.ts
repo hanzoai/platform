@@ -3,6 +3,39 @@ import util from "node:util";
 export const execAsync = util.promisify(exec);
 
 /**
+ * Execute command with streaming output
+ */
+export const execAsyncStream = async (
+	command: string,
+	onData?: (data: string) => void,
+): Promise<{ stdout: string; stderr: string }> => {
+	return new Promise((resolve, reject) => {
+		const child = exec(command);
+		let stdout = '';
+		let stderr = '';
+
+		child.stdout?.on('data', (data) => {
+			stdout += data;
+			if (onData) onData(data);
+		});
+
+		child.stderr?.on('data', (data) => {
+			stderr += data;
+			if (onData) onData(data);
+		});
+
+		child.on('error', reject);
+		child.on('close', (code) => {
+			if (code !== 0) {
+				reject(new Error(`Command failed with exit code ${code}`));
+			} else {
+				resolve({ stdout, stderr });
+			}
+		});
+	});
+};
+
+/**
  * Stub implementation that logs a warning and executes the command locally
  * Multi-server functionality has been removed
  */

@@ -1,4 +1,4 @@
-import type { IUpdateData } from "@hanzo/core/index";
+import type { IUpdateData } from "@hanzo/platform/index";
 import {
 	Bug,
 	Download,
@@ -47,7 +47,7 @@ export const UpdateServer = ({
 	);
 	const { mutateAsync: getUpdateData, isLoading } =
 		api.settings.getUpdateData.useMutation();
-	const { data: hanzoVersion } = api.settings.getHanzo PlatformVersion.useQuery();
+	const { data: hanzoVersion } = api.settings.getHanzoPlatformVersion.useQuery();
 	const { data: releaseTag } = api.settings.getReleaseTag.useQuery();
 	const [latestVersion, setLatestVersion] = useState(
 		updateData?.latestVersion ?? "",

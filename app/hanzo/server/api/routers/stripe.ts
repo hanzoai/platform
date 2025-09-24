@@ -3,7 +3,7 @@ import {
 	findUserById,
 	IS_CLOUD,
 	updateUser,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import Stripe from "stripe";
 import { z } from "zod";

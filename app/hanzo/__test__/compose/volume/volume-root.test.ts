@@ -1,5 +1,5 @@
-import type { ComposeSpecification } from "@hanzo/core";
-import { addSuffixToVolumesRoot, generateRandomHash } from "@hanzo/core";
+import type { ComposeSpecification } from "@hanzo/platform";
+import { addSuffixToVolumesRoot, generateRandomHash } from "@hanzo/platform";
 import { load } from "js-yaml";
 import { expect, test } from "vitest";
 

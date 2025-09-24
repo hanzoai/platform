@@ -1,5 +1,5 @@
-import { IS_CLOUD } from "@hanzo/core/constants";
-import { validateRequest } from "@hanzo/core/lib/auth";
+import { IS_CLOUD } from "@hanzo/platform/constants";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";
 import { ShowSchedules } from "@/components/dashboard/application/schedules/show-schedules";

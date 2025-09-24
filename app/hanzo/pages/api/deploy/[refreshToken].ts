@@ -1,4 +1,4 @@
-import { IS_CLOUD, shouldDeploy } from "@hanzo/core";
+import { IS_CLOUD, shouldDeploy } from "@hanzo/platform";
 import { eq } from "drizzle-orm";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { db } from "@/server/db";

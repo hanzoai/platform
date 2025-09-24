@@ -1,4 +1,4 @@
-import { addHanzoNetworkToService } from "@hanzo/core";
+import { addHanzoNetworkToService } from "@hanzo/platform";
 import { describe, expect, it } from "vitest";
 
 describe("addHanzoNetworkToService", () => {

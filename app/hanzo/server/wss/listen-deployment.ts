@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import type http from "node:http";
-import { findServerById, validateRequest } from "@hanzo/core";
+import { findServerById, validateRequest } from "@hanzo/platform";
 import { Client } from "ssh2";
 import { WebSocketServer } from "ws";
 
