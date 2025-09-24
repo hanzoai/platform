@@ -1,6 +1,6 @@
-import { findAdmin, generateRandomPassword } from "@hanzo/core";
-import { db } from "@hanzo/core/db";
-import { account } from "@hanzo/core/db/schema";
+import { findAdmin, generateRandomPassword } from "@hanzo/platform";
+import { db } from "@hanzo/platform/db";
+import { account } from "@hanzo/platform/db/schema";
 import { eq } from "drizzle-orm";
 
 (async () => {

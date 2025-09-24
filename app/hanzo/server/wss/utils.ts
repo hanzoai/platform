@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execAsync, paths } from "@hanzo/core";
+import { execAsync, paths } from "@hanzo/platform";
 
 export const getShell = () => {
 	switch (os.platform()) {

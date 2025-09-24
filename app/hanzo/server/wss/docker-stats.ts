@@ -5,7 +5,7 @@ import {
 	getLastAdvancedStatsFile,
 	recordAdvancedStats,
 	validateRequest,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { WebSocketServer } from "ws";
 
 export const setupDockerStatsMonitoringSocketServer = (

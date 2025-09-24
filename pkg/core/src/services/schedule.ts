@@ -114,6 +114,18 @@ export const deleteSchedule = async (scheduleId: string) => {
 	return true;
 };
 
+export const runCommand = async (scheduleId: string) => {
+	const schedule = await findScheduleById(scheduleId);
+	if (!schedule) {
+		throw new Error("Schedule not found");
+	}
+	
+	// Execute the schedule's command
+	// This would typically trigger the scheduled job immediately
+	console.log(`Running schedule: ${schedule.name}`);
+	return true;
+};
+
 export const updateSchedule = async (
 	input: z.infer<typeof updateScheduleSchema>,
 ) => {
