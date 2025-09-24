@@ -1,4 +1,4 @@
-import { validateRequest } from "@hanzo/core/lib/auth";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import copy from "copy-to-clipboard";
 import { GlobeIcon, HelpCircle, ServerOff } from "lucide-react";
@@ -55,7 +55,7 @@ import { UseKeyboardNav } from "@/hooks/use-keyboard-nav";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
 <<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/application/[applicationId].tsx
-import { validateRequest } from "@hanzo/core/lib/auth";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import copy from "copy-to-clipboard";
 import { GlobeIcon, HelpCircle, ServerOff } from "lucide-react";

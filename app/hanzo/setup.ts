@@ -3,12 +3,12 @@ import {
 	createDefaultServerTraefikConfig,
 	createDefaultTraefikConfig,
 	initializeTraefik,
-} from "@hanzo/core/setup/traefik-setup";
+} from "@hanzo/platform/setup/traefik-setup";
 
-import { setupDirectories } from "@hanzo/core/setup/config-paths";
-import { initializePostgres } from "@hanzo/core/setup/postgres-setup";
-import { initializeRedis } from "@hanzo/core/setup/redis-setup";
-import { initializeNetwork, initializeSwarm } from "@hanzo/core/setup/setup";
+import { setupDirectories } from "@hanzo/platform/setup/config-paths";
+import { initializePostgres } from "@hanzo/platform/setup/postgres-setup";
+import { initializeRedis } from "@hanzo/platform/setup/redis-setup";
+import { initializeNetwork, initializeSwarm } from "@hanzo/platform/setup/setup";
 (async () => {
 	try {
 		setupDirectories();

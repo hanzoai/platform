@@ -1,8 +1,8 @@
-import type { ComposeSpecification } from "@hanzo/core";
+import type { ComposeSpecification } from "@hanzo/platform";
 import {
 	addSuffixToAllServiceNames,
 	addSuffixToServiceNames,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { load } from "js-yaml";
 import { expect, test } from "vitest";
 

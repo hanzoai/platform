@@ -17,7 +17,7 @@ import {
 	stopService,
 	stopServiceRemote,
 	updatePostgresById,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";

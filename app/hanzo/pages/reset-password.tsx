@@ -1,4 +1,4 @@
-import { IS_CLOUD } from "@hanzo/core";
+import { IS_CLOUD } from "@hanzo/platform";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
