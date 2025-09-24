@@ -1,5 +1,5 @@
-import { IS_CLOUD } from "@hanzo/core/constants";
-import { validateRequest } from "@hanzo/core/lib/auth";
+import { IS_CLOUD } from "@hanzo/platform/constants";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";

@@ -1,18 +1,18 @@
-import { IS_CLOUD, removeScheduleJob, scheduleJob } from "@hanzo/core";
-import { db } from "@hanzo/core/db";
-import { deployments } from "@hanzo/core/db/schema/deployment";
+import { IS_CLOUD, removeScheduleJob, scheduleJob } from "@hanzo/platform";
+import { db } from "@hanzo/platform/db";
+import { deployments } from "@hanzo/platform/db/schema/deployment";
 import {
 	createScheduleSchema,
 	schedules,
 	updateScheduleSchema,
-} from "@hanzo/core/db/schema/schedule";
-import { runCommand } from "@hanzo/core/index";
+} from "@hanzo/platform/db/schema/schedule";
+import { runCommand } from "@hanzo/platform/index";
 import {
 	createSchedule,
 	deleteSchedule,
 	findScheduleById,
 	updateSchedule,
-} from "@hanzo/core/services/schedule";
+} from "@hanzo/platform/services/schedule";
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";

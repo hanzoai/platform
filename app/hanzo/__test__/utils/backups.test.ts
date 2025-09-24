@@ -1,4 +1,4 @@
-import { normalizeS3Path } from "@hanzo/core";
+import { normalizeS3Path } from "@hanzo/platform";
 import { describe, expect, test } from "vitest";
 
 describe("normalizeS3Path", () => {

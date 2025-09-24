@@ -1,4 +1,4 @@
-import { findGiteaById } from "@hanzo/core";
+import { findGiteaById } from "@hanzo/platform";
 import type { NextApiResponse } from "next";
 
 export interface Gitea {

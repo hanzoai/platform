@@ -1,10 +1,10 @@
-import type { ComposeSpecification } from "@hanzo/core";
+import type { ComposeSpecification } from "@hanzo/platform";
 import {
 	addSuffixToAllNetworks,
 	addSuffixToNetworksRoot,
 	addSuffixToServiceNetworks,
 	generateRandomHash,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { load } from "js-yaml";
 import { expect, test } from "vitest";
 

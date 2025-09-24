@@ -1,4 +1,4 @@
-import type { findEnvironmentsByProjectId } from "@hanzo/core";
+import type { findEnvironmentsByProjectId } from "@hanzo/platform";
 import {
 	ChevronDownIcon,
 	PencilIcon,

@@ -1,32 +1,32 @@
-import { IS_CLOUD } from "@hanzo/core/constants";
+import { IS_CLOUD } from "@hanzo/platform/constants";
 import {
 	apiCreateAi,
 	apiUpdateAi,
 	deploySuggestionSchema,
-} from "@hanzo/core/db/schema/ai";
+} from "@hanzo/platform/db/schema/ai";
 import {
 	createDomain,
 	createMount,
 	findEnvironmentById,
-} from "@hanzo/core/index";
+} from "@hanzo/platform/index";
 import {
 	deleteAiSettings,
 	getAiSettingById,
 	getAiSettingsByOrganizationId,
 	saveAiSettings,
 	suggestVariants,
-} from "@hanzo/core/services/ai";
-import { createComposeByTemplate } from "@hanzo/core/services/compose";
-import { findProjectById } from "@hanzo/core/services/project";
+} from "@hanzo/platform/services/ai";
+import { createComposeByTemplate } from "@hanzo/platform/services/compose";
+import { findProjectById } from "@hanzo/platform/services/project";
 import {
 	addNewService,
 	checkServiceAccess,
-} from "@hanzo/core/services/user";
+} from "@hanzo/platform/services/user";
 import {
 	getProviderHeaders,
 	getProviderName,
 	type Model,
-} from "@hanzo/core/utils/ai/select-ai-provider";
+} from "@hanzo/platform/utils/ai/select-ai-provider";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { slugify } from "@/lib/slug";

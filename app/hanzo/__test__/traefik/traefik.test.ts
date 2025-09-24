@@ -1,5 +1,5 @@
-import type { ApplicationNested, Domain, Redirect } from "@hanzo/core";
-import { createRouterConfig } from "@hanzo/core";
+import type { ApplicationNested, Domain, Redirect } from "@hanzo/platform";
+import { createRouterConfig } from "@hanzo/platform";
 import { expect, test } from "vitest";
 
 const baseApp: ApplicationNested = {
