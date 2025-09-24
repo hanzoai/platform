@@ -232,6 +232,15 @@ export const createCompose = async (
 /**
  * Update an existing compose configuration
  */
+export const createComposeByTemplate = async (
+	input: any
+) => {
+	// Stub function for creating compose from template
+	// This would typically create a new compose configuration from a predefined template
+	console.log("Creating compose from template:", input);
+	return createCompose(input);
+};
+
 export const updateCompose = async (
   id: string,
   data: Partial<Omit<Compose, "id" | "createdAt">>

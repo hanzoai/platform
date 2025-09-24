@@ -1,4 +1,4 @@
-import { auth } from "@hanzo/core/index";
+import { auth } from "@hanzo/platform/index";
 import { toNodeHandler } from "better-auth/node";
 
 // Disallow body parsing, we will parse it manually

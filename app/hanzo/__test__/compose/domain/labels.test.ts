@@ -1,5 +1,5 @@
-import type { Domain } from "@hanzo/core";
-import { createDomainLabels } from "@hanzo/core";
+import type { Domain } from "@hanzo/platform";
+import { createDomainLabels } from "@hanzo/platform";
 import { describe, expect, it } from "vitest";
 
 describe("createDomainLabels", () => {

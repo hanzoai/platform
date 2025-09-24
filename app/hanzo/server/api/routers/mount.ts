@@ -6,7 +6,7 @@ import {
 	findMountOrganizationId,
 	getServiceContainer,
 	updateMount,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {

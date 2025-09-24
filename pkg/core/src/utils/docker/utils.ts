@@ -273,32 +273,28 @@ export const prepareEnvironmentVariables = (
 		let resolvedValue = value;
 
 		// Replace project variables
-		if (projectVars) {
-			resolvedValue = resolvedValue.replace(
-				/\$\{\{project\.(.*?)\}\}/g,
-				(_, ref) => {
-					if (projectVars[ref] !== undefined) {
-						return projectVars[ref];
-					}
-					throw new Error(
-						`Invalid project environment variable: project.${ref}`,
-					);
-				},
-			);
-		}
+		resolvedValue = resolvedValue.replace(
+			/\$\{\{project\.(.*?)\}\}/g,
+			(_, ref) => {
+				if (projectVars && projectVars[ref] !== undefined) {
+					return projectVars[ref];
+				}
+				throw new Error(
+					`Invalid project environment variable: project.${ref}`,
+				);
+			},
+		);
 
 		// Replace environment variables
-		if (environmentVars) {
-			resolvedValue = resolvedValue.replace(
-				/\$\{\{environment\.(.*?)\}\}/g,
-				(_, ref) => {
-					if (environmentVars[ref] !== undefined) {
-						return environmentVars[ref];
-					}
-					throw new Error(`Invalid environment variable: environment.${ref}`);
-				},
-			);
-		}
+		resolvedValue = resolvedValue.replace(
+			/\$\{\{environment\.(.*?)\}\}/g,
+			(_, ref) => {
+				if (environmentVars && environmentVars[ref] !== undefined) {
+					return environmentVars[ref];
+				}
+				throw new Error(`Invalid environment variable: environment.${ref}`);
+			},
+		);
 
 		// Replace self-references (service variables)
 		// Keep replacing until no more placeholders are found (handles recursive references)
@@ -341,12 +337,12 @@ export const prepareEnvironmentVariables = (
 	};
 
 	// Process variables in multiple passes to handle forward references
-	// First, copy all raw values
+	// First, copy all raw values and apply initial resolution
 	for (const [key, value] of Object.entries(serviceVars)) {
-		resolvedServiceVars[key] = value;
+		resolvedServiceVars[key] = resolveValue(value, key);
 	}
 
-	// Then resolve all references iteratively
+	// Then resolve any remaining self-references iteratively
 	let hasChanges = true;
 	let iterations = 0;
 	const maxIterations = 10; // Prevent infinite loops
@@ -355,13 +351,14 @@ export const prepareEnvironmentVariables = (
 		hasChanges = false;
 		iterations++;
 
-		for (const [key, originalValue] of Object.entries(serviceVars)) {
+		for (const [key, _] of Object.entries(serviceVars)) {
 			const currentValue = resolvedServiceVars[key];
-			const newValue = resolveValue(currentValue, key);
-
-			if (newValue !== currentValue) {
-				resolvedServiceVars[key] = newValue;
-				hasChanges = true;
+			if (currentValue.includes("${{")) {
+				const newValue = resolveValue(currentValue, key);
+				if (newValue !== currentValue) {
+					resolvedServiceVars[key] = newValue;
+					hasChanges = true;
+				}
 			}
 		}
 	}

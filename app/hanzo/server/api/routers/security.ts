@@ -4,7 +4,7 @@ import {
 	findApplicationById,
 	findSecurityById,
 	updateSecurityById,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import {
 	apiCreateSecurity,

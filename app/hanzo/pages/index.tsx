@@ -1,5 +1,5 @@
-import { IS_CLOUD, isAdminPresent } from "@hanzo/core";
-import { validateRequest } from "@hanzo/core/lib/auth";
+import { IS_CLOUD, isAdminPresent } from "@hanzo/platform";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import type { GetServerSidePropsContext } from "next";

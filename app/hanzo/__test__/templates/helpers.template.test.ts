@@ -1,5 +1,5 @@
-import type { Schema } from "@hanzo/core/templates";
-import { processValue } from "@hanzo/core/templates/processors";
+import type { Schema } from "@hanzo/platform/templates";
+import { processValue } from "@hanzo/platform/templates/processors";
 import { describe, expect, it } from "vitest";
 
 describe("helpers functions", () => {

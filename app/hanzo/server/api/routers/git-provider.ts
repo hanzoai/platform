@@ -1,4 +1,4 @@
-import { findGitProviderById, removeGitProvider } from "@hanzo/core";
+import { findGitProviderById, removeGitProvider } from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";

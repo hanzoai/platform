@@ -1,5 +1,5 @@
 import type http from "node:http";
-import { findServerById, validateRequest } from "@hanzo/core";
+import { findServerById, validateRequest } from "@hanzo/platform";
 import { spawn } from "node-pty";
 import { Client } from "ssh2";
 import { WebSocketServer } from "ws";

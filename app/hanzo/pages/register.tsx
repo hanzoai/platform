@@ -1,4 +1,4 @@
-import { IS_CLOUD, isAdminPresent, validateRequest } from "@hanzo/core";
+import { IS_CLOUD, isAdminPresent, validateRequest } from "@hanzo/platform";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle } from "lucide-react";
 import type { GetServerSidePropsContext } from "next";
