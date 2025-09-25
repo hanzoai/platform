@@ -1,14 +1,14 @@
 import { createWriteStream } from "node:fs";
 import { join } from "node:path";
-import { paths } from "@hanzo/core/constants";
-import type { apiGitlabTestConnection } from "@hanzo/core/db/schema";
-import type { Compose } from "@hanzo/core/services/compose";
+import { paths } from "@hanzo/platform/constants";
+import type { apiGitlabTestConnection } from "@hanzo/platform/db/schema";
+import type { Compose } from "@hanzo/platform/services/compose";
 import {
 	findGitlabById,
 	type Gitlab,
 	updateGitlab,
-} from "@hanzo/core/services/gitlab";
-import type { InferResultType } from "@hanzo/core/types/with";
+} from "@hanzo/platform/services/gitlab";
+import type { InferResultType } from "@hanzo/platform/types/with";
 import { TRPCError } from "@trpc/server";
 import { recreateDirectory } from "../filesystem/directory";
 import { execAsyncRemote } from "../process/execAsync";

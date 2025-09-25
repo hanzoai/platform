@@ -1,7 +1,7 @@
-import { db } from "@hanzo/core/db";
-import { notifications } from "@hanzo/core/db/schema";
-import BuildSuccessEmail from "@hanzo/core/emails/emails/build-success";
-import type { Domain } from "@hanzo/core/services/domain";
+import { db } from "@hanzo/platform/db";
+import { notifications } from "@hanzo/platform/db/schema";
+import BuildSuccessEmail from "@hanzo/platform/emails/emails/build-success";
+import type { Domain } from "@hanzo/platform/services/domain";
 import { renderAsync } from "@react-email/components";
 import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";

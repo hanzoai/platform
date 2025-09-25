@@ -1,4 +1,4 @@
-import type { Redirect } from "@hanzo/core/services/redirect";
+import type { Redirect } from "@hanzo/platform/services/redirect";
 import type { ApplicationNested } from "../builders";
 import {
 	loadOrCreateConfig,

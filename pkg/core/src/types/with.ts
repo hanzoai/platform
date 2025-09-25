@@ -1,4 +1,4 @@
-import type * as schema from "@hanzo/core/db/schema";
+import type * as schema from "@hanzo/platform/db/schema";
 import type {
 	BuildQueryResult,
 	DBQueryConfig,

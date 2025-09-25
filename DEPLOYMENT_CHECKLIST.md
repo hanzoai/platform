@@ -4,7 +4,7 @@
 
 ### 1. Code Status
 - [x] Successfully merged Dokploy v0.25.1 upstream
-- [x] All "dokploy" references replaced with "hanzo"
+- [x] All "hanzo" references replaced with "hanzo"
 - [x] Setup scripts verified and working
 - [x] Package dependencies updated to workspace versions
 - [ ] All TypeScript compilation errors fixed
@@ -32,12 +32,12 @@
   - `pnpm run hanzo:start` ✅
 
 ### 4. Critical Changes from Merge
-- Network: `dokploy-network` → `hanzo-network`
-- Database: `dokploy` → `hanzo`
-- Containers: `dokploy-*` → `hanzo-*`
-- Paths: `/etc/dokploy` → `/etc/hanzo`
-- Package: `@dokploy/server` → `@hanzo/core`
-- Docker images: `dokploy/*` → `hanzoai/*`
+- Network: `hanzo-network` → `hanzo-network`
+- Database: `hanzo` → `hanzo`
+- Containers: `hanzo-*` → `hanzo-*`
+- Paths: `/etc/hanzo` → `/etc/hanzo`
+- Package: `@hanzo/server` → `@hanzo/platform`
+- Docker images: `hanzo/*` → `hanzoai/*`
 
 ## Local Testing Commands
 

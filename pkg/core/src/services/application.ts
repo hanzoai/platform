@@ -1,44 +1,44 @@
-import { docker } from "@hanzo/core/constants";
-import { db } from "@hanzo/core/db";
+import { docker } from "@hanzo/platform/constants";
+import { db } from "@hanzo/platform/db";
 import {
 	type apiCreateApplication,
 	applications,
 	buildAppName,
-} from "@hanzo/core/db/schema";
-import { getAdvancedStats } from "@hanzo/core/monitoring/utils";
+} from "@hanzo/platform/db/schema";
+import { getAdvancedStats } from "@hanzo/platform/monitoring/utils";
 import {
 	buildApplication,
 	getBuildCommand,
 	mechanizeDockerContainer,
-} from "@hanzo/core/utils/builders";
-import { sendBuildErrorNotifications } from "@hanzo/core/utils/notifications/build-error";
-import { sendBuildSuccessNotifications } from "@hanzo/core/utils/notifications/build-success";
-import { execAsyncRemote } from "@hanzo/core/utils/process/execAsync";
+} from "@hanzo/platform/utils/builders";
+import { sendBuildErrorNotifications } from "@hanzo/platform/utils/notifications/build-error";
+import { sendBuildSuccessNotifications } from "@hanzo/platform/utils/notifications/build-success";
+import { execAsyncRemote } from "@hanzo/platform/utils/process/execAsync";
 import {
 	cloneBitbucketRepository,
 	getBitbucketCloneCommand,
-} from "@hanzo/core/utils/providers/bitbucket";
+} from "@hanzo/platform/utils/providers/bitbucket";
 import {
 	buildDocker,
 	buildRemoteDocker,
-} from "@hanzo/core/utils/providers/docker";
+} from "@hanzo/platform/utils/providers/docker";
 import {
 	cloneGitRepository,
 	getCustomGitCloneCommand,
-} from "@hanzo/core/utils/providers/git";
+} from "@hanzo/platform/utils/providers/git";
 import {
 	cloneGiteaRepository,
 	getGiteaCloneCommand,
-} from "@hanzo/core/utils/providers/gitea";
+} from "@hanzo/platform/utils/providers/gitea";
 import {
 	cloneGithubRepository,
 	getGithubCloneCommand,
-} from "@hanzo/core/utils/providers/github";
+} from "@hanzo/platform/utils/providers/github";
 import {
 	cloneGitlabRepository,
 	getGitlabCloneCommand,
-} from "@hanzo/core/utils/providers/gitlab";
-import { createTraefikConfig } from "@hanzo/core/utils/traefik/application";
+} from "@hanzo/platform/utils/providers/gitlab";
+import { createTraefikConfig } from "@hanzo/platform/utils/traefik/application";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { encodeBase64 } from "../utils/docker/utils";
