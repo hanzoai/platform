@@ -1,6 +1,6 @@
-import { db } from "@hanzo/core/db";
-import { ai } from "@hanzo/core/db/schema";
-import { selectAIProvider } from "@hanzo/core/utils/ai/select-ai-provider";
+import { db } from "@hanzo/platform/db";
+import { ai } from "@hanzo/platform/db/schema";
+import { selectAIProvider } from "@hanzo/platform/utils/ai/select-ai-provider";
 import { TRPCError } from "@trpc/server";
 import { generateObject } from "ai";
 import { desc, eq } from "drizzle-orm";
