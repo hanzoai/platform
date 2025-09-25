@@ -1,9 +1,9 @@
-import { db } from "@hanzo/core/db";
-import { type apiCreateSecurity, security } from "@hanzo/core/db/schema";
+import { db } from "@hanzo/platform/db";
+import { type apiCreateSecurity, security } from "@hanzo/platform/db/schema";
 import {
 	createSecurityMiddleware,
 	removeSecurityMiddleware,
-} from "@hanzo/core/utils/traefik/security";
+} from "@hanzo/platform/utils/traefik/security";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";

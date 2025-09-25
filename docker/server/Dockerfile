@@ -12,12 +12,12 @@ WORKDIR /usr/src/app
 RUN apt-get update && apt-get install -y python3 make g++ git python3-pip pkg-config libsecret-1-dev && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=@hanzo/core --filter=./app/api install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=@hanzo/platform --filter=./app/api install --frozen-lockfile
 
 # Deploy only the hanzo app
 
 ENV NODE_ENV=production
-RUN pnpm --filter=@hanzo/core build
+RUN pnpm --filter=@hanzo/platform build
 RUN pnpm --filter=./app/api run build
 
 RUN pnpm --filter=./app/api --prod deploy /prod/api

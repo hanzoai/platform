@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { paths } from "@hanzo/core/constants";
-import type { Domain } from "@hanzo/core/services/domain";
+import { paths } from "@hanzo/platform/constants";
+import type { Domain } from "@hanzo/platform/services/domain";
 import { dump, load } from "js-yaml";
 import type { ApplicationNested } from "../builders";
 import { execAsyncRemote } from "../process/execAsync";

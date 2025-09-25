@@ -1,10 +1,10 @@
-import { db } from "@hanzo/core/db";
+import { db } from "@hanzo/platform/db";
 import {
 	type apiCreateBitbucket,
 	type apiUpdateBitbucket,
 	bitbucket,
 	gitProvider,
-} from "@hanzo/core/db/schema";
+} from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 

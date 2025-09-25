@@ -1,6 +1,6 @@
-import { db } from "@hanzo/core/db";
-import { notifications } from "@hanzo/core/db/schema";
-import HanzoPlatformRestartEmail from "@hanzo/core/emails/emails/hanzo-restart";
+import { db } from "@hanzo/platform/db";
+import { notifications } from "@hanzo/platform/db/schema";
+import HanzoPlatformRestartEmail from "@hanzo/platform/emails/emails/hanzo-restart";
 import { renderAsync } from "@react-email/components";
 import { format } from "date-fns";
 import { eq } from "drizzle-orm";

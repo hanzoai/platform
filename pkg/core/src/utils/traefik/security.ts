@@ -1,4 +1,4 @@
-import type { Security } from "@hanzo/core/services/security";
+import type { Security } from "@hanzo/platform/services/security";
 import * as bcrypt from "bcrypt";
 import type { ApplicationNested } from "../builders";
 import {

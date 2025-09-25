@@ -1,8 +1,8 @@
 import { createWriteStream } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { paths } from "@hanzo/core/constants";
-import type { Compose } from "@hanzo/core/services/compose";
+import { paths } from "@hanzo/platform/constants";
+import type { Compose } from "@hanzo/platform/services/compose";
 import { encodeBase64 } from "../docker/utils";
 import { recreateDirectory } from "../filesystem/directory";
 import { execAsyncRemote } from "../process/execAsync";

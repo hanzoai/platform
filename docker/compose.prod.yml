@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # Hanzo Platform Application
+  platform:
+    image: hanzoai/platform:latest
+    container_name: hanzo-platform
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://hanzo:hanzo123@postgres:5432/hanzo
+      REDIS_URL: redis://redis:6379
+      NEXTAUTH_URL: https://platform.hanzo.ai
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-your-secret-key-here}
+      SERVER_IP: ${SERVER_IP:-platform.hanzo.ai}
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - hanzo_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - hanzo-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.platform.rule=Host(`platform.hanzo.ai`)"
+      - "traefik.http.routers.platform.entrypoints=websecure"
+      - "traefik.http.routers.platform.tls=true"
+      - "traefik.http.routers.platform.tls.certresolver=letsencrypt"
+      - "traefik.http.services.platform.loadbalancer.server.port=3000"
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: hanzo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hanzo
+      POSTGRES_PASSWORD: hanzo123
+      POSTGRES_DB: hanzo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hanzo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hanzo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: hanzo-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - hanzo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: hanzo-traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@hanzo.ai"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/letsencrypt
+    networks:
+      - hanzo-network
+
+networks:
+  hanzo-network:
+    name: hanzo-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  hanzo_data:
+  traefik_certs:

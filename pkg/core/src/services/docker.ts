@@ -1,7 +1,7 @@
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@hanzo/core/utils/process/execAsync";
+} from "@hanzo/platform/utils/process/execAsync";
 
 export const getContainers = async (serverId?: string | null) => {
 	try {
