@@ -1,10 +1,10 @@
 import path from "node:path";
-import { paths } from "@hanzo/core/constants";
+import { paths } from "@hanzo/platform/constants";
 import {
 	createServerDeployment,
 	updateDeploymentStatus,
-} from "@hanzo/core/services/deployment";
-import { findServerById } from "@hanzo/core/services/server";
+} from "@hanzo/platform/services/deployment";
+import { findServerById } from "@hanzo/platform/services/server";
 import {
 	getDefaultMiddlewares,
 	getDefaultServerTraefikConfig,
@@ -12,7 +12,7 @@ import {
 	TRAEFIK_PORT,
 	TRAEFIK_SSL_PORT,
 	TRAEFIK_VERSION,
-} from "@hanzo/core/setup/traefik-setup";
+} from "@hanzo/platform/setup/traefik-setup";
 import slug from "slugify";
 import { Client } from "ssh2";
 import { recreateDirectory } from "../utils/filesystem/directory";

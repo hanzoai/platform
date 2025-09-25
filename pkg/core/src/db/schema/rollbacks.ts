@@ -1,8 +1,8 @@
-import type { Application } from "@hanzo/core/services/application";
-import type { Mount } from "@hanzo/core/services/mount";
-import type { Port } from "@hanzo/core/services/port";
-import type { Project } from "@hanzo/core/services/project";
-import type { Registry } from "@hanzo/core/services/registry";
+import type { Application } from "@hanzo/platform/services/application";
+import type { Mount } from "@hanzo/platform/services/mount";
+import type { Port } from "@hanzo/platform/services/port";
+import type { Project } from "@hanzo/platform/services/project";
+import type { Registry } from "@hanzo/platform/services/registry";
 import { relations } from "drizzle-orm";
 import { jsonb, pgTable, serial, text } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";

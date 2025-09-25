@@ -1,5 +1,5 @@
-import { db } from "@hanzo/core/db";
-import { type apiCreateDestination, destinations } from "@hanzo/core/db/schema";
+import { db } from "@hanzo/platform/db";
+import { type apiCreateDestination, destinations } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 

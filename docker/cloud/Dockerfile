@@ -16,7 +16,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN pnpm --filter=@hanzo/core build
+RUN pnpm --filter=@hanzo/platform build
 RUN pnpm --filter=./app/hanzo run build
 
 RUN mkdir -p /build/hanzo && rm -rf /build/hanzo/*

@@ -1,4 +1,4 @@
-import { findComposeById } from "@hanzo/core/services/compose";
+import { findComposeById } from "@hanzo/platform/services/compose";
 import { dump, load } from "js-yaml";
 import { addAppNameToAllServiceNames } from "./collision/root-network";
 import { generateRandomHash, addSuffixToAllVolumes } from "./compose";

@@ -1,4 +1,4 @@
-import { docker } from "@hanzo/core/constants";
+import { docker } from "@hanzo/platform/constants";
 import Dockerode from "dockerode";
 
 /**

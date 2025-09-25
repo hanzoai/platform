@@ -1,9 +1,9 @@
-import { db } from "@hanzo/core/db";
-import { type apiCreateRegistry, registry } from "@hanzo/core/db/schema";
+import { db } from "@hanzo/platform/db";
+import { type apiCreateRegistry, registry } from "@hanzo/platform/db/schema";
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@hanzo/core/utils/process/execAsync";
+} from "@hanzo/platform/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { IS_CLOUD } from "../constants";
