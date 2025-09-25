@@ -1,28 +1,13 @@
 {
   "name": "@hanzo/platform",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./index": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
   },
   "dependencies": {
-    "@hanzo/platform": "workspace:*"
-  },
-  "devDependencies": {
-    "typescript": "^5.7.3"
+    "@hanzo/core": "workspace:*"
   }
 }
