@@ -1,5 +1,5 @@
-import { db } from "@hanzo/core/db";
-import { apikey, member, users_temp } from "@hanzo/core/db/schema";
+import { db } from "@hanzo/platform/db";
+import { apikey, member, users_temp } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { auth } from "../lib/auth";

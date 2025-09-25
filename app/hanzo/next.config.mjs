@@ -18,7 +18,7 @@ const nextConfig = {
 	typescript: {
 		ignoreBuildErrors: true,
 	},
-	transpilePackages: ["@hanzo/core"],
+	transpilePackages: ["@hanzo/platform"],
 	webpack: (config) => {
 		config.plugins.push(
 			new CopyWebpackPlugin({
