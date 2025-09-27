@@ -6,8 +6,8 @@ import {
 	execAsyncRemote,
 } from "@hanzo/platform/utils/process/execAsync";
 import {
-	initializeStandaloneTraefik,
-	initializeTraefikService,
+	setupTraefik as initializeStandaloneTraefik,
+	setupTraefik as initializeTraefikService,
 	type TraefikOptions,
 } from "../setup/traefik-setup";
 

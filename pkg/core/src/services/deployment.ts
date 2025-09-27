@@ -49,151 +49,158 @@ export const createDeployment = async (
 			deployment.applicationId,
 			application.serverId,
 		);
-
-		const { LOGS_PATH } = paths(!!application.serverId);
-		const formattedDateTime = format(new Date(), "yyyy-MM-dd:HH:mm:ss");
-		const fileName = `${application.appName}-${formattedDateTime}.log`;
-		const logFilePath = path.join(LOGS_PATH, application.appName, fileName);
-
-		if (application.serverId) {
-			const command = `
-mkdir -p ${LOGS_PATH}/${application.appName};
-echo "Initializing deployment" >> ${logFilePath};
-`;
-
-			await execAsyncRemote(application.serverId, command);
-		} else {
-			await fsPromises.mkdir(path.join(LOGS_PATH, application.appName), {
-				recursive: true,
+		const appName = application.appName;
+		if (!appName) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "App name not found",
 			});
-			await fsPromises.writeFile(logFilePath, "Initializing deployment");
 		}
+		const logFileName = `${appName}-${format(
+			new Date(),
+			"yyyy-MM-dd'T'HH:mm:ss",
+		)}.log`;
+		const logFileNameCron = `${appName}-CRON-${format(
+			new Date(),
+			"yyyy-MM-dd'T'HH:mm:ss",
+		)}.log`;
 
-		const deploymentCreate = await db
+		const pathFolder = path.join(paths().LOGS_PATH, appName);
+
+		const logPath = path.join(
+			pathFolder,
+			deployment.type === "job" ? logFileNameCron : logFileName,
+		);
+
+		const newDeployment = await db
 			.insert(deployments)
 			.values({
-				applicationId: deployment.applicationId,
-				title: deployment.title || "Deployment",
-				description: deployment.description || "",
-				status: "running",
-				logPath: logFilePath,
+				...deployment,
+				logPath: logPath,
 			})
-			.returning();
+			.returning()
+			.then((res) => res[0]);
 
-		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
+		if (!newDeployment) {
 			throw new TRPCError({
 				code: "BAD_REQUEST",
-				message: "Error creating the deployment",
+				message: "Error to create the deployment",
 			});
 		}
 
-		await updateApplicationStatus(deployment.applicationId, "running");
-
-		return deploymentCreate[0];
+		return newDeployment;
 	} catch (error) {
-		await db
-			.insert(deployments)
-			.values({
-				applicationId: deployment.applicationId,
-				title: deployment.title || "Deployment",
-				status: "error",
-				logPath: "",
-				description: deployment.description || "",
-				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error
-					}`,
-			})
-			.returning();
-		await updateApplicationStatus(deployment.applicationId, "error");
+		console.log(error);
 		throw new TRPCError({
 			code: "BAD_REQUEST",
-			message: "Error creating the deployment",
+			message: "Error to create this deployment",
 		});
 	}
 };
 
-export const removeDeployment = async (deploymentId: string) => {
-	try {
-		const deployment = await db
-			.delete(deployments)
-			.where(eq(deployments.deploymentId, deploymentId))
-			.returning();
-		return deployment[0];
-	} catch (error) {
-		const message =
-			error instanceof Error ? error.message : "Error creating the deployment";
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message,
-		});
-	}
-};
-
-export const removeDeploymentsByApplicationId = async (
-	applicationId: string,
+export const removeDeploymentById = async (
+	deploymentId: string,
+	serverId: string,
 ) => {
-	await db
-		.delete(deployments)
-		.where(eq(deployments.applicationId, applicationId))
-		.returning();
+	const deploymentResponse = await db
+		.select()
+		.from(deployments)
+		.where(eq(deployments.deploymentId, deploymentId))
+		.limit(1);
+
+	const deployment = deploymentResponse[0];
+	if (!deployment) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Deployment not found",
+		});
+	}
+
+	const logPath = deployment.logPath;
+
+	try {
+		if (serverId === "local") {
+			if (logPath) {
+				const directory = path.dirname(logPath);
+				const fileName = path.basename(logPath);
+				await removeDirectoryIfExistsContent(directory, fileName);
+			}
+		} else {
+			if (logPath) {
+				const directory = path.dirname(logPath);
+				const fileName = path.basename(logPath);
+
+				await execAsyncRemote(
+					serverId,
+					`rm -f ${path.join(directory, fileName)}`,
+				);
+			}
+		}
+
+		await db.delete(deployments).where(eq(deployments.deploymentId, deploymentId));
+	} catch (error) {
+		console.log(error);
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Error to remove this deployment",
+		});
+	}
 };
 
 export const removeLastTenDeployments = async (
 	applicationId: string,
-	serverId: string | null,
+	serverId: string,
 ) => {
-	const deploymentList = await db.query.deployments.findMany({
-		where: eq(deployments.applicationId, applicationId),
-		orderBy: [desc(deployments.createdAt)],
-	});
+	const deploymentsToKeep = await db
+		.select()
+		.from(deployments)
+		.where(eq(deployments.applicationId, applicationId))
+		.orderBy(desc(deployments.createdAt))
+		.limit(10);
 
-	if (deploymentList.length > 10) {
-		const deploymentsToDelete = deploymentList.slice(9);
-		if (serverId) {
-			let command = "";
-			for (const oldDeployment of deploymentsToDelete) {
-				const logPath = path.join(oldDeployment.logPath);
+	const deploymentIdsToKeep = deploymentsToKeep.map(
+		(d) => d.deploymentId,
+	);
 
-				command += `
-				rm -rf ${logPath};
-				`;
-				await removeDeployment(oldDeployment.deploymentId);
-			}
+	const deploymentsToDelete = await db
+		.select()
+		.from(deployments)
+		.where(eq(deployments.applicationId, applicationId));
 
-			await execAsyncRemote(serverId, command);
-		} else {
-			for (const oldDeployment of deploymentsToDelete) {
-				const logPath = path.join(oldDeployment.logPath);
-				if (existsSync(logPath)) {
-					await fsPromises.unlink(logPath);
-				}
-				await removeDeployment(oldDeployment.deploymentId);
-			}
-		}
+	const deploymentsToRemove = deploymentsToDelete.filter(
+		(d) => !deploymentIdsToKeep.includes(d.deploymentId),
+	);
+
+	for (const deployment of deploymentsToRemove) {
+		await removeDeploymentById(deployment.deploymentId, serverId);
 	}
 };
 
-export const removeDeployments = async (application: Application) => {
-	const { LOGS_PATH } = paths();
-	const { appName } = application;
-	const logsPath = path.join(LOGS_PATH, appName);
-	await removeDirectoryIfExistsContent(logsPath);
-	await db
-		.delete(deployments)
-		.where(eq(deployments.applicationId, application.applicationId))
-		.returning();
-};
-
-export const findAllDeploymentsByApplicationId = async (
+export const getDeploymentsByApplicationId = async (
 	applicationId: string,
 ) => {
-	const deploymentsList = await db.query.deployments.findMany({
-		where: eq(deployments.applicationId, applicationId),
-		orderBy: [desc(deployments.createdAt)],
-	});
-	return deploymentsList;
+	const deploymentsResponse = await db
+		.select()
+		.from(deployments)
+		.where(eq(deployments.applicationId, applicationId))
+		.orderBy(desc(deployments.createdAt));
+
+	return deploymentsResponse;
 };
 
-export const updateDeployment = async (
+export const getDeploymentsByServerId = async (serverId: string) => {
+	const deploymentsResponse = await db.query.deployments.findMany({
+		with: {
+			application: true,
+		},
+		orderBy: desc(deployments.createdAt),
+		where: eq(deployments.serverId, serverId),
+	});
+
+	return deploymentsResponse;
+};
+
+export const updateDeploymentById = async (
 	deploymentId: string,
 	deploymentData: Partial<Deployment>,
 ) => {
@@ -334,5 +341,98 @@ export const killDeploymentProcess = async (deploymentId: string) => {
 			code: "INTERNAL_SERVER_ERROR",
 			message: `Failed to kill process: ${error instanceof Error ? error.message : "Unknown error"}`,
 		});
+	}
+};
+
+export const createDeploymentBackup = async (
+	deployment: Omit<
+		any,
+		"deploymentId" | "createdAt" | "status" | "logPath"
+	>,
+) => {
+	try {
+		const backupId = deployment.backupId;
+		const logFileName = `backup-${format(
+			new Date(),
+			"yyyy-MM-dd'T'HH:mm:ss",
+		)}.log`;
+
+		const pathFolder = path.join(paths().LOGS_PATH, "backups");
+		const logPath = path.join(pathFolder, logFileName);
+
+		const newDeployment = await db
+			.insert(deployments)
+			.values({
+				...deployment,
+				applicationId: backupId, // Using backupId as applicationId for backups
+				logPath: logPath,
+				type: "backup",
+			})
+			.returning()
+			.then((res) => res[0]);
+
+		if (!newDeployment) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: "Error creating the backup deployment",
+			});
+		}
+
+		return newDeployment;
+	} catch (error) {
+		console.error("Error creating backup deployment:", error);
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Error creating backup deployment",
+		});
+	}
+};
+
+export const createDeploymentPreview = async (
+	applicationId: string,
+	title: string,
+	description: string,
+	previewDeploymentId: string,
+) => {
+	const application = await findApplicationById(applicationId);
+
+	const deployment = await createDeployment({
+		applicationId,
+		title,
+		description,
+		type: "deploy",
+		previewDeploymentId,
+	});
+
+	return deployment;
+};
+
+export const removeDeploymentsByPreviewDeploymentId = async (
+	previewDeployment: any,
+	serverId: string,
+) => {
+	try {
+		// Find all deployments associated with this preview deployment
+		const deploymentsToRemove = await db.query.deployments.findMany({
+			where: eq(deployments.previewDeploymentId, previewDeployment.previewDeploymentId),
+		});
+
+		// Remove deployment directories
+		for (const deployment of deploymentsToRemove) {
+			const logPath = deployment.logPath;
+			if (logPath && existsSync(logPath)) {
+				await fsPromises.rm(path.dirname(logPath), { recursive: true, force: true });
+			}
+		}
+
+		// Delete deployments from database
+		await db
+			.delete(deployments)
+			.where(eq(deployments.previewDeploymentId, previewDeployment.previewDeploymentId));
+
+		return true;
+	} catch (error) {
+		console.error("Error removing deployments for preview deployment:", error);
+		throw error;
 	}
 };
