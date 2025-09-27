@@ -1,6 +1,6 @@
 import { exec, execFile } from "node:child_process";
 import util from "node:util";
-import { findServerById } from "@hanzo/server/services/server";
+import { findServerById } from "@hanzo/platform/services/server";
 import { Client } from "ssh2";
 
 export const execAsync = util.promisify(exec);
