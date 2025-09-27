@@ -6,7 +6,7 @@ import { z } from "zod";
 import { applications } from "./application";
 import { compose } from "./compose";
 import { deployments } from "./deployment";
-import { server } from "./server";
+import { server } from "./hanzo-server";
 import { users_temp } from "./user";
 import { generateAppName } from "./utils";
 export const shellTypes = pgEnum("shellType", ["bash", "sh"]);

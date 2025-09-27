@@ -37,7 +37,7 @@ export const getRemoteDocker = async (serverId?: string) => {
 };
 
 // Export Docker utilities
-export const docker = {
+export const dockerUtils = {
   swarmInspect: async () => ({ JoinTokens: { Worker: "worker-token", Manager: "manager-token" } }),
   version: async () => ({ Version: "24.0.5" }),
   listNodes: async () => []

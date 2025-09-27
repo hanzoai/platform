@@ -64,3 +64,18 @@ export * from "./setup/setup";
 export * from "./setup/monitoring-setup";
 export * from "./setup/docker-compose";
 export * from "./setup/docker-swarm";
+
+// Constants
+export * from "./constants";
+export { paths } from "./constants";
+
+// WebSocket utilities
+export * from "./wss/utils";
+// Docker stats utilities (stub implementations)
+export const getLastAdvancedStatsFile = async () => null;
+export const getAdvancedStats = async () => ({ containers: [], memory: 0, cpu: 0, disk: 0 });
+export const collectDockerStats = async () => ({ containers: [] });
+export const saveAdvancedStats = async (stats: any) => {};
+export const recordAdvancedStats = async () => {};
+export const cleanupOldStats = async () => {};
+export const getStatsHistory = async () => [];
