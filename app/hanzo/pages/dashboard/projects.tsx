@@ -9,10 +9,10 @@ import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
 
-const ShowWelcomeHanzo Platform = dynamic(
+const ShowWelcomeHanzoPlatform = dynamic(
 	() =>
 		import("@/components/dashboard/settings/billing/show-welcome-hanzo").then(
-			(mod) => mod.ShowWelcomeHanzo Platform,
+			(mod) => mod.ShowWelcomeHanzoPlatform,
 		),
 	{ ssr: false },
 );
@@ -21,7 +21,7 @@ const Dashboard = () => {
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 	return (
 		<>
-			{isCloud && <ShowWelcomeHanzo Platform />}
+			{isCloud && <ShowWelcomeHanzoPlatform />}
 
 			<ShowProjects />
 		</>

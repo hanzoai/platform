@@ -1,4 +1,4 @@
-import { findComposeById } from "@hanzo/platform/services/compose";
+// import { findComposeById } from "@hanzo/platform/services/compose";
 import { dump, load } from "js-yaml";
 import { addAppNameToAllServiceNames } from "./collision/root-network";
 import { generateRandomHash, addSuffixToAllVolumes } from "./compose";
@@ -20,11 +20,13 @@ export const randomizeIsolatedDeploymentComposeFile = async (
 	composeId: string,
 	suffix?: string,
 ) => {
-	const compose = await findComposeById(composeId);
-	const composeFile = compose?.composeFile;
+	// TODO: Refactor to avoid circular dependency
+	// const compose = await findComposeById(composeId);
+	// const composeFile = compose?.composeFile;
+	const composeFile = "";
 	const composeData = load(composeFile || "") as ComposeSpecification;
 
-	const randomSuffix = suffix || compose?.appName || generateRandomHash();
+	const randomSuffix = suffix || generateRandomHash();
 
 	const newComposeFile = addAppNameToPreventCollision(
 		composeData,
