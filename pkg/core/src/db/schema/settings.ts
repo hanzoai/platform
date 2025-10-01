@@ -1,9 +1,4 @@
 // Settings schema stub
-export function getHanzoPlatformImageTag() {
-  console.warn("getHanzoPlatformImageTag called - returning 'latest' (stub)");
-  return "latest";
-}
+// getHanzoPlatformImageTag is exported from services/settings.ts
 
-export default {
-  getHanzoPlatformImageTag
-};
+export default {};

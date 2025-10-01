@@ -1,6 +1,6 @@
-import { paths } from "@hanzo/server/constants";
-import { findAdmin } from "@hanzo/server/services/admin";
-import { updateUser } from "@hanzo/server/services/user";
+import { paths } from "@hanzo/platform/constants";
+import { findAdmin } from "@hanzo/platform/services/admin";
+import { updateUser } from "@hanzo/platform/services/user";
 import { scheduledJobs, scheduleJob } from "node-schedule";
 import { execAsync } from "../process/execAsync";
 
