@@ -8,7 +8,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
-import { ShowHanzo PlatformActions } from "./servers/actions/show-hanzo-actions";
+import { ShowHanzoPlatformActions } from "./servers/actions/show-hanzo-actions";
 import { ShowStorageActions } from "./servers/actions/show-storage-actions";
 import { ShowTraefikActions } from "./servers/actions/show-traefik-actions";
 import { ToggleDockerCleanup } from "./servers/actions/toggle-docker-cleanup";
@@ -44,7 +44,7 @@ export const WebServer = () => {
 					</CardHeader> */}
 					<CardContent className="space-y-6 py-6 border-t">
 						<div className="grid md:grid-cols-2 gap-4">
-							<ShowHanzo PlatformActions />
+							<ShowHanzoPlatformActions />
 							<ShowTraefikActions />
 							<ShowStorageActions />
 

@@ -5,7 +5,7 @@ import { createDeepInfra } from "@ai-sdk/deepinfra";
 import { createMistral } from "@ai-sdk/mistral";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { createOllama } from "ai-sdk-ollama";
+// import { createOllama } from "ollama-ai-provider"; // Removed - not used
 
 export function getProviderName(apiUrl: string) {
 	if (apiUrl.includes("api.openai.com")) return "openai";
@@ -57,9 +57,13 @@ export function selectAIProvider(config: { apiUrl: string; apiKey: string }) {
 				apiKey: config.apiKey,
 			});
 		case "ollama":
-			return createOllama({
-				// optional settings, e.g.
+			// Ollama support removed - use OpenAI compatible instead
+			return createOpenAICompatible({
+				name: "ollama",
 				baseURL: config.apiUrl,
+				headers: config.apiKey ? {
+					Authorization: `Bearer ${config.apiKey}`,
+				} : {},
 			});
 		case "deepinfra":
 			return createDeepInfra({

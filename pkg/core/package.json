@@ -1,8 +1,8 @@
 {
-  "name": "@hanzo/core",
+  "name": "@hanzo/platform",
   "version": "1.0.4",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./src/index.ts",
   "types": "./dist/index.d.ts",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -10,29 +10,18 @@
     "scope": "@hanzo"
   },
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs.js"
-    },
+    ".": "./src/index.ts",
     "./db": {
-      "import": "./dist/db/index.js",
+      "import": "./src/db/index.ts",
       "require": "./dist/db/index.cjs.js"
     },
-    "./*": {
-      "import": "./dist/*",
-      "require": "./dist/*.cjs"
+    "./setup/*": {
+      "import": "./src/setup/*.ts",
+      "require": "./dist/setup/index.cjs.js"
     },
-    "./dist": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs.js"
-    },
-    "./dist/db": {
-      "import": "./dist/db/index.js",
-      "require": "./dist/db/index.cjs.js"
-    },
-    "./dist/db/schema": {
-      "import": "./dist/db/schema/index.js",
-      "require": "./dist/db/schema/index.cjs.js"
+    "./constants": {
+      "import": "./src/constants/index.ts",
+      "require": "./dist/constants.cjs.js"
     }
   },
   "files": [
@@ -86,7 +75,6 @@
     "node-schedule": "2.1.1",
     "nodemailer": "6.9.14",
     "octokit": "3.1.2",
-    "ollama-ai-provider": "^1.1.0",
     "otpauth": "^9.2.3",
     "postgres": "3.4.4",
     "public-ip": "6.0.2",

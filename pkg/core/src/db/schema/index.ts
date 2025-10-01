@@ -28,7 +28,7 @@ export * from "./registry";
 export * from "./rollbacks";
 export * from "./schedule";
 export * from "./security";
-export * from "./server";
+export * from "./hanzo-server";
 export * from "./session";
 export * from "./shared";
 export * from "./ssh-key";

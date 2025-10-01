@@ -71,15 +71,6 @@ export const findProjectById = async (projectId: string) => {
 	return project;
 };
 
-export const deleteProject = async (projectId: string) => {
-	const project = await db
-		.delete(projects)
-		.where(eq(projects.projectId, projectId))
-		.returning()
-		.then((value) => value[0]);
-
-	return project;
-};
 
 export const updateProjectById = async (
 	projectId: string,
