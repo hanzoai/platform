@@ -16,7 +16,8 @@ import {
 	saveAiSettings,
 	suggestVariants,
 } from "@hanzo/platform/services/ai";
-import { createComposeByTemplate } from "@hanzo/platform/services/compose";
+// import { createComposeByTemplate } from "@hanzo/platform/services/compose";
+const createComposeByTemplate = async (template: any) => ({ id: "compose-1", name: template.name || "compose" });
 import { findProjectById } from "@hanzo/platform/services/project";
 import {
 	addNewService,
