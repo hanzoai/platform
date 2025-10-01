@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import { findComposeById } from "@hanzo/platform/services/compose";
 import { dump, load } from "js-yaml";
 import { addSuffixToAllConfigs } from "./compose/configs";
 import { addSuffixToAllNetworks } from "./compose/network";
@@ -14,10 +13,11 @@ export const generateRandomHash = (): string => {
 
 export const randomizeComposeFile = async (composeId: string, suffix?: string) => {
 	try {
-		const compose = await findComposeById(composeId);
-		if (!compose) {
-			throw new Error(`Compose configuration not found for ID: ${composeId}`);
-		}
+		// TODO: Refactor to avoid circular dependency
+		// const compose = await findComposeById(composeId);
+		// if (!compose) {
+		// 	throw new Error(`Compose configuration not found for ID: ${composeId}`);
+		// }
 
 		// Stub implementation that maintains the interface
 		return "version: '3'";

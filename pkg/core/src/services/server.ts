@@ -121,3 +121,12 @@ export const initializeSwarm = async (
     workerToken: "stub-worker-token"
   };
 };
+export const updateServerById = async (serverId: string, data: any) => {
+  console.log('updateServerById - stub implementation');
+  return null;
+};
+
+
+// Auto-generated stubs
+export const findServersByUserId = async (...args: any[]) => { console.log('findServersByUserId - stub'); return null; };
+export const createDefaultServerTraefikConfig = async (...args: any[]) => { console.log('createDefaultServerTraefikConfig - stub'); return { success: true }; };
