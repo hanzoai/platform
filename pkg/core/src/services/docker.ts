@@ -467,3 +467,9 @@ export const getApplicationInfo = async (
 		return appArray;
 	} catch {}
 };
+
+
+// Auto-generated stubs
+// Type exports
+export type DockerNode = any;
+export type Server = any;
