@@ -3,6 +3,12 @@ export const TRAEFIK_PORT = 80;
 export const TRAEFIK_SSL_PORT = 443;
 export const TRAEFIK_VERSION = "2.10";
 
+export interface TraefikOptions {
+	traefikPort?: number;
+	traefikSslPort?: number;
+	traefikVersion?: string;
+}
+
 export const setupTraefik = async () => {
   // Stub implementation
   console.log("Traefik setup would be performed here");

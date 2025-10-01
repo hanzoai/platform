@@ -20,9 +20,9 @@ Hanzo Platform is a self-hosted PaaS (Platform as a Service) solution for deploy
 │   ├── api/            # API service
 │   └── monitoring/     # Monitoring service
 ├── pkg/
-│   ├── core/           # Core utilities (@hanzo/core)
+│   ├── core/           # Core utilities (@hanzo/platform)
 │   ├── platform/       # Platform exports (@hanzo/platform)
-│   ├── server/         # Server package (@hanzo/server)
+│   ├── server/         # Server package (@hanzo/platform)
 │   ├── ui/             # UI components (@hanzo/ui)
 │   ├── paas/           # PaaS utilities (@hanzo/paas)
 │   └── mcp/            # MCP integration
@@ -35,9 +35,9 @@ Hanzo Platform is a self-hosted PaaS (Platform as a Service) solution for deploy
 ## Package Structure
 
 ### @hanzo/platform
-Re-exports everything from @hanzo/core for consistency. Server files import from @hanzo/platform.
+Re-exports everything from @hanzo/platform for consistency. Server files import from @hanzo/platform.
 
-### @hanzo/core
+### @hanzo/platform
 Contains all core utilities, database schemas, Docker management, and shared logic.
 
 ### @hanzo/ui
@@ -106,7 +106,7 @@ make status       # Check platform status
 ```
 
 ## Import Pattern
-All server files should import from `@hanzo/platform` not `@hanzo/core` directly.
+All server files should import from `@hanzo/platform` not `@hanzo/platform` directly.
 
 ## Technologies
 - Node.js 22+
