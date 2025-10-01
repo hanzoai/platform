@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  hanzo-platform:
+    image: hanzo/platform:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@172.17.0.1:5432/platform
+      - REDIS_URL=redis://172.17.0.1:6379
+      - IS_CLOUD=false
+      - PORT=3000
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+networks:
+  default:
+    driver: overlay
+    attachable: true
