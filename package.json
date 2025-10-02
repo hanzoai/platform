@@ -1,72 +1,55 @@
 {
-	"name": "hanzo-platform",
+	"name": "platform",
 	"private": true,
-	"version": "4.0.6",
 	"workspaces": [
-		"app/*",
-		"pkg/*"
+		"apps/*",
+		"packages/*"
 	],
 	"scripts": {
-		"hanzo:setup": "pnpm --filter=hanzo run setup",
-		"hanzo:dev": "pnpm --filter=hanzo run dev",
-		"hanzo:dev:turbopack": "pnpm --filter=hanzo run dev-turbopack",
-		"hanzo:build": "pnpm --filter=hanzo run build",
-		"hanzo:start": "pnpm --filter=hanzo run start",
-		"start": "pnpm --filter=hanzo run start",
-		"test": "pnpm --filter=hanzo run test",
-		"core:script": "pnpm --filter=core run switch:dev",
-		"core:dev": "pnpm --filter=core run dev",
-		"core:build": "pnpm --filter=core run build",
-		"docker:build:base": "docker buildx build --platform linux/amd64,linux/arm64 -f docker/base/Dockerfile -t hanzoai/os:latest --push .",
-		"docker:build:canary": "./docker/build.sh canary",
-		"docker:build:production": "./docker/build.sh production",
-		"docker:build:platform": "docker build -f docker/hanzo/Dockerfile -t hanzoai/platform:latest --push .",
-		"docker:build:dev": "docker build -f docker/dev/Dockerfile -t hanzoai/platform:dev --push .",
-		"docker:update:hanzo": "docker pull hanzoai/platform:latest && docker service update --image hanzoai/platform:latest hanzo",
+		"platform:setup": "pnpm --filter=platform run setup",
+		"platform:dev": "pnpm --filter=platform run dev",
+		"platform:dev:turbopack": "pnpm --filter=platform run dev-turbopack",
+		"platform:build": "pnpm --filter=platform run build",
+		"platform:start": "pnpm --filter=platform run start",
+		"test": "pnpm --filter=platform run test",
+		"server:script": "pnpm --filter=server run switch:dev",
+		"server:dev": "pnpm --filter=server run dev",
+		"server:build": "pnpm --filter=server run build",
+		"docker:build:canary": "./apps/platform/docker/build.sh canary",
 		"typecheck": "pnpm -r run typecheck",
 		"build": "pnpm -r run build",
-		"check": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
+		"format-and-lint": "biome check .",
+		"check": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true",
+		"format-and-lint:fix": "biome check . --write"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "1.9.4",
-		"@commitlint/cli": "^19.3.0",
-		"@commitlint/config-conventional": "^19.2.2",
-		"@types/node": "^18.17.0",
+		"@biomejs/biome": "2.1.1",
+		"@commitlint/cli": "^19.8.1",
+		"@commitlint/config-conventional": "^19.8.1",
+		"@types/node": "^18.19.104",
 		"dotenv": "16.4.5",
 		"esbuild": "0.20.2",
 		"lefthook": "1.8.4",
-		"lint-staged": "^15.2.7",
+		"lint-staged": "^15.5.2",
 		"tsx": "4.16.2"
 	},
-	"packageManager": "pnpm@10.5.2",
+	"packageManager": "pnpm@9.12.0",
 	"engines": {
-		"node": ">=22",
-		"pnpm": ">=10"
+		"node": "^20.16.0",
+		"pnpm": ">=9.12.0"
+	},
+	"lint-staged": {
+		"*": [
+			"biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
+		]
+	},
+	"commitlint": {
+		"extends": [
+			"@commitlint/config-conventional"
+		]
 	},
 	"resolutions": {
 		"@types/react": "18.3.5",
 		"@types/react-dom": "18.3.0"
-	},
-	"pnpm": {
-		"onlyBuiltDependencies": [
-			"@biomejs/biome",
-			"core-js",
-			"core-js-pure",
-			"cpu-features",
-			"esbuild",
-			"lefthook",
-			"msgpackr-extract",
-			"node-pty",
-			"sharp",
-			"sqlite3",
-			"ssh2",
-			"tree-sitter",
-			"tree-sitter-json",
-			"tree-sitter-yaml"
-		]
-	},
-	"dependencies": {
-		"pino": "9.4.0",
-		"toml": "^3.0.0"
 	}
 }

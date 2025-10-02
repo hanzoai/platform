@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { HanzoProject } from "../../../types/hanzo.js";
+import type { PlatformProject } from "../../../types/platform.js";
 import apiClient from "../../../utils/apiClient.js";
 import { ResponseFormatter } from "../../../utils/responseFormatter.js";
 import { createTool } from "../toolFactory.js";
@@ -7,7 +7,7 @@ import { createTool } from "../toolFactory.js";
 export const projectAll = createTool({
   name: "project-all",
   description:
-    "Lists all projects in Hanzo with optimized response size suitable for LLM consumption. Returns summary data including project info, service counts, and basic service details.",
+    "Lists all projects in Platform with optimized response size suitable for LLM consumption. Returns summary data including project info, service counts, and basic service details.",
   schema: z.object({}),
   annotations: {
     title: "List All Projects",
@@ -25,7 +25,7 @@ export const projectAll = createTool({
       );
     }
 
-    const projects = response.data as HanzoProject[];
+    const projects = response.data as PlatformProject[];
 
     // Always return optimized summary data
     const optimizedProjects = projects.map((project) => ({

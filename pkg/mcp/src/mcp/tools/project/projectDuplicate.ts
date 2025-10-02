@@ -21,7 +21,7 @@ const serviceSchema = z.object({
 export const projectDuplicate = createTool({
   name: "project-duplicate",
   description:
-    "Duplicates an existing project in Hanzo with optional service selection.",
+    "Duplicates an existing project in Platform with optional service selection.",
   schema: z.object({
     sourceProjectId: z
       .string()

@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const mysqlChangeStatus = createTool({
   name: "mysql-changeStatus",
-  description: "Changes the status of a MySQL database in Hanzo.",
+  description: "Changes the status of a MySQL database in Platform.",
   schema: z.object({
     mysqlId: z.string().describe("The ID of the MySQL database to update."),
     applicationStatus: z

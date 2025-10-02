@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const mysqlUpdate = createTool({
   name: "mysql-update",
-  description: "Updates a MySQL database configuration in Hanzo.",
+  description: "Updates a MySQL database configuration in Platform.",
   schema: z.object({
     mysqlId: z
       .string()
