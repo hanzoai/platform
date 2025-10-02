@@ -5,7 +5,7 @@ import { ResponseFormatter } from "../../../utils/responseFormatter.js";
 
 export const applicationOne = createTool({
   name: "application-one",
-  description: "Gets a specific application by its ID in Hanzo.",
+  description: "Gets a specific application by its ID in Platform.",
   schema: z.object({
     applicationId: z
       .string()

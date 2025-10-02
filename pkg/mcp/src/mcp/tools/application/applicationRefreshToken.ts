@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationRefreshToken = createTool({
   name: "application-refreshToken",
-  description: "Refreshes the token for an application in Hanzo.",
+  description: "Refreshes the token for an application in Platform.",
   schema: z.object({
     applicationId: z
       .string()

@@ -1,54 +1,70 @@
 <div align="center">
-   <div>
-    <a href="https://platform.hanzo.ai" target="_blank" rel="noopener">
-        <img style="object-fit: cover;" align="center" width="100%"src=".github/sponsors/logo.png" alt="Hanzo Platform - Open Source Alternative to Vercel, Heroku and Netlify." />
-    </a>
-</div>
-
-</br>
-<div align="center">
-  <div>Join us on Discord for help, feedback, and discussions!</div>
+  <a href="https://hanzo.ai">
+    <img src=".github/sponsors/logo.png" alt="Hanzo - Open Source Alternative to Vercel, Heroku and Netlify." width="100%"  />
+  </a>
   </br>
-  <a href="https://discord.gg/GeSKCeaJ">
-    <img src="https://discordapp.com/api/guilds/445309799979024395/widget.png?style=banner2" alt="Discord Shield"/>
+  </br>
+  <p>Join us on Discord for help, feedback, and discussions!</p>
+  <a href="https://discord.gg/2tBnJ3jDJc">
+    <img src="https://discordapp.com/api/guilds/1234073262418563112/widget.png?style=banner2" alt="Discord Shield"/>
   </a>
 </div>
-</div>
 <br />
-Hanzo Platform is a free, self-hostable Platform as a Service (PaaS) that simplifies the deployment and management of applications and databases.
 
-### Features
 
-Hanzo Platform includes multiple features to make your life easier.
+
+<div align="center" markdown="1">
+   <sup>Special thanks to:</sup>
+   <br>
+   <br>
+   <a href="https://tuple.app/platform">
+     <img src=".github/sponsors/tuple.png" alt="Tuple's sponsorship image" width="400"/>
+   </a>
+
+### [Tuple, the premier screen sharing app for developers](https://tuple.app/platform)
+[Available for MacOS & Windows](https://tuple.app/platform)<br>
+
+</div>
+
+
+Hanzo is a free, self-hostable Platform as a Service (PaaS) that simplifies the deployment and management of applications and databases.
+
+
+## ✨ Features
+
+Hanzo includes multiple features to make your life easier.
 
 - **Applications**: Deploy any type of application (Node.js, PHP, Python, Go, Ruby, etc.).
 - **Databases**: Create and manage databases with support for MySQL, PostgreSQL, MongoDB, MariaDB, and Redis.
 - **Backups**: Automate backups for databases to an external storage destination.
-- **Templates**: Deploy open-source templates (Plausible, Base, Calcom, etc.) with a single click.
+- **Docker Compose**: Native support for Docker Compose to manage complex applications.
+- **Multi Node**: Scale applications to multiple nodes using Docker Swarm to manage the cluster.
+- **Templates**: Deploy open-source templates (Plausible, Pocketbase, Calcom, etc.) with a single click.
 - **Traefik Integration**: Automatically integrates with Traefik for routing and load balancing.
 - **Real-time Monitoring**: Monitor CPU, memory, storage, and network usage for every resource.
 - **Docker Management**: Easily deploy and manage Docker containers.
 - **CLI/API**: Manage your applications and databases using the command line or through the API.
 - **Notifications**: Get notified when your deployments succeed or fail (via Slack, Discord, Telegram, Email, etc.).
-- **Self-Hosted**: Self-host Hanzo Platform on your VPS.
+- **Multi Server**: Deploy and manage your applications remotely to external servers.
+- **Self-Hosted**: Self-host Hanzo on your VPS.
 
 ## 🚀 Getting Started
 
 To get started, run the following command on a VPS:
 
-Want to skip the installation process? [Try the Hanzo Platform](https://platform.hanzo.ai).
+Want to skip the installation process? [Try the Hanzo Cloud](https://app.hanzo.ai).
 
 ```bash
-curl -sL https://hanzo.sh | sh
+curl -sSL https://hanzo.ai/install.sh | sh
 ```
 
 For detailed documentation, visit [docs.hanzo.ai](https://docs.hanzo.ai).
 
-## Sponsors
+## ♥️ Sponsors
 
-🙏 We're deeply grateful to all our sponsors who make Hanzo Platform possible! Your support helps cover the costs of hosting, testing, and developing new features.
+🙏 We're deeply grateful to all our sponsors who make Hanzo possible! Your support helps cover the costs of hosting, testing, and developing new features.
 
-[Hanzo Open Collective](https://opencollective.com/hanzoai)
+[Hanzo Open Collective](https://opencollective.com/platform)
 
 [Github Sponsors](https://github.com/sponsors/hanzoai)
 
@@ -58,83 +74,64 @@ For detailed documentation, visit [docs.hanzo.ai](https://docs.hanzo.ai).
 
 ### Hero Sponsors 🎖
 
-<div style="display: flex; align-items: center; gap: 20px;">
-  <a href="https://www.hostinger.com/vps-hosting?ref=hanzo" target="_blank" style="display: inline-block; margin-right: 10px;">
-    <img src=".github/sponsors/hostinger.jpg" alt="Hostinger" height="50"/>
-  </a>
-  <a href="https://www.lxaer.com/?ref=hanzo" target="_blank" style="display: inline-block; margin-right: 10px;">
-    <img src=".github/sponsors/lxaer.png" alt="LX Aer" height="50"/>
-  </a>
-    <a href="https://mandarin3d.com/?ref=hanzo" target="_blank" style="display: inline-block;">
-    <img src=".github/sponsors/mandarin.png" alt="Mandarin" height="50"/>
-  </a>
-    <a href="https://lightnode.com/?ref=hanzo" target="_blank" style="display: inline-block;">
-    <img src=".github/sponsors/light-node.webp" alt="Lightnode" height="70"/>
-  </a>
+<div>
+  <a href="https://www.hostinger.com/vps-hosting?ref=platform"><img src=".github/sponsors/hostinger.jpg" alt="Hostinger" width="300"/></a>
+  <a href="https://www.lxaer.com/?ref=platform"><img src=".github/sponsors/lxaer.png" alt="LX Aer" width="100"/></a>
 </div>
+
+<!-- Premium Supporters 🥇 -->
+
+<!-- Add Premium Supporters here -->
 
 ### Premium Supporters 🥇
 
-<div style="display: flex; gap: 30px; flex-wrap: wrap;">
-<a href="https://supafort.com/?ref=hanzo" target="_blank"><img src="https://supafort.com/build/q-4Ht4rBZR.webp" alt="Supafort.com" width="190"/></a>
+<div>
+  <a href="https://supafort.com/?ref=platform"><img src="https://supafort.com/build/q-4Ht4rBZR.webp" alt="Supafort.com" width="300"/></a>
+  <a href="https://agentdock.ai/?ref=platform"><img src=".github/sponsors/agentdock.png" alt="agentdock.ai" width="100"/></a>
 </div>
 
 <!-- Elite Contributors 🥈 -->
 
 <!-- Add Elite Contributors here -->
 
+### Elite Contributors 🥈
+
+<div>
+  <a href="https://americancloud.com/?ref=platform"><img src=".github/sponsors/american-cloud.png" alt="AmericanCloud" width="300"/></a>
+  <a href="https://tolgee.io/?utm_source=github_platform&utm_medium=banner&utm_campaign=platform"><img src="https://hanzo.ai/tolgee-logo.png" alt="Tolgee" width="100"/></a>
+</div>
+
 ### Supporting Members 🥉
 
-<div style="display: flex; gap: 30px; flex-wrap: wrap;">
-<a href="https://lightspeed.run/?ref=hanzo"><img src="https://github.com/lightspeedrun.png" width="60px" alt="Lightspeed.run"/></a>
-<a href="https://cloudblast.io/?ref=hanzo "><img src="https://cloudblast.io/img/logo-icon.193cf13e.svg" width="250px" alt="Cloudblast.io"/></a>
-<a href="https://startupfa.me/?ref=hanzo "><img src=".github/sponsors/startupfame.png" width="65px" alt="Startupfame"/></a>
-<a href="https://itsdb-center.com?ref=hanzo "><img src=".github/sponsors/its.png" width="65px" alt="Itsdb-center"/></a>
-<a href="https://openalternative.co/?ref=hanzo "><img src=".github/sponsors/openalternative.png" width="65px" alt="Openalternative"/></a>
+<div>
+
+  <a href="https://cloudblast.io/?ref=platform"><img src="https://cloudblast.io/img/logo-icon.193cf13e.svg" width="250px" alt="Cloudblast.io"/></a>
+
+  <a href="https://synexa.ai/?ref=platform"><img src=".github/sponsors/synexa.png" width="65px" alt="Synexa"/></a>
 </div>
 
 ### Community Backers 🤝
 
-<div style="display: flex; gap: 30px; flex-wrap: wrap;">
-<a href="https://steamsets.com/?ref=hanzo"><img src="https://avatars.githubusercontent.com/u/111978405?s=200&v=4" width="60px" alt="Steamsets.com"/></a>
-<a href="https://rivo.gg/?ref=hanzo"><img src="https://avatars.githubusercontent.com/u/126797452?s=200&v=4" width="60px" alt="Rivo.gg"/></a>
-<a href="https://photoquest.wedding/?ref=hanzo"><img src="https://photoquest.wedding/favicon/android-chrome-512x512.png" width="60px" alt="Rivo.gg"/></a>
-
-</div>
-
 #### Organizations:
 
-[![Sponsors on Open Collective](https://opencollective.com/hanzoai/organizations.svg?width=890)](https://opencollective.com/hanzoai)
+[Sponsors on Open Collective](https://opencollective.com/platform)
 
 #### Individuals:
 
-[![Individual Contributors on Open Collective](https://opencollective.com/hanzo/individuals.svg?width=890)](https://opencollective.com/hanzoai)
+[![Individual Contributors on Open Collective](https://opencollective.com/platform/individuals.svg?width=890)](https://opencollective.com/platform)
 
 ### Contributors 🤝
 
 <a href="https://github.com/hanzoai/platform/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=hanzoai/platform" />
-  </a>
-
-## Video Tutorial
-
-<a href="https://youtu.be/mznYKPvhcfw">
-  <img src="https://platform.hanzo.ai/banner.png" alt="Watch the video" width="400" style="border-radius:20px;"/>
+  <img src="https://contrib.rocks/image?repo=hanzoai/platform" alt="Contributors" />
 </a>
 
-<!-- ## Supported OS
+## 📺 Video Tutorial
 
-- Ubuntu 24.04 LTS
-- Ubuntu 23.10
-- Ubuntu 22.04 LTS
-- Ubuntu 20.04 LTS
-- Ubuntu 18.04 LTS
-- Debian 12
-- Debian 11
-- Fedora 40
-- Centos 9
-- Centos 8 -->
+<a href="https://youtu.be/mznYKPvhcfw">
+  <img src="https://hanzo.ai/banner.png" alt="Watch the video" width="400"/>
+</a>
 
-## Contributing
+## 🤝 Contributing
 
 Check out the [Contributing Guide](CONTRIBUTING.md) for more information.

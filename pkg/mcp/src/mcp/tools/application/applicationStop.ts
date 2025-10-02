@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationStop = createTool({
   name: "application-stop",
-  description: "Stops an application in Hanzo.",
+  description: "Stops an application in Platform.",
   schema: z.object({
     applicationId: z.string().describe("The ID of the application to stop."),
   }),

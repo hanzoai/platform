@@ -6,7 +6,7 @@ import { createTool } from "../toolFactory.js";
 export const applicationSaveGiteaProvider = createTool({
   name: "application-saveGiteaProvider",
   description:
-    "Saves Gitea provider configuration for an application in Hanzo.",
+    "Saves Gitea provider configuration for an application in Platform.",
   schema: z.object({
     applicationId: z
       .string()

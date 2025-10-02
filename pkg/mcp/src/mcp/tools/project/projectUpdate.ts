@@ -5,7 +5,7 @@ import { ResponseFormatter } from "../../../utils/responseFormatter.js";
 
 export const projectUpdate = createTool({
   name: "project-update",
-  description: "Updates an existing project in Hanzo.",
+  description: "Updates an existing project in Platform.",
   schema: z.object({
     projectId: z.string().min(1).describe("The ID of the project to update."),
     name: z.string().min(1).optional().describe("The new name of the project."),
