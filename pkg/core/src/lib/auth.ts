@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";

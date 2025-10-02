@@ -2,7 +2,7 @@
   "name": "@hanzo/platform",
   "version": "1.0.4",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -10,18 +10,29 @@
     "scope": "@hanzo"
   },
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs.js"
+    },
     "./db": {
-      "import": "./src/db/index.ts",
+      "import": "./dist/db/index.js",
       "require": "./dist/db/index.cjs.js"
     },
-    "./setup/*": {
-      "import": "./src/setup/*.ts",
-      "require": "./dist/setup/index.cjs.js"
+    "./*": {
+      "import": "./dist/*",
+      "require": "./dist/*.cjs"
     },
-    "./constants": {
-      "import": "./src/constants/index.ts",
-      "require": "./dist/constants.cjs.js"
+    "./dist": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs.js"
+    },
+    "./dist/db": {
+      "import": "./dist/db/index.js",
+      "require": "./dist/db/index.cjs.js"
+    },
+    "./dist/db/schema": {
+      "import": "./dist/db/schema/index.js",
+      "require": "./dist/db/schema/index.cjs.js"
     }
   },
   "files": [
@@ -54,7 +65,7 @@
     "@trpc/server": "^10.43.6",
     "adm-zip": "^0.5.14",
     "ai": "^4.0.23",
-    "bcrypt": "5.1.1",
+    "bcryptjs": "^2.4.3",
     "better-auth": "1.2.0",
     "bl": "6.0.11",
     "boxen": "^7.1.1",
@@ -89,7 +100,7 @@
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.5",
-    "@types/bcrypt": "5.0.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/dockerode": "3.3.23",
     "@types/js-yaml": "4.0.9",
     "@types/lodash": "4.17.4",
