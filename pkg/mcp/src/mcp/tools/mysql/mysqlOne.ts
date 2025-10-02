@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const mysqlOne = createTool({
   name: "mysql-one",
-  description: "Gets a specific MySQL database by its ID in Hanzo.",
+  description: "Gets a specific MySQL database by its ID in Platform.",
   schema: z.object({
     mysqlId: z.string().describe("The ID of the MySQL database to retrieve."),
   }),

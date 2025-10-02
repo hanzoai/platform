@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationMarkRunning = createTool({
   name: "application-markRunning",
-  description: "Marks an application as running in Hanzo.",
+  description: "Marks an application as running in Platform.",
   schema: z.object({
     applicationId: z
       .string()

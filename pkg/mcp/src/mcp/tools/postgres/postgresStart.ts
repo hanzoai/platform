@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const postgresStart = createTool({
   name: "postgres-start",
-  description: "Starts a PostgreSQL database in Hanzo.",
+  description: "Starts a PostgreSQL database in Platform.",
   schema: z.object({
     postgresId: z
       .string()

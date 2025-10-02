@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationRedeploy = createTool({
   name: "application-redeploy",
-  description: "Redeploys an application in Hanzo.",
+  description: "Redeploys an application in Platform.",
   schema: z.object({
     applicationId: z
       .string()

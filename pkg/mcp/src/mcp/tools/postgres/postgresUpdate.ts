@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const postgresUpdate = createTool({
   name: "postgres-update",
-  description: "Updates an existing PostgreSQL database in Hanzo.",
+  description: "Updates an existing PostgreSQL database in Platform.",
   schema: z.object({
     postgresId: z
       .string()

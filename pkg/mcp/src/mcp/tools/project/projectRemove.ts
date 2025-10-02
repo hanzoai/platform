@@ -5,7 +5,7 @@ import { ResponseFormatter } from "../../../utils/responseFormatter.js";
 
 export const projectRemove = createTool({
   name: "project-remove",
-  description: "Removes/deletes an existing project in Hanzo.",
+  description: "Removes/deletes an existing project in Platform.",
   schema: z.object({
     projectId: z.string().min(1).describe("The ID of the project to remove."),
   }),

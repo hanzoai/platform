@@ -6,7 +6,7 @@ import { createTool } from "../toolFactory.js";
 export const applicationSaveGitlabProvider = createTool({
   name: "application-saveGitlabProvider",
   description:
-    "Saves GitLab provider configuration for an application in Hanzo.",
+    "Saves GitLab provider configuration for an application in Platform.",
   schema: z.object({
     applicationId: z
       .string()

@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationMove = createTool({
   name: "application-move",
-  description: "Moves an application to a different project in Hanzo.",
+  description: "Moves an application to a different project in Platform.",
   schema: z.object({
     applicationId: z.string().describe("The ID of the application to move."),
     targetProjectId: z.string().describe("The ID of the destination project."),

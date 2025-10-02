@@ -28,7 +28,7 @@ const DEFAULT_HEADERS = {
 
 // Create axios instance with configuration from clientConfig
 const apiClient = axios.create({
-  baseURL: config.hanzoUrl,
+  baseURL: config.platformUrl,
   timeout: config.timeout,
   headers: DEFAULT_HEADERS,
 });

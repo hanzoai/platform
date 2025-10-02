@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationReadAppMonitoring = createTool({
   name: "application-readAppMonitoring",
-  description: "Reads monitoring data for an application in Hanzo.",
+  description: "Reads monitoring data for an application in Platform.",
   schema: z.object({
     appName: z
       .string()

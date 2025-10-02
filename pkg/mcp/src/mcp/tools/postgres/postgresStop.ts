@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const postgresStop = createTool({
   name: "postgres-stop",
-  description: "Stops a PostgreSQL database in Hanzo.",
+  description: "Stops a PostgreSQL database in Platform.",
   schema: z.object({
     postgresId: z
       .string()
