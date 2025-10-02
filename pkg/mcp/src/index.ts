@@ -29,7 +29,7 @@ async function main() {
   const server = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  logger.info("MCP Hanzo CLI server running via stdio");
+  logger.info("MCP Platform CLI server running via stdio");
 }
 
 main().catch((error) => {

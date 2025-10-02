@@ -1,5 +1,5 @@
 interface Config {
-  hanzoUrl: string;
+  platformUrl: string;
   authToken: string;
   timeout: number;
   retryAttempts: number;
@@ -27,22 +27,22 @@ class ConfigManager {
   }
 
   private loadConfig(): Config {
-    const hanzoUrl = process.env.HANZO_URL;
-    const authToken = process.env.HANZO_API_KEY;
+    const platformUrl = process.env.PLATFORM_URL;
+    const authToken = process.env.PLATFORM_API_KEY;
 
-    if (!hanzoUrl) {
-      throw new Error("Environment variable HANZO_URL is not defined");
+    if (!platformUrl) {
+      throw new Error("Environment variable PLATFORM_URL is not defined");
     }
     if (!authToken) {
-      throw new Error("Environment variable HANZO_API_KEY is not defined");
+      throw new Error("Environment variable PLATFORM_API_KEY is not defined");
     }
 
     return {
-      hanzoUrl,
+      platformUrl,
       authToken,
-      timeout: parseInt(process.env.HANZO_TIMEOUT || "30000", 10),
-      retryAttempts: parseInt(process.env.HANZO_RETRY_ATTEMPTS || "3", 10),
-      retryDelay: parseInt(process.env.HANZO_RETRY_DELAY || "1000", 10),
+      timeout: parseInt(process.env.PLATFORM_TIMEOUT || "30000", 10),
+      retryAttempts: parseInt(process.env.PLATFORM_RETRY_ATTEMPTS || "3", 10),
+      retryDelay: parseInt(process.env.PLATFORM_RETRY_DELAY || "1000", 10),
     };
   }
 }

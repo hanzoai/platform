@@ -282,7 +282,7 @@ export async function main() {
 
   // Start the server
   app.listen(PORT, () => {
-    logger.info("MCP Hanzo server started", {
+    logger.info("MCP Platform server started", {
       port: PORT,
       protocols: [
         "Streamable HTTP (MCP 2025-03-26)",

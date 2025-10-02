@@ -3,7 +3,7 @@ package containers
 import (
 	"strings"
 
-	"github.com/hanzoai/hanzo/app/monitoring/config"
+	"github.com/hanzoai/platform/apps/monitoring/config"
 )
 
 var monitorConfig *MonitoringConfig

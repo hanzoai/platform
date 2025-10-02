@@ -1,3 +1,6 @@
 packages:
-  - "app/*"
-  - "pkg/*"
+  - "app/api"
+  - "app/schedules"
+  - "app/platform"
+  - "pkg/mcp"
+  - "pkg/platform"

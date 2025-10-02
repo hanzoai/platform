@@ -5,7 +5,7 @@ import { ResponseFormatter } from "../../../utils/responseFormatter.js";
 
 export const projectCreate = createTool({
   name: "project-create",
-  description: "Creates a new project in Hanzo.",
+  description: "Creates a new project in Platform.",
   schema: z.object({
     name: z.string().min(1).describe("The name of the project."),
     description: z

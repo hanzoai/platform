@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationCleanQueues = createTool({
   name: "application-cleanQueues",
-  description: "Cleans the queues for an application in Hanzo.",
+  description: "Cleans the queues for an application in Platform.",
   schema: z.object({
     applicationId: z
       .string()
