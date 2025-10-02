@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hanzoai/hanzo/app/monitoring/config"
-	"github.com/hanzoai/hanzo/app/monitoring/database"
+	"github.com/hanzoai/platform/apps/monitoring/config"
+	"github.com/hanzoai/platform/apps/monitoring/database"
 )
 
 type ContainerMonitor struct {

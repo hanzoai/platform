@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationUpdateTraefikConfig = createTool({
   name: "application-updateTraefikConfig",
-  description: "Updates Traefik configuration for an application in Hanzo.",
+  description: "Updates Traefik configuration for an application in Platform.",
   schema: z.object({
     applicationId: z
       .string()

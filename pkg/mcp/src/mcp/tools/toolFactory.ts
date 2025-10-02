@@ -89,7 +89,7 @@ export function createTool<TShape extends import("zod").ZodRawShape>(
           ) {
             return ResponseFormatter.error(
               `Authentication failed for tool: ${definition.name}`,
-              "Please check your HANZO_API_KEY configuration"
+              "Please check your PLATFORM_API_KEY configuration"
             );
           }
 
@@ -109,7 +109,7 @@ export function createTool<TShape extends import("zod").ZodRawShape>(
           ) {
             return ResponseFormatter.error(
               `Server error occurred`,
-              `Hanzo server encountered an internal error while processing ${definition.name}`
+              `Platform server encountered an internal error while processing ${definition.name}`
             );
           }
         }

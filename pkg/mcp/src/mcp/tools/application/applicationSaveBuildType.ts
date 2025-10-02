@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationSaveBuildType = createTool({
   name: "application-saveBuildType",
-  description: "Saves build type configuration for an application in Hanzo.",
+  description: "Saves build type configuration for an application in Platform.",
   schema: z.object({
     applicationId: z
       .string()

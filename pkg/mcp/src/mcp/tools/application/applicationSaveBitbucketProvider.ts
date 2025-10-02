@@ -6,7 +6,7 @@ import { createTool } from "../toolFactory.js";
 export const applicationSaveBitbucketProvider = createTool({
   name: "application-saveBitbucketProvider",
   description:
-    "Saves Bitbucket provider configuration for an application in Hanzo.",
+    "Saves Bitbucket provider configuration for an application in Platform.",
   schema: z.object({
     applicationId: z
       .string()
