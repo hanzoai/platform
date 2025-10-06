@@ -13,13 +13,25 @@ export const createServer = async (
 	input: typeof apiCreateServer._type,
 	organizationId: string,
 ) => {
+	const insertData: any = {
+		name: input.name,
+		ipAddress: input.ipAddress,
+		port: input.port,
+		username: input.username,
+		organizationId: organizationId,
+		createdAt: new Date().toISOString(),
+	};
+	
+	if (input.description) {
+		insertData.description = input.description;
+	}
+	if (input.sshKeyId) {
+		insertData.sshKeyId = input.sshKeyId;
+	}
+	
 	const newServer = await db
 		.insert(server)
-		.values({
-			...input,
-			organizationId: organizationId,
-			createdAt: new Date().toISOString(),
-		})
+		.values(insertData)
 		.returning()
 		.then((value) => value[0]);
 
@@ -113,9 +125,7 @@ export const updateServerById = async (
 ) => {
 	const result = await db
 		.update(server)
-		.set({
-			...serverData,
-		})
+		.set(serverData as any)
 		.where(eq(server.serverId, serverId))
 		.returning()
 		.then((res) => res[0]);
@@ -125,5 +135,5 @@ export const updateServerById = async (
 
 export const getAllServers = async () => {
 	const servers = await db.query.server.findMany();
-	return servers;
+	return servers as unknown as Server[];
 };

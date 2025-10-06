@@ -305,66 +305,8 @@ export default Invitation;
 Invitation.getLayout = (page: ReactElement) => {
 	return <OnboardingLayout>{page}</OnboardingLayout>;
 };
-export async function getServerSideProps(ctx: GetServerSidePropsContext) {
-	const { query } = ctx;
-
-	const token = query.token;
-
-	// if (IS_CLOUD) {
-	// 	return {
-	// 		redirect: {
-	// 			permanent: true,
-	// 			destination: "/",
-	// 		},
-	// 	};
-	// }
-
-	if (typeof token !== "string") {
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/",
-			},
-		};
-	}
-
-	try {
-		const invitation = await getUserByToken(token);
-
-		if (invitation.userAlreadyExists) {
-			return {
-				props: {
-					isCloud: IS_CLOUD,
-					token: token,
-					invitation: invitation,
-					userAlreadyExists: true,
-				},
-			};
-		}
-
-		if (invitation.isExpired) {
-			return {
-				redirect: {
-					permanent: true,
-					destination: "/",
-				},
-			};
-		}
-
-		return {
-			props: {
-				isCloud: IS_CLOUD,
-				token: token,
-				invitation: invitation,
-			},
-		};
-	} catch (error) {
-		console.log("error", error);
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/",
-			},
-		};
-	}
+export async function getServerSideProps() {
+	return {
+		props: {},
+	};
 }
