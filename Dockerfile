@@ -12,18 +12,25 @@ WORKDIR /usr/src/app
 RUN apt-get update && apt-get install -y python3 make g++ git python3-pip pkg-config libsecret-1-dev && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
 
-# Deploy only the platform app
-
+# Build the platform package and app
 ENV NODE_ENV=production
 RUN pnpm --filter=@hanzo/platform build
-RUN pnpm --filter=./apps/platform run build
+RUN pnpm --filter=./app/platform run build-next
 
-RUN pnpm --filter=./apps/platform --prod deploy /prod/platform
+RUN pnpm --filter=./app/platform --prod deploy /prod/platform
 
-RUN cp -R /usr/src/app/apps/platform/.next /prod/platform/.next
-RUN cp -R /usr/src/app/apps/platform/dist /prod/platform/dist
+# Copy the @hanzo/platform package source files (Next.js will transpile from src/)
+RUN rm -rf /prod/platform/node_modules/@hanzo/platform && \
+    mkdir -p /prod/platform/node_modules/@hanzo/platform && \
+    cp -R /usr/src/app/pkg/platform/src /prod/platform/node_modules/@hanzo/platform/src && \
+    cp -R /usr/src/app/pkg/platform/dist /prod/platform/node_modules/@hanzo/platform/dist && \
+    cp /usr/src/app/pkg/platform/package.json /prod/platform/node_modules/@hanzo/platform/package.json && \
+    cp /usr/src/app/pkg/platform/tsconfig.json /prod/platform/node_modules/@hanzo/platform/tsconfig.json 2>/dev/null || true
+
+RUN cp -R /usr/src/app/app/platform/.next /prod/platform/.next
+RUN cp -R /usr/src/app/app/platform/dist /prod/platform/dist
 
 FROM base AS platform
 WORKDIR /app
@@ -40,17 +47,13 @@ COPY --from=build /prod/platform/next.config.mjs ./next.config.mjs
 COPY --from=build /prod/platform/public ./public
 COPY --from=build /prod/platform/package.json ./package.json
 COPY --from=build /prod/platform/drizzle ./drizzle
-COPY .env.production ./.env
-COPY --from=build /prod/hanzo.aiponents.json ./components.json
+COPY --from=build /prod/platform/components.json ./components.json
 COPY --from=build /prod/platform/node_modules ./node_modules
 
-
 # Install docker
-RUN curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh && rm get-docker.sh && curl https://rclone.org/install.sh | bash
+RUN curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh && rm get-docker.sh
 
-# Install Nixpacks and tsx
-# | VERBOSE=1 VERSION=1.21.0 bash
-
+# Install Nixpacks
 ARG NIXPACKS_VERSION=1.39.0
 RUN curl -sSL https://nixpacks.com/install.sh -o install.sh \
     && chmod +x install.sh \
@@ -60,9 +63,6 @@ RUN curl -sSL https://nixpacks.com/install.sh -o install.sh \
 # Install Railpack
 ARG RAILPACK_VERSION=0.2.2
 RUN curl -sSL https://railpack.com/install.sh | bash
-
-# Install buildpacks
-COPY --from=buildpacksio/pack:0.35.0 /usr/local/bin/pack /usr/local/bin/pack
 
 EXPOSE 3000
 CMD [ "pnpm", "start" ]

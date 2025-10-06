@@ -36,7 +36,7 @@ export const createRegistry = async (
 			.values({
 				...input,
 				organizationId: organizationId,
-			})
+			} as any)
 			.returning()
 			.then((value) => value[0]);
 
@@ -106,7 +106,7 @@ export const updateRegistry = async (
 			.update(registry)
 			.set({
 				...registryData,
-			})
+			} as any)
 			.where(eq(registry.registryId, registryId))
 			.returning()
 			.then((res) => res[0]);

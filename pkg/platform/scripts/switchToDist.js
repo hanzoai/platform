@@ -15,26 +15,20 @@ pkg.exports = {
 		import: "./dist/index.js",
 		require: "./dist/index.cjs.js",
 	},
-	"./db": {
-		import: "./dist/db/index.js",
-		require: "./dist/db/index.cjs.js",
-	},
-	"./*": {
-		import: "./dist/*",
-		require: "./dist/*.cjs",
-	},
-	"./dist": {
-		import: "./dist/index.js",
-		require: "./dist/index.cjs.js",
-	},
-	"./dist/db": {
-		import: "./dist/db/index.js",
-		require: "./dist/db/index.cjs.js",
-	},
-	"./dist/db/schema": {
-		import: "./dist/db/schema/index.js",
-		require: "./dist/db/schema/index.cjs.js",
-	},
+	"./package.json": "./package.json",
+	"./constants": "./dist/constants/index.js",
+	"./db": "./dist/db/index.js",
+	"./db/schema": "./dist/db/schema/index.js",
+	"./db/schema/*": "./dist/db/schema/*.js",
+	"./lib/auth": "./dist/lib/auth.js",
+	"./services/*": "./dist/services/*.js",
+	"./templates/*": "./dist/templates/*.js",
+	"./utils/*": "./dist/utils/*.js",
+	"./utils/ai/*": "./dist/utils/ai/*.js",
+	"./utils/backups/*": "./dist/utils/backups/*.js",
+	"./utils/process/*": "./dist/utils/process/*.js",
+	"./utils/restore": "./dist/utils/restore/index.js",
+	"./*": "./dist/*.js",
 };
 
 fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2));
