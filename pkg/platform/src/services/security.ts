@@ -34,7 +34,7 @@ export const createSecurity = async (
 				.insert(security)
 				.values({
 					...data,
-				})
+				} as any)
 				.returning()
 				.then((res) => res[0]);
 
@@ -94,7 +94,7 @@ export const updateSecurityById = async (
 			.update(security)
 			.set({
 				...data,
-			})
+			} as any)
 			.where(eq(security.securityId, securityId))
 			.returning();
 

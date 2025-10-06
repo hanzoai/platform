@@ -22,7 +22,7 @@ export const createGitea = async (
 				organizationId: organizationId,
 				name: input.name,
 				userId: userId,
-			})
+			} as any)
 			.returning()
 			.then((response) => response[0]);
 
@@ -38,7 +38,7 @@ export const createGitea = async (
 			.values({
 				...input,
 				gitProviderId: newGitProvider?.gitProviderId,
-			})
+			} as any)
 			.returning()
 			.then((response: (typeof gitea.$inferSelect)[]) => response[0]);
 
