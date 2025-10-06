@@ -69,7 +69,7 @@ export const sendTelegramNotification = async (
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				chat_id: connection.chatId,
-				message_thread_id: connection.messageThreadId,
+				message_thread_id: (connection as any).messageThreadId,
 				text: messageText,
 				parse_mode: "HTML",
 				disable_web_page_preview: true,
@@ -112,7 +112,7 @@ export const sendGotifyNotification = async (
 		body: JSON.stringify({
 			title: title,
 			message: message,
-			priority: connection.priority,
+			priority: (connection as any).priority,
 			extras: {
 				"client::display": {
 					contentType: "text/plain",
@@ -139,7 +139,7 @@ export const sendNtfyNotification = async (
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${connection.accessToken}`,
-			"X-Priority": connection.priority?.toString() || "3",
+			"X-Priority": (connection as any).priority?.toString() || "3",
 			"X-Title": title,
 			"X-Tags": tags,
 			"X-Actions": actions,

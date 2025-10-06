@@ -39,7 +39,7 @@ export const saveAiSettings = async (organizationId: string, settings: any) => {
 			aiId,
 			organizationId,
 			...settings,
-		})
+		} as any)
 		.onConflictDoUpdate({
 			target: ai.aiId,
 			set: {

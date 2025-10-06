@@ -10,7 +10,7 @@ export const createPort = async (input: typeof apiCreatePort._type) => {
 		.insert(ports)
 		.values({
 			...input,
-		})
+		} as any)
 		.returning()
 		.then((value) => value[0]);
 
@@ -65,7 +65,7 @@ export const updatePortById = async (
 		.update(ports)
 		.set({
 			...portData,
-		})
+		} as any)
 		.where(eq(ports.portId, portId))
 		.returning();
 

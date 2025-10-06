@@ -111,7 +111,7 @@ export const createDeployment = async (
 				logPath: logFilePath,
 				description: deployment.description || "",
 				startedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -132,7 +132,7 @@ export const createDeployment = async (
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 		await updateApplicationStatus(application.applicationId, "error");
 		console.log(error);
@@ -192,7 +192,7 @@ export const createDeploymentPreview = async (
 				description: deployment.description || "",
 				previewDeploymentId: deployment.previewDeploymentId,
 				startedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -213,7 +213,7 @@ export const createDeploymentPreview = async (
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 		await updatePreviewDeployment(deployment.previewDeploymentId, {
 			previewStatus: "error",
@@ -269,7 +269,7 @@ echo "Initializing deployment" >> ${logFilePath};
 				status: "running",
 				logPath: logFilePath,
 				startedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -290,7 +290,7 @@ echo "Initializing deployment" >> ${logFilePath};
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 		await updateCompose(compose.composeId, {
 			composeStatus: "error",
@@ -353,7 +353,7 @@ echo "Initializing backup\n" >> ${logFilePath};
 				status: "running",
 				logPath: logFilePath,
 				startedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -374,7 +374,7 @@ echo "Initializing backup\n" >> ${logFilePath};
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 		throw new TRPCError({
 			code: "BAD_REQUEST",
@@ -427,7 +427,7 @@ export const createDeploymentSchedule = async (
 				logPath: logFilePath,
 				description: deployment.description || "",
 				startedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -449,7 +449,7 @@ export const createDeploymentSchedule = async (
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 
 		throw new TRPCError({
@@ -512,7 +512,7 @@ export const createDeploymentVolumeBackup = async (
 				logPath: logFilePath,
 				description: deployment.description || "",
 				startedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -534,7 +534,7 @@ export const createDeploymentVolumeBackup = async (
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			})
+			} as any)
 			.returning();
 
 		throw new TRPCError({
@@ -720,7 +720,7 @@ export const updateDeployment = async (
 		.update(deployments)
 		.set({
 			...deploymentData,
-		})
+		} as any)
 		.where(eq(deployments.deploymentId, deploymentId))
 		.returning();
 
@@ -739,7 +739,7 @@ export const updateDeploymentStatus = async (
 				deploymentStatus === "done" || deploymentStatus === "error"
 					? new Date().toISOString()
 					: null,
-		})
+		} as any)
 		.where(eq(deployments.deploymentId, deploymentId))
 		.returning();
 
@@ -772,7 +772,7 @@ export const createServerDeployment = async (
 				description: deployment.description || "",
 				status: "running",
 				logPath: logFilePath,
-			})
+			} as any)
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({

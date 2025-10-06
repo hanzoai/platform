@@ -259,37 +259,8 @@ export default Register;
 Register.getLayout = (page: ReactElement) => {
 	return <OnboardingLayout>{page}</OnboardingLayout>;
 };
-export async function getServerSideProps(context: GetServerSidePropsContext) {
-	if (IS_CLOUD) {
-		const { user } = await validateRequest(context.req);
-
-		if (user) {
-			return {
-				redirect: {
-					permanent: true,
-					destination: "/dashboard/projects",
-				},
-			};
-		}
-		return {
-			props: {
-				isCloud: true,
-			},
-		};
-	}
-	const hasAdmin = await isAdminPresent();
-
-	if (hasAdmin) {
-		return {
-			redirect: {
-				permanent: false,
-				destination: "/",
-			},
-		};
-	}
+export async function getServerSideProps() {
 	return {
-		props: {
-			isCloud: false,
-		},
+		props: {},
 	};
 }
