@@ -24,7 +24,7 @@ export const createProject = async (
 		.values({
 			...input,
 			organizationId: organizationId,
-		})
+		} as any)
 		.returning()
 		.then((value) => value[0]);
 
@@ -89,7 +89,7 @@ export const updateProjectById = async (
 		.update(projects)
 		.set({
 			...projectData,
-		})
+		} as any)
 		.where(eq(projects.projectId, projectId))
 		.returning()
 		.then((res) => res[0]);
