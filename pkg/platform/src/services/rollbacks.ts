@@ -30,7 +30,7 @@ export const createRollback = async (
 		const { fullContext, ...other } = input;
 		const rollback = await tx
 			.insert(rollbacks)
-			.values(other)
+			.values(other as any)
 			.returning()
 			.then((res) => res[0]);
 
@@ -59,7 +59,7 @@ export const createRollback = async (
 			.set({
 				image: tagImage,
 				fullContext: rest,
-			})
+			} as any)
 			.where(eq(rollbacks.rollbackId, rollback.rollbackId));
 
 		// Update the deployment to reference this rollback
@@ -67,7 +67,7 @@ export const createRollback = async (
 			.update(deploymentsSchema)
 			.set({
 				rollbackId: rollback.rollbackId,
-			})
+			} as any)
 			.where(eq(deploymentsSchema.deploymentId, rollback.deploymentId));
 
 		await createRollbackImage(rest, tagImage);

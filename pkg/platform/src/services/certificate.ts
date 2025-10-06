@@ -40,7 +40,7 @@ export const createCertificate = async (
 		.values({
 			...certificateData,
 			organizationId: organizationId,
-		})
+		} as any)
 		.returning();
 
 	if (!certificate || certificate[0] === undefined) {

@@ -11,10 +11,15 @@ import {
 	initCancelDeployments,
 	sendHanzoRestartNotifications,
 	setupDirectories,
+	auth,
 } from "@hanzo/platform";
 import { config } from "dotenv";
 import next from "next";
+import { toNodeHandler } from "better-auth/node";
+import { createNextApiHandler } from "@trpc/server/adapters/next";
 import { migration } from "@/server/db/migration";
+import { appRouter } from "@/server/api/root";
+import { createTRPCContext } from "@/server/api/trpc";
 import { setupDockerContainerLogsWebSocketServer } from "./wss/docker-container-logs";
 import { setupDockerContainerTerminalWebSocketServer } from "./wss/docker-container-terminal";
 import { setupDockerStatsMonitoringSocketServer } from "./wss/docker-stats";
@@ -28,9 +33,56 @@ const HOST = process.env.HOST || "0.0.0.0";
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev, turbopack: process.env.TURBOPACK === "1" });
 const handle = app.getRequestHandler();
+
 void app.prepare().then(async () => {
 	try {
-		const server = http.createServer((req, res) => {
+		// Create auth handler once
+		const authHandler = toNodeHandler(auth.handler);
+
+		// Create TRPC handler once
+		const trpcHandler = createNextApiHandler({
+			router: appRouter,
+			createContext: createTRPCContext,
+		});
+
+		const server = http.createServer(async (req, res) => {
+			// Handle better-auth routes
+			if (req.url?.startsWith('/api/auth/')) {
+				try {
+					return await authHandler(req, res);
+				} catch (error) {
+					console.error('Auth error:', error);
+					res.writeHead(500);
+					res.end();
+					return;
+				}
+			}
+
+			// Handle TRPC routes
+			if (req.url?.startsWith('/api/trpc/')) {
+				try {
+					// Parse URL and add query object that TRPC expects
+					const url = new URL(req.url, `http://${req.headers.host}`);
+					const pathParts = url.pathname.split('/api/trpc/');
+					const trpcPath = pathParts[1] || '';
+
+					// Build query object
+					(req as any).query = {};
+					url.searchParams.forEach((value, key) => {
+						(req as any).query[key] = value;
+					});
+					(req as any).query.trpc = trpcPath;
+
+					return await trpcHandler(req as any, res as any);
+				} catch (error) {
+					console.error('TRPC error:', error);
+					res.writeHead(500);
+					res.end();
+					return;
+				}
+			}
+
+			// All other routes (pages, static files, etc.) go to Next.js
 			handle(req, res);
 		});
 

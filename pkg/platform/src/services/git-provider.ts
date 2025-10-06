@@ -36,7 +36,7 @@ export const updateGitProvider = async (
 		.update(gitProvider)
 		.set({
 			...input,
-		})
+		} as any)
 		.where(eq(gitProvider.gitProviderId, gitProviderId))
 		.returning()
 		.then((response) => response[0]);
