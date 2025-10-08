@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "platform": {
+      "command": "node",
+      "args": ["/home/z/platform/pkg/mcp/build/index.js"],
+      "env": {
+        "PLATFORM_URL": "https://platform.hanzo.ai/api",
+        "PLATFORM_API_KEY": "YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}
