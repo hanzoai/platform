@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  platform:
+    image: hanzoai/platform:latest
+    container_name: platform
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    networks:
+      hanzo-network:
+        ipv4_address: 10.0.1.36
+
+networks:
+  hanzo-network:
+    external: true
+    name: hanzo-network
