@@ -112,6 +112,14 @@ void app.prepare().then(async () => {
 
 		if (IS_CLOUD && process.env.NODE_ENV === "production") {
 			await migration();
+			
+			// Initialize billing jobs
+			console.log("🚀 Starting billing jobs...");
+			const { startUsageCollectionSchedule } = await import("@hanzo/platform/billing/usage-tracker");
+			const { startBillingSchedule } = await import("@hanzo/platform/billing/billing-job");
+			startUsageCollectionSchedule();
+			startBillingSchedule();
+			console.log("✅ Billing jobs started");
 		}
 
 		server.listen(PORT, HOST);
