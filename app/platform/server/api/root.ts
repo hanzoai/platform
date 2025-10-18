@@ -36,6 +36,7 @@ import { serverRouter } from "./routers/server";
 import { settingsRouter } from "./routers/settings";
 import { sshRouter } from "./routers/ssh-key";
 import { stripeRouter } from "./routers/stripe";
+import { billingRouter } from "./routers/billing";
 import { swarmRouter } from "./routers/swarm";
 import { userRouter } from "./routers/user";
 import { volumeBackupsRouter } from "./routers/volume-backups";
@@ -79,6 +80,7 @@ export const appRouter = createTRPCRouter({
 	github: githubRouter,
 	server: serverRouter,
 	stripe: stripeRouter,
+	billing: billingRouter,
 	swarm: swarmRouter,
 	ai: aiRouter,
 	organization: organizationRouter,
