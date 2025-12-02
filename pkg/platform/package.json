@@ -9,6 +9,10 @@
       "import": "./src/db/index.ts",
       "require": "./dist/db/index.cjs.js"
     },
+    "./db/schema": {
+      "import": "./src/db/schema/index.ts",
+      "require": "./dist/db/schema/index.cjs.js"
+    },
     "./setup/*": {
       "import": "./src/setup/*.ts",
       "require": "./dist/setup/index.cjs.js"
@@ -16,6 +20,26 @@
     "./constants": {
       "import": "./src/constants/index.ts",
       "require": "./dist/constants.cjs.js"
+    },
+    "./templates": {
+      "import": "./src/templates/index.ts",
+      "require": "./dist/templates/index.cjs.js"
+    },
+    "./templates/*": {
+      "import": "./src/templates/*.ts",
+      "require": "./dist/templates/*.cjs.js"
+    },
+    "./services/*": {
+      "import": "./src/services/*.ts",
+      "require": "./dist/services/*.cjs.js"
+    },
+    "./lib/*": {
+      "import": "./src/lib/*.ts",
+      "require": "./dist/lib/*.cjs.js"
+    },
+    "./utils/*": {
+      "import": "./src/utils/*.ts",
+      "require": "./dist/utils/*.cjs.js"
     }
   },
   "scripts": {
