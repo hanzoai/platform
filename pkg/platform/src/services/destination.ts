@@ -17,7 +17,7 @@ export const createDestintation = async (
 		.values({
 			...input,
 			organizationId: organizationId,
-		} as any)
+		})
 		.returning()
 		.then((value) => value[0]);
 
@@ -69,7 +69,7 @@ export const updateDestinationById = async (
 		.update(destinations)
 		.set({
 			...destinationData,
-		} as any)
+		})
 		.where(
 			and(
 				eq(destinations.destinationId, destinationId),

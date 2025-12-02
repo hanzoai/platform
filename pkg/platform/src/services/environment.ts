@@ -16,7 +16,7 @@ export const createEnvironment = async (
 		.insert(environments)
 		.values({
 			...input,
-		} as any)
+		})
 		.returning()
 		.then((value) => value[0]);
 
@@ -126,7 +126,7 @@ export const updateEnvironmentById = async (
 		.update(environments)
 		.set({
 			...environmentData,
-		} as any)
+		})
 		.where(eq(environments.environmentId, environmentId))
 		.returning()
 		.then((res) => res[0]);
@@ -147,7 +147,7 @@ export const duplicateEnvironment = async (
 			name: input.name,
 			description: input.description || originalEnvironment.description,
 			projectId: originalEnvironment.projectId,
-		} as any)
+		})
 		.returning()
 		.then((value) => value[0]);
 

@@ -1,5 +1,5 @@
-import { db } from "@dokploy/server/db";
-import { apikey, member, user } from "@dokploy/server/db/schema";
+import { db } from "@hanzo/platform/db";
+import { apikey, member, user } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { auth } from "../lib/auth";

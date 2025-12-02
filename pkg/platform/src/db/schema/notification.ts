@@ -359,7 +359,7 @@ export const apiCreateLark = notificationsSchema
 	.pick({
 		appBuildError: true,
 		databaseBackup: true,
-		dokployRestart: true,
+		platformRestart: true,
 		name: true,
 		appDeploy: true,
 		dockerCleanup: true,

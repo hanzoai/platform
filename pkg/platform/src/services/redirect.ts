@@ -33,7 +33,7 @@ export const createRedirect = async (
 				.insert(redirects)
 				.values({
 					...redirectData,
-				} as any)
+				})
 				.returning()
 				.then((res) => res[0]);
 
@@ -97,7 +97,7 @@ export const updateRedirectById = async (
 			.update(redirects)
 			.set({
 				...redirectData,
-			} as any)
+			})
 			.where(eq(redirects.redirectId, redirectId))
 			.returning()
 			.then((res) => res[0]);

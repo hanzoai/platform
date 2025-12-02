@@ -1,7 +1,7 @@
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@dokploy/server/utils/process/execAsync";
+} from "@hanzo/platform/utils/process/execAsync";
 import { Queue } from "bullmq";
 import { redisConfig } from "./redis-connection";
 

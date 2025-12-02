@@ -1,18 +1,18 @@
 import { exit } from "node:process";
-import { execAsync } from "@dokploy/server";
-import { setupDirectories } from "@dokploy/server/setup/config-paths";
-import { initializePostgres } from "@dokploy/server/setup/postgres-setup";
-import { initializeRedis } from "@dokploy/server/setup/redis-setup";
+import { execAsync } from "@hanzo/platform";
+import { setupDirectories } from "@hanzo/platform/setup/config-paths";
+import { initializePostgres } from "@hanzo/platform/setup/postgres-setup";
+import { initializeRedis } from "@hanzo/platform/setup/redis-setup";
 import {
 	initializeNetwork,
 	initializeSwarm,
-} from "@dokploy/server/setup/setup";
+} from "@hanzo/platform/setup/setup";
 import {
 	createDefaultMiddlewares,
 	createDefaultServerTraefikConfig,
 	createDefaultTraefikConfig,
 	initializeStandaloneTraefik,
-} from "@dokploy/server/setup/traefik-setup";
+} from "@hanzo/platform/setup/traefik-setup";
 
 (async () => {
 	try {

@@ -4,7 +4,7 @@ import {
 	findServerById,
 	IS_CLOUD,
 	validateRequest,
-} from "@dokploy/server";
+} from "@hanzo/platform";
 import { publicIpv4, publicIpv6 } from "public-ip";
 import { Client, type ConnectConfig } from "ssh2";
 import { WebSocketServer } from "ws";

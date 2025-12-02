@@ -23,7 +23,7 @@ export const createGithub = async (
 				organizationId: organizationId,
 				name: input.name,
 				userId: userId,
-			} as any)
+			})
 			.returning()
 			.then((response) => response[0]);
 
@@ -39,7 +39,7 @@ export const createGithub = async (
 			.values({
 				...input,
 				gitProviderId: newGitProvider?.gitProviderId,
-			} as any)
+			})
 			.returning()
 			.then((response) => response[0]);
 	});
@@ -71,7 +71,7 @@ export const updateGithub = async (
 		.update(github)
 		.set({
 			...input,
-		} as any)
+		})
 		.where(eq(github.githubId, githubId))
 		.returning()
 		.then((response) => response[0]);

@@ -34,7 +34,7 @@ export const createRedis = async (input: typeof apiCreateRedis._type) => {
 				? input.databasePassword
 				: generatePassword(),
 			appName,
-		} as any)
+		})
 		.returning()
 		.then((value) => value[0]);
 
@@ -79,7 +79,7 @@ export const updateRedisById = async (
 		.update(redis)
 		.set({
 			...rest,
-		} as any)
+		})
 		.where(eq(redis.redisId, redisId))
 		.returning();
 

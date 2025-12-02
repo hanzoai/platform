@@ -30,7 +30,7 @@ export const createMount = async (input: typeof apiCreateMount._type) => {
 				...rest,
 				...(input.serviceType === "application" && {
 					applicationId: serviceId,
-				}) as any,
+				}),
 				...(input.serviceType === "postgres" && {
 					postgresId: serviceId,
 				}),
@@ -49,7 +49,7 @@ export const createMount = async (input: typeof apiCreateMount._type) => {
 				...(input.serviceType === "compose" && {
 					composeId: serviceId,
 				}),
-			} as any)
+			})
 			.returning()
 			.then((value) => value[0]);
 
@@ -216,7 +216,7 @@ export const updateMount = async (
 			.update(mounts)
 			.set({
 				...mountData,
-			} as any)
+			})
 			.where(eq(mounts.mountId, mountId))
 			.returning()
 			.then((value) => value[0]);

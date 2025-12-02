@@ -106,7 +106,7 @@ export const updatePreviewDeployment = async (
 		.update(previewDeployments)
 		.set({
 			...previewDeploymentData,
-		} as any)
+		})
 		.where(eq(previewDeployments.previewDeploymentId, previewDeploymentId))
 		.returning();
 
@@ -166,7 +166,7 @@ export const createPreviewDeployment = async (
 			...schema,
 			appName: appName,
 			pullRequestCommentId: `${issue.data.id}`,
-		} as any)
+		})
 		.returning()
 		.then((value) => value[0]);
 
@@ -196,7 +196,7 @@ export const createPreviewDeployment = async (
 		.update(previewDeployments)
 		.set({
 			domainId: newDomain.domainId,
-		} as any)
+		})
 		.where(
 			eq(
 				previewDeployments.previewDeploymentId,

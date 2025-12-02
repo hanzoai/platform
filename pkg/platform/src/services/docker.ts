@@ -60,8 +60,8 @@ export const getContainers = async (serverId?: string | null) => {
 			})
 			.filter(
 				(container) =>
-					!container.name.includes("platform") ||
-					container.name.includes("platform-monitoring"),
+					!container.name.includes("hanzo") ||
+					container.name.includes("hanzo-monitoring"),
 			);
 
 		return containers;
@@ -434,7 +434,7 @@ export const getNodeApplications = async (serverId?: string) => {
 			.trim()
 			.split("\n")
 			.map((line) => JSON.parse(line))
-			.filter((service) => !service.Name.startsWith("platform-"));
+			.filter((service) => !service.Name.startsWith("dokploy-"));
 
 		return appArray;
 	} catch {}

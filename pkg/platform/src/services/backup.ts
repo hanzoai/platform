@@ -12,7 +12,7 @@ export const createBackup = async (input: typeof apiCreateBackup._type) => {
 		.insert(backups)
 		.values({
 			...input,
-		} as any)
+		})
 		.returning()
 		.then((value) => value[0]);
 
@@ -55,7 +55,7 @@ export const updateBackupById = async (
 		.update(backups)
 		.set({
 			...backupData,
-		} as any)
+		})
 		.where(eq(backups.backupId, backupId))
 		.returning();
 
