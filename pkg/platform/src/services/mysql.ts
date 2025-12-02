@@ -37,7 +37,7 @@ export const createMysql = async (input: typeof apiCreateMySql._type) => {
 				? input.databaseRootPassword
 				: generatePassword(),
 			appName,
-		} as any)
+		})
 		.returning()
 		.then((value) => value[0]);
 
@@ -89,7 +89,7 @@ export const updateMySqlById = async (
 		.update(mysql)
 		.set({
 			...rest,
-		} as any)
+		})
 		.where(eq(mysql.mysqlId, mysqlId))
 		.returning();
 
@@ -100,7 +100,7 @@ export const findMySqlByBackupId = async (backupId: string) => {
 	const result = await db
 		.select({
 			...getTableColumns(mysql),
-		} as any)
+		})
 		.from(mysql)
 		.innerJoin(backups, eq(mysql.mysqlId, backups.mysqlId))
 		.where(eq(backups.backupId, backupId))

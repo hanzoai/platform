@@ -11,7 +11,7 @@ import {
 	initCancelDeployments,
 	sendDokployRestartNotifications,
 	setupDirectories,
-} from "@dokploy/server";
+} from "@hanzo/platform";
 import { config } from "dotenv";
 import next from "next";
 import { migration } from "@/server/db/migration";

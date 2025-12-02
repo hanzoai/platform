@@ -46,7 +46,7 @@ export const createPostgres = async (input: typeof apiCreatePostgres._type) => {
 				? input.databasePassword
 				: generatePassword(),
 			appName,
-		} as any)
+		})
 		.returning()
 		.then((value) => value[0]);
 
@@ -91,7 +91,7 @@ export const findPostgresByBackupId = async (backupId: string) => {
 	const result = await db
 		.select({
 			...getTableColumns(postgres),
-		} as any)
+		})
 		.from(postgres)
 		.innerJoin(backups, eq(postgres.postgresId, backups.postgresId))
 		.where(eq(backups.backupId, backupId))
@@ -115,7 +115,7 @@ export const updatePostgresById = async (
 		.update(postgres)
 		.set({
 			...rest,
-		} as any)
+		})
 		.where(eq(postgres.postgresId, postgresId))
 		.returning();
 

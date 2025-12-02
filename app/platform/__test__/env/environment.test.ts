@@ -1,7 +1,7 @@
 import {
 	prepareEnvironmentVariables,
 	prepareEnvironmentVariablesForShell,
-} from "@dokploy/server/index";
+} from "@hanzo/platform/index";
 import { describe, expect, it } from "vitest";
 
 const projectEnv = `

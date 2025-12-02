@@ -1,14 +1,14 @@
-import * as adminService from "@dokploy/server/services/admin";
-import * as applicationService from "@dokploy/server/services/application";
-import { deployApplication } from "@dokploy/server/services/application";
-import * as deploymentService from "@dokploy/server/services/deployment";
-import * as builders from "@dokploy/server/utils/builders";
-import * as notifications from "@dokploy/server/utils/notifications/build-success";
-import * as execProcess from "@dokploy/server/utils/process/execAsync";
-import * as gitProvider from "@dokploy/server/utils/providers/git";
+import * as adminService from "@hanzo/platform/services/admin";
+import * as applicationService from "@hanzo/platform/services/application";
+import { deployApplication } from "@hanzo/platform/services/application";
+import * as deploymentService from "@hanzo/platform/services/deployment";
+import * as builders from "@hanzo/platform/utils/builders";
+import * as notifications from "@hanzo/platform/utils/notifications/build-success";
+import * as execProcess from "@hanzo/platform/utils/process/execAsync";
+import * as gitProvider from "@hanzo/platform/utils/providers/git";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@dokploy/server/db", () => {
+vi.mock("@hanzo/platform/db", () => {
 	const createChainableMock = (): any => {
 		const chain = {
 			set: vi.fn(() => chain),
@@ -33,10 +33,10 @@ vi.mock("@dokploy/server/db", () => {
 	};
 });
 
-vi.mock("@dokploy/server/services/application", async () => {
+vi.mock("@hanzo/platform/services/application", async () => {
 	const actual = await vi.importActual<
-		typeof import("@dokploy/server/services/application")
-	>("@dokploy/server/services/application");
+		typeof import("@hanzo/platform/services/application")
+	>("@hanzo/platform/services/application");
 	return {
 		...actual,
 		findApplicationById: vi.fn(),
@@ -44,35 +44,35 @@ vi.mock("@dokploy/server/services/application", async () => {
 	};
 });
 
-vi.mock("@dokploy/server/services/admin", () => ({
+vi.mock("@hanzo/platform/services/admin", () => ({
 	getDokployUrl: vi.fn(),
 }));
 
-vi.mock("@dokploy/server/services/deployment", () => ({
+vi.mock("@hanzo/platform/services/deployment", () => ({
 	createDeployment: vi.fn(),
 	updateDeploymentStatus: vi.fn(),
 	updateDeployment: vi.fn(),
 }));
 
-vi.mock("@dokploy/server/utils/providers/git", async () => {
+vi.mock("@hanzo/platform/utils/providers/git", async () => {
 	const actual = await vi.importActual<
-		typeof import("@dokploy/server/utils/providers/git")
-	>("@dokploy/server/utils/providers/git");
+		typeof import("@hanzo/platform/utils/providers/git")
+	>("@hanzo/platform/utils/providers/git");
 	return {
 		...actual,
 		getGitCommitInfo: vi.fn(),
 	};
 });
 
-vi.mock("@dokploy/server/utils/process/execAsync", () => ({
+vi.mock("@hanzo/platform/utils/process/execAsync", () => ({
 	execAsync: vi.fn(),
 	ExecError: class ExecError extends Error {},
 }));
 
-vi.mock("@dokploy/server/utils/builders", async () => {
+vi.mock("@hanzo/platform/utils/builders", async () => {
 	const actual = await vi.importActual<
-		typeof import("@dokploy/server/utils/builders")
-	>("@dokploy/server/utils/builders");
+		typeof import("@hanzo/platform/utils/builders")
+	>("@hanzo/platform/utils/builders");
 	return {
 		...actual,
 		mechanizeDockerContainer: vi.fn(),
@@ -80,20 +80,20 @@ vi.mock("@dokploy/server/utils/builders", async () => {
 	};
 });
 
-vi.mock("@dokploy/server/utils/notifications/build-success", () => ({
+vi.mock("@hanzo/platform/utils/notifications/build-success", () => ({
 	sendBuildSuccessNotifications: vi.fn(),
 }));
 
-vi.mock("@dokploy/server/utils/notifications/build-error", () => ({
+vi.mock("@hanzo/platform/utils/notifications/build-error", () => ({
 	sendBuildErrorNotifications: vi.fn(),
 }));
 
-vi.mock("@dokploy/server/services/rollbacks", () => ({
+vi.mock("@hanzo/platform/services/rollbacks", () => ({
 	createRollback: vi.fn(),
 }));
 
-import { db } from "@dokploy/server/db";
-import { cloneGitRepository } from "@dokploy/server/utils/providers/git";
+import { db } from "@hanzo/platform/db";
+import { cloneGitRepository } from "@hanzo/platform/utils/providers/git";
 
 const createMockApplication = (overrides = {}) => ({
 	applicationId: "test-app-id",

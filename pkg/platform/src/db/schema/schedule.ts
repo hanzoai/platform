@@ -15,7 +15,7 @@ export const scheduleType = pgEnum("scheduleType", [
 	"application",
 	"compose",
 	"server",
-	"platform-server",
+	"hanzo-platform",
 ]);
 
 export const schedules = pgTable("schedule", {

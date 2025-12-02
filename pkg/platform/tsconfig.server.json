@@ -12,8 +12,6 @@
 		"rootDir": "./src",
 		"baseUrl": ".",
 		"jsx": "react-jsx",
-		"strict": false,
-		"skipLibCheck": true,
 		"paths": {
 			"@hanzo/platform/*": ["./src/*"]
 		}

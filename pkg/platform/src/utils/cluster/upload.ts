@@ -1,4 +1,4 @@
-import type { Registry } from "@dokploy/server/services/registry";
+import type { Registry } from "@hanzo/platform/services/registry";
 import type { ApplicationNested } from "../builders";
 
 export const uploadImageRemoteCommand = (application: ApplicationNested) => {

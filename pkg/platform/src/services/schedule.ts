@@ -18,11 +18,11 @@ export const createSchedule = async (
 	input: z.infer<typeof createScheduleSchema>,
 ) => {
 	const { scheduleId, ...rest } = input;
-	const [newSchedule] = await db.insert(schedules).values(rest as any).returning();
+	const [newSchedule] = await db.insert(schedules).values(rest).returning();
 
 	if (
 		newSchedule &&
-		(newSchedule.scheduleType === "platform-server" ||
+		(newSchedule.scheduleType === "hanzo-platform" ||
 			newSchedule.scheduleType === "server")
 	) {
 		await handleScript(newSchedule);
@@ -132,7 +132,7 @@ export const updateSchedule = async (
 	}
 
 	if (
-		updatedSchedule?.scheduleType === "platform-server" ||
+		updatedSchedule?.scheduleType === "hanzo-platform" ||
 		updatedSchedule?.scheduleType === "server"
 	) {
 		await handleScript(updatedSchedule);
@@ -158,7 +158,7 @@ ${schedule?.script || ""}`;
 		 echo "${encodedContent}" | base64 -d > ${fullPath}/script.sh
 	`;
 
-	if (schedule?.scheduleType === "platform-server") {
+	if (schedule?.scheduleType === "hanzo-platform") {
 		await execAsync(script);
 	} else if (schedule?.scheduleType === "server") {
 		await execAsyncRemote(schedule?.serverId || "", script);

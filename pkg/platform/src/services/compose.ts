@@ -1,40 +1,40 @@
 import { join } from "node:path";
-import { paths } from "@dokploy/server/constants";
-import { db } from "@dokploy/server/db";
+import { paths } from "@hanzo/platform/constants";
+import { db } from "@hanzo/platform/db";
 import {
 	type apiCreateCompose,
 	buildAppName,
 	cleanAppName,
 	compose,
-} from "@dokploy/server/db/schema";
-import { getBuildComposeCommand } from "@dokploy/server/utils/builders/compose";
-import { randomizeSpecificationFile } from "@dokploy/server/utils/docker/compose";
+} from "@hanzo/platform/db/schema";
+import { getBuildComposeCommand } from "@hanzo/platform/utils/builders/compose";
+import { randomizeSpecificationFile } from "@hanzo/platform/utils/docker/compose";
 import {
 	cloneCompose,
 	loadDockerCompose,
 	loadDockerComposeRemote,
-} from "@dokploy/server/utils/docker/domain";
-import type { ComposeSpecification } from "@dokploy/server/utils/docker/types";
-import { sendBuildErrorNotifications } from "@dokploy/server/utils/notifications/build-error";
-import { sendBuildSuccessNotifications } from "@dokploy/server/utils/notifications/build-success";
+} from "@hanzo/platform/utils/docker/domain";
+import type { ComposeSpecification } from "@hanzo/platform/utils/docker/types";
+import { sendBuildErrorNotifications } from "@hanzo/platform/utils/notifications/build-error";
+import { sendBuildSuccessNotifications } from "@hanzo/platform/utils/notifications/build-success";
 import {
 	ExecError,
 	execAsync,
 	execAsyncRemote,
-} from "@dokploy/server/utils/process/execAsync";
-import { cloneBitbucketRepository } from "@dokploy/server/utils/providers/bitbucket";
+} from "@hanzo/platform/utils/process/execAsync";
+import { cloneBitbucketRepository } from "@hanzo/platform/utils/providers/bitbucket";
 import {
 	cloneGitRepository,
 	getGitCommitInfo,
-} from "@dokploy/server/utils/providers/git";
-import { cloneGiteaRepository } from "@dokploy/server/utils/providers/gitea";
-import { cloneGithubRepository } from "@dokploy/server/utils/providers/github";
-import { cloneGitlabRepository } from "@dokploy/server/utils/providers/gitlab";
-import { getCreateComposeFileCommand } from "@dokploy/server/utils/providers/raw";
+} from "@hanzo/platform/utils/providers/git";
+import { cloneGiteaRepository } from "@hanzo/platform/utils/providers/gitea";
+import { cloneGithubRepository } from "@hanzo/platform/utils/providers/github";
+import { cloneGitlabRepository } from "@hanzo/platform/utils/providers/gitlab";
+import { getCreateComposeFileCommand } from "@hanzo/platform/utils/providers/raw";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { encodeBase64 } from "../utils/docker/utils";
-import { getDokployUrl } from "./admin";
+import { getHanzoUrl } from "./admin";
 import {
 	createDeploymentCompose,
 	updateDeployment,
@@ -212,7 +212,7 @@ export const deployCompose = async ({
 }) => {
 	const compose = await findComposeById(composeId);
 
-	const buildLink = `${await getDokployUrl()}/dashboard/project/${
+	const buildLink = `${await getHanzoUrl()}/dashboard/project/${
 		compose.environment.projectId
 	}/environment/${compose.environmentId}/services/compose/${compose.composeId}?tab=deployments`;
 	const deployment = await createDeploymentCompose({
@@ -394,7 +394,7 @@ export const removeCompose = async (
 
 		if (compose.composeType === "stack") {
 			const command = `
-			docker network disconnect ${compose.appName} dokploy-traefik;
+			docker network disconnect ${compose.appName} hanzo-traefik;
 			cd ${projectPath} && docker stack rm ${compose.appName} && rm -rf ${projectPath}`;
 
 			if (compose.serverId) {
@@ -407,7 +407,7 @@ export const removeCompose = async (
 			});
 		} else {
 			const command = `
-			 docker network disconnect ${compose.appName} dokploy-traefik;
+			 docker network disconnect ${compose.appName} hanzo-traefik;
 			cd ${projectPath} && env -i PATH="$PATH" docker compose -p ${compose.appName} down ${
 				deleteVolumes ? "--volumes" : ""
 			} && rm -rf ${projectPath}`;

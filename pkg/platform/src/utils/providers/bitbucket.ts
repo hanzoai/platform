@@ -1,14 +1,14 @@
 import { join } from "node:path";
-import { paths } from "@dokploy/server/constants";
+import { paths } from "@hanzo/platform/constants";
 import type {
 	apiBitbucketTestConnection,
 	apiFindBitbucketBranches,
-} from "@dokploy/server/db/schema";
+} from "@hanzo/platform/db/schema";
 import {
 	type Bitbucket,
 	findBitbucketById,
-} from "@dokploy/server/services/bitbucket";
-import type { InferResultType } from "@dokploy/server/types/with";
+} from "@hanzo/platform/services/bitbucket";
+import type { InferResultType } from "@hanzo/platform/types/with";
 import { TRPCError } from "@trpc/server";
 
 export type ApplicationWithBitbucket = InferResultType<

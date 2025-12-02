@@ -1,9 +1,9 @@
 import path, { join } from "node:path";
-import { paths } from "@dokploy/server/constants";
+import { paths } from "@hanzo/platform/constants";
 import {
 	findSSHKeyById,
 	updateSSHKeyById,
-} from "@dokploy/server/services/ssh-key";
+} from "@hanzo/platform/services/ssh-key";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
 
 interface CloneGitRepository {

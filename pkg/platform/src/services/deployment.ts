@@ -1,7 +1,7 @@
 import { existsSync, promises as fsPromises } from "node:fs";
 import path from "node:path";
-import { paths } from "@dokploy/server/constants";
-import { db } from "@dokploy/server/db";
+import { paths } from "@hanzo/platform/constants";
+import { db } from "@hanzo/platform/db";
 import {
 	type apiCreateDeployment,
 	type apiCreateDeploymentBackup,
@@ -11,9 +11,9 @@ import {
 	type apiCreateDeploymentServer,
 	type apiCreateDeploymentVolumeBackup,
 	deployments,
-} from "@dokploy/server/db/schema";
-import { removeDirectoryIfExistsContent } from "@dokploy/server/utils/filesystem/directory";
-import { execAsyncRemote } from "@dokploy/server/utils/process/execAsync";
+} from "@hanzo/platform/db/schema";
+import { removeDirectoryIfExistsContent } from "@hanzo/platform/utils/filesystem/directory";
+import { execAsyncRemote } from "@hanzo/platform/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
 import { desc, eq } from "drizzle-orm";
@@ -93,7 +93,7 @@ export const createDeployment = async (
 			const command = `
 				mkdir -p ${LOGS_PATH}/${application.appName};
             	echo "Initializing deployment" >> ${logFilePath};
-			    echo "Building on ${serverId ? "Build Server" : "Dokploy Server"}" >> ${logFilePath};
+			    echo "Building on ${serverId ? "Build Server" : "Hanzo Server"}" >> ${logFilePath};
 			`;
 
 			await execAsyncRemote(server.serverId, command);

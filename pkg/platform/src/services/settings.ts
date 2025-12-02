@@ -1,10 +1,10 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { docker } from "@dokploy/server/constants";
+import { docker } from "@hanzo/platform/constants";
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@dokploy/server/utils/process/execAsync";
+} from "@hanzo/platform/utils/process/execAsync";
 import {
 	initializeStandaloneTraefik,
 	initializeTraefikService,
@@ -22,16 +22,16 @@ export const DEFAULT_UPDATE_DATA: IUpdateData = {
 };
 
 /** Returns current Dokploy docker image tag or `latest` by default. */
-export const getDokployImageTag = () => {
+export const getHanzoImageTag = () => {
 	return process.env.RELEASE_TAG || "latest";
 };
 
-export const getDokployImage = () => {
-	return `dokploy/dokploy:${getDokployImageTag()}`;
+export const getHanzoImage = () => {
+	return `hanzoai/platform:${getHanzoImageTag()}`;
 };
 
 export const pullLatestRelease = async () => {
-	const stream = await docker.pull(getDokployImage());
+	const stream = await docker.pull(getHanzoImage());
 	await new Promise((resolve, reject) => {
 		docker.modem.followProgress(stream, (err, res) =>
 			err ? reject(err) : resolve(res),
@@ -42,7 +42,7 @@ export const pullLatestRelease = async () => {
 /** Returns Dokploy docker service image digest */
 export const getServiceImageDigest = async () => {
 	const { stdout } = await execAsync(
-		"docker service inspect dokploy --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'",
+		"docker service inspect hanzo --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'",
 	);
 
 	const currentDigest = stdout.trim().split("@")[1];
@@ -64,7 +64,7 @@ export const getUpdateData = async (): Promise<IUpdateData> => {
 		return DEFAULT_UPDATE_DATA;
 	}
 
-	const baseUrl = "https://hub.docker.com/v2/repositories/dokploy/dokploy/tags";
+	const baseUrl = "https://hub.docker.com/v2/repositories/hanzoai/platform/tags";
 	let url: string | null = `${baseUrl}?page_size=100`;
 	let allResults: { digest: string; name: string }[] = [];
 	while (url) {
@@ -82,7 +82,7 @@ export const getUpdateData = async (): Promise<IUpdateData> => {
 		url = data?.next;
 	}
 
-	const imageTag = getDokployImageTag();
+	const imageTag = getHanzoImageTag();
 	const searchedDigest = allResults.find((t) => t.name === imageTag)?.digest;
 
 	if (!searchedDigest) {
@@ -394,7 +394,7 @@ export const readPorts = async (
 
 export const writeTraefikSetup = async (input: TraefikOptions) => {
 	const resourceType = await getDockerResourceType(
-		"dokploy-traefik",
+		"hanzo-traefik",
 		input.serverId,
 	);
 

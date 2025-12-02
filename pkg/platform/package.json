@@ -1,27 +1,22 @@
 {
   "name": "@hanzo/platform",
   "version": "1.0.0",
-  "main": "./dist/index.js",
+  "main": "./src/index.ts",
   "type": "module",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs.js"
+    ".": "./src/index.ts",
+    "./db": {
+      "import": "./src/db/index.ts",
+      "require": "./dist/db/index.cjs.js"
     },
-    "./package.json": "./package.json",
-    "./constants": "./dist/constants/index.js",
-    "./db": "./dist/db/index.js",
-    "./db/schema": "./dist/db/schema/index.js",
-    "./db/schema/*": "./dist/db/schema/*.js",
-    "./lib/auth": "./dist/lib/auth.js",
-    "./services/*": "./dist/services/*.js",
-    "./templates/*": "./dist/templates/*.js",
-    "./utils/*": "./dist/utils/*.js",
-    "./utils/ai/*": "./dist/utils/ai/*.js",
-    "./utils/backups/*": "./dist/utils/backups/*.js",
-    "./utils/process/*": "./dist/utils/process/*.js",
-    "./utils/restore": "./dist/utils/restore/index.js",
-    "./*": "./dist/*.js"
+    "./setup/*": {
+      "import": "./src/setup/*.ts",
+      "require": "./dist/setup/index.cjs.js"
+    },
+    "./constants": {
+      "import": "./src/constants/index.ts",
+      "require": "./dist/constants.cjs.js"
+    }
   },
   "scripts": {
     "build": "npm run switch:prod && rm -rf ./dist && tsc --project tsconfig.server.json && tsc-alias -p tsconfig.server.json",
@@ -113,7 +108,7 @@
   },
   "packageManager": "pnpm@9.12.0",
   "engines": {
-    "node": "^20.16.0",
+    "node": ">=20.16.0",
     "pnpm": ">=9.12.0"
   }
 }
