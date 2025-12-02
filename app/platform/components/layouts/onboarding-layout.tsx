@@ -35,12 +35,12 @@ export const OnboardingLayout = ({ children }: Props) => {
 				</div>
 				<div className="flex items-center gap-4 justify-center absolute bottom-4 right-4 text-muted-foreground">
 					<Button variant="ghost" size="icon">
-						<Link href="https://github.com/hanzoai/platform">
+						<Link href="https://github.com/hanzoai">
 							<GithubIcon />
 						</Link>
 					</Button>
 					<Button variant="ghost" size="icon">
-						<Link href="https://x.com/getplatform">
+						<Link href="https://x.com/hanzoai">
 							<svg
 								stroke="currentColor"
 								fill="currentColor"
@@ -54,7 +54,7 @@ export const OnboardingLayout = ({ children }: Props) => {
 						</Link>
 					</Button>
 					<Button variant="ghost" size="icon">
-						<Link href="https://discord.com/invite/2tBnJ3jDJc">
+						<Link href="https://discord.gg/XthHQQj">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 48 48"

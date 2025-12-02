@@ -1,4 +1,3 @@
-import { IS_CLOUD } from "@hanzo/platform/constants";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import type { GetServerSidePropsContext } from "next";
@@ -20,17 +19,9 @@ Page.getLayout = (page: ReactElement) => {
 export async function getServerSideProps(
 	ctx: GetServerSidePropsContext<{ serviceId: string }>,
 ) {
-	if (!IS_CLOUD) {
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/dashboard/projects",
-			},
-		};
-	}
 	const { req, res } = ctx;
 	const { user, session } = await validateRequest(req);
-	if (!user || user.role === "member") {
+	if (!user) {
 		return {
 			redirect: {
 				permanent: true,
@@ -52,8 +43,6 @@ export async function getServerSideProps(
 	});
 
 	await helpers.user.get.prefetch();
-
-	await helpers.settings.isCloud.prefetch();
 
 	return {
 		props: {
