@@ -4,7 +4,7 @@ import {
 	findServerById,
 	IS_CLOUD,
 	validateRequest,
-} from "@hanzo/platform";
+} from "@dokploy/server";
 import { publicIpv4, publicIpv6 } from "public-ip";
 import { Client, type ConnectConfig } from "ssh2";
 import { WebSocketServer } from "ws";
@@ -17,13 +17,13 @@ mkdir -p $HOME/.ssh && \\
 chmod 700 $HOME/.ssh && \\
 touch $HOME/.ssh/authorized_keys && \\
 chmod 600 $HOME/.ssh/authorized_keys && \\
-cat /etc/platform/ssh/auto_generated-platform-local.pub >> $HOME/.ssh/authorized_keys && \\
-echo "✓ Hanzo SSH key added successfully. Reopen the terminal in Hanzo to reconnect."
+cat /etc/dokploy/ssh/auto_generated-dokploy-local.pub >> $HOME/.ssh/authorized_keys && \\
+echo "✓ Dokploy SSH key added successfully. Reopen the terminal in Dokploy to reconnect."
 # ----------------------------------------`;
 
 const COMMAND_TO_GRANT_PERMISSION_ACCESS = `
 # ----------------------------------------
-sudo chown -R $USER:$USER /etc/platform/ssh
+sudo chown -R $USER:$USER /etc/dokploy/ssh
 # ----------------------------------------
 `;
 

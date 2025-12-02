@@ -1,5 +1,5 @@
-import type { ComposeSpecification } from "@hanzo/platform";
-import { addSuffixToAllProperties } from "@hanzo/platform";
+import type { ComposeSpecification } from "@dokploy/server";
+import { addSuffixToAllProperties } from "@dokploy/server";
 import { expect, test } from "vitest";
 import { parse } from "yaml";
 

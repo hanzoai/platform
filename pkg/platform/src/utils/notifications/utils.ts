@@ -2,10 +2,11 @@ import type {
 	discord,
 	email,
 	gotify,
+	lark,
 	ntfy,
 	slack,
 	telegram,
-} from "@hanzo/platform/db/schema";
+} from "@dokploy/server/db/schema";
 import nodemailer from "nodemailer";
 
 export const sendEmailNotification = async (
@@ -33,9 +34,13 @@ export const sendEmailNotification = async (
 			to: toAddresses.join(", "),
 			subject,
 			html: htmlContent,
+			textEncoding: "base64",
 		});
 	} catch (err) {
 		console.log(err);
+		throw new Error(
+			`Failed to send email notification ${err instanceof Error ? err.message : "Unknown error"}`,
+		);
 	}
 };
 
@@ -43,15 +48,23 @@ export const sendDiscordNotification = async (
 	connection: typeof discord.$inferInsert,
 	embed: any,
 ) => {
-	// try {
-	await fetch(connection.webhookUrl, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ embeds: [embed] }),
-	});
-	// } catch (err) {
-	// 	console.log(err);
-	// }
+	try {
+		const response = await fetch(connection.webhookUrl, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ embeds: [embed] }),
+		});
+		if (!response.ok) {
+			throw new Error(
+				`Failed to send discord notification ${response.statusText}`,
+			);
+		}
+	} catch (err) {
+		console.log("error", err);
+		throw new Error(
+			`Failed to send discord notification ${err instanceof Error ? err.message : "Unknown error"}`,
+		);
+	}
 };
 
 export const sendTelegramNotification = async (
@@ -69,7 +82,7 @@ export const sendTelegramNotification = async (
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				chat_id: connection.chatId,
-				message_thread_id: (connection as any).messageThreadId,
+				message_thread_id: connection.messageThreadId,
 				text: messageText,
 				parse_mode: "HTML",
 				disable_web_page_preview: true,
@@ -88,13 +101,21 @@ export const sendSlackNotification = async (
 	message: any,
 ) => {
 	try {
-		await fetch(connection.webhookUrl, {
+		const response = await fetch(connection.webhookUrl, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(message),
 		});
+		if (!response.ok) {
+			throw new Error(
+				`Failed to send slack notification ${response.statusText}`,
+			);
+		}
 	} catch (err) {
-		console.log(err);
+		console.log("error", err);
+		throw new Error(
+			`Failed to send slack notification ${err instanceof Error ? err.message : "Unknown error"}`,
+		);
 	}
 };
 
@@ -112,7 +133,7 @@ export const sendGotifyNotification = async (
 		body: JSON.stringify({
 			title: title,
 			message: message,
-			priority: (connection as any).priority,
+			priority: connection.priority,
 			extras: {
 				"client::display": {
 					contentType: "text/plain",
@@ -138,8 +159,10 @@ export const sendNtfyNotification = async (
 	const response = await fetch(`${connection.serverUrl}/${connection.topic}`, {
 		method: "POST",
 		headers: {
-			Authorization: `Bearer ${connection.accessToken}`,
-			"X-Priority": (connection as any).priority?.toString() || "3",
+			...(connection.accessToken && {
+				Authorization: `Bearer ${connection.accessToken}`,
+			}),
+			"X-Priority": connection.priority?.toString() || "3",
 			"X-Title": title,
 			"X-Tags": tags,
 			"X-Actions": actions,
@@ -149,5 +172,20 @@ export const sendNtfyNotification = async (
 
 	if (!response.ok) {
 		throw new Error(`Failed to send ntfy notification: ${response.statusText}`);
+	}
+};
+
+export const sendLarkNotification = async (
+	connection: typeof lark.$inferInsert,
+	message: any,
+) => {
+	try {
+		await fetch(connection.webhookUrl, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(message),
+		});
+	} catch (err) {
+		console.log(err);
 	}
 };

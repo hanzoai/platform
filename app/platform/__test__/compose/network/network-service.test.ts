@@ -1,8 +1,8 @@
-import type { ComposeSpecification } from "@hanzo/platform";
+import type { ComposeSpecification } from "@dokploy/server";
 import {
 	addSuffixToServiceNetworks,
 	generateRandomHash,
-} from "@hanzo/platform";
+} from "@dokploy/server";
 import { expect, test } from "vitest";
 import { parse } from "yaml";
 
@@ -192,10 +192,10 @@ services:
   web:
     image: nginx:latest
     networks:
-      - platform-network
+      - dokploy-network
 `;
 
-test("It shoudn't add suffix to platform-network in services", () => {
+test("It shoudn't add suffix to dokploy-network in services", () => {
 	const composeData = parse(composeFile7) as ComposeSpecification;
 
 	const suffix = generateRandomHash();
@@ -207,7 +207,7 @@ test("It shoudn't add suffix to platform-network in services", () => {
 	const service = networks.web;
 
 	expect(service).toBeDefined();
-	expect(service?.networks).toContain("platform-network");
+	expect(service?.networks).toContain("dokploy-network");
 });
 
 const composeFile8 = `
@@ -219,7 +219,7 @@ services:
     networks:
       - frontend
       - backend
-      - platform-network
+      - dokploy-network
 
 
   api:
@@ -228,23 +228,23 @@ services:
       frontend:
         aliases:
           - api
-      platform-network:
+      dokploy-network:
         aliases:
           - api
   redis:
     image: redis:alpine
     networks:
-      platform-network:
+      dokploy-network:
   db:
     image: myapi:latest
     networks:
-      platform-network:
+      dokploy-network:
         aliases:
           - apid
 	
 `;
 
-test("It shoudn't add suffix to platform-network in services multiples cases", () => {
+test("It shoudn't add suffix to dokploy-network in services multiples cases", () => {
 	const composeData = parse(composeFile8) as ComposeSpecification;
 
 	const suffix = generateRandomHash();
@@ -267,9 +267,9 @@ test("It shoudn't add suffix to platform-network in services multiples cases", (
 	};
 
 	expect(service).toBeDefined();
-	expect(service?.networks).toContain("platform-network");
+	expect(service?.networks).toContain("dokploy-network");
 
-	expect(redis?.networks).toHaveProperty("platform-network");
-	expect(dbNetworks["platform-network"]).toBeDefined();
-	expect(apiNetworks["platform-network"]).toBeDefined();
+	expect(redis?.networks).toHaveProperty("dokploy-network");
+	expect(dbNetworks["dokploy-network"]).toBeDefined();
+	expect(apiNetworks["dokploy-network"]).toBeDefined();
 });
