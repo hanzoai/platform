@@ -1,7 +1,7 @@
 import { existsSync, promises as fsPromises } from "node:fs";
 import path from "node:path";
-import { paths } from "@hanzo/platform/constants";
-import { db } from "@hanzo/platform/db";
+import { paths } from "@dokploy/server/constants";
+import { db } from "@dokploy/server/db";
 import {
 	type apiCreateDeployment,
 	type apiCreateDeploymentBackup,
@@ -11,9 +11,9 @@ import {
 	type apiCreateDeploymentServer,
 	type apiCreateDeploymentVolumeBackup,
 	deployments,
-} from "@hanzo/platform/db/schema";
-import { removeDirectoryIfExistsContent } from "@hanzo/platform/utils/filesystem/directory";
-import { execAsyncRemote } from "@hanzo/platform/utils/process/execAsync";
+} from "@dokploy/server/db/schema";
+import { removeDirectoryIfExistsContent } from "@dokploy/server/utils/filesystem/directory";
+import { execAsyncRemote } from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
 import { desc, eq } from "drizzle-orm";
@@ -74,24 +74,26 @@ export const createDeployment = async (
 	>,
 ) => {
 	const application = await findApplicationById(deployment.applicationId);
-
 	try {
 		await removeLastTenDeployments(
 			deployment.applicationId,
 			"application",
 			application.serverId,
 		);
-		const { LOGS_PATH } = paths(!!application.serverId);
+		const serverId = application.buildServerId || application.serverId;
+
+		const { LOGS_PATH } = paths(!!serverId);
 		const formattedDateTime = format(new Date(), "yyyy-MM-dd:HH:mm:ss");
 		const fileName = `${application.appName}-${formattedDateTime}.log`;
 		const logFilePath = path.join(LOGS_PATH, application.appName, fileName);
 
-		if (application.serverId) {
-			const server = await findServerById(application.serverId);
+		if (serverId) {
+			const server = await findServerById(serverId);
 
 			const command = `
 				mkdir -p ${LOGS_PATH}/${application.appName};
             	echo "Initializing deployment" >> ${logFilePath};
+			    echo "Building on ${serverId ? "Build Server" : "Dokploy Server"}" >> ${logFilePath};
 			`;
 
 			await execAsyncRemote(server.serverId, command);
@@ -99,7 +101,7 @@ export const createDeployment = async (
 			await fsPromises.mkdir(path.join(LOGS_PATH, application.appName), {
 				recursive: true,
 			});
-			await fsPromises.writeFile(logFilePath, "Initializing deployment");
+			await fsPromises.writeFile(logFilePath, "Initializing deployment\n");
 		}
 
 		const deploymentCreate = await db
@@ -111,7 +113,10 @@ export const createDeployment = async (
 				logPath: logFilePath,
 				description: deployment.description || "",
 				startedAt: new Date().toISOString(),
-			} as any)
+				...(application.buildServerId && {
+					buildServerId: application.buildServerId,
+				}),
+			})
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -132,7 +137,7 @@ export const createDeployment = async (
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			} as any)
+			})
 			.returning();
 		await updateApplicationStatus(application.applicationId, "error");
 		console.log(error);
@@ -192,7 +197,7 @@ export const createDeploymentPreview = async (
 				description: deployment.description || "",
 				previewDeploymentId: deployment.previewDeploymentId,
 				startedAt: new Date().toISOString(),
-			} as any)
+			})
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -213,7 +218,7 @@ export const createDeploymentPreview = async (
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			} as any)
+			})
 			.returning();
 		await updatePreviewDeployment(deployment.previewDeploymentId, {
 			previewStatus: "error",
@@ -249,7 +254,7 @@ export const createDeploymentCompose = async (
 
 			const command = `
 mkdir -p ${LOGS_PATH}/${compose.appName};
-echo "Initializing deployment" >> ${logFilePath};
+echo "Initializing deployment\n" >> ${logFilePath};
 `;
 
 			await execAsyncRemote(server.serverId, command);
@@ -257,7 +262,7 @@ echo "Initializing deployment" >> ${logFilePath};
 			await fsPromises.mkdir(path.join(LOGS_PATH, compose.appName), {
 				recursive: true,
 			});
-			await fsPromises.writeFile(logFilePath, "Initializing deployment");
+			await fsPromises.writeFile(logFilePath, "Initializing deployment\n");
 		}
 
 		const deploymentCreate = await db
@@ -269,7 +274,7 @@ echo "Initializing deployment" >> ${logFilePath};
 				status: "running",
 				logPath: logFilePath,
 				startedAt: new Date().toISOString(),
-			} as any)
+			})
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -290,7 +295,7 @@ echo "Initializing deployment" >> ${logFilePath};
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			} as any)
+			})
 			.returning();
 		await updateCompose(compose.composeId, {
 			composeStatus: "error",
@@ -353,7 +358,7 @@ echo "Initializing backup\n" >> ${logFilePath};
 				status: "running",
 				logPath: logFilePath,
 				startedAt: new Date().toISOString(),
-			} as any)
+			})
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -374,7 +379,7 @@ echo "Initializing backup\n" >> ${logFilePath};
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			} as any)
+			})
 			.returning();
 		throw new TRPCError({
 			code: "BAD_REQUEST",
@@ -427,7 +432,7 @@ export const createDeploymentSchedule = async (
 				logPath: logFilePath,
 				description: deployment.description || "",
 				startedAt: new Date().toISOString(),
-			} as any)
+			})
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -449,7 +454,7 @@ export const createDeploymentSchedule = async (
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			} as any)
+			})
 			.returning();
 
 		throw new TRPCError({
@@ -512,7 +517,7 @@ export const createDeploymentVolumeBackup = async (
 				logPath: logFilePath,
 				description: deployment.description || "",
 				startedAt: new Date().toISOString(),
-			} as any)
+			})
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({
@@ -534,7 +539,7 @@ export const createDeploymentVolumeBackup = async (
 				errorMessage: `An error have occured: ${error instanceof Error ? error.message : error}`,
 				startedAt: new Date().toISOString(),
 				finishedAt: new Date().toISOString(),
-			} as any)
+			})
 			.returning();
 
 		throw new TRPCError({
@@ -720,7 +725,7 @@ export const updateDeployment = async (
 		.update(deployments)
 		.set({
 			...deploymentData,
-		} as any)
+		})
 		.where(eq(deployments.deploymentId, deploymentId))
 		.returning();
 
@@ -739,7 +744,7 @@ export const updateDeploymentStatus = async (
 				deploymentStatus === "done" || deploymentStatus === "error"
 					? new Date().toISOString()
 					: null,
-		} as any)
+		})
 		.where(eq(deployments.deploymentId, deploymentId))
 		.returning();
 
@@ -772,7 +777,7 @@ export const createServerDeployment = async (
 				description: deployment.description || "",
 				status: "running",
 				logPath: logFilePath,
-			} as any)
+			})
 			.returning();
 		if (deploymentCreate.length === 0 || !deploymentCreate[0]) {
 			throw new TRPCError({

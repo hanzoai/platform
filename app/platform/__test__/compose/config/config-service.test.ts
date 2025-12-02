@@ -1,8 +1,8 @@
-import type { ComposeSpecification } from "@hanzo/platform";
+import type { ComposeSpecification } from "@dokploy/server";
 import {
 	addSuffixToConfigsInServices,
 	generateRandomHash,
-} from "@hanzo/platform";
+} from "@dokploy/server";
 import { expect, test } from "vitest";
 import { parse } from "yaml";
 

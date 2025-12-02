@@ -50,8 +50,8 @@ COPY --from=build /prod/platform/drizzle ./drizzle
 COPY --from=build /prod/platform/components.json ./components.json
 COPY --from=build /prod/platform/node_modules ./node_modules
 
-# Install docker
-RUN curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh && rm get-docker.sh
+# Install docker and rclone
+RUN curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh --version 28.5.2 && rm get-docker.sh && curl https://rclone.org/install.sh | bash
 
 # Install Nixpacks
 ARG NIXPACKS_VERSION=1.39.0

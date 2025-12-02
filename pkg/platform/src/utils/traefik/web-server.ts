@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { paths } from "@hanzo/platform/constants";
-import type { User } from "@hanzo/platform/services/user";
+import { paths } from "@dokploy/server/constants";
+import type { User } from "@dokploy/server/services/user";
 import { parse, stringify } from "yaml";
 import {
 	loadOrCreateConfig,
@@ -16,7 +16,7 @@ export const updateServerTraefik = (
 	newHost: string | null,
 ) => {
 	const { https, certificateType } = user || {};
-	const appName = "platform";
+	const appName = "dokploy";
 	const config: FileConfig = loadOrCreateConfig(appName);
 
 	config.http = config.http || { routers: {}, services: {} };
@@ -36,7 +36,7 @@ export const updateServerTraefik = (
 			loadBalancer: {
 				servers: [
 					{
-						url: `http://platform:${process.env.PORT || 3000}`,
+						url: `http://dokploy:${process.env.PORT || 3000}`,
 					},
 				],
 				passHostHeader: true,

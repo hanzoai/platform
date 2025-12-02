@@ -1,5 +1,5 @@
-import type { ComposeSpecification } from "@hanzo/platform";
-import { addSuffixToVolumesRoot, generateRandomHash } from "@hanzo/platform";
+import type { ComposeSpecification } from "@dokploy/server";
+import { addSuffixToVolumesRoot, generateRandomHash } from "@dokploy/server";
 import { expect, test } from "vitest";
 import { parse } from "yaml";
 

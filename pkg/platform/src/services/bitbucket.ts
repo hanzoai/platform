@@ -1,10 +1,10 @@
-import { db } from "@hanzo/platform/db";
+import { db } from "@dokploy/server/db";
 import {
 	type apiCreateBitbucket,
 	type apiUpdateBitbucket,
 	bitbucket,
 	gitProvider,
-} from "@hanzo/platform/db/schema";
+} from "@dokploy/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 
@@ -23,7 +23,7 @@ export const createBitbucket = async (
 				organizationId: organizationId,
 				name: input.name,
 				userId: userId,
-			} as any)
+			})
 			.returning()
 			.then((response) => response[0]);
 
@@ -39,7 +39,7 @@ export const createBitbucket = async (
 			.values({
 				...input,
 				gitProviderId: newGitProvider?.gitProviderId,
-			} as any)
+			})
 			.returning()
 			.then((response) => response[0]);
 	});
@@ -88,7 +88,7 @@ export const updateBitbucket = async (
 				appPassword: input.appPassword,
 				apiToken: input.apiToken,
 				bitbucketWorkspaceName: input.bitbucketWorkspaceName,
-			} as any)
+			})
 			.where(eq(bitbucket.bitbucketId, bitbucketId))
 			.returning();
 
@@ -98,7 +98,7 @@ export const updateBitbucket = async (
 				.set({
 					name: input.name,
 					organizationId: input.organizationId,
-				} as any)
+				})
 				.where(eq(gitProvider.gitProviderId, currentProvider.gitProviderId))
 				.returning();
 		}

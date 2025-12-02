@@ -1,5 +1,5 @@
-import type { ComposeSpecification } from "@hanzo/platform";
-import { addSuffixToNetworksRoot, generateRandomHash } from "@hanzo/platform";
+import type { ComposeSpecification } from "@dokploy/server";
+import { addSuffixToNetworksRoot, generateRandomHash } from "@dokploy/server";
 import { expect, test } from "vitest";
 import { parse } from "yaml";
 
@@ -286,13 +286,13 @@ services:
   web:
     image: nginx:latest
     networks:
-      - platform-network
+      - dokploy-network
 
 networks:
-  platform-network:
+  dokploy-network:
 `;
 
-test("It shoudn't add suffix to platform-network", () => {
+test("It shoudn't add suffix to dokploy-network", () => {
 	const composeData = parse(composeFile7) as ComposeSpecification;
 
 	const suffix = generateRandomHash();
@@ -304,6 +304,6 @@ test("It shoudn't add suffix to platform-network", () => {
 
 	expect(networks).toBeDefined();
 	for (const networkKey of Object.keys(networks)) {
-		expect(networkKey).toContain("platform-network");
+		expect(networkKey).toContain("dokploy-network");
 	}
 });

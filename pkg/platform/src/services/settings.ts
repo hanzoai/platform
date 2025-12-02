@@ -1,10 +1,10 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { docker } from "@hanzo/platform/constants";
+import { docker } from "@dokploy/server/constants";
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@hanzo/platform/utils/process/execAsync";
+} from "@dokploy/server/utils/process/execAsync";
 import {
 	initializeStandaloneTraefik,
 	initializeTraefikService,
@@ -21,17 +21,17 @@ export const DEFAULT_UPDATE_DATA: IUpdateData = {
 	updateAvailable: false,
 };
 
-/** Returns current Hanzo docker image tag or `latest` by default. */
-export const getHanzoImageTag = () => {
+/** Returns current Dokploy docker image tag or `latest` by default. */
+export const getDokployImageTag = () => {
 	return process.env.RELEASE_TAG || "latest";
 };
 
-export const getHanzoImage = () => {
-	return `hanzoai/platform:${getHanzoImageTag()}`;
+export const getDokployImage = () => {
+	return `dokploy/dokploy:${getDokployImageTag()}`;
 };
 
 export const pullLatestRelease = async () => {
-	const stream = await docker.pull(getHanzoImage());
+	const stream = await docker.pull(getDokployImage());
 	await new Promise((resolve, reject) => {
 		docker.modem.followProgress(stream, (err, res) =>
 			err ? reject(err) : resolve(res),
@@ -39,10 +39,10 @@ export const pullLatestRelease = async () => {
 	});
 };
 
-/** Returns Hanzo docker service image digest */
+/** Returns Dokploy docker service image digest */
 export const getServiceImageDigest = async () => {
 	const { stdout } = await execAsync(
-		"docker service inspect platform --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'",
+		"docker service inspect dokploy --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'",
 	);
 
 	const currentDigest = stdout.trim().split("@")[1];
@@ -59,14 +59,12 @@ export const getUpdateData = async (): Promise<IUpdateData> => {
 	let currentDigest: string;
 	try {
 		currentDigest = await getServiceImageDigest();
-	} catch {
-		// Docker service might not exist locally
-		// You can run the # Installation command for docker service create mentioned in the below docs to test it locally:
-		// https://docs.hanzo.ai/docs/core/manual-installation
+	} catch (error) {
+		// TODO: Docker versions 29.0.0 change the way to get the service image digest, so we need to update this in the future we upgrade to that version.
 		return DEFAULT_UPDATE_DATA;
 	}
 
-	const baseUrl = "https://hub.docker.com/v2/repositories/hanzoai/platform/tags";
+	const baseUrl = "https://hub.docker.com/v2/repositories/dokploy/dokploy/tags";
 	let url: string | null = `${baseUrl}?page_size=100`;
 	let allResults: { digest: string; name: string }[] = [];
 	while (url) {
@@ -84,7 +82,7 @@ export const getUpdateData = async (): Promise<IUpdateData> => {
 		url = data?.next;
 	}
 
-	const imageTag = getHanzoImageTag();
+	const imageTag = getDokployImageTag();
 	const searchedDigest = allResults.find((t) => t.name === imageTag)?.digest;
 
 	if (!searchedDigest) {
@@ -396,7 +394,7 @@ export const readPorts = async (
 
 export const writeTraefikSetup = async (input: TraefikOptions) => {
 	const resourceType = await getDockerResourceType(
-		"platform-traefik",
+		"dokploy-traefik",
 		input.serverId,
 	);
 

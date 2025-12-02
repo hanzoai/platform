@@ -1,8 +1,8 @@
 import dns from "node:dns";
 import { promisify } from "node:util";
-import { db } from "@hanzo/platform/db";
-import { generateRandomDomain } from "@hanzo/platform/templates";
-import { manageDomain } from "@hanzo/platform/utils/traefik/domain";
+import { db } from "@dokploy/server/db";
+import { generateRandomDomain } from "@dokploy/server/templates";
+import { manageDomain } from "@dokploy/server/utils/traefik/domain";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { type apiCreateDomain, domains } from "../db/schema";
@@ -19,7 +19,8 @@ export const createDomain = async (input: typeof apiCreateDomain._type) => {
 			.insert(domains)
 			.values({
 				...input,
-			} as any)
+				host: input.host?.trim(),
+			})
 			.returning()
 			.then((response) => response[0]);
 
@@ -120,7 +121,8 @@ export const updateDomainById = async (
 		.update(domains)
 		.set({
 			...domainData,
-		} as any)
+			...(domainData.host && { host: domainData.host.trim() }),
+		})
 		.where(eq(domains.domainId, domainId))
 		.returning();
 

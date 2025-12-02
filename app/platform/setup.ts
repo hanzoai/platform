@@ -1,18 +1,18 @@
 import { exit } from "node:process";
-import { execAsync } from "@hanzo/platform";
-import { setupDirectories } from "@hanzo/platform/setup/config-paths";
-import { initializePostgres } from "@hanzo/platform/setup/postgres-setup";
-import { initializeRedis } from "@hanzo/platform/setup/redis-setup";
+import { execAsync } from "@dokploy/server";
+import { setupDirectories } from "@dokploy/server/setup/config-paths";
+import { initializePostgres } from "@dokploy/server/setup/postgres-setup";
+import { initializeRedis } from "@dokploy/server/setup/redis-setup";
 import {
 	initializeNetwork,
 	initializeSwarm,
-} from "@hanzo/platform/setup/setup";
+} from "@dokploy/server/setup/setup";
 import {
 	createDefaultMiddlewares,
 	createDefaultServerTraefikConfig,
 	createDefaultTraefikConfig,
 	initializeStandaloneTraefik,
-} from "@hanzo/platform/setup/traefik-setup";
+} from "@dokploy/server/setup/traefik-setup";
 
 (async () => {
 	try {
@@ -22,13 +22,13 @@ import {
 		await initializeNetwork();
 		createDefaultTraefikConfig();
 		createDefaultServerTraefikConfig();
-		await execAsync("docker pull traefik:v3.5.0");
+		await execAsync("docker pull traefik:v3.6.1");
 		await initializeStandaloneTraefik();
 		await initializeRedis();
 		await initializePostgres();
-		console.log("Hanzo setup completed");
+		console.log("Dokploy setup completed");
 		exit(0);
 	} catch (e) {
-		console.error("Error in platform setup", e);
+		console.error("Error in dokploy setup", e);
 	}
 })();

@@ -12,6 +12,7 @@ export const notificationType = pgEnum("notificationType", [
 	"email",
 	"gotify",
 	"ntfy",
+	"lark",
 ]);
 
 export const notifications = pgTable("notification", {
@@ -46,6 +47,9 @@ export const notifications = pgTable("notification", {
 		onDelete: "cascade",
 	}),
 	ntfyId: text("ntfyId").references(() => ntfy.ntfyId, {
+		onDelete: "cascade",
+	}),
+	larkId: text("larkId").references(() => lark.larkId, {
 		onDelete: "cascade",
 	}),
 	organizationId: text("organizationId")
@@ -112,8 +116,16 @@ export const ntfy = pgTable("ntfy", {
 		.$defaultFn(() => nanoid()),
 	serverUrl: text("serverUrl").notNull(),
 	topic: text("topic").notNull(),
-	accessToken: text("accessToken").notNull(),
+	accessToken: text("accessToken"),
 	priority: integer("priority").notNull().default(3),
+});
+
+export const lark = pgTable("lark", {
+	larkId: text("larkId")
+		.notNull()
+		.primaryKey()
+		.$defaultFn(() => nanoid()),
+	webhookUrl: text("webhookUrl").notNull(),
 });
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
@@ -140,6 +152,10 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
 	ntfy: one(ntfy, {
 		fields: [notifications.ntfyId],
 		references: [ntfy.ntfyId],
+	}),
+	lark: one(lark, {
+		fields: [notifications.larkId],
+		references: [lark.larkId],
 	}),
 	organization: one(organization, {
 		fields: [notifications.organizationId],
@@ -315,7 +331,7 @@ export const apiCreateNtfy = notificationsSchema
 	.extend({
 		serverUrl: z.string().min(1),
 		topic: z.string().min(1),
-		accessToken: z.string().min(1),
+		accessToken: z.string().optional(),
 		priority: z.number().min(1),
 	})
 	.required();
@@ -339,6 +355,31 @@ export const apiFindOneNotification = notificationsSchema
 	})
 	.required();
 
+export const apiCreateLark = notificationsSchema
+	.pick({
+		appBuildError: true,
+		databaseBackup: true,
+		dokployRestart: true,
+		name: true,
+		appDeploy: true,
+		dockerCleanup: true,
+		serverThreshold: true,
+	})
+	.extend({
+		webhookUrl: z.string().min(1),
+	})
+	.required();
+
+export const apiUpdateLark = apiCreateLark.partial().extend({
+	notificationId: z.string().min(1),
+	larkId: z.string().min(1),
+	organizationId: z.string().optional(),
+});
+
+export const apiTestLarkConnection = apiCreateLark.pick({
+	webhookUrl: true,
+});
+
 export const apiSendTest = notificationsSchema
 	.extend({
 		botToken: z.string(),
@@ -354,7 +395,7 @@ export const apiSendTest = notificationsSchema
 		serverUrl: z.string(),
 		topic: z.string(),
 		appToken: z.string(),
-		accessToken: z.string(),
+		accessToken: z.string().optional(),
 		priority: z.number(),
 	})
 	.partial();
