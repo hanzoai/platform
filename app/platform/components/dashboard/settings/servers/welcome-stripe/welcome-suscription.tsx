@@ -333,7 +333,7 @@ export const WelcomeSuscription = () => {
 											<div className="flex flex-row gap-4">
 												<Button className="rounded-full bg-[#5965F2] hover:bg-[#4A55E0] w-fit">
 													<Link
-														href="https://discord.gg/2tBnJ3jDJc"
+														href="https://discord.gg/XthHQQj"
 														aria-label="Hanzo on GitHub"
 														target="_blank"
 														className="flex flex-row items-center gap-2 text-white"

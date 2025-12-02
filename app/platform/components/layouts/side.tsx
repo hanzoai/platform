@@ -359,8 +359,15 @@ const MENU: Menu = {
 			title: "Billing",
 			url: "/dashboard/settings/billing",
 			icon: CreditCard,
-			// Only enabled for admins in cloud environments
-			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && isCloud),
+			// Enabled for all authenticated users
+		},
+		{
+			isSingle: true,
+			title: "Admin Billing",
+			url: "/dashboard/settings/admin-billing",
+			icon: CreditCard,
+			// Only enabled for admins/owners
+			isEnabled: ({ auth }) => !!(auth?.role === "owner" || auth?.role === "admin"),
 		},
 	],
 
@@ -372,7 +379,7 @@ const MENU: Menu = {
 		},
 		{
 			name: "Support",
-			url: "https://discord.gg/2tBnJ3jDJc",
+			url: "https://discord.gg/XthHQQj",
 			icon: CircleHelp,
 		},
 		{

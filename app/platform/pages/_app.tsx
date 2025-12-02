@@ -13,6 +13,7 @@ import { SearchCommand } from "@/components/dashboard/search-command";
 import { Toaster } from "@/components/ui/sonner";
 import { Languages } from "@/lib/languages";
 import { api } from "@/utils/api";
+import { WalletProvider } from "@/components/providers/wallet-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -51,6 +52,7 @@ const MyApp = ({
 					/>
 				)}
 
+			<WalletProvider>
 			<ThemeProvider
 				attribute="class"
 				defaultTheme="system"
@@ -63,6 +65,7 @@ const MyApp = ({
 				<SearchCommand />
 				{getLayout(<Component {...pageProps} />)}
 			</ThemeProvider>
+		</WalletProvider>
 		</>
 	);
 };
