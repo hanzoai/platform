@@ -12,6 +12,7 @@
 		"setup": "tsx -r dotenv/config setup.ts && sleep 5 && pnpm run migration:run",
 		"reset-password": "node -r dotenv/config dist/reset-password.mjs",
 		"reset-2fa": "node -r dotenv/config dist/reset-2fa.mjs",
+		"seed:dev-admin": "tsx -r dotenv/config seed-dev-admin.ts",
 		"dev": "tsx -r dotenv/config ./server/server.ts  --project tsconfig.server.json ",
 		"dev-turbopack": "TURBOPACK=1 tsx -r dotenv/config ./server/server.ts  --project tsconfig.server.json",
 		"studio": "drizzle-kit studio --config ./server/db/drizzle.config.ts",
