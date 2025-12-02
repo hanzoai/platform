@@ -2,7 +2,7 @@ name: Hanzo Docker Build
 
 on:
   push:
-    branches: [main, canary, "fix/re-apply-database-migration-fix"]
+    branches: [main, canary, dev]
   workflow_dispatch:
 
 env:
@@ -32,6 +32,8 @@ jobs:
             VERSION=$(node -p "require('./app/hanzo/package.json').version")
           elif [ "${{ github.ref }}" = "refs/heads/canary" ]; then
             TAG="canary"
+          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            TAG="dev"
           else
             TAG="feature"
           fi
@@ -73,6 +75,8 @@ jobs:
             VERSION=$(node -p "require('./app/hanzo/package.json').version")
           elif [ "${{ github.ref }}" = "refs/heads/canary" ]; then
             TAG="canary"
+          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            TAG="dev"
           else
             TAG="feature"
           fi
@@ -123,6 +127,12 @@ jobs:
 
           elif [ "${{ github.ref }}" = "refs/heads/canary" ]; then
             TAG="canary"
+            docker buildx imagetools create -t ${IMAGE_NAME}:${TAG} \
+              ${IMAGE_NAME}:${TAG}-amd64 \
+              ${IMAGE_NAME}:${TAG}-arm64
+
+          elif [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            TAG="dev"
             docker buildx imagetools create -t ${IMAGE_NAME}:${TAG} \
               ${IMAGE_NAME}:${TAG}-amd64 \
               ${IMAGE_NAME}:${TAG}-arm64
