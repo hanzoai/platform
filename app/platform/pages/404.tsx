@@ -1,20 +1,9 @@
-import type { NextPageContext } from "next";
-
-interface Props {
-	statusCode: number;
-}
-
-// Minimal error page without any external components to avoid SSG issues
-export default function ErrorPage({ statusCode }: Props) {
-	const displayStatusCode = statusCode || 500;
-	const message = statusCode === 404
-		? "Sorry, we couldn't find your page."
-		: "Oops, something went wrong.";
-
+// Minimal 404 page without any external components to avoid SSG issues
+export default function NotFoundPage() {
 	return (
 		<html>
 			<head>
-				<title>{displayStatusCode} | Hanzo</title>
+				<title>404 | Hanzo</title>
 			</head>
 			<body style={{
 				fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -28,10 +17,10 @@ export default function ErrorPage({ statusCode }: Props) {
 			}}>
 				<div style={{ textAlign: 'center' }}>
 					<h1 style={{ fontSize: '8rem', margin: 0, fontWeight: 'bold' }}>
-						{displayStatusCode}
+						404
 					</h1>
 					<p style={{ color: '#888', marginTop: '1rem' }}>
-						{message}
+						Sorry, we couldn't find your page.
 					</p>
 					<a
 						href="/dashboard/projects"
@@ -52,8 +41,3 @@ export default function ErrorPage({ statusCode }: Props) {
 		</html>
 	);
 }
-
-ErrorPage.getInitialProps = ({ res, err }: NextPageContext) => {
-	const statusCode = res ? res.statusCode : err ? (err as any).statusCode : 404;
-	return { statusCode };
-};
