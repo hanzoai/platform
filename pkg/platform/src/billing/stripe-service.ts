@@ -1,29 +1,6 @@
-import Stripe from "stripe";
+import { getPaymentProvider, isPaymentConfigured } from "./payment-provider";
 import { addCreditsToWallet, getOrganizationWallet } from "./wallet-service";
-import { PLANS, type PlanType } from "./pricing";
-
-// Lazy initialization to handle missing API keys gracefully
-let _stripe: Stripe | null = null;
-
-function getStripe(): Stripe {
-  if (!_stripe) {
-    const apiKey = process.env.STRIPE_SECRET_KEY;
-    if (!apiKey || apiKey === "CHANGE_ME") {
-      throw new Error("Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.");
-    }
-    _stripe = new Stripe(apiKey, { apiVersion: "2024-09-30.acacia" });
-  }
-  return _stripe;
-}
-
-// For backward compatibility, export as stripe (getter)
-const stripe = new Proxy({} as Stripe, {
-  get: (_, prop) => {
-    const instance = getStripe();
-    const value = (instance as any)[prop];
-    return typeof value === "function" ? value.bind(instance) : value;
-  },
-});
+import { type PlanType } from "./pricing";
 
 const WEBSITE_URL = process.env.NODE_ENV === "development" ? "http://localhost:3000" : process.env.SITE_URL;
 
@@ -39,92 +16,57 @@ export async function createSubscription(params: {
   plan: PlanType;
   stripeCustomerId?: string;
 }) {
+  const provider = getPaymentProvider();
   const product = STRIPE_PRODUCTS[params.plan as "hobby" | "pro"];
 
-  let customerId = params.stripeCustomerId;
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: params.ownerEmail,
-      metadata: { organizationId: params.organizationId, ownerId: params.ownerId },
-    });
-    customerId = customer.id;
-  }
-
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customerId,
-    line_items: [{ price: product.priceId, quantity: 1 }],
-    metadata: { organizationId: params.organizationId, ownerId: params.ownerId, plan: params.plan },
-    subscription_data: { metadata: { organizationId: params.organizationId, plan: params.plan } },
-    payment_method_collection: "always",
-    success_url: `${WEBSITE_URL}/dashboard/billing?success=true`,
-    cancel_url: `${WEBSITE_URL}/dashboard/billing?canceled=true`,
+  return provider.createSubscription({
+    organizationId: params.organizationId,
+    ownerId: params.ownerId,
+    ownerEmail: params.ownerEmail,
+    plan: params.plan,
+    customerId: params.stripeCustomerId,
+    priceId: product.priceId,
+    successUrl: `${WEBSITE_URL}/dashboard/billing?success=true`,
+    cancelUrl: `${WEBSITE_URL}/dashboard/billing?canceled=true`,
   });
-
-  return { sessionId: session.id };
 }
 
 export async function createManualTopup(params: { organizationId: string; amount: number; stripeCustomerId: string }) {
   if (params.amount < 10) throw new Error("Minimum top-up is $10");
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    customer: params.stripeCustomerId,
-    line_items: [{
-      price_data: {
-        currency: "usd",
-        unit_amount: params.amount * 100,
-        product_data: { name: "Hanzo Platform Credits", description: `Add $${params.amount}` },
-      },
-      quantity: 1,
-    }],
-    metadata: { organizationId: params.organizationId, type: "manual_topup" },
-    success_url: `${WEBSITE_URL}/dashboard/billing?topup=success`,
-    cancel_url: `${WEBSITE_URL}/dashboard/billing`,
+  const provider = getPaymentProvider();
+  return provider.createTopup({
+    organizationId: params.organizationId,
+    amount: params.amount,
+    customerId: params.stripeCustomerId,
+    successUrl: `${WEBSITE_URL}/dashboard/billing?topup=success`,
+    cancelUrl: `${WEBSITE_URL}/dashboard/billing`,
   });
-
-  return { sessionId: session.id };
 }
 
 export async function triggerAutoTopupPayment(wallet: any) {
   if (!wallet.stripeCustomerId || !wallet.autoTopupAmount) return;
 
-  const amount = Number(wallet.autoTopupAmount);
-  const customer = await stripe.customers.retrieve(wallet.stripeCustomerId);
-
-  // Type guard: check if customer is deleted
-  if (customer.deleted) return;
-
-  // Cast to Customer type since we've verified it's not deleted
-  const activeCustomer = customer as import("stripe").Stripe.Customer;
-  const defaultPaymentMethod = activeCustomer.invoice_settings?.default_payment_method;
-  if (!defaultPaymentMethod) return;
-
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: amount * 100,
-    currency: "usd",
-    customer: wallet.stripeCustomerId,
-    payment_method: defaultPaymentMethod as string,
-    off_session: true,
-    confirm: true,
-    metadata: { organizationId: wallet.organizationId, type: "auto_topup" },
+  const provider = getPaymentProvider();
+  await provider.triggerAutoTopup({
+    organizationId: wallet.organizationId,
+    stripeCustomerId: wallet.stripeCustomerId,
+    autoTopupAmount: wallet.autoTopupAmount,
+    balance: wallet.balance,
   });
 
-  if (paymentIntent.status === "succeeded") {
-    await addCreditsToWallet(wallet.organizationId, amount, "auto_topup", `Auto top-up at $${wallet.balance}`, paymentIntent.id);
-  }
+  // Note: Credit addition is handled in the payment provider webhook
 }
 
 export async function createCustomerPortalSession(organizationId: string) {
   const wallet = await getOrganizationWallet(organizationId);
-  if (!wallet?.stripeCustomerId) throw new Error("No Stripe customer");
+  if (!wallet?.stripeCustomerId) throw new Error("No payment customer");
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: wallet.stripeCustomerId,
-    return_url: `${WEBSITE_URL}/dashboard/billing`,
-  });
-
-  return { url: session.url };
+  const provider = getPaymentProvider();
+  return provider.createPortalSession(
+    wallet.stripeCustomerId,
+    `${WEBSITE_URL}/dashboard/billing`
+  );
 }
 
-export { stripe };
+export { isPaymentConfigured };
