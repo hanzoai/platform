@@ -70,13 +70,20 @@ export async function triggerAutoTopupPayment(wallet: any) {
 
   const amount = Number(wallet.autoTopupAmount);
   const customer = await stripe.customers.retrieve(wallet.stripeCustomerId);
-  if (customer.deleted || !customer.invoice_settings?.default_payment_method) return;
+
+  // Type guard: check if customer is deleted
+  if (customer.deleted) return;
+
+  // Cast to Customer type since we've verified it's not deleted
+  const activeCustomer = customer as import("stripe").Stripe.Customer;
+  const defaultPaymentMethod = activeCustomer.invoice_settings?.default_payment_method;
+  if (!defaultPaymentMethod) return;
 
   const paymentIntent = await stripe.paymentIntents.create({
     amount: amount * 100,
     currency: "usd",
     customer: wallet.stripeCustomerId,
-    payment_method: customer.invoice_settings.default_payment_method as string,
+    payment_method: defaultPaymentMethod as string,
     off_session: true,
     confirm: true,
     metadata: { organizationId: wallet.organizationId, type: "auto_topup" },
