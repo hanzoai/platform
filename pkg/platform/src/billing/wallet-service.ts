@@ -3,6 +3,11 @@ import { organizationWallet, walletTransactions } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { PLANS, type PlanType } from "./pricing";
 
+// Type assertion helpers for Drizzle insert operations
+// This works around a type inference issue with the wallet schema
+type WalletInsert = typeof organizationWallet.$inferInsert;
+type TxInsert = typeof walletTransactions.$inferInsert;
+
 export async function createOrganizationWallet(organizationId: string, ownerId: string, plan: PlanType = "hobby") {
   const planConfig = PLANS[plan];
   const cycleStart = new Date();
@@ -17,7 +22,7 @@ export async function createOrganizationWallet(organizationId: string, ownerId: 
     plan,
     cycleStart,
     cycleEnd,
-  }).returning();
+  } as WalletInsert).returning();
 
   await db.insert(walletTransactions).values({
     walletId: wallet!.walletId,
@@ -27,7 +32,7 @@ export async function createOrganizationWallet(organizationId: string, ownerId: 
     balanceBefore: "0",
     balanceAfter: planConfig.monthlyCredits.toString(),
     description: `Initial ${plan} plan credits`,
-  });
+  } as TxInsert);
 
   return wallet!;
 }
@@ -58,7 +63,7 @@ export async function addCreditsToWallet(
   const newBalance = balanceBefore + amount;
 
   const [updated] = await db.update(organizationWallet)
-    .set({ balance: newBalance.toString(), updatedAt: new Date() })
+    .set({ balance: newBalance.toString(), updatedAt: new Date() } as Partial<WalletInsert>)
     .where(eq(organizationWallet.walletId, wallet.walletId))
     .returning();
 
@@ -71,7 +76,7 @@ export async function addCreditsToWallet(
     balanceAfter: newBalance.toString(),
     description,
     stripePaymentIntentId,
-  });
+  } as TxInsert);
 
   return updated!;
 }
@@ -91,7 +96,7 @@ export async function deductFromWallet(
   const newBalance = balanceBefore - amount;
 
   const [updated] = await db.update(organizationWallet)
-    .set({ balance: newBalance.toString(), updatedAt: new Date() })
+    .set({ balance: newBalance.toString(), updatedAt: new Date() } as Partial<WalletInsert>)
     .where(eq(organizationWallet.walletId, wallet.walletId))
     .returning();
 
@@ -103,7 +108,7 @@ export async function deductFromWallet(
     balanceBefore: balanceBefore.toString(),
     balanceAfter: newBalance.toString(),
     description,
-  });
+  } as TxInsert);
 
   return updated!;
 }
@@ -121,7 +126,7 @@ export async function resetMonthlyCredits(organizationId: string) {
   cycleEnd.setDate(cycleEnd.getDate() + 30);
 
   const [updated] = await db.update(organizationWallet)
-    .set({ balance: newBalance.toString(), cycleStart, cycleEnd, updatedAt: new Date() })
+    .set({ balance: newBalance.toString(), cycleStart, cycleEnd, updatedAt: new Date() } as Partial<WalletInsert>)
     .where(eq(organizationWallet.walletId, wallet.walletId))
     .returning();
 
@@ -133,7 +138,7 @@ export async function resetMonthlyCredits(organizationId: string) {
     balanceBefore: currentBalance.toString(),
     balanceAfter: newBalance.toString(),
     description: `Monthly ${wallet.plan} plan credits`,
-  });
+  } as TxInsert);
 
   return updated!;
 }
