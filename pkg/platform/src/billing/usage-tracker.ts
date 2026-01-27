@@ -1,8 +1,11 @@
 import Dockerode from "dockerode";
 import { db } from "../db";
-import { appUsageMetrics, application, projects } from "../db/schema";
+import { appUsageMetrics, applications, environments, projects, organization } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { calculateTotalUsageCost } from "./pricing";
+
+// Type helper for insert operations
+type MetricsInsert = typeof appUsageMetrics.$inferInsert;
 
 const docker = new Dockerode();
 
@@ -57,7 +60,7 @@ async function getStorageUsageGB(containerId: string): Promise<number> {
 
 export async function collectApplicationMetrics(applicationId: string, intervalSeconds: number = 60) {
   try {
-    const app = await db.query.application.findFirst({ where: eq(application.applicationId, applicationId) });
+    const app = await db.query.applications.findFirst({ where: eq(applications.applicationId, applicationId) });
     if (!app?.appName) return;
 
     const containers = await docker.listContainers({
@@ -76,13 +79,22 @@ export async function collectApplicationMetrics(applicationId: string, intervalS
 
     const costs = calculateTotalUsageCost({ cpuSeconds, memoryGbSeconds, storageGbSeconds, egressGb });
 
-    const project = await db.query.projects.findFirst({ where: eq(projects.projectId, app.projectId!) });
+    // Navigate relationship: application -> environment -> project -> organization
+    if (!app.environmentId) return;
+
+    const env = await db.query.environments.findFirst({ where: eq(environments.environmentId, app.environmentId) });
+    if (!env?.projectId) return;
+
+    const project = await db.query.projects.findFirst({ where: eq(projects.projectId, env.projectId) });
     if (!project) return;
+
+    const org = await db.query.organization.findFirst({ where: eq(organization.id, project.organizationId) });
+    if (!org) return;
 
     await db.insert(appUsageMetrics).values({
       applicationId,
       organizationId: project.organizationId,
-      ownerId: project.userId,
+      ownerId: org.ownerId,
       periodStart: new Date(Date.now() - intervalSeconds * 1000),
       periodEnd: new Date(),
       durationSeconds: intervalSeconds,
@@ -95,15 +107,15 @@ export async function collectApplicationMetrics(applicationId: string, intervalS
       storageCost: costs.storageCost.toString(),
       egressCost: costs.egressCost.toString(),
       totalCost: costs.totalCost.toString(),
-    });
+    } as MetricsInsert);
   } catch (error) {
     console.error(`Error collecting metrics for ${applicationId}:`, error);
   }
 }
 
 export async function collectAllApplicationsMetrics(intervalSeconds: number = 60) {
-  const apps = await db.query.application.findMany();
-  await Promise.allSettled(apps.map(app => collectApplicationMetrics(app.applicationId, intervalSeconds)));
+  const apps = await db.query.applications.findMany();
+  await Promise.allSettled(apps.map(app => collectApplicationMetrics((app as unknown as { applicationId: string }).applicationId, intervalSeconds)));
 }
 
 export function startUsageCollectionSchedule() {
