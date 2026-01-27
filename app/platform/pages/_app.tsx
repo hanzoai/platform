@@ -1,5 +1,6 @@
 import "@/styles/globals.css";
 
+import dynamic from "next/dynamic";
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
 import { Inter } from "next/font/google";
@@ -8,10 +9,18 @@ import Script from "next/script";
 import { appWithTranslation } from "next-i18next";
 import { ThemeProvider } from "next-themes";
 import type { ReactElement, ReactNode } from "react";
-import { SearchCommand } from "@/components/dashboard/search-command";
-import { Toaster } from "@/components/ui/sonner";
 import { Languages } from "@/lib/languages";
 import { api } from "@/utils/api";
+
+// Dynamic imports with SSR disabled to avoid context issues during build
+const SearchCommand = dynamic(
+	() => import("@/components/dashboard/search-command").then(m => m.SearchCommand),
+	{ ssr: false }
+);
+const Toaster = dynamic(
+	() => import("@/components/ui/sonner").then(m => m.Toaster),
+	{ ssr: false }
+);
 
 const inter = Inter({ subsets: ["latin"] });
 
