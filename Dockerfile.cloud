@@ -26,13 +26,14 @@ ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 ENV NODE_ENV=production
-RUN pnpm --filter=@hanzo/platform build
-RUN pnpm --filter=./apps/platform run build
 
-RUN pnpm --filter=./apps/platform --prod deploy /prod/platform
-
-RUN cp -R /usr/src/app/apps/platform/.next /prod/platform/.next
-RUN cp -R /usr/src/app/apps/platform/dist /prod/platform/dist
+# Build and deploy in a single layer to avoid cache issues
+# Cache bust: 2026-01-30
+RUN pnpm --filter=@hanzo/platform build && \
+    pnpm --filter=./apps/platform run build && \
+    pnpm --filter=./apps/platform --prod deploy /prod/platform && \
+    cp -R /usr/src/app/apps/platform/.next /prod/platform/.next && \
+    cp -R /usr/src/app/apps/platform/dist /prod/platform/dist
 
 FROM base AS platform
 WORKDIR /app
@@ -49,7 +50,7 @@ COPY --from=build /prod/platform/next.config.mjs ./next.config.mjs
 COPY --from=build /prod/platform/public ./public
 COPY --from=build /prod/platform/package.json ./package.json
 COPY --from=build /prod/platform/drizzle ./drizzle
-COPY --from=build /prod/hanzo.aiponents.json ./components.json
+COPY --from=build /prod/platform/components.json ./components.json
 COPY --from=build /prod/platform/node_modules ./node_modules
 
 
