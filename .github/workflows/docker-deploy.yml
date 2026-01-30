@@ -68,6 +68,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -111,6 +114,7 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Deploy to Production
         uses: appleboy/ssh-action@v1.0.0
@@ -118,43 +122,68 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
           script: |
-            # Stop existing container
-            docker stop hanzo-platform || true
-            docker rm hanzo-platform || true
+            cd /root/hanzo
 
-            # Pull latest image
+            # Pull latest Platform image
             docker pull ${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE }}:latest
 
-            # Run new container
-            docker run -d \
-              --name hanzo-platform \
-              --restart unless-stopped \
-              -p 3000:3000 \
-              -e NODE_ENV=production \
-              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-              -e REDIS_URL="${{ secrets.REDIS_URL }}" \
-              -e AUTH_SECRET="${{ secrets.AUTH_SECRET }}" \
-              -e NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
-              -e SERVER_URL="${{ secrets.SERVER_URL }}" \
-              -e SERVER_IP="${{ secrets.SERVER_IP }}" \
-              -e GITHUB_CLIENT_ID="${{ secrets.GITHUB_CLIENT_ID }}" \
-              -e GITHUB_CLIENT_SECRET="${{ secrets.GITHUB_CLIENT_SECRET }}" \
-              -e NEXT_PUBLIC_APP_NAME="Hanzo Platform" \
-              -e NEXT_PUBLIC_APP_URL="${{ secrets.NEXTAUTH_URL }}" \
-              -v /var/run/docker.sock:/var/run/docker.sock \
-              -v /etc/localtime:/etc/localtime:ro \
-              -v hanzo-data:/app \
-              --network hanzo-network \
-              ${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE }}:latest
+            # Update and restart Platform service via Docker Compose
+            docker compose -f compose.production.yml up -d --no-deps --pull always platform
+
+            # Health check - wait for Platform to be healthy
+            echo "Waiting for Platform health check..."
+            for i in {1..30}; do
+              if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
+                echo "Platform is healthy!"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "Platform health check failed"
+                docker logs hanzo-platform --tail 50
+                exit 1
+              fi
+              echo "Waiting... ($i/30)"
+              sleep 2
+            done
+
+            # Show service status
+            docker compose -f compose.production.yml ps platform
+
+  deploy-canary:
+    needs: build
+    if: github.ref == 'refs/heads/canary' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Deploy to Staging
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            cd /root/hanzo
+
+            # Pull canary Platform image
+            docker pull ${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE }}:canary
+
+            # Update staging Platform
+            docker compose -f compose.staging.yml up -d --no-deps platform
 
             # Health check
-            sleep 10
-            docker ps | grep hanzo-platform || exit 1
+            for i in {1..30}; do
+              if curl -sf http://localhost:3001/api/health > /dev/null 2>&1; then
+                echo "Staging Platform is healthy!"
+                break
+              fi
+              sleep 2
+            done
 
   notify:
-    needs: [test, build, deploy]
+    needs: [test, build, deploy, deploy-canary]
     if: always()
     runs-on: ubuntu-latest
     steps:
