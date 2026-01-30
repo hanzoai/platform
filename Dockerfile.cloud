@@ -12,7 +12,7 @@ WORKDIR /usr/src/app
 RUN apt-get update && apt-get install -y python3 make g++ git python3-pip pkg-config libsecret-1-dev && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=@hanzo/platform --filter=./apps/platform install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=@hanzo/platform --filter=./app/platform install --frozen-lockfile
 
 
 # Deploy only the platform app
@@ -28,12 +28,12 @@ ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV NODE_ENV=production
 
 # Build and deploy in a single layer to avoid cache issues
-# Cache bust: 2026-01-30
+# Cache bust: 2026-01-30-v2
 RUN pnpm --filter=@hanzo/platform build && \
-    pnpm --filter=./apps/platform run build && \
-    pnpm --filter=./apps/platform --prod deploy /prod/platform && \
-    cp -R /usr/src/app/apps/platform/.next /prod/platform/.next && \
-    cp -R /usr/src/app/apps/platform/dist /prod/platform/dist
+    pnpm --filter=./app/platform run build && \
+    pnpm --filter=./app/platform --prod deploy /prod/platform && \
+    cp -R /usr/src/app/app/platform/.next /prod/platform/.next && \
+    cp -R /usr/src/app/app/platform/dist /prod/platform/dist
 
 FROM base AS platform
 WORKDIR /app
