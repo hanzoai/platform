@@ -1,0 +1,227 @@
+# ============================================================================
+# ZAP Gateway Configuration for Hanzo Platform
+# ============================================================================
+#
+# This configuration integrates Platform as a ZAP server with the zapd gateway.
+#
+# Usage:
+#   zapd serve --config /path/to/gateway.toml
+#
+# Or start Platform's native ZAP server:
+#   platform-zap serve --port 9998
+#
+# ============================================================================
+
+[gateway]
+listen = "0.0.0.0"
+port = 9999
+log_level = "info"
+
+[gateway.tls]
+enabled = true
+cert = "/etc/zap/server.crt"
+key = "/etc/zap/server.key"
+ca = "/etc/zap/ca.crt"
+
+[gateway.health]
+interval_ms = 30000
+timeout_ms = 5000
+unhealthy_threshold = 3
+healthy_threshold = 2
+
+[gateway.load_balancing]
+strategy = "least_latency"
+
+[gateway.consensus]
+enabled = true
+endpoint = "zap://lux-node.hanzo.network:9000"
+snapshot_interval_ms = 60000
+min_confidence = 0.95
+
+# ============================================================================
+# Platform Native ZAP Server
+# ============================================================================
+#
+# Platform exposes a native ZAP endpoint using Cap'n Proto RPC.
+# This is the primary, high-performance integration point.
+#
+
+[[servers]]
+name = "platform"
+url = "zap://platform.hanzo.ai:9998"
+transport = "zap"
+timeout = 60000
+
+[servers.retry]
+max_attempts = 3
+initial_delay = 1000
+max_delay = 10000
+multiplier = 2.0
+
+[servers.health]
+interval = 30000
+timeout = 5000
+unhealthy_threshold = 3
+
+[servers.auth]
+type = "bearer"
+token = "${PLATFORM_ZAP_TOKEN}"
+
+# ============================================================================
+# Platform MCP Server (Backwards Compatibility)
+# ============================================================================
+#
+# Platform's existing MCP server is bridged via the ZAP Gateway.
+# Tools appear with the "mcp.platform." namespace prefix.
+#
+# This allows existing MCP clients to continue working during migration.
+#
+
+[[servers]]
+name = "platform-mcp"
+url = "http://platform.hanzo.ai:3100"
+transport = "http"
+timeout = 30000
+
+[servers.retry]
+max_attempts = 3
+initial_delay = 500
+max_delay = 5000
+multiplier = 2.0
+
+[servers.auth]
+type = "bearer"
+token = "${PLATFORM_MCP_TOKEN}"
+
+# ============================================================================
+# Additional MCP Servers
+# ============================================================================
+#
+# Other MCP servers can be added here and will be aggregated into the
+# unified ZAP catalog.
+#
+
+[[servers]]
+name = "github"
+url = "stdio://gh-mcp"
+transport = "stdio"
+timeout = 30000
+
+[[servers]]
+name = "filesystem"
+url = "stdio://mcp-filesystem"
+transport = "stdio"
+timeout = 10000
+
+# ============================================================================
+# Load Balancing Weights
+# ============================================================================
+#
+# Optional: Configure weights for load balancing between providers.
+#
+
+[[gateway.load_balancing.weights]]
+server = "platform"
+weight = 10
+
+[[gateway.load_balancing.weights]]
+server = "platform-mcp"
+weight = 1
+
+# ============================================================================
+# Tool Namespace Configuration
+# ============================================================================
+#
+# Configure how tools are namespaced in the unified catalog.
+#
+
+[gateway.namespaces]
+# Native ZAP tools use short prefixes
+platform = "platform"
+
+# MCP tools get the mcp. prefix
+platform-mcp = "mcp.platform"
+github = "mcp.github"
+filesystem = "mcp.fs"
+
+# ============================================================================
+# Rate Limiting
+# ============================================================================
+#
+# Optional: Rate limiting per server/tool.
+#
+
+[gateway.rate_limiting]
+enabled = true
+default_requests_per_minute = 1000
+
+[[gateway.rate_limiting.rules]]
+server = "platform"
+tool_pattern = "scaling.*"
+requests_per_minute = 60  # Scaling operations are rate-limited
+
+[[gateway.rate_limiting.rules]]
+server = "platform"
+tool_pattern = "deploy.*"
+requests_per_minute = 30  # Deployments are rate-limited
+
+# ============================================================================
+# Consensus Rules
+# ============================================================================
+#
+# Tools that require consensus before execution.
+#
+
+[gateway.consensus.rules]
+# Critical operations require consensus
+require_consensus = [
+    "platform.scaling.scaleDown",
+    "platform.pool.deletePool",
+    "platform.infra.deleteFirewall",
+    "platform.infra.deleteLoadBalancer",
+]
+
+# Quorum execution for redundancy
+require_quorum = [
+    "platform.deploy.deploy",
+]
+
+[gateway.consensus.quorum]
+min_providers = 2
+timeout_ms = 60000
+
+# ============================================================================
+# Observability
+# ============================================================================
+
+[gateway.metrics]
+enabled = true
+port = 9090
+path = "/metrics"
+
+[gateway.tracing]
+enabled = true
+endpoint = "http://jaeger.hanzo.network:14268/api/traces"
+service_name = "zap-gateway"
+sample_rate = 0.1
+
+# ============================================================================
+# Security
+# ============================================================================
+
+[gateway.security]
+# Enable capability-based access control
+capability_based_auth = true
+
+# Post-quantum signature verification
+post_quantum_signatures = true
+pq_algorithm = "dilithium3"
+
+# TLS client verification
+require_client_cert = false
+
+# Allowed organizations (empty = all)
+allowed_organizations = []
+
+# IP whitelist (empty = all)
+ip_whitelist = []
