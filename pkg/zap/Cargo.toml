@@ -1,0 +1,105 @@
+[package]
+name = "platform-zap"
+version = "1.0.0"
+edition = "2021"
+description = "ZAP server for Hanzo Platform - High-performance agent control of cloud infrastructure"
+authors = ["Hanzo AI <engineering@hanzo.ai>"]
+license = "MIT"
+repository = "https://github.com/hanzoai/platform"
+keywords = ["zap", "mcp", "capnproto", "rpc", "cloud"]
+categories = ["network-programming", "development-tools"]
+
+[lib]
+name = "platform_zap"
+path = "src/lib.rs"
+
+[[bin]]
+name = "platform-zap"
+path = "src/main.rs"
+
+[dependencies]
+# Cap'n Proto
+capnp = "0.19"
+capnp-rpc = "0.19"
+
+# Async runtime
+tokio = { version = "1", features = ["full", "rt-multi-thread", "macros", "signal"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+futures = "0.3"
+
+# HTTP client for tRPC bridge
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+
+# Logging/Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Async utilities
+async-trait = "0.1"
+pin-project-lite = "0.2"
+
+# Crypto (for auth)
+jsonwebtoken = "9"
+base64 = "0.21"
+
+# Post-quantum crypto (optional)
+pqcrypto-dilithium = { version = "0.5", optional = true }
+
+# Metrics
+prometheus = { version = "0.13", optional = true }
+
+# Configuration
+config = "0.14"
+directories = "5"
+
+# UUID generation
+uuid = { version = "1", features = ["v4", "fast-rng"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["async_tokio"] }
+tokio-test = "0.4"
+wiremock = "0.5"
+tempfile = "3"
+
+[build-dependencies]
+capnpc = "0.19"
+
+[features]
+default = []
+post-quantum = ["pqcrypto-dilithium"]
+metrics = ["prometheus"]
+integration = []
+
+[[bench]]
+name = "rpc_benchmark"
+harness = false
+
+[[example]]
+name = "client"
+path = "examples/client.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+strip = true
+
+[profile.bench]
+lto = true
+codegen-units = 1
+opt-level = 3
