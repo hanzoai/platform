@@ -97,6 +97,15 @@ const { handler, api } = betterAuth({
 			create: {
 				before: async (_user, context) => {
 					if (!IS_CLOUD) {
+						// Allow OAuth/SSO users through (they arrive via the
+						// generic-oauth callback, not the signup form).
+						const isOAuthCallback =
+							context?.request?.url?.includes("/callback/") ||
+							context?.request?.url?.includes("/oauth2/");
+						if (isOAuthCallback) {
+							return;
+						}
+
 						const xHanzoToken =
 							context?.request?.headers?.get("x-platform-token");
 						if (xHanzoToken) {

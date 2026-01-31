@@ -1,0 +1,60 @@
+# Platform ZAP Server Docker Compose
+#
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f platform-zap
+
+services:
+  platform-zap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: hanzoai/platform-zap:latest
+    container_name: platform-zap
+    ports:
+      - "9998:9998"
+    environment:
+      - PLATFORM_ZAP_LISTEN=0.0.0.0
+      - PLATFORM_ZAP_PORT=9998
+      - PLATFORM_ZAP_LOG_LEVEL=info
+      - PLATFORM_TRPC_URL=${PLATFORM_TRPC_URL:-http://platform:3000}
+      - PLATFORM_ZAP_SECRET=${PLATFORM_ZAP_SECRET:-}
+      - PLATFORM_ZAP_TLS_ENABLED=false
+    volumes:
+      - ./config:/etc/platform-zap:ro
+    networks:
+      - platform-network
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/platform-zap", "--health-check"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+
+  # Optional: Run with Platform for local development
+  platform:
+    image: hanzoai/platform:latest
+    container_name: platform
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-}
+    networks:
+      - platform-network
+    profiles:
+      - full
+
+networks:
+  platform-network:
+    driver: bridge

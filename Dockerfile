@@ -17,6 +17,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 # Build the platform package and app
 ENV NODE_ENV=production
 RUN pnpm --filter=@hanzo/platform build
+RUN pnpm --filter=./app/platform run build-server
 RUN pnpm --filter=./app/platform run build-next
 
 RUN pnpm --filter=./app/platform --prod deploy /prod/platform
