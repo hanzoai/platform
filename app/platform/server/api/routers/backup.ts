@@ -196,9 +196,9 @@ export const backupRouter = createTRPCRouter({
 			try {
 				const backup = await findBackupById(input.backupId);
 				const postgres = await findPostgresByBackupId(backup.backupId);
-				await runPostgresBackup(postgres, backup);
+				await runPostgresBackup(postgres as any, backup);
 
-				await keepLatestNBackups(backup, postgres?.serverId);
+				await keepLatestNBackups(backup, (postgres as any)?.serverId);
 				return true;
 			} catch (error) {
 				const message =
@@ -218,8 +218,8 @@ export const backupRouter = createTRPCRouter({
 			try {
 				const backup = await findBackupById(input.backupId);
 				const mysql = await findMySqlByBackupId(backup.backupId);
-				await runMySqlBackup(mysql, backup);
-				await keepLatestNBackups(backup, mysql?.serverId);
+				await runMySqlBackup(mysql as any, backup);
+				await keepLatestNBackups(backup, (mysql as any)?.serverId);
 				return true;
 			} catch (error) {
 				throw new TRPCError({
@@ -235,8 +235,8 @@ export const backupRouter = createTRPCRouter({
 			try {
 				const backup = await findBackupById(input.backupId);
 				const mariadb = await findMariadbByBackupId(backup.backupId);
-				await runMariadbBackup(mariadb, backup);
-				await keepLatestNBackups(backup, mariadb?.serverId);
+				await runMariadbBackup(mariadb as any, backup);
+				await keepLatestNBackups(backup, (mariadb as any)?.serverId);
 				return true;
 			} catch (error) {
 				throw new TRPCError({
@@ -252,8 +252,8 @@ export const backupRouter = createTRPCRouter({
 			try {
 				const backup = await findBackupById(input.backupId);
 				const compose = await findComposeByBackupId(backup.backupId);
-				await runComposeBackup(compose, backup);
-				await keepLatestNBackups(backup, compose?.serverId);
+				await runComposeBackup(compose as any, backup);
+				await keepLatestNBackups(backup, (compose as any)?.serverId);
 				return true;
 			} catch (error) {
 				throw new TRPCError({
@@ -269,8 +269,8 @@ export const backupRouter = createTRPCRouter({
 			try {
 				const backup = await findBackupById(input.backupId);
 				const mongo = await findMongoByBackupId(backup.backupId);
-				await runMongoBackup(mongo, backup);
-				await keepLatestNBackups(backup, mongo?.serverId);
+				await runMongoBackup(mongo as any, backup);
+				await keepLatestNBackups(backup, (mongo as any)?.serverId);
 				return true;
 			} catch (error) {
 				throw new TRPCError({
