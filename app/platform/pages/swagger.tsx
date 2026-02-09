@@ -17,7 +17,7 @@ const Home: NextPage = () => {
 		if (data) {
 			const protocolAndHost = `${window.location.protocol}//${window.location.host}/api`;
 			const newSpec = {
-				...data,
+				...(data as Record<string, unknown>),
 				servers: [{ url: protocolAndHost }],
 				externalDocs: {
 					url: `${protocolAndHost}/settings.getOpenApiDocument`,
