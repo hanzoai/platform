@@ -189,12 +189,12 @@ export const userRouter = createTRPCRouter({
 					.update(account)
 					.set({
 						password: bcrypt.hashSync(input.password, 10),
-					})
+					} as any)
 					.where(eq(account.userId, ctx.user.id));
 			}
 
 			try {
-				return await updateUser(ctx.user.id, input);
+				return await updateUser(ctx.user.id, input as any);
 			} catch (error) {
 				throw new TRPCError({
 					code: "BAD_REQUEST",
@@ -249,7 +249,7 @@ export const userRouter = createTRPCRouter({
 					.update(member)
 					.set({
 						...rest,
-					})
+					} as any)
 					.where(
 						and(
 							eq(member.userId, input.id),
@@ -375,7 +375,7 @@ export const userRouter = createTRPCRouter({
 	createApiKey: protectedProcedure
 		.input(apiCreateApiKey)
 		.mutation(async ({ input, ctx }) => {
-			const apiKey = await createApiKey(ctx.user.id, input);
+			const apiKey = await createApiKey(ctx.user.id, input as any);
 			return apiKey;
 		}),
 
