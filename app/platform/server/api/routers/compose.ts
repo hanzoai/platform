@@ -187,7 +187,7 @@ export const composeRouter = createTRPCRouter({
 					message: "You are not authorized to update this compose",
 				});
 			}
-			return updateCompose(input.composeId, input);
+			return updateCompose(input.composeId, input as any);
 		}),
 	delete: protectedProcedure
 		.input(apiDeleteCompose)
@@ -575,7 +575,7 @@ export const composeRouter = createTRPCRouter({
 				sourceType: "raw",
 				appName: appName,
 				isolatedDeployment: true,
-			});
+			} as any);
 
 			if (ctx.user.role === "member") {
 				await addNewService(

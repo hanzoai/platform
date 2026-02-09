@@ -364,7 +364,7 @@ export const mysqlRouter = createTRPCRouter({
 			}
 			const service = await updateMySqlById(mysqlId, {
 				...rest,
-			});
+			} as any);
 
 			if (!service) {
 				throw new TRPCError({

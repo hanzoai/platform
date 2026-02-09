@@ -138,6 +138,6 @@ export const githubRouter = createTRPCRouter({
 
 			await updateGithub(input.githubId, {
 				...input,
-			});
+			} as any);
 		}),
 });
