@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (session.mode === "subscription" && plan) {
           const wallet = await createOrganizationWallet(organizationId, ownerId!, plan as "hobby" | "pro");
           await db.update(organizationWallet)
-            .set({ stripeCustomerId: session.customer as string, stripeSubscriptionId: session.subscription as string })
+            .set({ stripeCustomerId: session.customer as string, stripeSubscriptionId: session.subscription as string } as any)
             .where(eq(organizationWallet.organizationId, organizationId));
         }
 
