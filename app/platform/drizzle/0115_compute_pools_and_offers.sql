@@ -274,7 +274,7 @@ END $$;
 --> statement-breakpoint
 
 DO $$ BEGIN
-	ALTER TABLE "compute_pool" ADD CONSTRAINT "compute_pool_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
+	ALTER TABLE "compute_pool" ADD CONSTRAINT "compute_pool_owner_id_user_temp_id_fk" FOREIGN KEY ("owner_id") REFERENCES "user_temp"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
 END $$;
@@ -316,7 +316,7 @@ END $$;
 --> statement-breakpoint
 
 DO $$ BEGIN
-	ALTER TABLE "compute_lease" ADD CONSTRAINT "compute_lease_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
+	ALTER TABLE "compute_lease" ADD CONSTRAINT "compute_lease_user_id_user_temp_id_fk" FOREIGN KEY ("user_id") REFERENCES "user_temp"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
 END $$;
