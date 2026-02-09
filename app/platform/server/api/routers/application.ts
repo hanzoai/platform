@@ -412,7 +412,7 @@ export const applicationRouter = createTRPCRouter({
 				githubId: input.githubId,
 				watchPaths: input.watchPaths,
 				triggerType: input.triggerType,
-				enableSubmodules: input.enableSubmodules,
+				enableSubmodules: input.enableSubmodules as boolean,
 			});
 
 			return true;
@@ -438,10 +438,10 @@ export const applicationRouter = createTRPCRouter({
 				sourceType: "gitlab",
 				applicationStatus: "idle",
 				gitlabId: input.gitlabId,
-				gitlabProjectId: input.gitlabProjectId,
+				gitlabProjectId: input.gitlabProjectId as number,
 				gitlabPathNamespace: input.gitlabPathNamespace,
 				watchPaths: input.watchPaths,
-				enableSubmodules: input.enableSubmodules,
+				enableSubmodules: input.enableSubmodules as boolean,
 			});
 
 			return true;
@@ -468,7 +468,7 @@ export const applicationRouter = createTRPCRouter({
 				applicationStatus: "idle",
 				bitbucketId: input.bitbucketId,
 				watchPaths: input.watchPaths,
-				enableSubmodules: input.enableSubmodules,
+				enableSubmodules: input.enableSubmodules as boolean,
 			});
 
 			return true;
@@ -495,7 +495,7 @@ export const applicationRouter = createTRPCRouter({
 				applicationStatus: "idle",
 				giteaId: input.giteaId,
 				watchPaths: input.watchPaths,
-				enableSubmodules: input.enableSubmodules,
+				enableSubmodules: input.enableSubmodules as boolean,
 			});
 
 			return true;
@@ -545,7 +545,7 @@ export const applicationRouter = createTRPCRouter({
 				sourceType: "git",
 				applicationStatus: "idle",
 				watchPaths: input.watchPaths,
-				enableSubmodules: input.enableSubmodules,
+				enableSubmodules: input.enableSubmodules as boolean,
 			});
 
 			return true;
@@ -643,7 +643,7 @@ export const applicationRouter = createTRPCRouter({
 			const { applicationId, ...rest } = input;
 			const updateApp = await updateApplication(applicationId, {
 				...rest,
-			});
+			} as any);
 
 			if (!updateApp) {
 				throw new TRPCError({

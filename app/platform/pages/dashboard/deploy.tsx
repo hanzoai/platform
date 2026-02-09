@@ -29,7 +29,7 @@ const DeployPage = () => {
   const { toast } = useToast();
 
   // Load compose files from current repo
-  const { data: repoFiles } = api.repo.listComposeFiles.useQuery();
+  const repoFiles: string[] | undefined = undefined; // TODO: implement api.repo.listComposeFiles
 
   // Parse YAML to Compose Spec
   const parseYaml = (content: string) => {
@@ -245,7 +245,7 @@ const DeployPage = () => {
                           </div>
                         </label>
                         {deployments.has(name) && (
-                          <Badge variant="success">
+                          <Badge variant="green">
                             <CheckCircle className="w-3 h-3 mr-1" />
                             Deployed
                           </Badge>
