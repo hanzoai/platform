@@ -12,6 +12,7 @@ import ReactFlow, {
   Controls,
   MiniMap,
   Background,
+  BackgroundVariant,
   useNodesState,
   useEdgesState,
   addEdge,
@@ -409,7 +410,7 @@ export function ComposeFlowEditor({
               connectionMode={ConnectionMode.Loose}
               fitView
             >
-              <Background variant="dots" gap={12} size={1} />
+              <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
               <Controls />
               <MiniMap
                 nodeColor={(node) => {
