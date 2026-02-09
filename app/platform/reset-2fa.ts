@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
 			.update(users_temp)
 			.set({
 				twoFactorEnabled: false,
-			})
+			} as any)
 			.where(eq(users_temp.id, result.userId));
 
 		if (update) {
