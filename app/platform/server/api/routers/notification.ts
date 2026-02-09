@@ -97,7 +97,7 @@ export const notificationRouter = createTRPCRouter({
 		.input(apiTestSlackConnection)
 		.mutation(async ({ input }) => {
 			try {
-				await sendSlackNotification(input, {
+				await sendSlackNotification(input as any, {
 					channel: input.channel,
 					text: "Hi, From Hanzo 👋",
 				});
@@ -154,7 +154,7 @@ export const notificationRouter = createTRPCRouter({
 		.input(apiTestTelegramConnection)
 		.mutation(async ({ input }) => {
 			try {
-				await sendTelegramNotification(input, "Hi, From Hanzo 👋");
+				await sendTelegramNotification(input as any, "Hi, From Hanzo 👋");
 				return true;
 			} catch (error) {
 				throw new TRPCError({
@@ -212,7 +212,7 @@ export const notificationRouter = createTRPCRouter({
 				const decorate = (decoration: string, text: string) =>
 					`${input.decoration ? decoration : ""} ${text}`.trim();
 
-				await sendDiscordNotification(input, {
+				await sendDiscordNotification(input as any, {
 					title: decorate(">", "`🤚` - Test Notification"),
 					description: decorate(">", "Hi, From Hanzo 👋"),
 					color: 0xf3f7f4,
@@ -271,7 +271,7 @@ export const notificationRouter = createTRPCRouter({
 		.mutation(async ({ input }) => {
 			try {
 				await sendEmailNotification(
-					input,
+					input as any,
 					"Test Email",
 					"<p>Hi, From Hanzo 👋</p>",
 				);
@@ -388,7 +388,7 @@ export const notificationRouter = createTRPCRouter({
 				await sendServerThresholdNotifications(organizationId, {
 					...input,
 					ServerName,
-				});
+				} as any);
 			} catch (error) {
 				throw new TRPCError({
 					code: "BAD_REQUEST",
@@ -440,7 +440,7 @@ export const notificationRouter = createTRPCRouter({
 		.mutation(async ({ input }) => {
 			try {
 				await sendGotifyNotification(
-					input,
+					input as any,
 					"Test Notification",
 					"Hi, From Hanzo 👋",
 				);
@@ -496,7 +496,7 @@ export const notificationRouter = createTRPCRouter({
 		.mutation(async ({ input }) => {
 			try {
 				await sendNtfyNotification(
-					input,
+					input as any,
 					"Test Notification",
 					"",
 					"view, visit Hanzo on Github, https://github.com/hanzoai/platform, clear=true;",

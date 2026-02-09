@@ -219,7 +219,7 @@ export const settingsRouter = createTRPCRouter({
 					letsEncryptEmail: input.letsEncryptEmail,
 				}),
 				certificateType: input.certificateType,
-				https: input.https,
+				https: input.https as boolean,
 			});
 
 			if (!user) {
@@ -250,7 +250,7 @@ export const settingsRouter = createTRPCRouter({
 		.mutation(async ({ input, ctx }) => {
 			if (input.serverId) {
 				await updateServerById(input.serverId, {
-					enableDockerCleanup: input.enableDockerCleanup,
+					enableDockerCleanup: input.enableDockerCleanup as boolean,
 				});
 
 				const server = await findServerById(input.serverId);
@@ -301,7 +301,7 @@ export const settingsRouter = createTRPCRouter({
 				}
 			} else if (!IS_CLOUD) {
 				const userUpdated = await updateUser(ctx.user.id, {
-					enableDockerCleanup: input.enableDockerCleanup,
+					enableDockerCleanup: input.enableDockerCleanup as boolean,
 				});
 
 				if (userUpdated?.enableDockerCleanup) {
@@ -610,8 +610,8 @@ export const settingsRouter = createTRPCRouter({
 
 			const parsedConfig = parseRawConfig(
 				rawConfig as string,
-				input.page,
-				input.sort,
+				input.page as any,
+				input.sort as any,
 				input.search,
 				input.status,
 				input.dateRange,
@@ -814,7 +814,7 @@ export const settingsRouter = createTRPCRouter({
 
 				await writeTraefikSetup({
 					env: preparedEnv,
-					additionalPorts: input.additionalPorts,
+					additionalPorts: input.additionalPorts as any,
 					serverId: input.serverId,
 				});
 				return true;
