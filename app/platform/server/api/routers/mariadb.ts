@@ -352,7 +352,7 @@ export const mariadbRouter = createTRPCRouter({
 			}
 			const service = await updateMariadbById(mariadbId, {
 				...rest,
-			});
+			} as any);
 
 			if (!service) {
 				throw new TRPCError({

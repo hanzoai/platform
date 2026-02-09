@@ -112,7 +112,7 @@ export const gitlabRouter = createTRPCRouter({
 					message: "You are not allowed to access this Gitlab provider",
 				});
 			}
-			return await getGitlabBranches(input);
+			return await getGitlabBranches(input as any);
 		}),
 	testConnection: protectedProcedure
 		.input(apiGitlabTestConnection)
@@ -161,11 +161,11 @@ export const gitlabRouter = createTRPCRouter({
 
 				await updateGitlab(input.gitlabId, {
 					...input,
-				});
+				} as any);
 			} else {
 				await updateGitlab(input.gitlabId, {
 					...input,
-				});
+				} as any);
 			}
 		}),
 });

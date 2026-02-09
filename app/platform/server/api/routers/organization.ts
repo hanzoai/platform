@@ -28,7 +28,7 @@ export const organizationRouter = createTRPCRouter({
 					slug: nanoid(),
 					createdAt: new Date(),
 					ownerId: ctx.user.id,
-				})
+				} as any)
 				.returning()
 				.then((res) => res[0]);
 
@@ -97,7 +97,7 @@ export const organizationRouter = createTRPCRouter({
 				.set({
 					name: input.name,
 					logo: input.logo,
-				})
+				} as any)
 				.where(eq(organization.id, input.organizationId))
 				.returning();
 			return result[0];
