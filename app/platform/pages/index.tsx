@@ -259,7 +259,7 @@ export default function Home() {
 							onClick={async () => {
 								try {
 									await authClient.signIn.social({
-										provider: "github" as any, // Hanzo IAM provider
+										provider: "hanzo" as any, // Hanzo IAM provider
 										callbackURL: "/dashboard/projects",
 									});
 								} catch (e) {
