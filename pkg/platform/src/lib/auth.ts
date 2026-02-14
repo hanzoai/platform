@@ -13,8 +13,23 @@ import { updateUser } from "../services/user";
 import { sendEmail } from "../verification/send-verification-email";
 import { getPublicIpWithFallback } from "../wss/utils";
 
-// Hanzo IAM OIDC configuration
-const HANZO_IAM_URL = process.env.HANZO_IAM_URL || "https://iam.hanzo.ai";
+// IAM OIDC configuration (prefer IAM_* env vars)
+const IAM_URL = (
+	process.env.IAM_URL ||
+	process.env.IAM_ENDPOINT ||
+	process.env.HANZO_IAM_URL ||
+	process.env.HANZO_IAM_ENDPOINT ||
+	process.env.HANZO_IAM_SERVER_URL ||
+	"https://hanzo.id"
+).replace(/\/$/, "");
+const IAM_CLIENT_ID =
+	process.env.IAM_CLIENT_ID ||
+	process.env.HANZO_IAM_CLIENT_ID ||
+	process.env.HANZO_CLIENT_ID;
+const IAM_CLIENT_SECRET =
+	process.env.IAM_CLIENT_SECRET ||
+	process.env.HANZO_IAM_CLIENT_SECRET ||
+	process.env.HANZO_CLIENT_SECRET;
 
 const { handler, api } = betterAuth({
 	database: drizzleAdapter(db, {
@@ -231,15 +246,15 @@ const { handler, api } = betterAuth({
 			},
 		}),
 		// Hanzo IAM OIDC provider
-		...(process.env.HANZO_IAM_CLIENT_ID
+		...(IAM_CLIENT_ID && IAM_CLIENT_SECRET
 			? [
 					genericOAuth({
 						config: [
 							{
 								providerId: "hanzo",
-								discoveryUrl: `${HANZO_IAM_URL}/.well-known/openid-configuration`,
-								clientId: process.env.HANZO_IAM_CLIENT_ID as string,
-								clientSecret: process.env.HANZO_IAM_CLIENT_SECRET as string,
+								discoveryUrl: `${IAM_URL}/.well-known/openid-configuration`,
+								clientId: IAM_CLIENT_ID as string,
+								clientSecret: IAM_CLIENT_SECRET as string,
 								scopes: ["openid", "profile", "email"],
 								pkce: true,
 							},
