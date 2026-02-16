@@ -213,10 +213,7 @@ export const ProfileForm = () => {
 													<FormItem>
 														<FormLabel>Email</FormLabel>
 														<FormControl>
-															<Input
-																placeholder="Email"
-																{...field}
-															/>
+															<Input placeholder="Email" {...field} />
 														</FormControl>
 														<FormMessage />
 													</FormItem>
@@ -245,9 +242,7 @@ export const ProfileForm = () => {
 												name="password"
 												render={({ field }) => (
 													<FormItem>
-														<FormLabel>
-															Password
-														</FormLabel>
+														<FormLabel>Password</FormLabel>
 														<FormControl>
 															<Input
 																type="password"
@@ -266,9 +261,7 @@ export const ProfileForm = () => {
 												name="image"
 												render={({ field }) => (
 													<FormItem>
-														<FormLabel>
-															Avatar
-														</FormLabel>
+														<FormLabel>Avatar</FormLabel>
 														<FormControl>
 															<RadioGroup
 																onValueChange={(e) => {
