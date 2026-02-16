@@ -120,7 +120,7 @@ export const suggestVariants = async ({
 		});
 		const suggestionsResult = await generateText({
 			model,
-			// @ts-expect-error TS2589 - Zod + AI SDK Output.object() causes excessively deep instantiation
+			// @ts-ignore - Zod + AI SDK Output.object() causes excessively deep instantiation
 			output: Output.object({ schema: suggestionsSchema }),
 			prompt: `
 		    Act as advanced DevOps engineer and analyze the user's request to determine the appropriate suggestions (up to 3 items).
@@ -199,7 +199,7 @@ export const suggestVariants = async ({
 				try {
 					const dockerResult = await generateText({
 						model,
-						// @ts-expect-error TS2589 - Zod + AI SDK Output.object() causes excessively deep instantiation
+						// @ts-ignore - Zod + AI SDK Output.object() causes excessively deep instantiation
 						output: Output.object({ schema: dockerSchema }),
 						prompt: `
 		          Act as advanced DevOps engineer and generate docker compose with environment variables and domain configurations needed to install the following project.
