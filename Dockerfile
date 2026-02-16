@@ -34,6 +34,7 @@ RUN cp -R /usr/src/app/app/platform/.next /prod/platform/.next
 RUN cp -R /usr/src/app/app/platform/dist /prod/platform/dist
 
 FROM base AS platform
+LABEL org.opencontainers.image.source=https://github.com/hanzoai/platform
 WORKDIR /app
 
 # Set production
