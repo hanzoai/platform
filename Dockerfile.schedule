@@ -12,17 +12,17 @@ WORKDIR /usr/src/app
 RUN apt-get update && apt-get install -y python3 make g++ git python3-pip pkg-config libsecret-1-dev && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=@hanzo/platform --filter=./apps/schedules install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=@hanzo/platform --filter=./app/schedules install --frozen-lockfile
 
 # Deploy only the platform app
 
 ENV NODE_ENV=production
 RUN pnpm --filter=@hanzo/platform build
-RUN pnpm --filter=./apps/schedules run build
+RUN pnpm --filter=./app/schedules run build
 
-RUN pnpm --filter=./apps/schedules --prod deploy /prod/schedules
+RUN pnpm --filter=./app/schedules --prod deploy /prod/schedules
 
-RUN cp -R /usr/src/app/apps/schedules/dist /prod/schedules/dist
+RUN cp -R /usr/src/app/app/schedules/dist /prod/schedules/dist
 
 FROM base AS platform
 LABEL org.opencontainers.image.source=https://github.com/hanzoai/platform
