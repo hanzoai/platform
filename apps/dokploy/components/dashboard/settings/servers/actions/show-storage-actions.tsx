@@ -1,4 +1,3 @@
-import { useTranslation } from "next-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +15,6 @@ interface Props {
 	serverId?: string;
 }
 export const ShowStorageActions = ({ serverId }: Props) => {
-	const { t } = useTranslation("settings");
 	const { mutateAsync: cleanAll, isLoading: cleanAllIsLoading } =
 		api.settings.cleanAll.useMutation();
 
@@ -64,12 +62,12 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 					}
 					variant="outline"
 				>
-					{t("settings.server.webServer.storage.label")}
+					Space
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent className="w-64" align="start">
 				<DropdownMenuLabel>
-					{t("settings.server.webServer.actions")}
+					Actions
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
@@ -88,7 +86,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 						}}
 					>
 						<span>
-							{t("settings.server.webServer.storage.cleanUnusedImages")}
+							Clean unused images
 						</span>
 					</DropdownMenuItem>
 					<DropdownMenuItem
@@ -106,7 +104,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 						}}
 					>
 						<span>
-							{t("settings.server.webServer.storage.cleanUnusedVolumes")}
+							Clean unused volumes
 						</span>
 					</DropdownMenuItem>
 
@@ -125,7 +123,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 						}}
 					>
 						<span>
-							{t("settings.server.webServer.storage.cleanStoppedContainers")}
+							Clean stopped containers
 						</span>
 					</DropdownMenuItem>
 
@@ -144,7 +142,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 						}}
 					>
 						<span>
-							{t("settings.server.webServer.storage.cleanDockerBuilder")}
+							Clean Docker Builder & System
 						</span>
 					</DropdownMenuItem>
 					{!serverId && (
@@ -161,7 +159,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 							}}
 						>
 							<span>
-								{t("settings.server.webServer.storage.cleanMonitoring")}
+								Clean Monitoring
 							</span>
 						</DropdownMenuItem>
 					)}
@@ -180,7 +178,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 								});
 						}}
 					>
-						<span>{t("settings.server.webServer.storage.cleanAll")}</span>
+						<span>Clean all</span>
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
 			</DropdownMenuContent>
