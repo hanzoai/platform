@@ -175,9 +175,7 @@ export const ManageTraefikPorts = ({ children, serverId }: Props) => {
 															render={({ field }) => (
 																<FormItem>
 																	<FormLabel className="text-sm font-medium text-muted-foreground">
-																		{t(
-																			"settings.server.webServer.traefik.targetPort",
-																		)}
+																		Target Port
 																	</FormLabel>
 																	<FormControl>
 																		<Input
@@ -206,9 +204,7 @@ export const ManageTraefikPorts = ({ children, serverId }: Props) => {
 															render={({ field }) => (
 																<FormItem>
 																	<FormLabel className="text-sm font-medium text-muted-foreground">
-																		{t(
-																			"settings.server.webServer.traefik.publishedPort",
-																		)}
+																		Published Port
 																	</FormLabel>
 																	<FormControl>
 																		<Input
