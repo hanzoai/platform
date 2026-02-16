@@ -29,9 +29,7 @@ export const WebServer = () => {
 							<ServerIcon className="size-6 text-muted-foreground self-center" />
 							Web Server
 						</CardTitle>
-						<CardDescription>
-							Reload or clean the web server.
-						</CardDescription>
+						<CardDescription>Reload or clean the web server.</CardDescription>
 					</CardHeader>
 					{/* <CardHeader>
 						<CardTitle className="text-xl">

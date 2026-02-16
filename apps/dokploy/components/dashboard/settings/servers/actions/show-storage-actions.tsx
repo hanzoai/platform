@@ -66,9 +66,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent className="w-64" align="start">
-				<DropdownMenuLabel>
-					Actions
-				</DropdownMenuLabel>
+				<DropdownMenuLabel>Actions</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem
@@ -85,9 +83,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 								});
 						}}
 					>
-						<span>
-							Clean unused images
-						</span>
+						<span>Clean unused images</span>
 					</DropdownMenuItem>
 					<DropdownMenuItem
 						className="w-full cursor-pointer"
@@ -103,9 +99,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 								});
 						}}
 					>
-						<span>
-							Clean unused volumes
-						</span>
+						<span>Clean unused volumes</span>
 					</DropdownMenuItem>
 
 					<DropdownMenuItem
@@ -122,9 +116,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 								});
 						}}
 					>
-						<span>
-							Clean stopped containers
-						</span>
+						<span>Clean stopped containers</span>
 					</DropdownMenuItem>
 
 					<DropdownMenuItem
@@ -141,9 +133,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 								});
 						}}
 					>
-						<span>
-							Clean Docker Builder & System
-						</span>
+						<span>Clean Docker Builder & System</span>
 					</DropdownMenuItem>
 					{!serverId && (
 						<DropdownMenuItem
@@ -158,9 +148,7 @@ export const ShowStorageActions = ({ serverId }: Props) => {
 									});
 							}}
 						>
-							<span>
-								Clean Monitoring
-							</span>
+							<span>Clean Monitoring</span>
 						</DropdownMenuItem>
 					)}
 
