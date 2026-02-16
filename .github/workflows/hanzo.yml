@@ -34,7 +34,7 @@ jobs:
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             TAG="latest"
-            VERSION=$(node -p "require('./app/hanzo/package.json').version")
+            VERSION=$(node -p "require('./app/platform/package.json').version")
           elif [ "${{ github.ref }}" = "refs/heads/canary" ]; then
             TAG="canary"
           else
@@ -44,8 +44,8 @@ jobs:
 
       - name: Prepare env file
         run: |
-          cp app/hanzo/.env.production.example .env.production
-          cp app/hanzo/.env.production.example app/hanzo/.env.production
+          cp app/platform/.env.production.example .env.production
+          cp app/platform/.env.production.example app/platform/.env.production
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -73,10 +73,10 @@ jobs:
       - name: Set tag and version
         id: meta
         run: |
-          VERSION=$(node -p "require('./app/hanzo/package.json').version")
+          VERSION=$(node -p "require('./app/platform/package.json').version")
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             TAG="latest"
-            VERSION=$(node -p "require('./app/hanzo/package.json').version")
+            VERSION=$(node -p "require('./app/platform/package.json').version")
           elif [ "${{ github.ref }}" = "refs/heads/canary" ]; then
             TAG="canary"
           else
@@ -86,8 +86,8 @@ jobs:
 
       - name: Prepare env file
         run: |
-          cp app/hanzo/.env.production.example .env.production
-          cp app/hanzo/.env.production.example app/hanzo/.env.production
+          cp app/platform/.env.production.example .env.production
+          cp app/platform/.env.production.example app/platform/.env.production
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -117,7 +117,7 @@ jobs:
       - name: Create and push manifests
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            VERSION=$(node -p "require('./app/hanzo/package.json').version")
+            VERSION=$(node -p "require('./app/platform/package.json').version")
             TAG="latest"
 
             docker buildx imagetools create -t ${IMAGE_NAME}:${TAG} \
@@ -154,7 +154,7 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          VERSION=$(node -p "require('./app/hanzo/package.json').version")
+          VERSION=$(node -p "require('./app/platform/package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Create Release
