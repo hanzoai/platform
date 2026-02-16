@@ -217,15 +217,11 @@ export const WebDomain = () => {
 													>
 														<FormControl>
 															<SelectTrigger>
-																<SelectValue
-																	placeholder="Select a certificate"
-																/>
+																<SelectValue placeholder="Select a certificate" />
 															</SelectTrigger>
 														</FormControl>
 														<SelectContent>
-															<SelectItem value={"none"}>
-																None
-															</SelectItem>
+															<SelectItem value={"none"}>None</SelectItem>
 															<SelectItem value={"letsencrypt"}>
 																Let's Encrypt
 															</SelectItem>
