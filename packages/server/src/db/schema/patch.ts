@@ -1,10 +1,12 @@
 import { relations } from "drizzle-orm";
-import { boolean, pgTable, text, unique } from "drizzle-orm/pg-core";
+import { boolean, pgEnum, pgTable, text, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { applications } from "./application";
 import { compose } from "./compose";
+
+export const patchType = pgEnum("patchType", ["create", "update", "delete"]);
 
 export const patch = pgTable(
 	"patch",
@@ -13,6 +15,7 @@ export const patch = pgTable(
 			.notNull()
 			.primaryKey()
 			.$defaultFn(() => nanoid()),
+		type: patchType("type").notNull().default("update"),
 		filePath: text("filePath").notNull(),
 		enabled: boolean("enabled").notNull().default(true),
 		content: text("content").notNull(),
