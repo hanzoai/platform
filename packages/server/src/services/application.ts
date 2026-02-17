@@ -44,10 +44,7 @@ import {
 	issueCommentExists,
 	updateIssueComment,
 } from "./github";
-import {
-	findPatchesByApplicationId,
-	generateApplyPatchesCommand,
-} from "./patch";
+import { generateApplyPatchesCommand } from "./patch";
 import {
 	findPreviewDeploymentById,
 	updatePreviewDeployment,
@@ -206,20 +203,12 @@ export const deployApplication = async ({
 			command += await buildRemoteDocker(application);
 		}
 
-		// Apply patches after cloning (for non-docker sources only)
 		if (application.sourceType !== "docker") {
-			const patches = await findPatchesByApplicationId(
-				application.applicationId,
-			);
-			const enabledPatches = patches.filter((p) => p.enabled);
-			if (enabledPatches.length > 0) {
-				command += generateApplyPatchesCommand({
-					appName: application.appName,
-					type: "application",
-					serverId,
-					patches: enabledPatches,
-				});
-			}
+			command += await generateApplyPatchesCommand({
+				id: application.applicationId,
+				type: "application",
+				serverId,
+			});
 		}
 
 		command += await getBuildCommand(application);
