@@ -76,7 +76,7 @@ echo "Repository cloned successfully";
 			});
 		}
 	} else {
-	// Repo exists - check if on correct branch and update
+		// Repo exists - check if on correct branch and update
 		const updateCommand = `
 set -e;
 cd "${repoPath}";
@@ -161,7 +161,7 @@ export const readPatchRepoDirectory = async (
 		for (let i = 0; i < parts.length; i++) {
 			const part = parts[i];
 			if (!part) continue;
-			
+
 			const isFile = i === parts.length - 1;
 			const parentPath = currentPath;
 			currentPath = currentPath ? `${currentPath}/${part}` : part;
@@ -295,7 +295,9 @@ rm -rf "${tempDir}";
 /**
  * Clean all patch repos
  */
-export const cleanPatchRepos = async (serverId?: string | null): Promise<void> => {
+export const cleanPatchRepos = async (
+	serverId?: string | null,
+): Promise<void> => {
 	const { PATCH_REPOS_PATH } = paths(!!serverId);
 
 	const command = `rm -rf "${PATCH_REPOS_PATH}"/* 2>/dev/null || true`;
