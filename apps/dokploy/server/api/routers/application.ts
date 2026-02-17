@@ -1,7 +1,7 @@
 import {
 	addNewService,
 	checkServiceAccess,
-	clearOldDeploymentsByApplicationId,
+	clearOldDeployments,
 	createApplication,
 	deleteAllMiddlewares,
 	findApplicationById,
@@ -761,9 +761,7 @@ export const applicationRouter = createTRPCRouter({
 						"You are not authorized to clear deployments for this application",
 				});
 			}
-			const result = await clearOldDeploymentsByApplicationId(
-				input.applicationId,
-			);
+			const result = await clearOldDeployments(input.applicationId);
 			return {
 				success: true,
 				message: `${result.deletedCount} old deployments cleared successfully`,
