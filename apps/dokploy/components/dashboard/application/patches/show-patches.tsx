@@ -84,7 +84,7 @@ export const ShowPatches = ({ id, type }: Props) => {
 
 	return (
 		<Card className="bg-background">
-				<CardHeader className="flex flex-row items-center justify-between">
+			<CardHeader className="flex flex-row items-center justify-between">
 				<div>
 					<CardTitle>Patches</CardTitle>
 					<CardDescription>
@@ -185,8 +185,7 @@ export const ShowPatches = ({ id, type }: Props) => {
 									</TableCell>
 									<TableCell>
 										<div className="flex items-center gap-1">
-											{(patch.type === "update" ||
-												patch.type === "create") && (
+											{(patch.type === "update" || patch.type === "create") && (
 												<EditPatchDialog
 													patchId={patch.patchId}
 													entityId={id}
