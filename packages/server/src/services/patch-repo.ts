@@ -144,107 +144,39 @@ export const readPatchRepoDirectory = async (
 	return root;
 };
 
-interface ReadFileResult {
-	content: string;
-	patchError?: boolean;
-	patchErrorMessage?: string;
-}
-
-/**
- * Read file content from patch repo, optionally with patch applied
- */
 export const readPatchRepoFile = async (
-	repoPath: string,
+	id: string,
+	type: "application" | "compose",
 	filePath: string,
-	patchContent?: string,
-	serverId?: string | null,
-): Promise<ReadFileResult> => {
+) => {
+	let serverId: string | null = null;
+
+	if (type === "application") {
+		const application = await findApplicationById(id);
+		serverId = application.buildServerId || application.serverId;
+	} else {
+		const compose = await findComposeById(id);
+		serverId = compose.serverId;
+	}
+	const { PATCH_REPOS_PATH } = paths(!!serverId);
+
+	const application =
+		type === "application"
+			? await findApplicationById(id)
+			: await findComposeById(id);
+
+	const repoPath = join(PATCH_REPOS_PATH, type, application.appName);
 	const fullPath = join(repoPath, filePath);
 
-	// Read original file
-	const command = `cat "${fullPath}" 2>/dev/null || echo "__FILE_NOT_FOUND__"`;
+	const command = `cat "${fullPath}"`;
 
-	let content: string;
-	try {
-		if (serverId) {
-			const result = await execAsyncRemote(serverId, command);
-			content = result.stdout;
-		} else {
-			const result = await execAsync(command);
-			content = result.stdout;
-		}
-	} catch (error) {
-		throw new TRPCError({
-			code: "NOT_FOUND",
-			message: `File not found: ${filePath}`,
-		});
+	if (serverId) {
+		const result = await execAsyncRemote(serverId, command);
+		return result.stdout;
 	}
 
-	if (content.trim() === "__FILE_NOT_FOUND__") {
-		throw new TRPCError({
-			code: "NOT_FOUND",
-			message: `File not found: ${filePath}`,
-		});
-	}
-
-	// If no patch, return original content
-	if (!patchContent) {
-		return { content };
-	}
-
-	// Try to apply patch
-	const tempDir = `/tmp/patch_apply_${Date.now()}`;
-	const encodedContent = Buffer.from(content).toString("base64");
-	const encodedPatch = Buffer.from(patchContent).toString("base64");
-
-	// We need to recreate the file structure for git apply to work
-	// git diff usually uses paths relative to repo root
-	const applyCommand = `
-set -e;
-mkdir -p "${tempDir}";
-cd "${tempDir}";
-git init -q;
-# Create file with correct path
-mkdir -p "$(dirname "${filePath}")";
-echo "${encodedContent}" | base64 -d > "${filePath}";
-# Save patch
-echo "${encodedPatch}" | base64 -d > "patch.diff";
-# Apply patch
-git apply --ignore-space-change --ignore-whitespace patch.diff;
-# Read result
-cat "${filePath}";
-rm -rf "${tempDir}";
-`;
-
-	try {
-		let patchedContent: string;
-		if (serverId) {
-			const result = await execAsyncRemote(serverId, applyCommand);
-			patchedContent = result.stdout;
-		} else {
-			const result = await execAsync(applyCommand);
-			patchedContent = result.stdout;
-		}
-		return { content: patchedContent };
-	} catch (error) {
-		// Patch failed - return original content with error
-		const cleanupCommand = `rm -rf "${tempDir}" 2>/dev/null || true`;
-		try {
-			if (serverId) {
-				await execAsyncRemote(serverId, cleanupCommand);
-			} else {
-				await execAsync(cleanupCommand);
-			}
-		} catch {
-			// Ignore cleanup errors
-		}
-
-		return {
-			content,
-			patchError: true,
-			patchErrorMessage: `Failed to apply patch: ${error}`,
-		};
-	}
+	const result = await execAsync(command);
+	return result.stdout;
 };
 
 /**

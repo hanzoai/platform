@@ -56,16 +56,10 @@ export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 			{
 				id,
 				type,
-				repoPath,
 				filePath: selectedFile || "",
 			},
 			{
 				enabled: !!selectedFile,
-				onSuccess: (data) => {
-					if (data.patchError) {
-						toast.error(data.patchErrorMessage || "Failed to apply patch");
-					}
-				},
 			},
 		);
 
@@ -90,7 +84,6 @@ export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 		saveAsPatch({
 			id,
 			type,
-			repoPath,
 			filePath: selectedFile,
 			content: fileContent,
 		})
@@ -213,7 +206,7 @@ export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 							</div>
 						) : selectedFile ? (
 							<CodeEditor
-								value={fileData?.content || ""}
+								value={fileData || ""}
 								onChange={(value) => setFileContent(value || "")}
 								className="h-full w-full"
 								wrapperClassName="h-full"
