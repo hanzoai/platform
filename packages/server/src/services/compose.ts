@@ -40,10 +40,7 @@ import {
 	updateDeployment,
 	updateDeploymentStatus,
 } from "./deployment";
-import {
-	findPatchesByComposeId,
-	generateApplyPatchesCommand,
-} from "./patch";
+import { findPatchesByComposeId, generateApplyPatchesCommand } from "./patch";
 import { validUniqueServerAppName } from "./project";
 
 export type Compose = typeof compose.$inferSelect;
@@ -255,7 +252,7 @@ export const deployCompose = async ({
 		// Apply patches after cloning (for non-raw sources only)
 		if (compose.sourceType !== "raw") {
 			const patches = await findPatchesByComposeId(compose.composeId);
-			const enabledPatches = patches.filter(p => p.enabled);
+			const enabledPatches = patches.filter((p) => p.enabled);
 			if (enabledPatches.length > 0) {
 				const patchCommand = generateApplyPatchesCommand({
 					appName: compose.appName,
