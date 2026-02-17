@@ -17,9 +17,9 @@ import { ShowVolumes } from "@/components/dashboard/application/advanced/volumes
 import { ShowDeployments } from "@/components/dashboard/application/deployments/show-deployments";
 import { ShowDomains } from "@/components/dashboard/application/domains/show-domains";
 import { ShowEnvironment } from "@/components/dashboard/application/environment/show-enviroment";
+import { ShowPatches } from "@/components/dashboard/application/patches/show-patches";
 import { ShowSchedules } from "@/components/dashboard/application/schedules/show-schedules";
 import { ShowVolumeBackups } from "@/components/dashboard/application/volume-backups/show-volume-backups";
-import { ShowPatches } from "@/components/dashboard/application/patches/show-patches";
 import { AddCommandCompose } from "@/components/dashboard/compose/advanced/add-command";
 import { IsolatedDeploymentTab } from "@/components/dashboard/compose/advanced/add-isolation";
 import { DeleteService } from "@/components/dashboard/compose/delete-service";
@@ -367,7 +367,7 @@ const Service = (
 
 									<TabsContent value="patches" className="w-full">
 										<div className="flex flex-col gap-4 pt-2.5">
-											<ShowPatches composeId={composeId} />
+											<ShowPatches id={composeId} type="compose" />
 										</div>
 									</TabsContent>
 

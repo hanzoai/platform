@@ -6,10 +6,10 @@ import {
 	ensurePatchRepo,
 	findApplicationById,
 	findComposeById,
+	findPatchByFilePath,
 	findPatchById,
 	findPatchesByApplicationId,
 	findPatchesByComposeId,
-	findPatchByFilePath,
 	generatePatch,
 	readPatchRepoDirectory,
 	readPatchRepoFile,
@@ -218,13 +218,13 @@ export const patchRouter = createTRPCRouter({
 	ensureRepo: protectedProcedure
 		.input(
 			z.object({
-				applicationId: z.string().optional(),
-				composeId: z.string().optional(),
+				id: z.string(),
+				type: z.enum(["application", "compose"]),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
-			if (input.applicationId) {
-				const app = await findApplicationById(input.applicationId);
+			if (input.type === "application") {
+				const app = await findApplicationById(input.id);
 				if (
 					app.environment.project.organizationId !==
 					ctx.session.activeOrganizationId
@@ -253,8 +253,8 @@ export const patchRouter = createTRPCRouter({
 				});
 			}
 
-			if (input.composeId) {
-				const compose = await findComposeById(input.composeId);
+			if (input.type === "compose") {
+				const compose = await findComposeById(input.id);
 				if (
 					compose.environment.project.organizationId !==
 					ctx.session.activeOrganizationId
@@ -285,21 +285,21 @@ export const patchRouter = createTRPCRouter({
 
 			throw new TRPCError({
 				code: "BAD_REQUEST",
-				message: "Either applicationId or composeId must be provided",
+				message: "Either application or compose must be provided",
 			});
 		}),
 
 	readRepoDirectories: protectedProcedure
 		.input(
 			z.object({
-				applicationId: z.string().optional(),
-				composeId: z.string().optional(),
+				id: z.string(),
+				type: z.enum(["application", "compose"]),
 				repoPath: z.string(),
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			if (input.applicationId) {
-				const app = await findApplicationById(input.applicationId);
+			if (input.type === "application") {
+				const app = await findApplicationById(input.id);
 				if (
 					app.environment.project.organizationId !==
 					ctx.session.activeOrganizationId
@@ -312,8 +312,8 @@ export const patchRouter = createTRPCRouter({
 				return await readPatchRepoDirectory(input.repoPath, app.serverId);
 			}
 
-			if (input.composeId) {
-				const compose = await findComposeById(input.composeId);
+			if (input.type === "compose") {
+				const compose = await findComposeById(input.id);
 				if (
 					compose.environment.project.organizationId !==
 					ctx.session.activeOrganizationId
@@ -328,15 +328,15 @@ export const patchRouter = createTRPCRouter({
 
 			throw new TRPCError({
 				code: "BAD_REQUEST",
-				message: "Either applicationId or composeId must be provided",
+				message: "Either application or compose must be provided",
 			});
 		}),
 
 	readRepoFile: protectedProcedure
 		.input(
 			z.object({
-				applicationId: z.string().optional(),
-				composeId: z.string().optional(),
+				id: z.string(),
+				type: z.enum(["application", "compose"]),
 				repoPath: z.string(),
 				filePath: z.string(),
 			}),
@@ -345,8 +345,8 @@ export const patchRouter = createTRPCRouter({
 			let serverId: string | null = null;
 			let patchContent: string | undefined;
 
-			if (input.applicationId) {
-				const app = await findApplicationById(input.applicationId);
+			if (input.type === "application") {
+				const app = await findApplicationById(input.id);
 				if (
 					app.environment.project.organizationId !==
 					ctx.session.activeOrganizationId
@@ -361,14 +361,14 @@ export const patchRouter = createTRPCRouter({
 				// Check if patch exists for this file
 				const existingPatch = await findPatchByFilePath(
 					input.filePath,
-					input.applicationId,
+					input.id,
 					undefined,
 				);
 				if (existingPatch?.enabled) {
 					patchContent = existingPatch.content;
 				}
-			} else if (input.composeId) {
-				const compose = await findComposeById(input.composeId);
+			} else if (input.type === "compose") {
+				const compose = await findComposeById(input.id);
 				if (
 					compose.environment.project.organizationId !==
 					ctx.session.activeOrganizationId
@@ -384,7 +384,7 @@ export const patchRouter = createTRPCRouter({
 				const existingPatch = await findPatchByFilePath(
 					input.filePath,
 					undefined,
-					input.composeId,
+					input.id,
 				);
 				if (existingPatch?.enabled) {
 					patchContent = existingPatch.content;
@@ -407,8 +407,8 @@ export const patchRouter = createTRPCRouter({
 	saveFileAsPatch: protectedProcedure
 		.input(
 			z.object({
-				applicationId: z.string().optional(),
-				composeId: z.string().optional(),
+				id: z.string(),
+				type: z.enum(["application", "compose"]),
 				repoPath: z.string(),
 				filePath: z.string(),
 				content: z.string(),
@@ -417,8 +417,8 @@ export const patchRouter = createTRPCRouter({
 		.mutation(async ({ input, ctx }) => {
 			let serverId: string | null = null;
 
-			if (input.applicationId) {
-				const app = await findApplicationById(input.applicationId);
+			if (input.type === "application") {
+				const app = await findApplicationById(input.id);
 				if (
 					app.environment.project.organizationId !==
 					ctx.session.activeOrganizationId
@@ -429,8 +429,8 @@ export const patchRouter = createTRPCRouter({
 					});
 				}
 				serverId = app.serverId;
-			} else if (input.composeId) {
-				const compose = await findComposeById(input.composeId);
+			} else if (input.type === "compose") {
+				const compose = await findComposeById(input.id);
 				if (
 					compose.environment.project.organizationId !==
 					ctx.session.activeOrganizationId
@@ -444,7 +444,7 @@ export const patchRouter = createTRPCRouter({
 			} else {
 				throw new TRPCError({
 					code: "BAD_REQUEST",
-					message: "Either applicationId or composeId must be provided",
+					message: "Either application or compose must be provided",
 				});
 			}
 
@@ -460,8 +460,8 @@ export const patchRouter = createTRPCRouter({
 				// No changes - remove existing patch if any
 				const existingPatch = await findPatchByFilePath(
 					input.filePath,
-					input.applicationId,
-					input.composeId,
+					input.id,
+					input.id,
 				);
 				if (existingPatch) {
 					await deletePatch(existingPatch.patchId);
@@ -472,8 +472,8 @@ export const patchRouter = createTRPCRouter({
 			// Check if patch exists
 			const existingPatch = await findPatchByFilePath(
 				input.filePath,
-				input.applicationId,
-				input.composeId,
+				input.id,
+				input.id,
 			);
 
 			if (existingPatch) {
@@ -487,8 +487,8 @@ export const patchRouter = createTRPCRouter({
 				filePath: input.filePath,
 				content: patchContent,
 				enabled: true,
-				applicationId: input.applicationId,
-				composeId: input.composeId,
+				applicationId: input.id,
+				composeId: input.id,
 			});
 
 			return { deleted: false, patchId: newPatch.patchId };
