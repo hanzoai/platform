@@ -2,7 +2,7 @@ import {
 	addDomainToCompose,
 	addNewService,
 	checkServiceAccess,
-	clearOldDeploymentsByComposeId,
+	clearOldDeployments,
 	cloneCompose,
 	createCommand,
 	createCompose,
@@ -278,7 +278,7 @@ export const composeRouter = createTRPCRouter({
 						"You are not authorized to clear deployments for this compose",
 				});
 			}
-			const result = await clearOldDeploymentsByComposeId(input.composeId);
+			const result = await clearOldDeployments(input.composeId, "compose");
 			return {
 				success: true,
 				message: `${result.deletedCount} old deployments cleared successfully`,
