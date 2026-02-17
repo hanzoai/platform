@@ -11,8 +11,6 @@ import { and, eq, isNotNull } from "drizzle-orm";
 
 export type Patch = typeof patch.$inferSelect;
 
-// CRUD Operations
-
 export const createPatch = async (input: typeof apiCreatePatch._type) => {
 	if (!input.applicationId && !input.composeId) {
 		throw new TRPCError({
@@ -25,9 +23,8 @@ export const createPatch = async (input: typeof apiCreatePatch._type) => {
 		.insert(patch)
 		.values({
 			...input,
-			content: input.content.endsWith("\n")
-				? input.content
-				: `${input.content}\n`,
+			content: input.content,
+			enabled: true,
 		})
 		.returning()
 		.then((value) => value[0]);
@@ -185,97 +182,5 @@ export const applyPatches = async ({
 		await execAsyncRemote(serverId, command);
 	} else {
 		await execAsync(command);
-	}
-};
-
-interface GeneratePatchOptions {
-	codePath: string;
-	filePath: string;
-	newContent: string;
-	serverId?: string | null;
-}
-
-/**
- * Generate a patch from modified file content using git diff
- */
-export const generatePatch = async ({
-	codePath,
-	filePath,
-	newContent,
-	serverId,
-}: GeneratePatchOptions): Promise<string> => {
-	const fullPath = join(codePath, filePath);
-
-	// Write new content to the file
-	const encodedContent = Buffer.from(newContent).toString("base64");
-	const writeCommand = `echo "${encodedContent}" | base64 -d > "${fullPath}"`;
-
-	if (serverId) {
-		await execAsyncRemote(serverId, writeCommand);
-	} else {
-		await execAsync(writeCommand);
-	}
-
-	// Generate diff
-	const diffCommand = `cd "${codePath}" && git diff -- "${filePath}"`;
-
-	let diffResult: string;
-	if (serverId) {
-		const result = await execAsyncRemote(serverId, diffCommand);
-		diffResult = result.stdout;
-	} else {
-		const result = await execAsync(diffCommand);
-		diffResult = result.stdout;
-	}
-
-	// Reset the file to original state
-	const resetCommand = `cd "${codePath}" && git checkout -- "${filePath}"`;
-	if (serverId) {
-		await execAsyncRemote(serverId, resetCommand);
-	} else {
-		await execAsync(resetCommand);
-	}
-
-	return diffResult;
-};
-
-interface ApplyPatchToContentOptions {
-	originalContent: string;
-	patchContent: string;
-}
-
-/**
- * Apply a patch to content in memory (for preview purposes)
- * Returns the patched content or throws an error if patch fails
- */
-export const applyPatchToContent = async ({
-	originalContent,
-	patchContent,
-}: ApplyPatchToContentOptions): Promise<string> => {
-	// Create temp files and apply patch
-	const tempDir = "/tmp/patch_preview_" + Date.now();
-	const tempFile = `${tempDir}/file`;
-	const patchFile = `${tempDir}/patch.diff`;
-
-	const encodedOriginal = Buffer.from(originalContent).toString("base64");
-	const encodedPatch = Buffer.from(patchContent).toString("base64");
-
-	const command = `
-mkdir -p "${tempDir}";
-echo "${encodedOriginal}" | base64 -d > "${tempFile}";
-echo "${encodedPatch}" | base64 -d > "${patchFile}";
-cd "${tempDir}" && patch -p0 < "${patchFile}" 2>/dev/null;
-cat "${tempFile}";
-rm -rf "${tempDir}";
-`;
-
-	try {
-		const result = await execAsync(command);
-		return result.stdout;
-	} catch {
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message: "Failed to apply patch to content",
-		});
 	}
 };
