@@ -19,7 +19,7 @@ import {
 } from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
-import { and, desc, eq, or } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import {
 	type Application,
 	findApplicationById,
@@ -853,23 +853,17 @@ export const findAllDeploymentsByServerId = async (serverId: string) => {
 };
 
 export const clearOldDeployments = async (
-	id: string,
-	type: "application" | "compose" = "application",
+	appName: string,
+	serverId: string | null,
 ) => {
-	// Get all deployments ordered by creation date (newest first)
-	const deploymentsList = await db.query.deployments.findMany({
-		where: and(
-			eq(deployments[`${type}Id`], id),
-			or(eq(deployments.status, "done"), eq(deployments.status, "error")),
-		),
-		orderBy: desc(deployments.createdAt),
-	});
-
-	for (const deployment of deploymentsList) {
-		await removeDeployment(deployment.deploymentId);
+	const { LOGS_PATH } = paths(!!serverId);
+	const folder = path.join(LOGS_PATH, appName);
+	const command = `
+		rm -rf ${folder};
+	`;
+	if (serverId) {
+		await execAsyncRemote(serverId, command);
+	} else {
+		await execAsync(command);
 	}
-
-	return {
-		deletedCount: deploymentsList.length,
-	};
 };
