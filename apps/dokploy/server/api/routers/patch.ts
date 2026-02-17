@@ -51,8 +51,8 @@ const getApplicationGitConfig = (
 			};
 		case "gitea":
 			return {
-				gitUrl: app.gitea?.gitUrl
-					? `${app.gitea.gitUrl}/${app.giteaOwner}/${app.giteaRepository}.git`
+				gitUrl: app.gitea?.giteaUrl
+					? `${app.gitea.giteaUrl}/${app.giteaOwner}/${app.giteaRepository}.git`
 					: "",
 				gitBranch: app.giteaBranch || "main",
 				sshKeyId: null,
@@ -93,8 +93,8 @@ const getComposeGitConfig = (
 			};
 		case "gitea":
 			return {
-				gitUrl: compose.gitea?.gitUrl
-					? `${compose.gitea.gitUrl}/${compose.giteaOwner}/${compose.giteaRepository}.git`
+				gitUrl: compose.gitea?.giteaUrl
+					? `${compose.gitea.giteaUrl}/${compose.giteaOwner}/${compose.giteaRepository}.git`
 					: "",
 				gitBranch: compose.giteaBranch || "main",
 				sshKeyId: null,
@@ -343,7 +343,6 @@ export const patchRouter = createTRPCRouter({
 		)
 		.query(async ({ input, ctx }) => {
 			let serverId: string | null = null;
-			let patchContent: string | undefined;
 
 			if (input.type === "application") {
 				const app = await findApplicationById(input.id);
@@ -357,16 +356,6 @@ export const patchRouter = createTRPCRouter({
 					});
 				}
 				serverId = app.serverId;
-
-				// Check if patch exists for this file
-				const existingPatch = await findPatchByFilePath(
-					input.filePath,
-					input.id,
-					undefined,
-				);
-				if (existingPatch?.enabled) {
-					patchContent = existingPatch.content;
-				}
 			} else if (input.type === "compose") {
 				const compose = await findComposeById(input.id);
 				if (
@@ -379,27 +368,22 @@ export const patchRouter = createTRPCRouter({
 					});
 				}
 				serverId = compose.serverId;
-
-				// Check if patch exists for this file
-				const existingPatch = await findPatchByFilePath(
-					input.filePath,
-					undefined,
-					input.id,
-				);
-				if (existingPatch?.enabled) {
-					patchContent = existingPatch.content;
-				}
 			} else {
 				throw new TRPCError({
 					code: "BAD_REQUEST",
 					message: "Either applicationId or composeId must be provided",
 				});
 			}
+			const existingPatch = await findPatchByFilePath(
+				input.filePath,
+				input.id,
+				input.type,
+			);
 
 			return await readPatchRepoFile(
 				input.repoPath,
 				input.filePath,
-				patchContent,
+				existingPatch?.enabled ? existingPatch?.content : undefined,
 				serverId,
 			);
 		}),
@@ -461,7 +445,7 @@ export const patchRouter = createTRPCRouter({
 				const existingPatch = await findPatchByFilePath(
 					input.filePath,
 					input.id,
-					input.id,
+					input.type,
 				);
 				if (existingPatch) {
 					await deletePatch(existingPatch.patchId);
@@ -473,22 +457,20 @@ export const patchRouter = createTRPCRouter({
 			const existingPatch = await findPatchByFilePath(
 				input.filePath,
 				input.id,
-				input.id,
+				input.type,
 			);
 
 			if (existingPatch) {
-				// Update existing patch
 				await updatePatch(existingPatch.patchId, { content: patchContent });
 				return { deleted: false, patchId: existingPatch.patchId };
 			}
 
-			// Create new patch
 			const newPatch = await createPatch({
 				filePath: input.filePath,
 				content: patchContent,
 				enabled: true,
-				applicationId: input.id,
-				composeId: input.id,
+				applicationId: input.type === "application" ? input.id : undefined,
+				composeId: input.type === "compose" ? input.id : undefined,
 			});
 
 			return { deleted: false, patchId: newPatch.patchId };
