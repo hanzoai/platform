@@ -1,15 +1,6 @@
-import {
-	AlertCircle,
-	ChevronRight,
-	File,
-	Folder,
-	Loader2,
-	Power,
-	Trash2,
-} from "lucide-react";
+import { File, FilePlus2, Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -28,121 +19,80 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/utils/api";
-import type { RouterOutputs } from "@/utils/api";
 import { PatchEditor } from "./patch-editor";
 
 interface Props {
-	applicationId?: string;
-	composeId?: string;
+	id: string;
+	type: "application" | "compose";
 }
 
-type Patch = RouterOutputs["patch"]["byApplicationId"][number];
-
-export const ShowPatches = ({ applicationId, composeId }: Props) => {
+export const ShowPatches = ({ id, type }: Props) => {
 	const [selectedFile, setSelectedFile] = useState<string | null>(null);
 	const [repoPath, setRepoPath] = useState<string | null>(null);
 	const [isLoadingRepo, setIsLoadingRepo] = useState(false);
 
 	const utils = api.useUtils();
 
-	// Fetch patches
-	// Fetch patches
-	const { data: appPatches, isLoading: isAppPatchesLoading } =
-		api.patch.byApplicationId.useQuery(
-			{ applicationId: applicationId! },
-			{ enabled: !!applicationId },
-		);
+	const queryMap = {
+		application: () =>
+			api.patch.byApplicationId.useQuery(
+				{ applicationId: id },
+				{ enabled: !!id },
+			),
+		compose: () =>
+			api.patch.byComposeId.useQuery({ composeId: id }, { enabled: !!id }),
+	};
 
-	const { data: composePatches, isLoading: isComposePatchesLoading } =
-		api.patch.byComposeId.useQuery(
-			{ composeId: composeId! },
-			{ enabled: !!composeId },
-		);
+	const { data: patches, isLoading: isPatchesLoading } = queryMap[type]
+		? queryMap[type]()
+		: api.patch.byApplicationId.useQuery(
+				{ applicationId: id },
+				{ enabled: !!id },
+			);
 
-	const patches = applicationId ? appPatches : composePatches;
-	const isPatchesLoading = applicationId
-		? isAppPatchesLoading
-		: isComposePatchesLoading;
-
-	// Mutations
-	const deletePatch = api.patch.delete.useMutation({
-		onSuccess: () => {
-			toast.success("Patch deleted");
-			if (applicationId) {
-				utils.patch.byApplicationId.invalidate({ applicationId });
-			} else if (composeId) {
-				utils.patch.byComposeId.invalidate({ composeId });
-			}
-		},
-		onError: () => {
-			toast.error("Failed to delete patch");
-		},
-	});
-
-	const togglePatch = api.patch.toggleEnabled.useMutation({
-		onSuccess: () => {
-			toast.success("Patch updated");
-			if (applicationId) {
-				utils.patch.byApplicationId.invalidate({ applicationId });
-			} else if (composeId) {
-				utils.patch.byComposeId.invalidate({ composeId });
-			}
-		},
-		onError: () => {
-			toast.error("Failed to update patch");
-		},
-	});
+	const mutationMap = {
+		application: () => api.patch.delete.useMutation(),
+		compose: () => api.patch.delete.useMutation(),
+	};
 
 	const ensureRepo = api.patch.ensureRepo.useMutation();
 
-	const handleOpenEditor = async () => {
-		setIsLoadingRepo(true);
-		const toastId = toast.loading("Syncing repository...");
-		ensureRepo.mutate(
-			{ applicationId, composeId },
-			{
-				onSuccess: (path) => {
-					setRepoPath(path);
-					setIsLoadingRepo(false);
-					toast.dismiss(toastId);
-				},
-				onError: () => {
-					setIsLoadingRepo(false);
-					toast.dismiss(toastId);
-					toast.error("Failed to load repository");
-				},
-			},
-		);
-	};
+	const togglePatch = api.patch.toggleEnabled.useMutation();
 
-	const handleDeletePatch = (patchId: string) => {
-		deletePatch.mutate({ patchId });
-	};
-
-	const handleTogglePatch = (patchId: string, enabled: boolean) => {
-		togglePatch.mutate({ patchId, enabled });
-	};
+	const { mutateAsync } = mutationMap[type]
+		? mutationMap[type]()
+		: api.patch.delete.useMutation();
 
 	const handleCloseEditor = () => {
 		setSelectedFile(null);
 		setRepoPath(null);
-		if (applicationId) {
-			utils.patch.byApplicationId.invalidate({ applicationId });
-		} else if (composeId) {
-			utils.patch.byComposeId.invalidate({ composeId });
-		}
 	};
 
 	if (repoPath) {
 		return (
 			<PatchEditor
-				applicationId={applicationId}
-				composeId={composeId}
-				repoPath={repoPath}
+				id={id}
+				type={type}
+				repoPath={repoPath || ""}
 				onClose={handleCloseEditor}
 			/>
 		);
 	}
+
+	const handleOpenEditor = async () => {
+		setIsLoadingRepo(true);
+		await ensureRepo
+			.mutateAsync({ id, type })
+			.then((result) => {
+				setRepoPath(result);
+			})
+			.catch((err) => {
+				toast.error(err.message);
+			})
+			.finally(() => {
+				setIsLoadingRepo(false);
+			});
+	};
 
 	return (
 		<Card className="bg-background">
@@ -154,25 +104,39 @@ export const ShowPatches = ({ applicationId, composeId }: Props) => {
 						applied after cloning the repository and before building.
 					</CardDescription>
 				</div>
-				<Button onClick={handleOpenEditor} disabled={isLoadingRepo}>
-					{isLoadingRepo && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-					Create Patch
-				</Button>
+				{patches && patches?.length > 0 && (
+					<Button onClick={handleOpenEditor} disabled={isLoadingRepo}>
+						{isLoadingRepo && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+						<FilePlus2 className="mr-2 h-4 w-4" />
+						Create Patch
+					</Button>
+				)}
 			</CardHeader>
 			<CardContent>
 				{isPatchesLoading ? (
 					<div className="flex items-center justify-center py-8">
 						<Loader2 className="h-6 w-6 animate-spin" />
 					</div>
-				) : !patches || patches.length === 0 ? (
-					<Alert>
-						<AlertCircle className="h-4 w-4" />
-						<AlertTitle>No patches</AlertTitle>
-						<AlertDescription>
-							No patches have been created for this application yet. Click
-							"Create Patch" to add modifications to your code during build.
-						</AlertDescription>
-					</Alert>
+				) : patches?.length === 0 ? (
+					<div className="flex min-h-[40vh] w-full flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-8">
+						<div className="rounded-full bg-muted p-4">
+							<FilePlus2 className="h-10 w-10 text-muted-foreground" />
+						</div>
+						<div className="space-y-1 text-center">
+							<p className="text-sm font-medium">No patches yet</p>
+							<p className="max-w-sm text-sm text-muted-foreground">
+								Add file patches to modify your repo before each build—configs,
+								env, or code. Create your first patch to get started.
+							</p>
+						</div>
+						<Button onClick={handleOpenEditor} disabled={isLoadingRepo}>
+							{isLoadingRepo && (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							)}
+							<FilePlus2 className="mr-2 h-4 w-4" />
+							Create Patch
+						</Button>
+					</div>
 				) : (
 					<Table>
 						<TableHeader>
@@ -183,7 +147,7 @@ export const ShowPatches = ({ applicationId, composeId }: Props) => {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{patches.map((patch: Patch) => (
+							{patches?.map((patch) => (
 								<TableRow key={patch.patchId}>
 									<TableCell className="font-mono text-sm">
 										<div className="flex items-center gap-2">
@@ -194,16 +158,49 @@ export const ShowPatches = ({ applicationId, composeId }: Props) => {
 									<TableCell>
 										<Switch
 											checked={patch.enabled}
-											onCheckedChange={(checked) =>
-												handleTogglePatch(patch.patchId, checked)
-											}
+											onCheckedChange={(checked) => {
+												togglePatch
+													.mutateAsync({
+														patchId: patch.patchId,
+														enabled: checked,
+													})
+													.then(() => {
+														toast.success("Patch updated");
+														utils.patch.byApplicationId.invalidate({
+															applicationId: id,
+														});
+														utils.patch.byComposeId.invalidate({
+															composeId: id,
+														});
+													})
+													.catch((err) => {
+														toast.error(err.message);
+													})
+													.finally(() => {
+														setIsLoadingRepo(false);
+													});
+											}}
 										/>
 									</TableCell>
 									<TableCell>
 										<Button
 											variant="ghost"
 											size="icon"
-											onClick={() => handleDeletePatch(patch.patchId)}
+											onClick={() => {
+												mutateAsync({ patchId: patch.patchId })
+													.then(() => {
+														toast.success("Patch deleted");
+														utils.patch.byApplicationId.invalidate({
+															applicationId: id,
+														});
+														utils.patch.byComposeId.invalidate({
+															composeId: id,
+														});
+													})
+													.catch((err) => {
+														toast.error(err.message);
+													});
+											}}
 										>
 											<Trash2 className="h-4 w-4 text-destructive" />
 										</Button>
