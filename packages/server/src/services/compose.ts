@@ -40,7 +40,7 @@ import {
 	updateDeployment,
 	updateDeploymentStatus,
 } from "./deployment";
-import { findPatchesByComposeId, generateApplyPatchesCommand } from "./patch";
+import { generateApplyPatchesCommand } from "./patch";
 import { validUniqueServerAppName } from "./project";
 
 export type Compose = typeof compose.$inferSelect;
@@ -249,24 +249,12 @@ export const deployCompose = async ({
 			await execAsync(commandWithLog);
 		}
 
-		// Apply patches after cloning (for non-raw sources only)
 		if (compose.sourceType !== "raw") {
-			const patches = await findPatchesByComposeId(compose.composeId);
-			const enabledPatches = patches.filter((p) => p.enabled);
-			if (enabledPatches.length > 0) {
-				const patchCommand = generateApplyPatchesCommand({
-					appName: compose.appName,
-					type: "compose",
-					serverId: compose.serverId,
-					patches: enabledPatches,
-				});
-				const patchCommandWithLog = `(${patchCommand}) >> ${deployment.logPath} 2>&1`;
-				if (compose.serverId) {
-					await execAsyncRemote(compose.serverId, patchCommandWithLog);
-				} else {
-					await execAsync(patchCommandWithLog);
-				}
-			}
+			command += await generateApplyPatchesCommand({
+				id: compose.composeId,
+				type: "compose",
+				serverId: compose.serverId,
+			});
 		}
 
 		command = "set -e;";
