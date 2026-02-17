@@ -248,7 +248,7 @@ export const deployCompose = async ({
 		} else {
 			await execAsync(commandWithLog);
 		}
-
+		command = "set -e;";
 		if (compose.sourceType !== "raw") {
 			command += await generateApplyPatchesCommand({
 				id: compose.composeId,
@@ -257,7 +257,6 @@ export const deployCompose = async ({
 			});
 		}
 
-		command = "set -e;";
 		command += await getBuildComposeCommand(entity);
 		commandWithLog = `(${command}) >> ${deployment.logPath} 2>&1`;
 		if (compose.serverId) {

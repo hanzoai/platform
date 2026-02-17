@@ -146,7 +146,6 @@ export const generateApplyPatchesCommand = async ({
 	const codePath = join(basePath, entity.appName, "code");
 
 	const resultPatches = await findPatchesByEntityId(id, type);
-
 	const patches = resultPatches.filter((p) => p.enabled);
 
 	let command = `echo "Applying ${patches.length} patch(es)...";`;
@@ -159,7 +158,6 @@ export const generateApplyPatchesCommand = async ({
 			rm -f "${filePath}";
 			`;
 		} else {
-			// create and update: write file
 			command += `
 file="${filePath}"
 dir="$(dirname "$file")"
