@@ -41,7 +41,6 @@ export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 	const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
 		new Set(),
 	);
-	const [isSaving, setIsSaving] = useState(false);
 
 	const { data: directories, isLoading: isDirLoading } =
 		api.patch.readRepoDirectories.useQuery(
@@ -49,27 +48,13 @@ export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 			{ enabled: !!repoPath },
 		);
 
-	const saveAsPatch = api.patch.saveFileAsPatch.useMutation({
-		onSuccess: (result) => {
-			setIsSaving(false);
-			if (result.deleted) {
-				toast.success("No changes - patch removed");
-			} else {
-				toast.success("Patch saved");
-			}
-			setOriginalContent(fileContent);
-		},
-		onError: () => {
-			setIsSaving(false);
-			toast.error("Failed to save patch");
-		},
-	});
+	const { mutateAsync: saveAsPatch, isLoading: isSavingPatch } =
+		api.patch.saveFileAsPatch.useMutation();
 
-	// Read file content when selected
 	const { data: fileData, isFetching: isFileLoading } =
 		api.patch.readRepoFile.useQuery(
 			{
-				id: id || "",
+				id,
 				type,
 				repoPath,
 				filePath: selectedFile || "",
@@ -77,8 +62,6 @@ export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 			{
 				enabled: !!selectedFile,
 				onSuccess: (data) => {
-					setFileContent(data.content);
-					setOriginalContent(data.content);
 					if (data.patchError) {
 						toast.error(data.patchErrorMessage || "Failed to apply patch");
 					}
@@ -104,14 +87,19 @@ export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 
 	const handleSave = () => {
 		if (!selectedFile) return;
-		setIsSaving(true);
-		saveAsPatch.mutate({
+		saveAsPatch({
 			id,
 			type,
 			repoPath,
 			filePath: selectedFile,
 			content: fileContent,
-		});
+		})
+			.then(() => {
+				toast.success("Patch saved");
+			})
+			.catch(() => {
+				toast.error("Failed to save patch");
+			});
 	};
 
 	const hasChanges = fileContent !== originalContent;
@@ -192,8 +180,8 @@ export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 					</div>
 				</div>
 				{selectedFile && (
-					<Button onClick={handleSave} disabled={isSaving || !hasChanges}>
-						{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+					<Button onClick={handleSave} disabled={isSavingPatch || !hasChanges}>
+						{isSavingPatch && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 						<Save className="mr-2 h-4 w-4" />
 						Save Patch
 					</Button>
@@ -201,7 +189,6 @@ export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 			</CardHeader>
 			<CardContent className="p-0">
 				<div className="grid grid-cols-[250px_1fr] border-t h-[600px]">
-					{/* File Tree */}
 					<div className="border-r h-full overflow-hidden">
 						<ScrollArea className="h-full">
 							<div className="p-2">
@@ -219,7 +206,6 @@ export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 							</div>
 						</ScrollArea>
 					</div>
-					{/* Editor */}
 					<div className="h-full overflow-hidden relative">
 						{isFileLoading ? (
 							<div className="flex items-center justify-center h-full">
@@ -227,7 +213,7 @@ export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 							</div>
 						) : selectedFile ? (
 							<CodeEditor
-								value={fileContent}
+								value={fileData?.content || ""}
 								onChange={(value) => setFileContent(value || "")}
 								className="h-full w-full"
 								wrapperClassName="h-full"
