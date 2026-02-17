@@ -1,9 +1,23 @@
-import { AlertCircle, ChevronRight, File, Folder, Loader2, Power, Trash2 } from "lucide-react";
+import {
+	AlertCircle,
+	ChevronRight,
+	File,
+	Folder,
+	Loader2,
+	Power,
+	Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import {
 	Table,
@@ -136,8 +150,8 @@ export const ShowPatches = ({ applicationId, composeId }: Props) => {
 				<div>
 					<CardTitle>Patches</CardTitle>
 					<CardDescription>
-						Apply code patches to your repository during build. Patches are applied after
-						cloning the repository and before building.
+						Apply code patches to your repository during build. Patches are
+						applied after cloning the repository and before building.
 					</CardDescription>
 				</div>
 				<Button onClick={handleOpenEditor} disabled={isLoadingRepo}>
@@ -155,8 +169,8 @@ export const ShowPatches = ({ applicationId, composeId }: Props) => {
 						<AlertCircle className="h-4 w-4" />
 						<AlertTitle>No patches</AlertTitle>
 						<AlertDescription>
-							No patches have been created for this application yet. Click "Create Patch"
-							to add modifications to your code during build.
+							No patches have been created for this application yet. Click
+							"Create Patch" to add modifications to your code during build.
 						</AlertDescription>
 					</Alert>
 				) : (
