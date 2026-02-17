@@ -76,23 +76,15 @@ export const findPatchesByComposeId = async (composeId: string) => {
 
 export const findPatchByFilePath = async (
 	filePath: string,
-	applicationId?: string,
-	composeId?: string,
+	id: string,
+	type: "application" | "compose",
 ) => {
-	if (applicationId) {
-		return await db.query.patch.findFirst({
-			where: and(
-				eq(patch.filePath, filePath),
-				eq(patch.applicationId, applicationId),
-			),
-		});
-	}
-	if (composeId) {
-		return await db.query.patch.findFirst({
-			where: and(eq(patch.filePath, filePath), eq(patch.composeId, composeId)),
-		});
-	}
-	return null;
+	return await db.query.patch.findFirst({
+		where:
+			type === "application"
+				? and(eq(patch.filePath, filePath), eq(patch.applicationId, id))
+				: and(eq(patch.filePath, filePath), eq(patch.composeId, id)),
+	});
 };
 
 export const updatePatch = async (patchId: string, data: Partial<Patch>) => {
