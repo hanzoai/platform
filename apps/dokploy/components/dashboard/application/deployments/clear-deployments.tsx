@@ -25,11 +25,6 @@ export const ClearDeployments = ({ id, type }: Props) => {
 		type === "application"
 			? api.application.clearDeployments.useMutation()
 			: api.compose.clearDeployments.useMutation();
-	const { data: isCloud } = api.settings.isCloud.useQuery();
-
-	if (isCloud) {
-		return null;
-	}
 
 	return (
 		<AlertDialog>
@@ -57,14 +52,11 @@ export const ClearDeployments = ({ id, type }: Props) => {
 								applicationId: id || "",
 								composeId: id || "",
 							})
-								.then(async (result) => {
-									toast.success(
-										`${result.deletedCount} old deployments cleared successfully`,
-									);
-									// Invalidate deployment queries to refresh the list
+								.then(async () => {
+									toast.success("Old deployments cleared successfully");
 									await utils.deployment.allByType.invalidate({
 										id,
-										type,
+										type: type as "application" | "compose",
 									});
 								})
 								.catch((err) => {
