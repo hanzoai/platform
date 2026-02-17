@@ -33,22 +33,8 @@ export const ShowPatches = ({ id, type }: Props) => {
 
 	const utils = api.useUtils();
 
-	const queryMap = {
-		application: () =>
-			api.patch.byApplicationId.useQuery(
-				{ applicationId: id },
-				{ enabled: !!id },
-			),
-		compose: () =>
-			api.patch.byComposeId.useQuery({ composeId: id }, { enabled: !!id }),
-	};
-
-	const { data: patches, isLoading: isPatchesLoading } = queryMap[type]
-		? queryMap[type]()
-		: api.patch.byApplicationId.useQuery(
-				{ applicationId: id },
-				{ enabled: !!id },
-			);
+	const { data: patches, isLoading: isPatchesLoading } =
+		api.patch.byEntityId.useQuery({ id, type }, { enabled: !!id });
 
 	const mutationMap = {
 		application: () => api.patch.delete.useMutation(),
@@ -166,11 +152,9 @@ export const ShowPatches = ({ id, type }: Props) => {
 													})
 													.then(() => {
 														toast.success("Patch updated");
-														utils.patch.byApplicationId.invalidate({
-															applicationId: id,
-														});
-														utils.patch.byComposeId.invalidate({
-															composeId: id,
+														utils.patch.byEntityId.invalidate({
+															id,
+															type,
 														});
 													})
 													.catch((err) => {
@@ -190,11 +174,9 @@ export const ShowPatches = ({ id, type }: Props) => {
 												mutateAsync({ patchId: patch.patchId })
 													.then(() => {
 														toast.success("Patch deleted");
-														utils.patch.byApplicationId.invalidate({
-															applicationId: id,
-														});
-														utils.patch.byComposeId.invalidate({
-															composeId: id,
+														utils.patch.byEntityId.invalidate({
+															id,
+															type,
 														});
 													})
 													.catch((err) => {

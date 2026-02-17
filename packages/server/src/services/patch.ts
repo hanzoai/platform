@@ -2,12 +2,11 @@ import { join } from "node:path";
 import { paths } from "@dokploy/server/constants";
 import { db } from "@dokploy/server/db";
 import { type apiCreatePatch, patch } from "@dokploy/server/db/schema";
-import {
-	execAsync,
-	execAsyncRemote,
-} from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { encodeBase64 } from "../utils/docker/utils";
+import { findApplicationById } from "./application";
+import { findComposeById } from "./compose";
 
 export type Patch = typeof patch.$inferSelect;
 
@@ -54,19 +53,15 @@ export const findPatchById = async (patchId: string) => {
 	return result;
 };
 
-export const findPatchesByApplicationId = async (applicationId: string) => {
+export const findPatchesByEntityId = async (
+	id: string,
+	type: "application" | "compose",
+) => {
 	return await db.query.patch.findMany({
-		where: and(
-			eq(patch.applicationId, applicationId),
-			isNotNull(patch.applicationId),
+		where: eq(
+			type === "application" ? patch.applicationId : patch.composeId,
+			id,
 		),
-		orderBy: (patch, { asc }) => [asc(patch.filePath)],
-	});
-};
-
-export const findPatchesByComposeId = async (composeId: string) => {
-	return await db.query.patch.findMany({
-		where: and(eq(patch.composeId, composeId), isNotNull(patch.composeId)),
 		orderBy: (patch, { asc }) => [asc(patch.filePath)],
 	});
 };
@@ -77,10 +72,10 @@ export const findPatchByFilePath = async (
 	type: "application" | "compose",
 ) => {
 	return await db.query.patch.findFirst({
-		where:
-			type === "application"
-				? and(eq(patch.filePath, filePath), eq(patch.applicationId, id))
-				: and(eq(patch.filePath, filePath), eq(patch.composeId, id)),
+		where: and(
+			eq(patch.filePath, filePath),
+			eq(type === "application" ? patch.applicationId : patch.composeId, id),
+		),
 	});
 };
 
@@ -111,76 +106,45 @@ export const deletePatch = async (patchId: string) => {
 	return result[0];
 };
 
-// Patch Application Functions
-
 interface ApplyPatchesOptions {
-	appName: string;
+	id: string;
 	type: "application" | "compose";
 	serverId: string | null;
-	patches: Patch[];
 }
 
-/**
- * Generate shell commands to apply patches to cloned repository
- * Uses git apply to apply unified diff patches
- */
-export const generateApplyPatchesCommand = ({
-	appName,
+export const generateApplyPatchesCommand = async ({
+	id,
 	type,
-	patches,
 	serverId,
-}: ApplyPatchesOptions): string => {
+}: ApplyPatchesOptions) => {
+	const entity =
+		type === "application"
+			? await findApplicationById(id)
+			: await findComposeById(id);
+	const { COMPOSE_PATH, APPLICATIONS_PATH } = paths(!!serverId);
+	const basePath = type === "compose" ? COMPOSE_PATH : APPLICATIONS_PATH;
+	const codePath = join(basePath, entity.appName, "code");
+
+	const patches = (await findPatchesByEntityId(id, type)).filter(
+		(p) => p.enabled,
+	);
+
 	if (patches.length === 0) {
 		return "";
 	}
 
-	const { COMPOSE_PATH, APPLICATIONS_PATH } = paths(!!serverId);
-	const basePath = type === "compose" ? COMPOSE_PATH : APPLICATIONS_PATH;
-	const codePath = join(basePath, appName, "code");
-
 	let command = `echo "Applying ${patches.length} patch(es)...";`;
 
 	for (const p of patches) {
-		// Create a temporary patch file and apply it
-		const patchFileName = `/tmp/patch_${p.patchId}.patch`;
-		// Escape content for shell - use base64 encoding
-		const encodedContent = Buffer.from(p.content).toString("base64");
-
+		if (!p.enabled) {
+			continue;
+		}
+		const filePath = join(codePath, p.filePath);
 		command += `
-echo "${encodedContent}" | base64 -d > ${patchFileName};
-cd ${codePath} && git apply --whitespace=fix ${patchFileName} && echo "✅ Applied patch for: ${p.filePath}" || echo "⚠️ Warning: Failed to apply patch for: ${p.filePath}";
-rm -f ${patchFileName};
+rm -f ${filePath};
+echo "${encodeBase64(p.content)}" | base64 -d > ${filePath};
 `;
 	}
 
 	return command;
-};
-
-/**
- * Apply patches during build process
- */
-export const applyPatches = async ({
-	appName,
-	type,
-	serverId,
-	patches,
-}: ApplyPatchesOptions): Promise<void> => {
-	const enabledPatches = patches.filter((p) => p.enabled);
-
-	if (enabledPatches.length === 0) {
-		return;
-	}
-
-	const command = generateApplyPatchesCommand({
-		appName,
-		type,
-		serverId,
-		patches: enabledPatches,
-	});
-
-	if (serverId) {
-		await execAsyncRemote(serverId, command);
-	} else {
-		await execAsync(command);
-	}
 };
