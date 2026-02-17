@@ -259,16 +259,9 @@ export const ShowDeployments = ({
 							const isExpanded = expandedDescriptions.has(
 								deployment.deploymentId,
 							);
-							const lastSuccessfulDeployment = deployments?.find(
-								(d) => d.status === "done",
-							);
-							const isLastSuccessfulDeployment =
-								lastSuccessfulDeployment?.deploymentId ===
-								deployment.deploymentId;
 							const canDelete =
-								deployments &&
-								deployments.length > 1 &&
-								!isLastSuccessfulDeployment;
+								deployment.status === "done" || deployment.status === "error";
+
 							return (
 								<div
 									key={deployment.deploymentId}
