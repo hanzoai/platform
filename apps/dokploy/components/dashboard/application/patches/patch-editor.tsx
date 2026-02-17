@@ -1,9 +1,22 @@
-import { ArrowLeft, ChevronRight, File, Folder, Loader2, Save } from "lucide-react";
+import {
+	ArrowLeft,
+	ChevronRight,
+	File,
+	Folder,
+	Loader2,
+	Save,
+} from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { CodeEditor } from "@/components/shared/code-editor";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/utils/api";
 import type { RouterOutputs } from "@/utils/api";
@@ -31,7 +44,9 @@ export const PatchEditor = ({
 	const [selectedFile, setSelectedFile] = useState<string | null>(null);
 	const [fileContent, setFileContent] = useState<string>("");
 	const [originalContent, setOriginalContent] = useState<string>("");
-	const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+	const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+		new Set(),
+	);
 	const [isSaving, setIsSaving] = useState(false);
 
 	// Fetch directory tree

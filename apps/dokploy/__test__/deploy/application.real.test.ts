@@ -1,4 +1,3 @@
-
 import { existsSync } from "node:fs";
 import path from "node:path";
 import type { ApplicationNested } from "@dokploy/server";
@@ -80,9 +79,8 @@ vi.mock("@dokploy/server/services/rollbacks", () => ({
 }));
 
 vi.mock("@dokploy/server/services/patch", async (importOriginal) => {
-	const actual = await importOriginal<
-		typeof import("@dokploy/server/services/patch")
-	>();
+	const actual =
+		await importOriginal<typeof import("@dokploy/server/services/patch")>();
 	return {
 		...actual,
 		findPatchesByApplicationId: vi.fn().mockResolvedValue([]),
@@ -507,7 +505,8 @@ describe(
 				// 1. Setup local temporary git repo
 				const tempRepo = await mkdtemp(join(tmpdir(), "real-patch-repo-"));
 				// Helper for local git commands
-				const execLocal = async (cmd: string) => execAsync(cmd, { cwd: tempRepo });
+				const execLocal = async (cmd: string) =>
+					execAsync(cmd, { cwd: tempRepo });
 
 				await execLocal("git init");
 				await execLocal("git config user.email 'test@dokploy.com'");
@@ -518,7 +517,7 @@ describe(
 				await writeFile(join(tempRepo, "app.py"), "print('Original App')\n");
 				await writeFile(
 					join(tempRepo, "Dockerfile"),
-					"FROM python:3.9-slim\nCOPY app.py .\nCMD [\"python\", \"app.py\"]\n",
+					'FROM python:3.9-slim\nCOPY app.py .\nCMD ["python", "app.py"]\n',
 				);
 
 				await execLocal("git add .");
