@@ -29,11 +29,9 @@ import {
 } from "@/server/db/schema";
 
 export const patchRouter = createTRPCRouter({
-	// CRUD Operations
 	create: protectedProcedure
 		.input(apiCreatePatch)
 		.mutation(async ({ input, ctx }) => {
-			// Verify access
 			if (input.applicationId) {
 				const app = await findApplicationById(input.applicationId);
 				if (
