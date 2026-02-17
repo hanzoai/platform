@@ -26,11 +26,11 @@ import { ShowDomains } from "@/components/dashboard/application/domains/show-dom
 import { ShowEnvironment } from "@/components/dashboard/application/environment/show";
 import { ShowGeneralApplication } from "@/components/dashboard/application/general/show";
 import { ShowDockerLogs } from "@/components/dashboard/application/logs/show";
+import { ShowPatches } from "@/components/dashboard/application/patches/show-patches";
 import { ShowPreviewDeployments } from "@/components/dashboard/application/preview-deployments/show-preview-deployments";
 import { ShowSchedules } from "@/components/dashboard/application/schedules/show-schedules";
 import { UpdateApplication } from "@/components/dashboard/application/update-application";
 import { ShowVolumeBackups } from "@/components/dashboard/application/volume-backups/show-volume-backups";
-import { ShowPatches } from "@/components/dashboard/application/patches/show-patches";
 import { DeleteService } from "@/components/dashboard/compose/delete-service";
 import { ContainerFreeMonitoring } from "@/components/dashboard/monitoring/free/container/show-free-container-monitoring";
 import { ContainerPaidMonitoring } from "@/components/dashboard/monitoring/paid/container/show-paid-container-monitoring";
@@ -365,7 +365,7 @@ const Service = (
 									</TabsContent>
 									<TabsContent value="patches" className="w-full">
 										<div className="flex flex-col gap-4 pt-2.5">
-											<ShowPatches applicationId={applicationId} />
+											<ShowPatches id={applicationId} type="application" />
 										</div>
 									</TabsContent>
 									<TabsContent value="advanced">
