@@ -761,12 +761,8 @@ export const applicationRouter = createTRPCRouter({
 						"You are not authorized to clear deployments for this application",
 				});
 			}
-			const result = await clearOldDeployments(input.applicationId);
-			return {
-				success: true,
-				message: `${result.deletedCount} old deployments cleared successfully`,
-				deletedCount: result.deletedCount,
-			};
+			await clearOldDeployments(application.appName, application.serverId);
+			return true;
 		}),
 	killBuild: protectedProcedure
 		.input(apiFindOneApplication)
