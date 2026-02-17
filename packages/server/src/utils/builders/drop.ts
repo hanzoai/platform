@@ -69,10 +69,6 @@ export const unzipDrop = async (zipFile: File, application: Application) => {
 				);
 			}
 
-			if (isSymlinkEntry(entry)) {
-				throw new Error(`Symlink entries are not allowed: ${entry.entryName}`);
-			}
-
 			if (isDangerousNode(entry)) {
 				throw new Error(
 					`Dangerous node entries are not allowed: ${entry.entryName}`,
@@ -148,12 +144,6 @@ const uploadFileToServer = (
 		});
 	});
 };
-
-function isSymlinkEntry(entry: AdmZip.IZipEntry) {
-	// upper 16 bits = unix permissions
-	const unix = (entry.header.attr >> 16) & 0o170000;
-	return unix === 0o120000;
-}
 
 function isDangerousNode(entry: AdmZip.IZipEntry) {
 	const type = (entry.header.attr >> 16) & 0o170000;
