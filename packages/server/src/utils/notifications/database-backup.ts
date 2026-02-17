@@ -421,7 +421,10 @@ export const sendDatabaseBackupNotifications = async ({
 					{ name: "Database Type", value: databaseType },
 					{ name: "Database Name", value: databaseName },
 					{ name: "Date", value: format(date, "PP pp") },
-					{ name: "Status", value: type === "success" ? "Successful" : "Failed" },
+					{
+						name: "Status",
+						value: type === "success" ? "Successful" : "Failed",
+					},
 				];
 				if (type === "error" && errorMessage) {
 					facts.push({ name: "Error", value: errorMessage.substring(0, 500) });
