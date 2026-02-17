@@ -285,6 +285,45 @@ describe("unzipDrop path under output (no traversal)", () => {
 	});
 });
 
+describe("security: traversal inside BASE_PATH (sandbox escape)", () => {
+	beforeAll(async () => {
+		await fs.rm(APPLICATIONS_PATH, { recursive: true, force: true });
+	});
+
+	afterAll(async () => {
+		await fs.rm(APPLICATIONS_PATH, { recursive: true, force: true });
+	});
+
+	it("should NOT allow writing outside application directory but inside BASE_PATH", async () => {
+		const appName = "sandbox-escape";
+
+		const base = APPLICATIONS_PATH.replace("/applications", "");
+		const output = path.join(APPLICATIONS_PATH, appName, "code");
+
+		await fs.mkdir(output, { recursive: true });
+
+		// attacker writes into traefik config inside base
+		const zip = new AdmZip();
+		zip.addFile(
+			"../../../traefik/dynamic/evil.yml",
+			Buffer.from("pwned: true"),
+		);
+
+		const file = new File([zip.toBuffer() as any], "exploit.zip");
+
+		await unzipDrop(file, { ...baseApp, appName });
+
+		const escapedPath = path.join(base, "traefik/dynamic/evil.yml");
+
+		const exists = await fs
+			.readFile(escapedPath)
+			.then(() => true)
+			.catch(() => false);
+
+		expect(exists).toBe(false);
+	});
+});
+
 describe("unzipDrop using real zip files", () => {
 	// const { APPLICATIONS_PATH } = paths();
 	beforeAll(async () => {
