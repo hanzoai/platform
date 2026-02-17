@@ -33,7 +33,9 @@ import {
 } from "@/server/db/schema";
 
 // Helper to get git config from application
-const getApplicationGitConfig = (app: Awaited<ReturnType<typeof findApplicationById>>) => {
+const getApplicationGitConfig = (
+	app: Awaited<ReturnType<typeof findApplicationById>>,
+) => {
 	switch (app.sourceType) {
 		case "github":
 			return {
@@ -73,7 +75,9 @@ const getApplicationGitConfig = (app: Awaited<ReturnType<typeof findApplicationB
 };
 
 // Helper to get git config from compose
-const getComposeGitConfig = (compose: Awaited<ReturnType<typeof findComposeById>>) => {
+const getComposeGitConfig = (
+	compose: Awaited<ReturnType<typeof findComposeById>>,
+) => {
 	switch (compose.sourceType) {
 		case "github":
 			return {
@@ -153,11 +157,9 @@ export const patchRouter = createTRPCRouter({
 			return await createPatch(input);
 		}),
 
-	one: protectedProcedure
-		.input(apiFindPatch)
-		.query(async ({ input }) => {
-			return await findPatchById(input.patchId);
-		}),
+	one: protectedProcedure.input(apiFindPatch).query(async ({ input }) => {
+		return await findPatchById(input.patchId);
+	}),
 
 	byApplicationId: protectedProcedure
 		.input(apiFindPatchesByApplicationId)
