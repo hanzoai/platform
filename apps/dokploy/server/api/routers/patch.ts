@@ -232,11 +232,7 @@ export const patchRouter = createTRPCRouter({
 			// For delete patches, show current file content from repo (what will be deleted)
 			if (existingPatch?.type === "delete") {
 				try {
-					return await readPatchRepoFile(
-						input.id,
-						input.type,
-						input.filePath,
-					);
+					return await readPatchRepoFile(input.id, input.type, input.filePath);
 				} catch {
 					return "(File not found in repo - will be removed if it exists)";
 				}
@@ -342,11 +338,7 @@ export const patchRouter = createTRPCRouter({
 				}
 			}
 
-			return await markPatchForDeletion(
-				input.filePath,
-				input.id,
-				input.type,
-			);
+			return await markPatchForDeletion(input.filePath, input.id, input.type);
 		}),
 
 	// Cleanup
