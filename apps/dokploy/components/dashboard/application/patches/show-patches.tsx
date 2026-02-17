@@ -9,6 +9,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
 	Table,
@@ -129,6 +130,7 @@ export const ShowPatches = ({ id, type }: Props) => {
 						<TableHeader>
 							<TableRow>
 								<TableHead>File Path</TableHead>
+								<TableHead className="w-[80px]">Type</TableHead>
 								<TableHead className="w-[100px]">Enabled</TableHead>
 								<TableHead className="w-[100px]">Actions</TableHead>
 							</TableRow>
@@ -138,9 +140,23 @@ export const ShowPatches = ({ id, type }: Props) => {
 								<TableRow key={patch.patchId}>
 									<TableCell className="font-mono text-sm">
 										<div className="flex items-center gap-2">
-											<File className="h-4 w-4 text-muted-foreground" />
+											<File className="h-4 w-4 text-muted-foreground shrink-0" />
 											{patch.filePath}
 										</div>
+									</TableCell>
+									<TableCell>
+										<Badge
+											variant={
+												patch.type === "delete"
+													? "destructive"
+													: patch.type === "create"
+														? "default"
+														: "secondary"
+											}
+											className="font-normal"
+										>
+											{patch.type}
+										</Badge>
 									</TableCell>
 									<TableCell>
 										<Switch
@@ -169,11 +185,14 @@ export const ShowPatches = ({ id, type }: Props) => {
 									</TableCell>
 									<TableCell>
 										<div className="flex items-center gap-1">
-											<EditPatchDialog
-												patchId={patch.patchId}
-												entityId={id}
-												type={type}
-											/>
+											{(patch.type === "update" ||
+												patch.type === "create") && (
+												<EditPatchDialog
+													patchId={patch.patchId}
+													entityId={id}
+													type={type}
+												/>
+											)}
 											<Button
 												variant="ghost"
 												size="icon"
