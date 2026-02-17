@@ -56,6 +56,7 @@ export const patchRelations = relations(patch, ({ one }) => ({
 const createSchema = createInsertSchema(patch, {
 	filePath: z.string().min(1),
 	content: z.string(),
+	type: z.enum(["create", "update", "delete"]).optional(),
 	enabled: z.boolean().optional(),
 	applicationId: z.string().optional(),
 	composeId: z.string().optional(),
@@ -64,6 +65,7 @@ const createSchema = createInsertSchema(patch, {
 export const apiCreatePatch = createSchema.pick({
 	filePath: true,
 	content: true,
+	type: true,
 	enabled: true,
 	applicationId: true,
 	composeId: true,

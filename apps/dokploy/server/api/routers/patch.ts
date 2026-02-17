@@ -9,6 +9,7 @@ import {
 	findPatchByFilePath,
 	findPatchById,
 	findPatchesByEntityId,
+	markPatchForDeletion,
 	readPatchRepoDirectory,
 	readPatchRepoFile,
 	updatePatch,
@@ -228,7 +229,19 @@ export const patchRouter = createTRPCRouter({
 				input.type,
 			);
 
-			if (existingPatch) {
+			// For delete patches, show current file content from repo (what will be deleted)
+			if (existingPatch?.type === "delete") {
+				try {
+					return await readPatchRepoFile(
+						input.id,
+						input.type,
+						input.filePath,
+					);
+				} catch {
+					return "(File not found in repo - will be removed if it exists)";
+				}
+			}
+			if (existingPatch?.content) {
 				return existingPatch.content;
 			}
 			return await readPatchRepoFile(input.id, input.type, input.filePath);
@@ -241,6 +254,7 @@ export const patchRouter = createTRPCRouter({
 				type: z.enum(["application", "compose"]),
 				filePath: z.string(),
 				content: z.string(),
+				patchType: z.enum(["create", "update"]).default("update"),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
@@ -280,17 +294,59 @@ export const patchRouter = createTRPCRouter({
 			);
 
 			if (!existingPatch) {
-				const newPatch = await createPatch({
+				return await createPatch({
 					filePath: input.filePath,
 					content: input.content,
+					type: input.patchType,
 					applicationId: input.type === "application" ? input.id : undefined,
 					composeId: input.type === "compose" ? input.id : undefined,
 				});
-			} else {
-				return await updatePatch(existingPatch.patchId, {
-					content: input.content,
-				});
 			}
+
+			return await updatePatch(existingPatch.patchId, {
+				content: input.content,
+				type: input.patchType,
+			});
+		}),
+
+	markFileForDeletion: protectedProcedure
+		.input(
+			z.object({
+				id: z.string(),
+				type: z.enum(["application", "compose"]),
+				filePath: z.string(),
+			}),
+		)
+		.mutation(async ({ input, ctx }) => {
+			if (input.type === "application") {
+				const app = await findApplicationById(input.id);
+				if (
+					app.environment.project.organizationId !==
+					ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this application",
+					});
+				}
+			} else if (input.type === "compose") {
+				const compose = await findComposeById(input.id);
+				if (
+					compose.environment.project.organizationId !==
+					ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this compose",
+					});
+				}
+			}
+
+			return await markPatchForDeletion(
+				input.filePath,
+				input.id,
+				input.type,
+			);
 		}),
 
 	// Cleanup
