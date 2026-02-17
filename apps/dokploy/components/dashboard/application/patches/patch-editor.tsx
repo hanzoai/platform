@@ -19,11 +19,10 @@ import {
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/utils/api";
-import type { RouterOutputs } from "@/utils/api";
 
 interface Props {
-	applicationId?: string;
-	composeId?: string;
+	id: string;
+	type: "application" | "compose";
 	repoPath: string;
 	onClose: () => void;
 }
@@ -35,12 +34,7 @@ type DirectoryEntry = {
 	children?: DirectoryEntry[];
 };
 
-export const PatchEditor = ({
-	applicationId,
-	composeId,
-	repoPath,
-	onClose,
-}: Props) => {
+export const PatchEditor = ({ id, type, repoPath, onClose }: Props) => {
 	const [selectedFile, setSelectedFile] = useState<string | null>(null);
 	const [fileContent, setFileContent] = useState<string>("");
 	const [originalContent, setOriginalContent] = useState<string>("");
@@ -49,14 +43,12 @@ export const PatchEditor = ({
 	);
 	const [isSaving, setIsSaving] = useState(false);
 
-	// Fetch directory tree
 	const { data: directories, isLoading: isDirLoading } =
 		api.patch.readRepoDirectories.useQuery(
-			{ applicationId, composeId, repoPath },
+			{ id: id, type, repoPath },
 			{ enabled: !!repoPath },
 		);
 
-	// Save mutation
 	const saveAsPatch = api.patch.saveFileAsPatch.useMutation({
 		onSuccess: (result) => {
 			setIsSaving(false);
@@ -77,8 +69,8 @@ export const PatchEditor = ({
 	const { data: fileData, isFetching: isFileLoading } =
 		api.patch.readRepoFile.useQuery(
 			{
-				applicationId,
-				composeId,
+				id: id || "",
+				type,
 				repoPath,
 				filePath: selectedFile || "",
 			},
@@ -114,8 +106,8 @@ export const PatchEditor = ({
 		if (!selectedFile) return;
 		setIsSaving(true);
 		saveAsPatch.mutate({
-			applicationId,
-			composeId,
+			id,
+			type,
 			repoPath,
 			filePath: selectedFile,
 			content: fileContent,
@@ -142,8 +134,11 @@ export const PatchEditor = ({
 						return (
 							<div key={entry.path}>
 								<button
+									type="button"
 									onClick={() => toggleFolder(entry.path)}
-									className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted/50 rounded-md transition-colors`}
+									className={
+										"w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted/50 rounded-md transition-colors"
+									}
 									style={{ paddingLeft: `${depth * 12 + 8}px` }}
 								>
 									<ChevronRight
@@ -163,6 +158,7 @@ export const PatchEditor = ({
 
 					return (
 						<button
+							type="button"
 							key={entry.path}
 							onClick={() => handleFileSelect(entry.path)}
 							className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted/50 rounded-md transition-colors ${

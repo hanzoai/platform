@@ -132,6 +132,8 @@ export const readPatchRepoDirectory = async (
 	// Use git ls-tree to get tracked files only
 	const command = `cd "${repoPath}" && git ls-tree -r --name-only HEAD`;
 
+	console.log("command", command);
+
 	let stdout: string;
 	try {
 		if (serverId) {
