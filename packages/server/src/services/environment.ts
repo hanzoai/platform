@@ -101,7 +101,9 @@ export const findEnvironmentsByProjectId = async (projectId: string) => {
 	return projectEnvironments;
 };
 
-const environmentHasServices = (env: Awaited<ReturnType<typeof findEnvironmentById>>) => {
+const environmentHasServices = (
+	env: Awaited<ReturnType<typeof findEnvironmentById>>,
+) => {
 	return (
 		(env.applications?.length ?? 0) > 0 ||
 		(env.compose?.length ?? 0) > 0 ||
