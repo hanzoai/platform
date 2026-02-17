@@ -125,24 +125,19 @@ export const generateApplyPatchesCommand = async ({
 	const basePath = type === "compose" ? COMPOSE_PATH : APPLICATIONS_PATH;
 	const codePath = join(basePath, entity.appName, "code");
 
-	const patches = (await findPatchesByEntityId(id, type)).filter(
-		(p) => p.enabled,
-	);
+	const resultPatches = await findPatchesByEntityId(id, type);
 
-	if (patches.length === 0) {
-		return "";
-	}
+	const patches = resultPatches.filter((p) => p.enabled);
 
 	let command = `echo "Applying ${patches.length} patch(es)...";`;
 
 	for (const p of patches) {
-		if (!p.enabled) {
-			continue;
-		}
 		const filePath = join(codePath, p.filePath);
 		command += `
-rm -f ${filePath};
-echo "${encodeBase64(p.content)}" | base64 -d > ${filePath};
+file="${filePath}"
+dir="$(dirname "$file")"
+mkdir -p "$dir"
+echo "${encodeBase64(p.content)}" | base64 -d > "$file"
 `;
 	}
 
