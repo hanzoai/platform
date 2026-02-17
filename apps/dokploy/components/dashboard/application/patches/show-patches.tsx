@@ -19,6 +19,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/utils/api";
+import { EditPatchDialog } from "./edit-patch-dialog";
 import { PatchEditor } from "./patch-editor";
 
 interface Props {
@@ -82,7 +83,7 @@ export const ShowPatches = ({ id, type }: Props) => {
 
 	return (
 		<Card className="bg-background">
-			<CardHeader className="flex flex-row items-center justify-between">
+				<CardHeader className="flex flex-row items-center justify-between">
 				<div>
 					<CardTitle>Patches</CardTitle>
 					<CardDescription>
@@ -129,7 +130,7 @@ export const ShowPatches = ({ id, type }: Props) => {
 							<TableRow>
 								<TableHead>File Path</TableHead>
 								<TableHead className="w-[100px]">Enabled</TableHead>
-								<TableHead className="w-[80px]">Actions</TableHead>
+								<TableHead className="w-[100px]">Actions</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
@@ -167,25 +168,33 @@ export const ShowPatches = ({ id, type }: Props) => {
 										/>
 									</TableCell>
 									<TableCell>
-										<Button
-											variant="ghost"
-											size="icon"
-											onClick={() => {
-												mutateAsync({ patchId: patch.patchId })
-													.then(() => {
-														toast.success("Patch deleted");
-														utils.patch.byEntityId.invalidate({
-															id,
-															type,
+										<div className="flex items-center gap-1">
+											<EditPatchDialog
+												patchId={patch.patchId}
+												entityId={id}
+												type={type}
+											/>
+											<Button
+												variant="ghost"
+												size="icon"
+												onClick={() => {
+													mutateAsync({ patchId: patch.patchId })
+														.then(() => {
+															toast.success("Patch deleted");
+															utils.patch.byEntityId.invalidate({
+																id,
+																type,
+															});
+														})
+														.catch((err) => {
+															toast.error(err.message);
 														});
-													})
-													.catch((err) => {
-														toast.error(err.message);
-													});
-											}}
-										>
-											<Trash2 className="h-4 w-4 text-destructive" />
-										</Button>
+												}}
+												title="Delete patch"
+											>
+												<Trash2 className="h-4 w-4 text-destructive" />
+											</Button>
+										</div>
 									</TableCell>
 								</TableRow>
 							))}
