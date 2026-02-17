@@ -32,90 +32,6 @@ import {
 	apiUpdatePatch,
 } from "@/server/db/schema";
 
-// Helper to get git config from application
-const getApplicationGitConfig = (
-	app: Awaited<ReturnType<typeof findApplicationById>>,
-) => {
-	switch (app.sourceType) {
-		case "github":
-			return {
-				gitUrl: `https://github.com/${app.owner}/${app.repository}.git`,
-				gitBranch: app.branch || "main",
-				sshKeyId: null,
-			};
-		case "gitlab":
-			return {
-				gitUrl: `https://gitlab.com/${app.gitlabOwner}/${app.gitlabRepository}.git`,
-				gitBranch: app.gitlabBranch || "main",
-				sshKeyId: null,
-			};
-		case "gitea":
-			return {
-				gitUrl: app.gitea?.giteaUrl
-					? `${app.gitea.giteaUrl}/${app.giteaOwner}/${app.giteaRepository}.git`
-					: "",
-				gitBranch: app.giteaBranch || "main",
-				sshKeyId: null,
-			};
-		case "bitbucket":
-			return {
-				gitUrl: `https://bitbucket.org/${app.bitbucketOwner}/${app.bitbucketRepository}.git`,
-				gitBranch: app.bitbucketBranch || "main",
-				sshKeyId: null,
-			};
-		case "git":
-			return {
-				gitUrl: app.customGitUrl || "",
-				gitBranch: app.customGitBranch || "main",
-				sshKeyId: app.customGitSSHKeyId,
-			};
-		default:
-			return null;
-	}
-};
-
-// Helper to get git config from compose
-const getComposeGitConfig = (
-	compose: Awaited<ReturnType<typeof findComposeById>>,
-) => {
-	switch (compose.sourceType) {
-		case "github":
-			return {
-				gitUrl: `https://github.com/${compose.owner}/${compose.repository}.git`,
-				gitBranch: compose.branch || "main",
-				sshKeyId: null,
-			};
-		case "gitlab":
-			return {
-				gitUrl: `https://gitlab.com/${compose.gitlabOwner}/${compose.gitlabRepository}.git`,
-				gitBranch: compose.gitlabBranch || "main",
-				sshKeyId: null,
-			};
-		case "gitea":
-			return {
-				gitUrl: compose.gitea?.giteaUrl
-					? `${compose.gitea.giteaUrl}/${compose.giteaOwner}/${compose.giteaRepository}.git`
-					: "",
-				gitBranch: compose.giteaBranch || "main",
-				sshKeyId: null,
-			};
-		case "bitbucket":
-			return {
-				gitUrl: `https://bitbucket.org/${compose.bitbucketOwner}/${compose.bitbucketRepository}.git`,
-				gitBranch: compose.bitbucketBranch || "main",
-				sshKeyId: null,
-			};
-		case "git":
-			return {
-				gitUrl: compose.customGitUrl || "",
-				gitBranch: compose.customGitBranch || "main",
-				sshKeyId: compose.customGitSSHKeyId,
-			};
-		default:
-			return null;
-	}
-};
-
 export const patchRouter = createTRPCRouter({
 	// CRUD Operations
 	create: protectedProcedure
@@ -222,70 +138,10 @@ export const patchRouter = createTRPCRouter({
 				type: z.enum(["application", "compose"]),
 			}),
 		)
-		.mutation(async ({ input, ctx }) => {
-			if (input.type === "application") {
-				const app = await findApplicationById(input.id);
-				if (
-					app.environment.project.organizationId !==
-					ctx.session.activeOrganizationId
-				) {
-					throw new TRPCError({
-						code: "UNAUTHORIZED",
-						message: "You are not authorized to access this application",
-					});
-				}
-
-				const gitConfig = getApplicationGitConfig(app);
-				if (!gitConfig || !gitConfig.gitUrl) {
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message: "Application does not have a git source configured",
-					});
-				}
-
-				return await ensurePatchRepo({
-					appName: app.appName,
-					type: "application",
-					gitUrl: gitConfig.gitUrl,
-					gitBranch: gitConfig.gitBranch,
-					sshKeyId: gitConfig.sshKeyId,
-					serverId: app.serverId,
-				});
-			}
-
-			if (input.type === "compose") {
-				const compose = await findComposeById(input.id);
-				if (
-					compose.environment.project.organizationId !==
-					ctx.session.activeOrganizationId
-				) {
-					throw new TRPCError({
-						code: "UNAUTHORIZED",
-						message: "You are not authorized to access this compose",
-					});
-				}
-
-				const gitConfig = getComposeGitConfig(compose);
-				if (!gitConfig || !gitConfig.gitUrl) {
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message: "Compose does not have a git source configured",
-					});
-				}
-
-				return await ensurePatchRepo({
-					appName: compose.appName,
-					type: "compose",
-					gitUrl: gitConfig.gitUrl,
-					gitBranch: gitConfig.gitBranch,
-					sshKeyId: gitConfig.sshKeyId,
-					serverId: compose.serverId,
-				});
-			}
-
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: "Either application or compose must be provided",
+		.mutation(async ({ input }) => {
+			return await ensurePatchRepo({
+				type: input.type,
+				id: input.id,
 			});
 		}),
 
@@ -432,48 +288,14 @@ export const patchRouter = createTRPCRouter({
 				});
 			}
 
-			// Generate patch diff
-			const patchContent = await generatePatch({
-				codePath: input.repoPath,
-				filePath: input.filePath,
-				newContent: input.content,
-				serverId,
-			});
-
-			if (!patchContent.trim()) {
-				// No changes - remove existing patch if any
-				const existingPatch = await findPatchByFilePath(
-					input.filePath,
-					input.id,
-					input.type,
-				);
-				if (existingPatch) {
-					await deletePatch(existingPatch.patchId);
-				}
-				return { deleted: true, patchId: null };
-			}
-
-			// Check if patch exists
-			const existingPatch = await findPatchByFilePath(
-				input.filePath,
-				input.id,
-				input.type,
-			);
-
-			if (existingPatch) {
-				await updatePatch(existingPatch.patchId, { content: patchContent });
-				return { deleted: false, patchId: existingPatch.patchId };
-			}
-
 			const newPatch = await createPatch({
 				filePath: input.filePath,
-				content: patchContent,
-				enabled: true,
+				content: input.content,
 				applicationId: input.type === "application" ? input.id : undefined,
 				composeId: input.type === "compose" ? input.id : undefined,
 			});
 
-			return { deleted: false, patchId: newPatch.patchId };
+			return newPatch;
 		}),
 
 	// Cleanup

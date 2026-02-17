@@ -1,16 +1,18 @@
-import path, { join } from "node:path";
+import { join } from "node:path";
 import { paths } from "@dokploy/server/constants";
-import { findSSHKeyById } from "@dokploy/server/services/ssh-key";
 import { TRPCError } from "@trpc/server";
 import { execAsync, execAsyncRemote } from "../utils/process/execAsync";
+import { cloneBitbucketRepository } from "../utils/providers/bitbucket";
+import { cloneGitRepository } from "../utils/providers/git";
+import { cloneGiteaRepository } from "../utils/providers/gitea";
+import { cloneGithubRepository } from "../utils/providers/github";
+import { cloneGitlabRepository } from "../utils/providers/gitlab";
+import { findApplicationById } from "./application";
+import { findComposeById } from "./compose";
 
 interface PatchRepoConfig {
-	appName: string;
 	type: "application" | "compose";
-	gitUrl: string;
-	gitBranch: string;
-	sshKeyId?: string | null;
-	serverId?: string | null;
+	id: string;
 }
 
 /**
@@ -18,98 +20,51 @@ interface PatchRepoConfig {
  * Returns path to the repo
  */
 export const ensurePatchRepo = async ({
-	appName,
 	type,
-	gitUrl,
-	gitBranch,
-	sshKeyId,
-	serverId,
+	id,
 }: PatchRepoConfig): Promise<string> => {
-	const { PATCH_REPOS_PATH, SSH_PATH } = paths(!!serverId);
-	const repoPath = join(PATCH_REPOS_PATH, type, appName);
-	const knownHostsPath = path.join(SSH_PATH, "known_hosts");
+	let serverId: string | null = null;
 
-	// Check if repo exists
-	const checkCommand = `test -d "${repoPath}/.git" && echo "exists" || echo "not_exists"`;
+	if (type === "application") {
+		const application = await findApplicationById(id);
+		serverId = application.buildServerId || application.serverId;
+	} else {
+		const compose = await findComposeById(id);
+		serverId = compose.serverId;
+	}
 
-	let exists = false;
+	const application =
+		type === "application"
+			? await findApplicationById(id)
+			: await findComposeById(id);
+
+	const { PATCH_REPOS_PATH } = paths(!!serverId);
+	const repoPath = join(PATCH_REPOS_PATH, type, application.appName);
+
+	const applicationEntity = {
+		...application,
+		type,
+		serverId: serverId,
+		outputPathOverride: repoPath,
+	};
+
+	let command = "set -e;";
+	if (application.sourceType === "github") {
+		command += await cloneGithubRepository(applicationEntity);
+	} else if (application.sourceType === "gitlab") {
+		command += await cloneGitlabRepository(applicationEntity);
+	} else if (application.sourceType === "gitea") {
+		command += await cloneGiteaRepository(applicationEntity);
+	} else if (application.sourceType === "bitbucket") {
+		command += await cloneBitbucketRepository(applicationEntity);
+	} else if (application.sourceType === "git") {
+		command += await cloneGitRepository(applicationEntity);
+	}
+
 	if (serverId) {
-		const result = await execAsyncRemote(serverId, checkCommand);
-		exists = result.stdout.trim() === "exists";
+		await execAsyncRemote(serverId, command);
 	} else {
-		const result = await execAsync(checkCommand);
-		exists = result.stdout.trim() === "exists";
-	}
-
-	// Setup SSH if needed
-	let sshSetup = "";
-	if (sshKeyId) {
-		const sshKey = await findSSHKeyById(sshKeyId);
-		const temporalKeyPath = "/tmp/patch_repo_id_rsa";
-		sshSetup = `
-echo "${sshKey.privateKey}" > ${temporalKeyPath};
-chmod 600 ${temporalKeyPath};
-export GIT_SSH_COMMAND="ssh -i ${temporalKeyPath} -o UserKnownHostsFile=${knownHostsPath} -o StrictHostKeyChecking=accept-new";
-`;
-	}
-
-	if (!exists) {
-		// Clone the repo
-		const cloneCommand = `
-set -e;
-${sshSetup}
-mkdir -p "${repoPath}";
-git clone --branch ${gitBranch} --progress "${gitUrl}" "${repoPath}";
-echo "Repository cloned successfully";
-`;
-
-		try {
-			if (serverId) {
-				await execAsyncRemote(serverId, cloneCommand);
-			} else {
-				await execAsync(cloneCommand);
-			}
-		} catch (error) {
-			throw new TRPCError({
-				code: "INTERNAL_SERVER_ERROR",
-				message: `Failed to clone repository: ${error}`,
-			});
-		}
-	} else {
-		// Repo exists - check if on correct branch and update
-		const updateCommand = `
-set -e;
-cd "${repoPath}";
-${sshSetup}
-
-# Fetch all updates including tags
-git fetch origin --tags --force
-
-# Checkout the target (branch or tag) - this handles switching branches/tags
-git checkout --force "${gitBranch}"
-
-# If it's a branch that corresponds to a remote branch, hard reset to match remote
-# This ensures we pull the latest changes for that branch.
-# If it's a tag, we are already at the correct commit after checkout.
-if git rev-parse --verify "origin/${gitBranch}" >/dev/null 2>&1; then
-    git reset --hard "origin/${gitBranch}"
-fi
-
-echo "Updated repository to ${gitBranch}"
-`;
-
-		try {
-			if (serverId) {
-				await execAsyncRemote(serverId, updateCommand);
-			} else {
-				await execAsync(updateCommand);
-			}
-		} catch (error) {
-			throw new TRPCError({
-				code: "INTERNAL_SERVER_ERROR",
-				message: `Failed to update repository: ${error}`,
-			});
-		}
+		await execAsync(command);
 	}
 
 	return repoPath;
@@ -131,8 +86,6 @@ export const readPatchRepoDirectory = async (
 ): Promise<DirectoryEntry[]> => {
 	// Use git ls-tree to get tracked files only
 	const command = `cd "${repoPath}" && git ls-tree -r --name-only HEAD`;
-
-	console.log("command", command);
 
 	let stdout: string;
 	try {
