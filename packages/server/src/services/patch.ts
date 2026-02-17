@@ -106,6 +106,26 @@ export const deletePatch = async (patchId: string) => {
 	return result[0];
 };
 
+export const markPatchForDeletion = async (
+	filePath: string,
+	entityId: string,
+	entityType: "application" | "compose",
+) => {
+	const existing = await findPatchByFilePath(filePath, entityId, entityType);
+
+	if (existing) {
+		return await updatePatch(existing.patchId, { type: "delete", content: "" });
+	}
+
+	return await createPatch({
+		filePath,
+		content: "",
+		type: "delete",
+		applicationId: entityType === "application" ? entityId : undefined,
+		composeId: entityType === "compose" ? entityId : undefined,
+	});
+};
+
 interface ApplyPatchesOptions {
 	id: string;
 	type: "application" | "compose";
@@ -133,12 +153,20 @@ export const generateApplyPatchesCommand = async ({
 
 	for (const p of patches) {
 		const filePath = join(codePath, p.filePath);
-		command += `
+
+		if (p.type === "delete") {
+			command += `
+			rm -f "${filePath}";
+			`;
+		} else {
+			// create and update: write file
+			command += `
 file="${filePath}"
 dir="$(dirname "$file")"
 mkdir -p "$dir"
 echo "${encodeBase64(p.content)}" | base64 -d > "$file"
 `;
+		}
 	}
 
 	return command;
