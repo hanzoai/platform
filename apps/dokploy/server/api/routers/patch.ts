@@ -186,7 +186,6 @@ export const patchRouter = createTRPCRouter({
 			z.object({
 				id: z.string(),
 				type: z.enum(["application", "compose"]),
-				repoPath: z.string(),
 				filePath: z.string(),
 			}),
 		)
@@ -229,12 +228,10 @@ export const patchRouter = createTRPCRouter({
 				input.type,
 			);
 
-			return await readPatchRepoFile(
-				input.repoPath,
-				input.filePath,
-				existingPatch?.enabled ? existingPatch?.content : undefined,
-				serverId,
-			);
+			if (existingPatch) {
+				return existingPatch.content;
+			}
+			return await readPatchRepoFile(input.id, input.type, input.filePath);
 		}),
 
 	saveFileAsPatch: protectedProcedure
@@ -242,14 +239,11 @@ export const patchRouter = createTRPCRouter({
 			z.object({
 				id: z.string(),
 				type: z.enum(["application", "compose"]),
-				repoPath: z.string(),
 				filePath: z.string(),
 				content: z.string(),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
-			let serverId: string | null = null;
-
 			if (input.type === "application") {
 				const app = await findApplicationById(input.id);
 				if (
@@ -261,7 +255,6 @@ export const patchRouter = createTRPCRouter({
 						message: "You are not authorized to access this application",
 					});
 				}
-				serverId = app.serverId;
 			} else if (input.type === "compose") {
 				const compose = await findComposeById(input.id);
 				if (
@@ -273,7 +266,6 @@ export const patchRouter = createTRPCRouter({
 						message: "You are not authorized to access this compose",
 					});
 				}
-				serverId = compose.serverId;
 			} else {
 				throw new TRPCError({
 					code: "BAD_REQUEST",
@@ -281,14 +273,24 @@ export const patchRouter = createTRPCRouter({
 				});
 			}
 
-			const newPatch = await createPatch({
-				filePath: input.filePath,
-				content: input.content,
-				applicationId: input.type === "application" ? input.id : undefined,
-				composeId: input.type === "compose" ? input.id : undefined,
-			});
+			const existingPatch = await findPatchByFilePath(
+				input.filePath,
+				input.id,
+				input.type,
+			);
 
-			return newPatch;
+			if (!existingPatch) {
+				const newPatch = await createPatch({
+					filePath: input.filePath,
+					content: input.content,
+					applicationId: input.type === "application" ? input.id : undefined,
+					composeId: input.type === "compose" ? input.id : undefined,
+				});
+			} else {
+				return await updatePatch(existingPatch.patchId, {
+					content: input.content,
+				});
+			}
 		}),
 
 	// Cleanup
