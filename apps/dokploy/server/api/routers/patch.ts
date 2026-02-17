@@ -8,9 +8,7 @@ import {
 	findComposeById,
 	findPatchByFilePath,
 	findPatchById,
-	findPatchesByApplicationId,
-	findPatchesByComposeId,
-	generatePatch,
+	findPatchesByEntityId,
 	readPatchRepoDirectory,
 	readPatchRepoFile,
 	updatePatch,
@@ -26,8 +24,6 @@ import {
 	apiCreatePatch,
 	apiDeletePatch,
 	apiFindPatch,
-	apiFindPatchesByApplicationId,
-	apiFindPatchesByComposeId,
 	apiTogglePatchEnabled,
 	apiUpdatePatch,
 } from "@/server/db/schema";
@@ -77,38 +73,37 @@ export const patchRouter = createTRPCRouter({
 		return await findPatchById(input.patchId);
 	}),
 
-	byApplicationId: protectedProcedure
-		.input(apiFindPatchesByApplicationId)
+	byEntityId: protectedProcedure
+		.input(
+			z.object({ id: z.string(), type: z.enum(["application", "compose"]) }),
+		)
 		.query(async ({ input, ctx }) => {
-			const app = await findApplicationById(input.applicationId);
-			if (
-				app.environment.project.organizationId !==
-				ctx.session.activeOrganizationId
-			) {
-				throw new TRPCError({
-					code: "UNAUTHORIZED",
-					message: "You are not authorized to access this application",
-				});
+			if (input.type === "application") {
+				const app = await findApplicationById(input.id);
+				if (
+					app.environment.project.organizationId !==
+					ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this application",
+					});
+				}
+			} else if (input.type === "compose") {
+				const compose = await findComposeById(input.id);
+				if (
+					compose.environment.project.organizationId !==
+					ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this compose",
+					});
+				}
 			}
+			const result = await findPatchesByEntityId(input.id, input.type);
 
-			return await findPatchesByApplicationId(input.applicationId);
-		}),
-
-	byComposeId: protectedProcedure
-		.input(apiFindPatchesByComposeId)
-		.query(async ({ input, ctx }) => {
-			const compose = await findComposeById(input.composeId);
-			if (
-				compose.environment.project.organizationId !==
-				ctx.session.activeOrganizationId
-			) {
-				throw new TRPCError({
-					code: "UNAUTHORIZED",
-					message: "You are not authorized to access this compose",
-				});
-			}
-
-			return await findPatchesByComposeId(input.composeId);
+			return result;
 		}),
 
 	update: protectedProcedure
