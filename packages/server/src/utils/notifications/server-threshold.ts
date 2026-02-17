@@ -50,7 +50,7 @@ export const sendServerThresholdNotifications = async (
 
 	for (const notification of notificationList) {
 		const { discord, telegram, slack, custom, lark, pushover, teams } =
-		notification;
+			notification;
 
 		if (discord) {
 			const decorate = (decoration: string, text: string) =>
