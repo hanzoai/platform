@@ -250,7 +250,7 @@ describe("security: zip symlink entry blocked", () => {
 		const file = new File([zipBuffer as any], "exploit.zip");
 
 		await expect(unzipDrop(file, { ...baseApp, appName })).rejects.toThrow(
-			/Symlink entries are not allowed/,
+			/Dangerous node entries are not allowed/,
 		);
 	});
 });
