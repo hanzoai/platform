@@ -81,6 +81,7 @@ export default function Home({ IS_CLOUD }: Props) {
 			const { data, error } = await authClient.signIn.email({
 				email: values.email,
 				password: values.password,
+				callbackURL: "/dashboard/projects",
 			});
 
 			if (error) {
@@ -105,7 +106,6 @@ export default function Home({ IS_CLOUD }: Props) {
 			setIsLoginLoading(false);
 		}
 	};
-
 	const onTwoFactorSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (twoFactorCode.length !== 6) {
