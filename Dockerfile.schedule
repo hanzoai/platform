@@ -20,7 +20,7 @@ ENV NODE_ENV=production
 RUN pnpm --filter=@dokploy/server build
 RUN pnpm --filter=./apps/schedules run build
 
-RUN pnpm --filter=./apps/schedules --prod deploy /prod/schedules
+RUN pnpm --filter=./apps/schedules --prod deploy --legacy /prod/schedules
 
 RUN cp -R /usr/src/app/apps/schedules/dist /prod/schedules/dist
 
