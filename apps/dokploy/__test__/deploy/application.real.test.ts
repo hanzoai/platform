@@ -83,7 +83,7 @@ vi.mock("@dokploy/server/services/patch", async (importOriginal) => {
 		await importOriginal<typeof import("@dokploy/server/services/patch")>();
 	return {
 		...actual,
-		findPatchesByApplicationId: vi.fn().mockResolvedValue([]),
+		findPatchesByEntityId: vi.fn().mockResolvedValue([]),
 	};
 });
 
@@ -99,7 +99,6 @@ import * as applicationService from "@dokploy/server/services/application";
 import { deployApplication } from "@dokploy/server/services/application";
 import * as deploymentService from "@dokploy/server/services/deployment";
 import * as patchService from "@dokploy/server/services/patch";
-import { generatePatch } from "@dokploy/server/services/patch";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -546,24 +545,17 @@ describe(
 					patchApp as any,
 				);
 
-				// 3. Generate a patch
-				// We modify the file, generate patch, and then reset.
+				// 3. Patch content is the raw file content (not a diff)
 				const newContent = "print('Patched App')\n";
-				const patchContent = await generatePatch({
-					codePath: tempRepo,
-					filePath: "app.py",
-					newContent,
-					serverId: null,
-				});
 
 				// 4. Mock patch service to return this patch
-				vi.mocked(patchService.findPatchesByApplicationId).mockResolvedValue([
+				vi.mocked(patchService.findPatchesByEntityId).mockResolvedValue([
 					{
 						patchId: "test-patch-1",
 						applicationId: "test-app-id",
 						composeId: null,
 						filePath: "app.py",
-						content: patchContent,
+						content: newContent,
 						enabled: true,
 						createdAt: new Date().toISOString(),
 					} as any,
