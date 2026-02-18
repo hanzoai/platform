@@ -1,6 +1,7 @@
 import { db } from "@dokploy/server/db";
-import { organization, user } from "@dokploy/server/db/schema";
+import { user } from "@dokploy/server/db/schema";
 import { eq } from "drizzle-orm";
+import { getOrganizationOwnerId } from "./sso";
 
 export const hasValidLicense = async (organizationId: string) => {
 	const ownerId = await getOrganizationOwnerId(organizationId);
