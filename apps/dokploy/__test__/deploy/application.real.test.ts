@@ -8,20 +8,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const REAL_TEST_TIMEOUT = 180000; // 3 minutes
 
-// Mock constants to avoid load error
-vi.mock("@dokploy/server/constants", () => ({
-	paths: () => ({
-		LOGS_PATH: "/tmp/dokploy-test-real/logs",
-		APPLICATIONS_PATH: "/tmp/dokploy-test-real/applications",
-		COMPOSE_PATH: "/tmp/dokploy-test-real/compose",
-		SSH_PATH: "/tmp/dokploy-test-real/ssh",
-		PATCH_REPOS_PATH: "/tmp/dokploy-test-real/patch-repos",
-		BASE_PATH: "/tmp/dokploy-test-real",
-	}),
-	IS_CLOUD: false,
-	docker: {},
-}));
-
 // Mock ONLY database and notifications
 vi.mock("@dokploy/server/db", () => {
 	const createChainableMock = (): any => {
