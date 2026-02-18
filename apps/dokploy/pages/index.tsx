@@ -81,7 +81,6 @@ export default function Home({ IS_CLOUD }: Props) {
 			const { data, error } = await authClient.signIn.email({
 				email: values.email,
 				password: values.password,
-				callbackURL: "/dashboard/projects",
 			});
 
 			if (error) {
