@@ -46,8 +46,7 @@
 	},
 	"pnpm": {
 		"overrides": {
-			"esbuild": "0.20.2",
-			"fast-xml-parser": "4.3.4"
+			"esbuild": "0.20.2"
 		},
 		"ignoredBuiltDependencies": [
 			"@prisma/client"
