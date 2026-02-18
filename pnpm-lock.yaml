@@ -39,19 +39,19 @@ importers:
         version: link:../../packages/server
       '@hono/node-server':
         specifier: ^1.14.3
-        version: 1.19.9(hono@4.11.9)
+        version: 1.19.9(hono@4.11.10)
       '@hono/zod-validator':
         specifier: 0.3.0
-        version: 0.3.0(hono@4.11.9)(zod@3.25.76)
+        version: 0.3.0(hono@4.11.10)(zod@3.25.76)
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
       hono:
         specifier: ^4.11.7
-        version: 4.11.9
+        version: 4.11.10
       inngest:
         specifier: 3.40.1
-        version: 3.40.1(h3@1.15.5)(hono@4.11.9)(next@16.1.6(@opentelemetry/api@1.9.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(typescript@5.9.3)
+        version: 3.40.1(h3@1.15.5)(hono@4.11.10)(next@16.1.6(@opentelemetry/api@1.9.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(typescript@5.9.3)
       pino:
         specifier: 9.4.0
         version: 9.4.0
@@ -91,7 +91,7 @@ importers:
     dependencies:
       '@ai-sdk/anthropic':
         specifier: ^3.0.44
-        version: 3.0.44(zod@3.25.76)
+        version: 3.0.45(zod@3.25.76)
       '@ai-sdk/azure':
         specifier: ^3.0.30
         version: 3.0.30(zod@3.25.76)
@@ -111,7 +111,7 @@ importers:
         specifier: ^2.0.30
         version: 2.0.30(zod@3.25.76)
       '@better-auth/sso':
-        specifier: v1.5.0-beta.16
+        specifier: 1.5.0-beta.16
         version: 1.5.0-beta.16(@better-auth/core@1.5.0-beta.16(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(better-call@1.3.2(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))(@better-auth/utils@0.3.1)(better-auth@1.5.0-beta.16(h4lkznhuumgjncksvwyobq3n34))(better-call@1.3.2(zod@3.25.76))
       '@codemirror/autocomplete':
         specifier: ^6.18.6
@@ -256,15 +256,15 @@ importers:
         version: 0.5.16
       ai:
         specifier: ^6.0.86
-        version: 6.0.86(zod@3.25.76)
+        version: 6.0.91(zod@3.25.76)
       ai-sdk-ollama:
         specifier: ^3.7.0
-        version: 3.7.0(ai@6.0.86(zod@3.25.76))(zod@3.25.76)
+        version: 3.7.1(ai@6.0.91(zod@3.25.76))(zod@3.25.76)
       bcrypt:
         specifier: 5.1.1
         version: 5.1.1
       better-auth:
-        specifier: v1.5.0-beta.16
+        specifier: 1.5.0-beta.16
         version: 1.5.0-beta.16(h4lkznhuumgjncksvwyobq3n34)
       bl:
         specifier: 6.0.11
@@ -527,10 +527,10 @@ importers:
         version: link:../../packages/server
       '@hono/node-server':
         specifier: ^1.14.3
-        version: 1.19.9(hono@4.11.9)
+        version: 1.19.9(hono@4.11.10)
       '@hono/zod-validator':
         specifier: 0.3.0
-        version: 0.3.0(hono@4.11.9)(zod@3.25.76)
+        version: 0.3.0(hono@4.11.10)(zod@3.25.76)
       bullmq:
         specifier: 5.67.3
         version: 5.67.3
@@ -542,7 +542,7 @@ importers:
         version: 0.41.0(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0(prisma@7.4.0(@types/react@18.3.5)(better-sqlite3@12.6.2)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(typescript@5.9.3)))(@types/pg@8.16.0)(better-sqlite3@12.6.2)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.18.0)(postgres@3.4.7)(prisma@7.4.0(@types/react@18.3.5)(better-sqlite3@12.6.2)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(typescript@5.9.3))
       hono:
         specifier: ^4.11.7
-        version: 4.11.9
+        version: 4.11.10
       ioredis:
         specifier: 5.4.1
         version: 5.4.1
@@ -582,7 +582,7 @@ importers:
     dependencies:
       '@ai-sdk/anthropic':
         specifier: ^3.0.44
-        version: 3.0.44(zod@3.25.76)
+        version: 3.0.45(zod@3.25.76)
       '@ai-sdk/azure':
         specifier: ^3.0.30
         version: 3.0.30(zod@3.25.76)
@@ -602,11 +602,11 @@ importers:
         specifier: ^2.0.30
         version: 2.0.30(zod@3.25.76)
       '@better-auth/sso':
-        specifier: v1.5.0-beta.16
-        version: 1.5.0-beta.16(@better-auth/core@1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))(@better-auth/utils@0.3.0)(better-auth@1.5.0-beta.16(y4zaje4qu5e7ecguvr4rmb7dqa))(better-call@1.1.8(zod@4.3.6))
+        specifier: 1.5.0-beta.16
+        version: 1.5.0-beta.16(@better-auth/core@1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))(@better-auth/utils@0.3.1)(better-auth@1.5.0-beta.16(y4zaje4qu5e7ecguvr4rmb7dqa))(better-call@1.1.8(zod@4.3.6))
       '@better-auth/utils':
-        specifier: 0.3.0
-        version: 0.3.0
+        specifier: 0.3.1
+        version: 0.3.1
       '@faker-js/faker':
         specifier: ^8.4.1
         version: 8.4.1
@@ -633,15 +633,15 @@ importers:
         version: 0.5.16
       ai:
         specifier: ^6.0.86
-        version: 6.0.86(zod@3.25.76)
+        version: 6.0.91(zod@3.25.76)
       ai-sdk-ollama:
         specifier: ^3.7.0
-        version: 3.7.0(ai@6.0.86(zod@3.25.76))(zod@3.25.76)
+        version: 3.7.1(ai@6.0.91(zod@3.25.76))(zod@3.25.76)
       bcrypt:
         specifier: 5.1.1
         version: 5.1.1
       better-auth:
-        specifier: v1.5.0-beta.16
+        specifier: 1.5.0-beta.16
         version: 1.5.0-beta.16(y4zaje4qu5e7ecguvr4rmb7dqa)
       bl:
         specifier: 6.0.11
@@ -815,8 +815,8 @@ importers:
 
 packages:
 
-  '@ai-sdk/anthropic@3.0.44':
-    resolution: {integrity: sha512-ke1NldgohWJ7sWLqm9Um9TVIOrtg8Y8AecWeB6PgaLt+paTPisAsyNfe8FNOVusuv58ugLBqY/78AkhUmbjXHA==}
+  '@ai-sdk/anthropic@3.0.45':
+    resolution: {integrity: sha512-bpIS3RakSsaUhCRTIvL9bcVNeeUMDXWbndpYdXNeMJIIPcElTcvwktvla+JxIfbeK1AdQjB8ggYVChepeXPGwQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -839,8 +839,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/gateway@3.0.46':
-    resolution: {integrity: sha512-zH1UbNRjG5woOXXFOrVCZraqZuFTtmPvLardMGcgLkzpxKV0U3tAGoyWKSZ862H+eBJfI/Hf2yj/zzGJcCkycg==}
+  '@ai-sdk/gateway@3.0.50':
+    resolution: {integrity: sha512-Jdd1a8VgbD7l7r+COj0h5SuaYRfPvOJ/AO6l0OrmTPEcI2MUQPr3C4JttfpNkcheEN+gOdy0CtZWuG17bW2fjw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -4177,14 +4177,14 @@ packages:
     resolution: {integrity: sha512-0poP0T7el6Vq3rstR8Mn4V/IQrpBLO6POkUSrN7RhyY+GF/InCFShQzsQ39T25gkHhLgSLByyAz+Kjb+c2L98w==}
     engines: {node: '>=12'}
 
-  ai-sdk-ollama@3.7.0:
-    resolution: {integrity: sha512-RtiOsAjfjykqtqp0vpnkkUe/lSlnZy7BEapuxZl6VnHwo8hq+DqRn35RpABoAI+eCBjzLioBcZk/msnhwfc8CA==}
+  ai-sdk-ollama@3.7.1:
+    resolution: {integrity: sha512-2G7lYQsojnCjqnNEcVHErus2CFDuEkns8+NtIe9a0+cOVJw1ioMCusRFjknVEGRs4HrtJSNV2qk5pq+6tPAvTQ==}
     engines: {node: '>=22'}
     peerDependencies:
-      ai: ^6.0.80
+      ai: ^6.0.89
 
-  ai@6.0.86:
-    resolution: {integrity: sha512-U2W2LBCHA/pr0Ui7vmmsjBiLEzBbZF3yVHNy7Rbzn7IX+SvoQPFM5rN74hhfVzZoE8zBuGD4nLLk+j0elGacvQ==}
+  ai@6.0.91:
+    resolution: {integrity: sha512-k1/8BusZMhYVxxLZt0BUZzm9HVDCCh117nyWfWUx5xjR2+tWisJbXgysL7EBMq2lgyHwgpA1jDR3tVjWSdWZXw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -5407,8 +5407,8 @@ packages:
     resolution: {integrity: sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==}
     engines: {node: 6.* || 8.* || >= 10.*}
 
-  get-east-asian-width@1.4.0:
-    resolution: {integrity: sha512-QZjmEOC+IT1uk6Rx0sX22V6uHWVwbdbxf1faPqJ1QhLdGgsRGCZoyaQBm/piRdJy/D2um6hM1UP7ZEeQ4EkP+Q==}
+  get-east-asian-width@1.5.0:
+    resolution: {integrity: sha512-CQ+bEO+Tva/qlmw24dCejulK5pMzVnUOFOijVogd3KQs07HnRIgp8TGipvCCRT06xeYEbpbgwaCxglFyiuIcmA==}
     engines: {node: '>=18'}
 
   get-intrinsic@1.3.0:
@@ -5547,12 +5547,12 @@ packages:
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
-  hono@4.11.4:
-    resolution: {integrity: sha512-U7tt8JsyrxSRKspfhtLET79pU8K+tInj5QZXs1jSugO1Vq5dFj3kmZsRldo29mTBfcjDRVRXrEZ6LS63Cog9ZA==}
+  hono@4.11.10:
+    resolution: {integrity: sha512-kyWP5PAiMooEvGrA9jcD3IXF7ATu8+o7B3KCbPXid5se52NPqnOpM/r9qeW2heMnOekF4kqR1fXJqCYeCLKrZg==}
     engines: {node: '>=16.9.0'}
 
-  hono@4.11.9:
-    resolution: {integrity: sha512-Eaw2YTGM6WOxA6CXbckaEvslr2Ne4NFsKrvc0v97JD5awbmeBLO5w9Ho9L9kmKonrwF9RJlW6BxT1PVv/agBHQ==}
+  hono@4.11.4:
+    resolution: {integrity: sha512-U7tt8JsyrxSRKspfhtLET79pU8K+tInj5QZXs1jSugO1Vq5dFj3kmZsRldo29mTBfcjDRVRXrEZ6LS63Cog9ZA==}
     engines: {node: '>=16.9.0'}
 
   html-to-text@9.0.5:
@@ -8140,7 +8140,7 @@ packages:
 
 snapshots:
 
-  '@ai-sdk/anthropic@3.0.44(zod@3.25.76)':
+  '@ai-sdk/anthropic@3.0.45(zod@3.25.76)':
     dependencies:
       '@ai-sdk/provider': 3.0.8
       '@ai-sdk/provider-utils': 4.0.15(zod@3.25.76)
@@ -8166,7 +8166,7 @@ snapshots:
       '@ai-sdk/provider-utils': 4.0.15(zod@3.25.76)
       zod: 3.25.76
 
-  '@ai-sdk/gateway@3.0.46(zod@3.25.76)':
+  '@ai-sdk/gateway@3.0.50(zod@3.25.76)':
     dependencies:
       '@ai-sdk/provider': 3.0.8
       '@ai-sdk/provider-utils': 4.0.15(zod@3.25.76)
@@ -8451,7 +8451,7 @@ snapshots:
       '@babel/preset-react': 7.28.5(@babel/core@7.29.0)
       '@babel/preset-typescript': 7.28.5(@babel/core@7.29.0)
       '@better-auth/core': 1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0)
-      '@better-auth/telemetry': 1.4.18(@better-auth/core@1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))
+      '@better-auth/telemetry': 1.4.18(@better-auth/core@1.4.18(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))
       '@better-auth/utils': 0.3.0
       '@clack/prompts': 0.11.0
       '@mrleebo/prisma-ast': 0.13.1
@@ -8569,10 +8569,10 @@ snapshots:
       '@prisma/client': 5.22.0(prisma@7.4.0(@types/react@18.3.5)(better-sqlite3@12.6.2)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(typescript@5.9.3))
       prisma: 7.4.0(@types/react@18.3.5)(better-sqlite3@12.6.2)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(typescript@5.9.3)
 
-  '@better-auth/sso@1.5.0-beta.16(@better-auth/core@1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))(@better-auth/utils@0.3.0)(better-auth@1.5.0-beta.16(y4zaje4qu5e7ecguvr4rmb7dqa))(better-call@1.1.8(zod@4.3.6))':
+  '@better-auth/sso@1.5.0-beta.16(@better-auth/core@1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))(@better-auth/utils@0.3.1)(better-auth@1.5.0-beta.16(y4zaje4qu5e7ecguvr4rmb7dqa))(better-call@1.1.8(zod@4.3.6))':
     dependencies:
       '@better-auth/core': 1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0)
-      '@better-auth/utils': 0.3.0
+      '@better-auth/utils': 0.3.1
       '@better-fetch/fetch': 1.1.21
       better-auth: 1.5.0-beta.16(y4zaje4qu5e7ecguvr4rmb7dqa)
       better-call: 1.1.8(zod@4.3.6)
@@ -8593,7 +8593,7 @@ snapshots:
       samlify: 2.10.2
       zod: 4.3.6
 
-  '@better-auth/telemetry@1.4.18(@better-auth/core@1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))':
+  '@better-auth/telemetry@1.4.18(@better-auth/core@1.4.18(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))':
     dependencies:
       '@better-auth/core': 1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0)
       '@better-auth/utils': 0.3.0
@@ -8901,17 +8901,17 @@ snapshots:
 
   '@hapi/bourne@3.0.0': {}
 
+  '@hono/node-server@1.19.9(hono@4.11.10)':
+    dependencies:
+      hono: 4.11.10
+
   '@hono/node-server@1.19.9(hono@4.11.4)':
     dependencies:
       hono: 4.11.4
 
-  '@hono/node-server@1.19.9(hono@4.11.9)':
+  '@hono/zod-validator@0.3.0(hono@4.11.10)(zod@3.25.76)':
     dependencies:
-      hono: 4.11.9
-
-  '@hono/zod-validator@0.3.0(hono@4.11.9)(zod@3.25.76)':
-    dependencies:
-      hono: 4.11.9
+      hono: 4.11.10
       zod: 3.25.76
 
   '@hookform/resolvers@3.10.0(react-hook-form@7.71.1(react@18.2.0))':
@@ -12124,19 +12124,19 @@ snapshots:
       clean-stack: 4.2.0
       indent-string: 5.0.0
 
-  ai-sdk-ollama@3.7.0(ai@6.0.86(zod@3.25.76))(zod@3.25.76):
+  ai-sdk-ollama@3.7.1(ai@6.0.91(zod@3.25.76))(zod@3.25.76):
     dependencies:
       '@ai-sdk/provider': 3.0.8
       '@ai-sdk/provider-utils': 4.0.15(zod@3.25.76)
-      ai: 6.0.86(zod@3.25.76)
+      ai: 6.0.91(zod@3.25.76)
       jsonrepair: 3.13.2
       ollama: 0.6.3
     transitivePeerDependencies:
       - zod
 
-  ai@6.0.86(zod@3.25.76):
+  ai@6.0.91(zod@3.25.76):
     dependencies:
-      '@ai-sdk/gateway': 3.0.46(zod@3.25.76)
+      '@ai-sdk/gateway': 3.0.50(zod@3.25.76)
       '@ai-sdk/provider': 3.0.8
       '@ai-sdk/provider-utils': 4.0.15(zod@3.25.76)
       '@opentelemetry/api': 1.9.0
@@ -12255,7 +12255,7 @@ snapshots:
   better-auth@1.4.18(y4zaje4qu5e7ecguvr4rmb7dqa):
     dependencies:
       '@better-auth/core': 1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0)
-      '@better-auth/telemetry': 1.4.18(@better-auth/core@1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))
+      '@better-auth/telemetry': 1.4.18(@better-auth/core@1.4.18(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@3.25.76))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.1.1
@@ -12348,7 +12348,7 @@ snapshots:
 
   better-call@1.1.8(zod@4.3.6):
     dependencies:
-      '@better-auth/utils': 0.3.0
+      '@better-auth/utils': 0.3.1
       '@better-fetch/fetch': 1.1.21
       rou3: 0.7.12
       set-cookie-parser: 2.7.2
@@ -13270,7 +13270,7 @@ snapshots:
 
   get-caller-file@2.0.5: {}
 
-  get-east-asian-width@1.4.0: {}
+  get-east-asian-width@1.5.0: {}
 
   get-intrinsic@1.3.0:
     dependencies:
@@ -13459,9 +13459,9 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono@4.11.4: {}
+  hono@4.11.10: {}
 
-  hono@4.11.9: {}
+  hono@4.11.4: {}
 
   html-to-text@9.0.5:
     dependencies:
@@ -13555,7 +13555,7 @@ snapshots:
 
   inline-style-parser@0.2.7: {}
 
-  inngest@3.40.1(h3@1.15.5)(hono@4.11.9)(next@16.1.6(@opentelemetry/api@1.9.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(typescript@5.9.3):
+  inngest@3.40.1(h3@1.15.5)(hono@4.11.10)(next@16.1.6(@opentelemetry/api@1.9.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(typescript@5.9.3):
     dependencies:
       '@bufbuild/protobuf': 2.11.0
       '@inngest/ai': 0.1.7
@@ -13581,7 +13581,7 @@ snapshots:
       zod: 3.22.5
     optionalDependencies:
       h3: 1.15.5
-      hono: 4.11.9
+      hono: 4.11.10
       next: 16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -13660,7 +13660,7 @@ snapshots:
 
   is-fullwidth-code-point@5.1.0:
     dependencies:
-      get-east-asian-width: 1.4.0
+      get-east-asian-width: 1.5.0
 
   is-glob@4.0.3:
     dependencies:
@@ -15561,7 +15561,7 @@ snapshots:
   string-width@7.2.0:
     dependencies:
       emoji-regex: 10.6.0
-      get-east-asian-width: 1.4.0
+      get-east-asian-width: 1.5.0
       strip-ansi: 7.1.2
 
   string_decoder@1.3.0:
