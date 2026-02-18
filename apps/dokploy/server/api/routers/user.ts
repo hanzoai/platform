@@ -118,6 +118,14 @@ export const userRouter = createTRPCRouter({
 
 		return memberResult;
 	}),
+	getTrustedOrigins: protectedProcedure.query(async ({ ctx }) => {
+		const memberResult = await db.query.member.findFirst({
+			where: and(
+				eq(member.organizationId, ctx.session?.activeOrganizationId || ""),
+			),
+		});
+		return memberResult?.user?.trustedOrigins ?? [];
+	}),
 	haveRootAccess: protectedProcedure.query(async ({ ctx }) => {
 		if (!IS_CLOUD) {
 			return false;
