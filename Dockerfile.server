@@ -20,7 +20,7 @@ ENV NODE_ENV=production
 RUN pnpm --filter=@dokploy/server build
 RUN pnpm --filter=./apps/api run build
 
-RUN pnpm --filter=./apps/api --prod deploy /prod/api
+RUN pnpm --filter=./apps/api --prod deploy --legacy /prod/api
 
 RUN cp -R /usr/src/app/apps/api/dist /prod/api/dist
 
