@@ -73,10 +73,11 @@ describe("isValidSearch (docker-container-logs)", () => {
 		expect(isValidSearch("")).toBe(true);
 	});
 
-	it("accepts safe printable ASCII", () => {
+	it("accepts only alphanumeric, space, dot, underscore, hyphen", () => {
 		expect(isValidSearch("error")).toBe(true);
 		expect(isValidSearch("foo bar")).toBe(true);
 		expect(isValidSearch("a-zA-Z0-9_.-")).toBe(true);
+		expect(isValidSearch("")).toBe(true);
 	});
 
 	it("rejects strings longer than 500 chars", () => {
@@ -91,10 +92,20 @@ describe("isValidSearch (docker-container-logs)", () => {
 		expect(isValidSearch("a\x19b")).toBe(false);
 	});
 
-	it("search is only used in Node (filter) or escaped for SSH; printable ASCII is allowed", () => {
-		// search is never concatenated into shell unescaped: local path filters in Node, SSH escapes
-		expect(isValidSearch("error")).toBe(true);
-		expect(isValidSearch("foo bar")).toBe(true);
+	it("rejects command injection vectors in search (search is concatenated into shell)", () => {
+		// Double-quoted context (SSH line 99): $ and ` execute
+		expect(isValidSearch("$(whoami)")).toBe(false);
+		expect(isValidSearch("`id`")).toBe(false);
+		expect(isValidSearch("$(id)")).toBe(false);
+		// Single-quoted context (local line 153): ' breaks out
+		expect(isValidSearch("'$(whoami)'")).toBe(false);
+		expect(isValidSearch("error'")).toBe(false);
+		expect(isValidSearch("'; whoami; #")).toBe(false);
+		// Other shell-metacharacters
+		expect(isValidSearch("error; id")).toBe(false);
+		expect(isValidSearch("a|b")).toBe(false);
+		expect(isValidSearch('error"')).toBe(false);
+		expect(isValidSearch("a&b")).toBe(false);
 	});
 });
 
