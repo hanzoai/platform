@@ -41,7 +41,9 @@ export const isValidSince = (since: string): boolean => {
  * Max length 500.
  */
 export const isValidSearch = (search: string): boolean => {
-	return /^[\x20-\x7E]{0,500}$/.test(search);
+	return /^[\x20-\x21\x23-\x25\x27-\x28\x2A-\x3A\x3D\x3F-\x5B\x5D-\x7B\x7D-\x7E]{0,500}$/.test(
+		search,
+	);
 };
 
 /**
