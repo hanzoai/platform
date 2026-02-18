@@ -3,7 +3,7 @@ FROM node:24.4.0-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
-RUN corepack prepare pnpm@9.12.0 --activate
+RUN corepack prepare pnpm@10.22.0 --activate
 
 FROM base AS build
 COPY . /usr/src/app
