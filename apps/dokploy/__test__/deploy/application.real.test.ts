@@ -13,7 +13,10 @@ vi.mock("@dokploy/server/constants", () => ({
 	paths: () => ({
 		LOGS_PATH: "/tmp/dokploy-test-real/logs",
 		APPLICATIONS_PATH: "/tmp/dokploy-test-real/applications",
+		COMPOSE_PATH: "/tmp/dokploy-test-real/compose",
+		SSH_PATH: "/tmp/dokploy-test-real/ssh",
 		PATCH_REPOS_PATH: "/tmp/dokploy-test-real/patch-repos",
+		BASE_PATH: "/tmp/dokploy-test-real",
 	}),
 	IS_CLOUD: false,
 	docker: {},
