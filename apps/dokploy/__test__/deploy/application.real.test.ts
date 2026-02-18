@@ -104,7 +104,6 @@ import * as adminService from "@dokploy/server/services/admin";
 import * as applicationService from "@dokploy/server/services/application";
 import { deployApplication } from "@dokploy/server/services/application";
 import * as deploymentService from "@dokploy/server/services/deployment";
-import * as patchService from "@dokploy/server/services/patch";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -554,8 +553,8 @@ describe(
 				// 3. Patch content is the raw file content (not a diff)
 				const newContent = "print('Patched App')\n";
 
-				// 4. Mock patch service to return this patch
-				vi.mocked(patchService.findPatchesByEntityId).mockResolvedValue([
+				// 4. Mock db.query.patch.findMany - generateApplyPatchesCommand uses this via findPatchesByEntityId
+				vi.mocked(db.query.patch.findMany).mockResolvedValue([
 					{
 						patchId: "test-patch-1",
 						applicationId: "test-app-id",
@@ -563,7 +562,9 @@ describe(
 						filePath: "app.py",
 						content: newContent,
 						enabled: true,
+						type: "update",
 						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
 					} as any,
 				]);
 
