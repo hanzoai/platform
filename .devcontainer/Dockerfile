@@ -1,5 +1,5 @@
 # Dockerfile for DevContainer
-FROM node:20.16.0-bullseye-slim
+FROM node:24.4.0-bullseye-slim
 
 # Install essential packages
 RUN apt-get update && apt-get install -y \
