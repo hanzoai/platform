@@ -142,12 +142,14 @@ export const patchRouter = createTRPCRouter({
 	readRepoDirectories: protectedProcedure
 		.input(
 			z.object({
-				id: z.string(),
+				id: z.string().min(1),
 				type: z.enum(["application", "compose"]),
 				repoPath: z.string(),
 			}),
 		)
 		.query(async ({ input, ctx }) => {
+			let serverId: string | null = null;
+
 			if (input.type === "application") {
 				const app = await findApplicationById(input.id);
 				if (
@@ -159,7 +161,7 @@ export const patchRouter = createTRPCRouter({
 						message: "You are not authorized to access this application",
 					});
 				}
-				return await readPatchRepoDirectory(input.repoPath, app.serverId);
+				serverId = app.serverId;
 			}
 
 			if (input.type === "compose") {
@@ -173,19 +175,16 @@ export const patchRouter = createTRPCRouter({
 						message: "You are not authorized to access this compose",
 					});
 				}
-				return await readPatchRepoDirectory(input.repoPath, compose.serverId);
+				serverId = compose.serverId;
 			}
 
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: "Either application or compose must be provided",
-			});
+			return await readPatchRepoDirectory(input.repoPath, serverId);
 		}),
 
 	readRepoFile: protectedProcedure
 		.input(
 			z.object({
-				id: z.string(),
+				id: z.string().min(1),
 				type: z.enum(["application", "compose"]),
 				filePath: z.string(),
 			}),
@@ -246,7 +245,7 @@ export const patchRouter = createTRPCRouter({
 	saveFileAsPatch: protectedProcedure
 		.input(
 			z.object({
-				id: z.string(),
+				id: z.string().min(1),
 				type: z.enum(["application", "compose"]),
 				filePath: z.string(),
 				content: z.string(),
@@ -308,7 +307,7 @@ export const patchRouter = createTRPCRouter({
 	markFileForDeletion: protectedProcedure
 		.input(
 			z.object({
-				id: z.string(),
+				id: z.string().min(1),
 				type: z.enum(["application", "compose"]),
 				filePath: z.string(),
 			}),
@@ -340,8 +339,6 @@ export const patchRouter = createTRPCRouter({
 
 			return await markPatchForDeletion(input.filePath, input.id, input.type);
 		}),
-
-	// Cleanup
 	cleanPatchRepos: adminProcedure
 		.input(z.object({ serverId: z.string().optional() }))
 		.mutation(async ({ input }) => {
