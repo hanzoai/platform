@@ -1,5 +1,5 @@
 {
-  "id": "5ba7ed04-440d-49a1-a7b6-8d4f4b147fc8",
+  "id": "ec86a5ad-8776-483e-a003-346d32f65089",
   "prevId": "50c73964-11f8-41d6-a282-780e38bdddd9",
   "version": "7",
   "dialect": "postgresql",
@@ -4983,6 +4983,14 @@
           "primaryKey": true,
           "notNull": true
         },
+        "type": {
+          "name": "type",
+          "type": "patchType",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'update'"
+        },
         "filePath": {
           "name": "filePath",
           "type": "text",
@@ -7341,6 +7349,15 @@
         "custom",
         "lark",
         "teams"
+      ]
+    },
+    "public.patchType": {
+      "name": "patchType",
+      "schema": "public",
+      "values": [
+        "create",
+        "update",
+        "delete"
       ]
     },
     "public.protocolType": {
