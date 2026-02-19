@@ -65,7 +65,6 @@ export const stripeRouter = createTRPCRouter({
 			expand: ["data.items.data.price"],
 		});
 
-		// Detectar plan actual para mostrar upgrade a usuarios legacy
 		type CurrentPlan = "legacy" | "hobby" | "startup";
 		let currentPlan: CurrentPlan = "legacy";
 		let isAnnualCurrent = false;
@@ -96,7 +95,6 @@ export const stripeRouter = createTRPCRouter({
 				| Stripe.Price
 				| undefined;
 			isAnnualCurrent = firstPrice?.recurring?.interval === "year";
-			// Precio actual total del intervalo (mes o año) desde Stripe
 			const totalCents = activeSub.items.data.reduce((sum, item) => {
 				const price = item.price as Stripe.Price;
 				const amount = price.unit_amount ?? 0;
@@ -202,7 +200,6 @@ export const stripeRouter = createTRPCRouter({
 		}
 	}),
 
-	/** Cambiar de plan o cantidad de servidores (legacy→Hobby/Startup, o Hobby/Startup→cambiar tier/cantidad). Portal deshabilitado para esto; se hace desde la app. */
 	upgradeSubscription: adminProcedure
 		.input(
 			z
