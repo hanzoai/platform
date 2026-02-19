@@ -15,7 +15,6 @@ const STARTUP_BASE_PRICE_IDS = [
 
 const STARTUP_SERVERS_INCLUDED = 3;
 
-/** Total de servidores: ítem "Startup base" (qty 1) = 3 servidores; el resto = quantity por ítem. */
 function getSubscriptionServersQuantity(
 	items: Stripe.SubscriptionItem[],
 ): number {
