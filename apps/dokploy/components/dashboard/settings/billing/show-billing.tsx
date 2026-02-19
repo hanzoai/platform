@@ -685,10 +685,18 @@ export const ShowBilling = () => {
 													/{isAnnual ? "yr" : "mo"}
 												</p>
 												<p className="text-xs text-muted-foreground mt-0.5">
-													{isAnnual ? "$45.90/yr" : "$4.50/mo"} per server (add
-													as many as you&apos;d like for{" "}
-													{isAnnual ? "$45.90/yr" : "$4.50/mo"})
+													Add more servers as you&apos;d like for{" "}
+													{isAnnual ? "$45.90/yr" : "$4.50/mo"}
 												</p>
+												{isAnnual && (
+													<p className="text-xs text-muted-foreground mt-2">
+														$
+														{(
+															calculatePriceHobby(serverQuantity, true) / 12
+														).toFixed(2)}
+														/mo
+													</p>
+												)}
 											</div>
 											<ul className="mt-5 flex flex-col gap-2 text-sm text-muted-foreground">
 												{[
@@ -807,6 +815,15 @@ export const ShowBilling = () => {
 													Add more servers as you&apos;d like for{" "}
 													{isAnnual ? "$45.90/yr" : "$4.50/mo"}
 												</p>
+												{isAnnual && (
+													<p className="text-xs text-muted-foreground mt-2">
+														$
+														{(
+															calculatePriceStartup(serverQuantity, true) / 12
+														).toFixed(2)}
+														/mo
+													</p>
+												)}
 											</div>
 											<ul className="mt-5 flex flex-col gap-2 text-sm text-muted-foreground">
 												<li className="flex items-start gap-2 font-medium text-foreground">
