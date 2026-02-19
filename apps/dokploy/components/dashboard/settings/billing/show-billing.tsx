@@ -43,20 +43,20 @@ export const calculatePrice = (count: number, isAnnual = false) => {
 	return count * 3.5;
 };
 
-/** Hobby: $4.50/mo por servidor; anual $45.90 por servidor (o 20% off = 43.92). */
+/** Hobby: $4.50/mo per server; annual 20% off = $43.20/yr per server (4.5 * 12 * 0.8). */
 export const calculatePriceHobby = (count: number, isAnnual = false) => {
 	const perServerMonthly = 4.5;
-	const perServerAnnual = 45.9;
+	const perServerAnnual = 43.2; // 4.5 * 12 * 0.8
 	return isAnnual ? count * perServerAnnual : count * perServerMonthly;
 };
 
-/** Startup: incluye 3 servidores ($15/mo); del 4º en adelante $4.50 c/u. Anual 20% off. */
+/** Startup: 3 servers included ($15/mo); extra servers $4.50/mo each. Annual 20% off. */
 export const STARTUP_SERVERS_INCLUDED = 3;
 export const calculatePriceStartup = (count: number, isAnnual = false) => {
 	const baseMonthly = 15;
 	const extraMonthly = 4.5;
-	const baseAnnual = 144; // 15*12 con 20% off
-	const extraAnnual = 45.9;
+	const baseAnnual = 144; // 15 * 12 * 0.8
+	const extraAnnual = 43.2; // 4.5 * 12 * 0.8, consistent with Hobby annual
 	if (count <= STARTUP_SERVERS_INCLUDED)
 		return isAnnual ? baseAnnual : baseMonthly;
 	return isAnnual
@@ -686,7 +686,7 @@ export const ShowBilling = () => {
 												</p>
 												<p className="text-xs text-muted-foreground mt-0.5">
 													Add more servers as you&apos;d like for{" "}
-													{isAnnual ? "$45.90/yr" : "$4.50/mo"}
+													{isAnnual ? "$43.20/yr" : "$4.50/mo"}
 												</p>
 												{isAnnual && (
 													<p className="text-xs text-muted-foreground mt-2">
@@ -813,7 +813,7 @@ export const ShowBilling = () => {
 												</p>
 												<p className="text-xs text-muted-foreground mt-0.5">
 													Add more servers as you&apos;d like for{" "}
-													{isAnnual ? "$45.90/yr" : "$4.50/mo"}
+													{isAnnual ? "$43.20/yr" : "$4.50/mo"}
 												</p>
 												{isAnnual && (
 													<p className="text-xs text-muted-foreground mt-2">
