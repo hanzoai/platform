@@ -61,7 +61,8 @@ export const getStripeItems = (
 			: HOBBY_PRICE_MONTHLY_ID || BASE_PRICE_MONTHLY_ID;
 		if (basePrice) items.push({ price: basePrice, quantity: 1 });
 		const extraQty = Math.max(0, serverQuantity - 3);
-		if (extraQty > 0) items.push({ price: extraServerPrice, quantity: extraQty });
+		if (extraQty > 0)
+			items.push({ price: extraServerPrice, quantity: extraQty });
 		return items;
 	}
 
