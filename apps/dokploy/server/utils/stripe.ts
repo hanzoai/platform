@@ -3,19 +3,16 @@ export const WEBSITE_URL =
 		? "http://localhost:3000"
 		: process.env.SITE_URL;
 
-// Legacy: precios/productos actuales. No borrar; usuarios existentes siguen con estos.
 export const BASE_PRICE_MONTHLY_ID = process.env.BASE_PRICE_MONTHLY_ID!;
 export const BASE_ANNUAL_MONTHLY_ID = process.env.BASE_ANNUAL_MONTHLY_ID!;
 export const PRODUCT_MONTHLY_ID = process.env.PRODUCT_MONTHLY_ID!;
 export const PRODUCT_ANNUAL_ID = process.env.PRODUCT_ANNUAL_ID!;
 
-/** Price IDs legacy: suscripciones con estos IDs no se migran y siguen con los mismos beneficios. */
 export const LEGACY_PRICE_IDS = [
 	process.env.BASE_PRICE_MONTHLY_ID,
 	process.env.BASE_ANNUAL_MONTHLY_ID,
 ].filter(Boolean) as string[];
 
-// Nuevos planes (opcionales hasta que crees los productos en Stripe)
 export const HOBBY_PRODUCT_ID = process.env.HOBBY_PRODUCT_ID ?? "";
 export const HOBBY_PRICE_MONTHLY_ID = process.env.HOBBY_PRICE_MONTHLY_ID ?? "";
 export const HOBBY_PRICE_ANNUAL_ID = process.env.HOBBY_PRICE_ANNUAL_ID ?? "";
@@ -28,7 +25,6 @@ export const STARTUP_BASE_PRICE_ANNUAL_ID =
 
 export type BillingTier = "legacy" | "hobby" | "startup";
 
-/** Line items para Stripe Checkout según tier y cantidad de servidores. */
 export const getStripeItems = (
 	tier: BillingTier,
 	serverQuantity: number,
