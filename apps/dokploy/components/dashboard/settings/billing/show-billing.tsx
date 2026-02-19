@@ -12,6 +12,8 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { DialogAction } from "@/components/shared/dialog-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -196,7 +198,7 @@ export const ShowBilling = () => {
 							{useNewPricing &&
 								data?.currentPlan === "legacy" &&
 								data?.subscriptions?.length > 0 && (
-									<div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-4">
+									<div className="rounded-xl border border-border bg-primary/5 p-4 space-y-4 max-w-2xl">
 										<h3 className="text-lg font-medium">Upgrade your plan</h3>
 										<p className="text-sm text-muted-foreground">
 											You’re on the legacy plan. Switch to Hobby or Startup
@@ -311,34 +313,73 @@ export const ShowBilling = () => {
 														? `$${calculatePriceHobby(upgradeServerQty, updateFormAnnual).toFixed(2)} per ${updateFormAnnual ? "year" : "month"}`
 														: `$${calculatePriceStartup(upgradeServerQty, updateFormAnnual).toFixed(2)} per ${updateFormAnnual ? "year" : "month"}`}
 												</p>
-												<Button
-													className="w-full sm:w-auto"
-													disabled={
-														isUpgrading ||
-														(upgradeTier === "startup" &&
-															upgradeServerQty < STARTUP_SERVERS_INCLUDED)
+												<DialogAction
+													title="Confirm upgrade"
+													description={
+														<div className="space-y-2">
+															<p className="font-medium text-foreground">
+																Current plan: Legacy
+															</p>
+															<p className="font-medium text-foreground">
+																New plan:{" "}
+																{upgradeTier === "startup"
+																	? "Startup"
+																	: "Hobby"}{" "}
+																· {upgradeServerQty} server
+																{upgradeServerQty !== 1 ? "s" : ""} · $
+																{upgradeTier === "hobby"
+																	? calculatePriceHobby(
+																			upgradeServerQty,
+																			updateFormAnnual,
+																		).toFixed(2)
+																	: calculatePriceStartup(
+																			upgradeServerQty,
+																			updateFormAnnual,
+																		).toFixed(2)}
+																/{updateFormAnnual ? "yr" : "mo"} (
+																{updateFormAnnual ? "annual" : "monthly"})
+															</p>
+															<p className="text-sm text-muted-foreground">
+																Stripe will prorate the change.
+															</p>
+														</div>
 													}
+													type="default"
 													onClick={async () => {
 														if (!upgradeTier) return;
-														await upgradeSubscription({
-															tier: upgradeTier,
-															serverQuantity: upgradeServerQty,
-															isAnnual: updateFormAnnual,
-														});
-														await utils.stripe.getProducts.invalidate();
-														await utils.user.get.invalidate();
-														setUpgradeTier(null);
+														try {
+															await upgradeSubscription({
+																tier: upgradeTier,
+																serverQuantity: upgradeServerQty,
+																isAnnual: updateFormAnnual,
+															});
+															await utils.stripe.getProducts.invalidate();
+															await utils.user.get.invalidate();
+															setUpgradeTier(null);
+															toast.success("Plan upgraded successfully");
+														} catch {
+															toast.error("Error upgrading plan");
+														}
 													}}
 												>
-													{isUpgrading ? (
-														<>
-															<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-															Upgrading…
-														</>
-													) : (
-														"Upgrade plan"
-													)}
-												</Button>
+													<Button
+														className="w-full sm:w-auto"
+														disabled={
+															isUpgrading ||
+															(upgradeTier === "startup" &&
+																upgradeServerQty < STARTUP_SERVERS_INCLUDED)
+														}
+													>
+														{isUpgrading ? (
+															<>
+																<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+																Upgrading…
+															</>
+														) : (
+															"Upgrade plan"
+														)}
+													</Button>
+												</DialogAction>
 											</div>
 										)}
 									</div>
@@ -348,7 +389,7 @@ export const ShowBilling = () => {
 								(data?.currentPlan === "hobby" ||
 									data?.currentPlan === "startup") &&
 								data?.subscriptions?.length > 0 && (
-									<div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-4 max-w-2xl">
+									<div className="rounded-xl border border-border bg-primary/5 p-4 space-y-4 max-w-2xl">
 										<h3 className="text-lg font-medium">
 											Change plan or number of servers
 										</h3>
@@ -366,8 +407,7 @@ export const ShowBilling = () => {
 												<>
 													{" · "}
 													<span className="font-medium text-foreground">
-														$
-														{data.currentPriceAmount.toFixed(2)}/
+														${data.currentPriceAmount.toFixed(2)}/
 														{data?.isAnnualCurrent ? "yr" : "mo"}
 													</span>
 												</>
@@ -487,35 +527,92 @@ export const ShowBilling = () => {
 														? `$${calculatePriceHobby(upgradeServerQty, updateFormAnnual).toFixed(2)} per ${updateFormAnnual ? "year" : "month"}`
 														: `$${calculatePriceStartup(upgradeServerQty, updateFormAnnual).toFixed(2)} per ${updateFormAnnual ? "year" : "month"}`}
 												</p>
-												<Button
-													className="w-auto"
-													disabled={
-														isUpgrading ||
-														(upgradeTier === "startup" &&
-															upgradeServerQty < STARTUP_SERVERS_INCLUDED)
+												<DialogAction
+													title="Confirm plan change"
+													description={
+														<div className="space-y-2">
+															<p className="font-medium text-foreground">
+																Current plan:{" "}
+																{data?.currentPlan === "startup"
+																	? "Startup"
+																	: "Hobby"}{" "}
+																· {admin?.user.serversQuantity ?? 0} server
+																{(admin?.user.serversQuantity ?? 0) !== 1
+																	? "s"
+																	: ""}{" "}
+																·{" "}
+																{data?.currentPriceAmount != null
+																	? `$${data.currentPriceAmount.toFixed(2)}/${data?.isAnnualCurrent ? "yr" : "mo"}`
+																	: ""}{" "}
+																({data?.isAnnualCurrent ? "annual" : "monthly"})
+															</p>
+															<p className="font-medium text-foreground">
+																New plan:{" "}
+																{upgradeTier === "startup"
+																	? "Startup"
+																	: "Hobby"}{" "}
+																· {upgradeServerQty} server
+																{upgradeServerQty !== 1 ? "s" : ""} · $
+																{upgradeTier === "hobby"
+																	? calculatePriceHobby(
+																			upgradeServerQty,
+																			updateFormAnnual,
+																		).toFixed(2)
+																	: calculatePriceStartup(
+																			upgradeServerQty,
+																			updateFormAnnual,
+																		).toFixed(2)}
+																/{updateFormAnnual ? "yr" : "mo"} (
+																{updateFormAnnual ? "annual" : "monthly"})
+															</p>
+															<p className="text-sm text-muted-foreground">
+																Stripe will prorate the change.
+															</p>
+														</div>
 													}
+													type="default"
 													onClick={async () => {
 														if (!upgradeTier) return;
-														await upgradeSubscription({
-															tier: upgradeTier,
-															serverQuantity: upgradeServerQty,
-															isAnnual: updateFormAnnual,
-														});
-														await utils.stripe.getProducts.invalidate();
-														await utils.user.get.invalidate();
-														setUpgradeTier(null);
-														// window.location.reload();
+														try {
+															await upgradeSubscription({
+																tier: upgradeTier,
+																serverQuantity: upgradeServerQty,
+																isAnnual: updateFormAnnual,
+															});
+															await utils.stripe.getProducts.invalidate();
+
+															// add delay of 3 seconds
+															await new Promise((resolve) =>
+																setTimeout(resolve, 3000),
+															);
+															await utils.user.get.invalidate();
+															setUpgradeTier(null);
+															toast.success(
+																"Subscription updated successfully",
+															);
+														} catch {
+															toast.error("Error updating subscription");
+														}
 													}}
 												>
-													{isUpgrading ? (
-														<>
-															<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-															Updating…
-														</>
-													) : (
-														"Update subscription"
-													)}
-												</Button>
+													<Button
+														className="w-auto"
+														disabled={
+															isUpgrading ||
+															(upgradeTier === "startup" &&
+																upgradeServerQty < STARTUP_SERVERS_INCLUDED)
+														}
+													>
+														{isUpgrading ? (
+															<>
+																<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+																Updating…
+															</>
+														) : (
+															"Update subscription"
+														)}
+													</Button>
+												</DialogAction>
 											</div>
 										)}
 									</div>
