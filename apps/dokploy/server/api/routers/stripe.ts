@@ -40,8 +40,8 @@ export const stripeRouter = createTRPCRouter({
 		const productIds = [
 			PRODUCT_MONTHLY_ID,
 			PRODUCT_ANNUAL_ID,
-			...(HOBBY_PRODUCT_ID ? [HOBBY_PRODUCT_ID] : []),
-			...(STARTUP_PRODUCT_ID ? [STARTUP_PRODUCT_ID] : []),
+			HOBBY_PRODUCT_ID,
+			STARTUP_PRODUCT_ID,
 		].filter(Boolean);
 		const filteredProducts = products.data.filter((product) =>
 			productIds.includes(product.id),
@@ -85,8 +85,7 @@ export const stripeRouter = createTRPCRouter({
 				currentPlan = "startup";
 			} else if (
 				priceIds.some(
-					(id) =>
-						id === HOBBY_PRICE_MONTHLY_ID || id === HOBBY_PRICE_ANNUAL_ID,
+					(id) => id === HOBBY_PRICE_MONTHLY_ID || id === HOBBY_PRICE_ANNUAL_ID,
 				)
 			) {
 				currentPlan = "hobby";
@@ -126,14 +125,10 @@ export const stripeRouter = createTRPCRouter({
 					serverQuantity: z.number().min(1),
 					isAnnual: z.boolean(),
 				})
-				.refine(
-					(data) =>
-						data.tier !== "startup" || data.serverQuantity >= 3,
-					{
-						message: "Startup plan requires at least 3 servers",
-						path: ["serverQuantity"],
-					},
-				),
+				.refine((data) => data.tier !== "startup" || data.serverQuantity >= 3, {
+					message: "Startup plan requires at least 3 servers",
+					path: ["serverQuantity"],
+				}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -216,14 +211,10 @@ export const stripeRouter = createTRPCRouter({
 					serverQuantity: z.number().min(1),
 					isAnnual: z.boolean(),
 				})
-				.refine(
-					(data) =>
-						data.tier !== "startup" || data.serverQuantity >= 3,
-					{
-						message: "Startup plan requires at least 3 servers",
-						path: ["serverQuantity"],
-					},
-				),
+				.refine((data) => data.tier !== "startup" || data.serverQuantity >= 3, {
+					message: "Startup plan requires at least 3 servers",
+					path: ["serverQuantity"],
+				}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
