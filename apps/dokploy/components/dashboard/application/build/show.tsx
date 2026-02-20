@@ -345,7 +345,6 @@ export const ShowBuildChooseForm = ({ applicationId }: Props) => {
 													placeholder="Path of your docker file (default: Dockerfile)"
 													{...field}
 													value={field.value ?? ""}
-													defaultValue={"Dockerfile"}
 												/>
 											</FormControl>
 											<FormMessage />
