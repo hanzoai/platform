@@ -1,5 +1,6 @@
 import {
 	createBackup,
+	findApplicationById,
 	findBackupById,
 	findComposeByBackupId,
 	findComposeById,
@@ -55,6 +56,51 @@ import {
 } from "@/server/db/schema";
 import { removeJob, schedule, updateJob } from "@/server/utils/backup";
 
+/**
+ * Resolve the organizationId for a backup by looking up its parent
+ * database service or compose resource.
+ */
+async function getBackupOrganizationId(
+	backup: Awaited<ReturnType<typeof findBackupById>>,
+): Promise<string> {
+	if (backup.databaseType === "postgres" && backup.postgres) {
+		const pg = await findPostgresById(backup.postgres.postgresId);
+		return pg.environment.project.organizationId;
+	}
+	if (backup.databaseType === "mysql" && backup.mysql) {
+		const my = await findMySqlById(backup.mysql.mysqlId);
+		return my.environment.project.organizationId;
+	}
+	if (backup.databaseType === "mariadb" && backup.mariadb) {
+		const maria = await findMariadbById(backup.mariadb.mariadbId);
+		return maria.environment.project.organizationId;
+	}
+	if (backup.databaseType === "mongo" && backup.mongo) {
+		const mongo = await findMongoById(backup.mongo.mongoId);
+		return mongo.environment.project.organizationId;
+	}
+	if (backup.backupType === "compose" && backup.compose) {
+		const compose = await findComposeById(backup.compose.composeId);
+		return compose.environment.project.organizationId;
+	}
+	throw new TRPCError({
+		code: "BAD_REQUEST",
+		message: "Cannot determine backup ownership",
+	});
+}
+
+function assertOrgMatch(
+	backupOrgId: string,
+	activeOrgId: string,
+): void {
+	if (backupOrgId !== activeOrgId) {
+		throw new TRPCError({
+			code: "UNAUTHORIZED",
+			message: "You are not authorized to access this backup",
+		});
+	}
+}
+
 interface RcloneFile {
 	Path: string;
 	Name: string;
@@ -70,11 +116,15 @@ interface RcloneFile {
 export const backupRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(apiCreateBackup)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
 				const newBackup = await createBackup(input);
 
 				const backup = await findBackupById(newBackup.backupId);
+
+				// Verify org ownership
+				const backupOrgId = await getBackupOrganizationId(backup);
+				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
 
 				if (IS_CLOUD && backup.enabled) {
 					const databaseType = backup.databaseType;
@@ -123,15 +173,23 @@ export const backupRouter = createTRPCRouter({
 				});
 			}
 		}),
-	one: protectedProcedure.input(apiFindOneBackup).query(async ({ input }) => {
-		const backup = await findBackupById(input.backupId);
-
-		return backup;
-	}),
+	one: protectedProcedure
+		.input(apiFindOneBackup)
+		.query(async ({ input, ctx }) => {
+			const backup = await findBackupById(input.backupId);
+			const backupOrgId = await getBackupOrganizationId(backup);
+			assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
+			return backup;
+		}),
 	update: protectedProcedure
 		.input(apiUpdateBackup)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
+				// Verify org ownership before update
+				const existingBackup = await findBackupById(input.backupId);
+				const backupOrgId = await getBackupOrganizationId(existingBackup);
+				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
+
 				await updateBackupById(input.backupId, input);
 				const backup = await findBackupById(input.backupId);
 
@@ -168,8 +226,13 @@ export const backupRouter = createTRPCRouter({
 		}),
 	remove: protectedProcedure
 		.input(apiRemoveBackup)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
+				// Verify org ownership before delete
+				const existingBackup = await findBackupById(input.backupId);
+				const backupOrgId = await getBackupOrganizationId(existingBackup);
+				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
+
 				const value = await removeBackupById(input.backupId);
 				if (IS_CLOUD && value) {
 					removeJob({
@@ -192,9 +255,12 @@ export const backupRouter = createTRPCRouter({
 		}),
 	manualBackupPostgres: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
 				const backup = await findBackupById(input.backupId);
+				const backupOrgId = await getBackupOrganizationId(backup);
+				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
+
 				const postgres = await findPostgresByBackupId(backup.backupId);
 				await runPostgresBackup(postgres as any, backup);
 
@@ -214,9 +280,12 @@ export const backupRouter = createTRPCRouter({
 
 	manualBackupMySql: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
 				const backup = await findBackupById(input.backupId);
+				const backupOrgId = await getBackupOrganizationId(backup);
+				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
+
 				const mysql = await findMySqlByBackupId(backup.backupId);
 				await runMySqlBackup(mysql as any, backup);
 				await keepLatestNBackups(backup, (mysql as any)?.serverId);
@@ -231,9 +300,12 @@ export const backupRouter = createTRPCRouter({
 		}),
 	manualBackupMariadb: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
 				const backup = await findBackupById(input.backupId);
+				const backupOrgId = await getBackupOrganizationId(backup);
+				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
+
 				const mariadb = await findMariadbByBackupId(backup.backupId);
 				await runMariadbBackup(mariadb as any, backup);
 				await keepLatestNBackups(backup, (mariadb as any)?.serverId);
@@ -248,9 +320,12 @@ export const backupRouter = createTRPCRouter({
 		}),
 	manualBackupCompose: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
 				const backup = await findBackupById(input.backupId);
+				const backupOrgId = await getBackupOrganizationId(backup);
+				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
+
 				const compose = await findComposeByBackupId(backup.backupId);
 				await runComposeBackup(compose as any, backup);
 				await keepLatestNBackups(backup, (compose as any)?.serverId);
@@ -265,9 +340,12 @@ export const backupRouter = createTRPCRouter({
 		}),
 	manualBackupMongo: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
 				const backup = await findBackupById(input.backupId);
+				const backupOrgId = await getBackupOrganizationId(backup);
+				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
+
 				const mongo = await findMongoByBackupId(backup.backupId);
 				await runMongoBackup(mongo as any, backup);
 				await keepLatestNBackups(backup, (mongo as any)?.serverId);
@@ -282,8 +360,11 @@ export const backupRouter = createTRPCRouter({
 		}),
 	manualBackupWebServer: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			const backup = await findBackupById(input.backupId);
+			const backupOrgId = await getBackupOrganizationId(backup);
+			assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
+
 			await runWebServerBackup(backup);
 			return true;
 		}),
@@ -295,9 +376,15 @@ export const backupRouter = createTRPCRouter({
 				serverId: z.string().optional(),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
 			try {
 				const destination = await findDestinationById(input.destinationId);
+				if (destination.organizationId !== ctx.session.activeOrganizationId) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this destination",
+					});
+				}
 				const rcloneFlags = getS3Credentials(destination);
 				const bucketPath = `:s3:${destination.bucket}`;
 
@@ -374,8 +461,14 @@ export const backupRouter = createTRPCRouter({
 			},
 		})
 		.input(apiRestoreBackup)
-		.subscription(async ({ input }) => {
+		.subscription(async ({ input, ctx }) => {
 			const destination = await findDestinationById(input.destinationId);
+			if (destination.organizationId !== ctx.session.activeOrganizationId) {
+				throw new TRPCError({
+					code: "UNAUTHORIZED",
+					message: "You are not authorized to access this destination",
+				});
+			}
 			if (input.backupType === "database") {
 				if (input.databaseType === "postgres") {
 					const postgres = await findPostgresById(input.databaseId);
