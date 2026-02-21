@@ -249,10 +249,7 @@ export const settingsRouter = createTRPCRouter({
 		.input(apiUpdateDockerCleanup)
 		.mutation(async ({ input, ctx }) => {
 			if (input.serverId) {
-				await updateServerById(input.serverId, {
-					enableDockerCleanup: input.enableDockerCleanup as boolean,
-				});
-
+				// Check org ownership BEFORE performing the update
 				const server = await findServerById(input.serverId);
 
 				if (server.organizationId !== ctx.session?.activeOrganizationId) {
@@ -261,6 +258,10 @@ export const settingsRouter = createTRPCRouter({
 						message: "You are not authorized to access this server",
 					});
 				}
+
+				await updateServerById(input.serverId, {
+					enableDockerCleanup: input.enableDockerCleanup as boolean,
+				});
 
 				if (server.enableDockerCleanup) {
 					const server = await findServerById(input.serverId);

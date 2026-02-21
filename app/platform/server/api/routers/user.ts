@@ -222,9 +222,29 @@ export const userRouter = createTRPCRouter({
 				userId: z.string(),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			if (IS_CLOUD) {
 				return true;
+			}
+			// Only owners can remove users, and only members of their own org
+			if (ctx.user.role !== "owner") {
+				throw new TRPCError({
+					code: "UNAUTHORIZED",
+					message: "Only owners can remove users",
+				});
+			}
+			// Verify the target user belongs to the caller's org
+			const targetMember = await db.query.member.findFirst({
+				where: and(
+					eq(member.userId, input.userId),
+					eq(member.organizationId, ctx.session.activeOrganizationId),
+				),
+			});
+			if (!targetMember) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "User not found in this organization",
+				});
 			}
 			return await removeUserById(input.userId);
 		}),
@@ -385,7 +405,20 @@ export const userRouter = createTRPCRouter({
 				userId: z.string(),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
+			// Only allow checking org count for users in the caller's org
+			const targetMember = await db.query.member.findFirst({
+				where: and(
+					eq(member.userId, input.userId),
+					eq(member.organizationId, ctx.session.activeOrganizationId),
+				),
+			});
+			if (!targetMember) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "User not found in this organization",
+				});
+			}
 			const organizations = await db.query.member.findMany({
 				where: eq(member.userId, input.userId),
 			});
