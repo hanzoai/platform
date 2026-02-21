@@ -72,7 +72,20 @@ export const organizationRouter = createTRPCRouter({
 				organizationId: z.string(),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
+			// Verify the caller is a member of the requested organization
+			const memberResult = await db.query.member.findFirst({
+				where: and(
+					eq(member.userId, ctx.user.id),
+					eq(member.organizationId, input.organizationId),
+				),
+			});
+			if (!memberResult) {
+				throw new TRPCError({
+					code: "UNAUTHORIZED",
+					message: "You are not a member of this organization",
+				});
+			}
 			return await db.query.organization.findFirst({
 				where: eq(organization.id, input.organizationId),
 			});
@@ -86,7 +99,17 @@ export const organizationRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			if (ctx.user.role !== "owner" && !IS_CLOUD) {
+			// Verify the caller owns or is a member of this specific org
+			const org = await db.query.organization.findFirst({
+				where: eq(organization.id, input.organizationId),
+			});
+			if (!org) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Organization not found",
+				});
+			}
+			if (org.ownerId !== ctx.user.id) {
 				throw new TRPCError({
 					code: "FORBIDDEN",
 					message: "Only the organization owner can update it",

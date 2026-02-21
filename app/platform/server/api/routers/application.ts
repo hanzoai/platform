@@ -835,12 +835,37 @@ export const applicationRouter = createTRPCRouter({
 		}),
 	readAppMonitoring: protectedProcedure
 		.input(apiFindMonitoringStats)
-		.query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
 			if (IS_CLOUD) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "Functionality not available in cloud version",
 				});
+			}
+			// Verify the appName belongs to the caller's org by looking up
+			// the application by appName in the db context. Since appName is
+			// passed directly, we validate via the applicationId if available.
+			if (input.appName) {
+				const app = await db.query.applications.findFirst({
+					where: eq(applications.appName, input.appName),
+					with: {
+						environment: {
+							with: {
+								project: true,
+							},
+						},
+					},
+				});
+				if (
+					app &&
+					app.environment.project.organizationId !==
+						ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this application",
+					});
+				}
 			}
 			const stats = await getApplicationStats(input.appName);
 
