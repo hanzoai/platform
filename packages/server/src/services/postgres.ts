@@ -29,7 +29,9 @@ export function getMountPath(dockerImage: string): string {
 
 export type Postgres = typeof postgres.$inferSelect;
 
-export const createPostgres = async (input: z.infer<typeof apiCreatePostgres>) => {
+export const createPostgres = async (
+	input: z.infer<typeof apiCreatePostgres>,
+) => {
 	const appName = buildAppName("postgres", input.appName);
 
 	const valid = await validUniqueServerAppName(appName);
