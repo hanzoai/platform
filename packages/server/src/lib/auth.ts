@@ -233,7 +233,6 @@ const { handler, api } = betterAuth({
 								message: "Provider not found",
 							});
 						}
-						console.log("provider", provider);
 						await db.insert(schema.member).values({
 							userId: user.id,
 							organizationId: provider?.organizationId || "",
