@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { CheckIcon, ChevronsUpDown, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
@@ -77,7 +77,7 @@ export const SaveGitlabProviderCompose = ({ composeId }: Props) => {
 	const { mutateAsync, isLoading: isSavingGitlabProvider } =
 		api.compose.update.useMutation();
 
-	const form = useForm<GitlabProvider>({
+	const form = useForm({
 		defaultValues: {
 			composePath: "./docker-compose.yml",
 			repository: {

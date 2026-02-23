@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
 	CheckIcon,
 	ChevronsUpDown,
@@ -220,8 +220,8 @@ export const HandleSchedules = ({ id, scheduleId, scheduleType }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [cacheType, setCacheType] = useState<CacheType>("cache");
 	const utils = api.useUtils();
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm({
+		resolver: standardSchemaResolver(formSchema),
 		defaultValues: {
 			name: "",
 			cronExpression: "",
@@ -279,7 +279,7 @@ export const HandleSchedules = ({ id, scheduleId, scheduleType }: Props) => {
 		? api.schedule.update.useMutation()
 		: api.schedule.create.useMutation();
 
-	const onSubmit = async (values: z.infer<typeof formSchema>) => {
+	const onSubmit = async (values: z.output<typeof formSchema>) => {
 		if (!id && !scheduleId) return;
 
 		await mutateAsync({

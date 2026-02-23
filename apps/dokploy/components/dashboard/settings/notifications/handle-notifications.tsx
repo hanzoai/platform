@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import {
 	AlertTriangle,
 	Mail,
@@ -298,7 +298,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 		? api.notification.updatePushover.useMutation()
 		: api.notification.createPushover.useMutation();
 
-	const form = useForm<NotificationSchema>({
+	const form = useForm({
 		defaultValues: {
 			type: "slack",
 			webhookUrl: "",
@@ -1898,7 +1898,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 										await testGotifyConnection({
 											serverUrl: data.serverUrl,
 											appToken: data.appToken,
-											priority: data.priority,
+											priority: data.priority ?? 0,
 											decoration: data.decoration,
 										});
 									} else if (data.type === "ntfy") {
@@ -1906,7 +1906,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 											serverUrl: data.serverUrl,
 											topic: data.topic,
 											accessToken: data.accessToken || "",
-											priority: data.priority,
+											priority: data.priority ?? 0,
 										});
 									} else if (data.type === "lark") {
 										await testLarkConnection({
@@ -1943,7 +1943,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 										await testPushoverConnection({
 											userKey: data.userKey,
 											apiToken: data.apiToken,
-											priority: data.priority,
+											priority: data.priority ?? 0,
 											retry: data.priority === 2 ? data.retry : undefined,
 											expire: data.priority === 2 ? data.expire : undefined,
 										});

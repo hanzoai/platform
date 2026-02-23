@@ -4,13 +4,14 @@ import { db } from "@dokploy/server/db";
 import { type apiCreatePatch, patch } from "@dokploy/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
+import type { z } from "zod";
 import { encodeBase64 } from "../utils/docker/utils";
 import { findApplicationById } from "./application";
 import { findComposeById } from "./compose";
 
 export type Patch = typeof patch.$inferSelect;
 
-export const createPatch = async (input: typeof apiCreatePatch._type) => {
+export const createPatch = async (input: z.infer<typeof apiCreatePatch>) => {
 	if (!input.applicationId && !input.composeId) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
