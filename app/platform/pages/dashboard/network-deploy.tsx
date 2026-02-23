@@ -20,7 +20,7 @@ const NetworkDeployPage = () => {
   const [deploying, setDeploying] = useState(false);
   const [deploymentId, setDeploymentId] = useState<string | null>(null);
   const { toast } = useToast();
-  const { data: specs } = api.compose.list.useQuery();
+  const specs: ComposeSpec[] | undefined = undefined; // TODO: implement api.compose.list
 
   const handleDeploy = async (spec: ComposeSpec) => {
     setDeploying(true);
@@ -69,7 +69,7 @@ const NetworkDeployPage = () => {
           <CardContent>
             <div className="flex items-center justify-between">
               <code className="text-sm">{deploymentId}</code>
-              <Badge variant="success">
+              <Badge variant="green">
                 <CheckCircle className="w-3 h-3 mr-1" />
                 Running
               </Badge>
