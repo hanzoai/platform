@@ -199,7 +199,7 @@ export const HandleVolumeBackups = ({
 		const preparedKeepLatestCount =
 			keepLatestCountInput === "" ? null : (values.keepLatestCount ?? null);
 
-		await mutateAsync({
+		await (mutateAsync as any)({
 			...values,
 			keepLatestCount: preparedKeepLatestCount,
 			destinationId: values.destinationId,
