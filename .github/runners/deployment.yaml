@@ -1,0 +1,65 @@
+# Self-hosted GitHub Actions runners on hanzo-k8s
+# Namespace: actions-runner-system
+#
+# Prerequisites:
+#   kubectl create namespace actions-runner-system
+#   kubectl -n actions-runner-system create secret generic github-runner-pat \
+#     --from-literal=ACCESS_TOKEN="$(gh auth token)"
+#
+# Deploy:
+#   kubectl apply -f .github/runners/deployment.yaml
+#
+# The image is forked at: github.com/hanzoai/docker-github-actions-runner
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-runner
+  namespace: actions-runner-system
+  labels:
+    app: github-runner
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: github-runner
+  template:
+    metadata:
+      labels:
+        app: github-runner
+    spec:
+      containers:
+        - name: runner
+          image: myoung34/github-runner:ubuntu-jammy
+          env:
+            - name: RUNNER_SCOPE
+              value: "org"
+            - name: ORG_NAME
+              value: "hanzoai"
+            - name: LABELS
+              value: "self-hosted,linux,x64,hanzo-k8s"
+            - name: RUNNER_WORKDIR
+              value: "/tmp/runner/work"
+            - name: RUNNER_NAME_PREFIX
+              value: "hanzo-k8s"
+            - name: EPHEMERAL
+              value: "true"
+            - name: DISABLE_AUTO_UPDATE
+              value: "true"
+            - name: ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: github-runner-pat
+                  key: ACCESS_TOKEN
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          volumeMounts:
+            - name: work
+              mountPath: /tmp/runner/work
+      volumes:
+        - name: work
+          emptyDir: {}
