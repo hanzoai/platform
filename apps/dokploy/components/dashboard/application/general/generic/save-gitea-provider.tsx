@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { CheckIcon, ChevronsUpDown, HelpCircle, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
@@ -91,7 +91,7 @@ export const SaveGiteaProvider = ({ applicationId }: Props) => {
 	const { mutateAsync, isLoading: isSavingGiteaProvider } =
 		api.application.saveGiteaProvider.useMutation();
 
-	const form = useForm<GiteaProvider>({
+	const form = useForm({
 		defaultValues: {
 			buildPath: "/",
 			repository: {
@@ -463,7 +463,7 @@ export const SaveGiteaProvider = ({ applicationId }: Props) => {
 												<X
 													className="size-3 cursor-pointer hover:text-destructive"
 													onClick={() => {
-														const newPaths = [...field.value];
+														const newPaths = [...(field.value || [])];
 														newPaths.splice(index, 1);
 														field.onChange(newPaths);
 													}}
@@ -481,7 +481,7 @@ export const SaveGiteaProvider = ({ applicationId }: Props) => {
 														const input = e.currentTarget;
 														const path = input.value.trim();
 														if (path) {
-															field.onChange([...field.value, path]);
+															field.onChange([...(field.value || []), path]);
 															input.value = "";
 														}
 													}
@@ -498,7 +498,7 @@ export const SaveGiteaProvider = ({ applicationId }: Props) => {
 												) as HTMLInputElement;
 												const path = input.value.trim();
 												if (path) {
-													field.onChange([...field.value, path]);
+													field.onChange([...(field.value || []), path]);
 													input.value = "";
 												}
 											}}

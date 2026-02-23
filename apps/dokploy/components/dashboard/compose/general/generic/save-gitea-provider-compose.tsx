@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { CheckIcon, ChevronsUpDown, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
@@ -75,7 +75,7 @@ export const SaveGiteaProviderCompose = ({ composeId }: Props) => {
 	const { mutateAsync, isLoading: isSavingGiteaProvider } =
 		api.compose.update.useMutation();
 
-	const form = useForm<GiteaProvider>({
+	const form = useForm({
 		defaultValues: {
 			composePath: "./docker-compose.yml",
 			repository: {
