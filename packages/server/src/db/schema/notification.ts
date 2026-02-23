@@ -483,7 +483,7 @@ export const apiCreateCustom = notificationsSchema
 	})
 	.extend({
 		endpoint: z.string().min(1),
-		headers: z.record(z.string()).optional(),
+		headers: z.record(z.string(), z.string()).optional(),
 	});
 
 export const apiUpdateCustom = apiCreateCustom.partial().extend({
@@ -494,7 +494,7 @@ export const apiUpdateCustom = apiCreateCustom.partial().extend({
 
 export const apiTestCustomConnection = z.object({
 	endpoint: z.string().min(1),
-	headers: z.record(z.string()).optional(),
+	headers: z.record(z.string(), z.string()).optional(),
 });
 
 export const apiCreateLark = notificationsSchema

@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -187,7 +187,7 @@ export const AddUserPermissions = ({ userId }: Props) => {
 	const { mutateAsync, isError, error, isLoading } =
 		api.user.assignPermissions.useMutation();
 
-	const form = useForm<AddPermissions>({
+	const form = useForm({
 		defaultValues: {
 			accessedProjects: [],
 			accessedEnvironments: [],
