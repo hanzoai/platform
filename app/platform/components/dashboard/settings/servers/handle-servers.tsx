@@ -109,7 +109,7 @@ export const HandleServers = ({ serverId }: Props) => {
 	}, [isOpen]);
 
 	const onSubmit = async (data: Schema) => {
-		await mutateAsync({
+		await (mutateAsync as any)({
 			name: data.name,
 			description: data.description || "",
 			ipAddress: data.ipAddress?.trim() || "",

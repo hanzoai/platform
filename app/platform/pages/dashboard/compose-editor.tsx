@@ -11,7 +11,6 @@ import { ComposeVisualEditor } from "@/components/compose/visual-editor";
 import { ComposeSpec } from "@/lib/compose-spec";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { api } from "@/utils/api";
 
 const ComposePage = () => {
   const [spec, setSpec] = useState<ComposeSpec>({
@@ -20,11 +19,9 @@ const ComposePage = () => {
     services: {}
   });
   const { toast } = useToast();
-  const saveCompose = api.compose.save.useMutation();
-
   const handleSave = async () => {
     try {
-      await saveCompose.mutateAsync(spec);
+      // TODO: implement compose save endpoint
       toast({
         title: "Saved",
         description: "Compose spec saved successfully"

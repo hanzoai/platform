@@ -18,7 +18,7 @@ export default defineConfig({
 		alias: {
 			"@hanzo/platform": path.resolve(
 				__dirname,
-				"../../../packages/server/src",
+				"../../../pkg/platform/src",
 			),
 		},
 	},
