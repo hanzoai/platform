@@ -28,6 +28,7 @@ export async function routeApplicationDeployment(
   application: Application,
   options: DeploymentOptions = { target: "local" }
 ) {
+  const app = application as any;
   console.log(`Routing deployment for ${application.name} to ${options.target}`);
 
   try {
@@ -41,7 +42,7 @@ export async function routeApplicationDeployment(
 
       // Store deployment info in database
       await storeDeploymentInfo({
-        applicationId: application.id,
+        applicationId: app.applicationId || app.id,
         deploymentId: result.deploymentId,
         target: "cloud",
         region: options.region,
@@ -57,11 +58,11 @@ export async function routeApplicationDeployment(
       };
     } else {
       // Deploy to local Docker
-      await dockerDeploy(application);
+      await dockerDeploy(application as any);
 
       return {
         success: true,
-        deploymentId: `local-${application.id}-${Date.now()}`,
+        deploymentId: `local-${app.applicationId || app.id}-${Date.now()}`,
         url: `https://${application.appName}.${process.env.DOMAIN}`,
         message: "Deployed to local Docker",
       };
@@ -79,6 +80,7 @@ export async function routeComposeDeployment(
   compose: Compose,
   options: DeploymentOptions = { target: "local" }
 ) {
+  const c = compose as any;
   console.log(`Routing compose deployment for ${compose.name} to ${options.target}`);
 
   try {
@@ -92,7 +94,7 @@ export async function routeComposeDeployment(
 
       // Store deployment info in database
       await storeDeploymentInfo({
-        composeId: compose.id,
+        composeId: c.composeId || c.id,
         deploymentId: result.deploymentId,
         target: "cloud",
         region: options.region,
@@ -109,11 +111,11 @@ export async function routeComposeDeployment(
     } else {
       // Deploy to local Docker using docker-compose
       const { deployCompose } = await import("@hanzo/platform");
-      await deployCompose(compose);
+      await deployCompose(compose as any);
 
       return {
         success: true,
-        deploymentId: `local-compose-${compose.id}-${Date.now()}`,
+        deploymentId: `local-compose-${c.composeId || c.id}-${Date.now()}`,
         url: `https://${compose.appName}.${process.env.DOMAIN}`,
         message: "Deployed compose stack to local Docker",
       };
