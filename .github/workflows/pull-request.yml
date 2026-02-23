@@ -20,7 +20,7 @@ jobs:
           node-version: 20.16.0
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm server:build
+      - run: pnpm --filter=@hanzo/platform build
       - run: pnpm typecheck
 
   test:
@@ -35,7 +35,7 @@ jobs:
           node-version: 20.16.0
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm server:build
+      - run: pnpm --filter=@hanzo/platform build
       - run: pnpm test
 
   build:
@@ -50,5 +50,5 @@ jobs:
           node-version: 20.16.0
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm server:build
+      - run: pnpm --filter=@hanzo/platform build
       - run: pnpm build
