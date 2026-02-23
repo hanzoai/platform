@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { Loader2, Palette, User } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -82,7 +82,7 @@ export const ProfileForm = () => {
 		]);
 	}, [gravatarHash]);
 
-	const form = useForm<Profile>({
+	const form = useForm({
 		defaultValues: {
 			email: data?.user?.email || "",
 			password: "",
