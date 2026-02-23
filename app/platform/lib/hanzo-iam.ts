@@ -12,7 +12,7 @@
 
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "@hanzo/platform";
+import { db } from "@hanzo/platform/db";
 
 export interface HanzoUser {
   id: string;
@@ -70,61 +70,20 @@ class HanzoIAM {
         enabled: false, // Disabled - use Hanzo IAM instead
       },
       socialProviders: {
-        // Hanzo IAM acts as an OAuth2 provider
-        custom: [
-          {
-            id: "hanzo",
-            name: "Hanzo IAM",
-            type: "oauth2",
-            authorization: {
-              url: `${this.iamEndpoint}/oauth/authorize`,
-              params: {
-                scope: "openid profile email organizations",
-                response_type: "code",
-              },
-            },
-            token: {
-              url: `${this.iamEndpoint}/oauth/token`,
-              params: {
-                grant_type: "authorization_code",
-              },
-            },
-            userinfo: {
-              url: `${this.iamEndpoint}/oauth/userinfo`,
-              async process(profile: any) {
-                return {
-                  id: profile.sub,
-                  email: profile.email,
-                  name: profile.name,
-                  image: profile.picture,
-                  emailVerified: profile.email_verified,
-                  role: profile.role,
-                  organizations: profile.organizations,
-                  permissions: profile.permissions,
-                };
-              },
-            },
-            clientId: this.clientId,
-            clientSecret: this.clientSecret,
-            redirectUri: this.redirectUri,
-          },
-        ],
         github: {
-          enabled: false, // Use through Hanzo IAM
+          clientId: process.env.GITHUB_CLIENT_ID || "disabled",
+          clientSecret: process.env.GITHUB_CLIENT_SECRET || "disabled",
+          enabled: !!process.env.GITHUB_CLIENT_ID,
         },
         google: {
-          enabled: false, // Use through Hanzo IAM
+          clientId: process.env.GOOGLE_CLIENT_ID || "disabled",
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET || "disabled",
+          enabled: !!process.env.GOOGLE_CLIENT_ID,
         },
       },
       session: {
         expiresIn: 60 * 60 * 24 * 7, // 7 days
         updateAge: 60 * 60 * 24, // Update session every day
-        cookieName: "hanzo-session",
-      },
-      cookies: {
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        domain: ".hanzo.ai", // Share cookies across all hanzo.ai subdomains
       },
       trustedOrigins: [
         "https://cloud.hanzo.ai",
@@ -138,24 +97,10 @@ class HanzoIAM {
           // Use Hanzo IAM's ID generation
           return `usr_${crypto.randomUUID()}`;
         },
-        crossSubdomainCookies: {
+        crossSubDomainCookies: {
           enabled: true,
           domain: ".hanzo.ai",
         },
-      },
-      hooks: {
-        after: [
-          {
-            matcher(context) {
-              return context.path === "/api/auth/signin";
-            },
-            handler: async (context) => {
-              // After signin, sync user data with Hanzo IAM
-              await this.syncUserData(context.user);
-              return context;
-            },
-          },
-        ],
       },
     });
   }

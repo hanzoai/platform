@@ -9,9 +9,9 @@ import {
 	BotIcon,
 	Boxes,
 	ChevronRight,
-	ChevronsUpDown,
 	CircleHelp,
 	Clock,
+	Cloud,
 	CreditCard,
 	Database,
 	Folder,
@@ -20,13 +20,11 @@ import {
 	GitBranch,
 	HeartIcon,
 	KeyRound,
-	Loader2,
 	type LucideIcon,
 	Package,
 	PieChart,
 	Server,
 	ShieldCheck,
-	Trash2,
 	User,
 	Users,
 } from "lucide-react";
@@ -50,7 +48,6 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuLabel,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
@@ -78,10 +75,12 @@ import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import type { AppRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
-import { AddOrganization } from "../dashboard/organization/handle-organization";
+import { EnvironmentSwitcher } from "../dashboard/environment-switcher";
+import { OrgSwitcher } from "../dashboard/org-switcher";
+import { ProjectSwitcher } from "../dashboard/project-switcher";
 import { DialogAction } from "../shared/dialog-action";
-import { Logo } from "../shared/logo";
 import { Button } from "../ui/button";
+import { ProjectContextProvider } from "@/hooks/use-project-context";
 import { UpdateServerButton } from "./update-server";
 import { UserNav } from "./user-nav";
 
@@ -346,6 +345,14 @@ const MENU: Menu = {
 		},
 		{
 			isSingle: true,
+			title: "DOKS Clusters",
+			url: "/dashboard/settings/doks",
+			icon: Cloud,
+			// Only enabled for admins/owners in cloud environments
+			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && isCloud),
+		},
+		{
+			isSingle: true,
 			title: "Notifications",
 			url: "/dashboard/settings/notifications",
 			icon: Bell,
@@ -488,266 +495,115 @@ interface Props {
 	children: React.ReactNode;
 }
 
-function LogoWrapper() {
-	return <SidebarLogo />;
-}
-
-function SidebarLogo() {
+function SidebarHeader_() {
 	const { state } = useSidebar();
-	const { data: isCloud } = api.settings.isCloud.useQuery();
-	const { data: user } = api.user.get.useQuery();
-	const { data: session } = authClient.useSession();
-
-	const {
-		data: organizations,
-		refetch,
-		isLoading,
-	} = api.organization.all.useQuery();
-	const { mutateAsync: deleteOrganization, isLoading: isRemoving } =
-		api.organization.delete.useMutation();
-	const { isMobile } = useSidebar();
-	const { data: activeOrganization } = authClient.useActiveOrganization();
-	const _utils = api.useUtils();
+	const collapsed = state === "collapsed";
 
 	const { data: invitations, refetch: refetchInvitations } =
 		api.user.getInvitations.useQuery();
-
-	const [_activeTeam, setActiveTeam] = useState<
-		typeof activeOrganization | null
-	>(null);
-
-	useEffect(() => {
-		if (activeOrganization) {
-			setActiveTeam(activeOrganization);
-		}
-	}, [activeOrganization]);
+	const { refetch } = api.organization.all.useQuery();
 
 	return (
-		<>
-			{isLoading ? (
-				<div className="flex flex-row gap-2 items-center justify-center text-sm text-muted-foreground min-h-[5vh] pt-4">
-					<Loader2 className="animate-spin size-4" />
-				</div>
-			) : (
-				<SidebarMenu
+		<SidebarMenu className="flex flex-col gap-1">
+			{/* Organization Switcher */}
+			<SidebarMenuItem>
+				<div
 					className={cn(
-						"flex gap-2",
-						state === "collapsed"
-							? "flex-col"
-							: "flex-row justify-between items-center",
+						"flex items-center",
+						collapsed ? "flex-col gap-1" : "flex-row justify-between",
 					)}
 				>
-					{/* Organization Logo and Selector */}
-					<SidebarMenuItem className={"w-full"}>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<SidebarMenuButton
-									size={state === "collapsed" ? "sm" : "lg"}
-									className={cn(
-										"data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
-										state === "collapsed" &&
-											"flex justify-center items-center p-2 h-10 w-10 mx-auto",
-									)}
-								>
-									<div
-										className={cn(
-											"flex items-center gap-2",
-											state === "collapsed" && "justify-center",
-										)}
-									>
-										<div
-											className={cn(
-												"flex items-center justify-center rounded-sm border",
-												"size-6",
-											)}
-										>
-											<Logo
-												className={cn(
-													"transition-all",
-													state === "collapsed" ? "size-4" : "size-5",
-												)}
-												logoUrl={activeOrganization?.logo || undefined}
-											/>
-										</div>
-										<div
-											className={cn(
-												"flex flex-col items-start",
-												state === "collapsed" && "hidden",
-											)}
-										>
-											<p className="text-sm font-medium leading-none">
-												{activeOrganization?.name ?? "Select Organization"}
-											</p>
-										</div>
-									</div>
-									<ChevronsUpDown
-										className={cn("ml-auto", state === "collapsed" && "hidden")}
-									/>
-								</SidebarMenuButton>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								className="rounded-lg"
-								align="start"
-								side={isMobile ? "bottom" : "right"}
-								sideOffset={4}
-							>
-								<DropdownMenuLabel className="text-xs text-muted-foreground">
-									Organizations
-								</DropdownMenuLabel>
-								{organizations?.map((org) => (
-									<div className="flex flex-row justify-between" key={org.name}>
-										<DropdownMenuItem
-											onClick={async () => {
-												await authClient.organization.setActive({
-													organizationId: org.id,
-												});
-												window.location.reload();
-											}}
-											className="w-full gap-2 p-2"
-										>
-											<div className="flex flex-col gap-4">{org.name}</div>
-											<div className="flex size-6 items-center justify-center rounded-sm border">
-												<Logo
-													className={cn(
-														"transition-all",
-														state === "collapsed" ? "size-6" : "size-10",
-													)}
-													logoUrl={org.logo ?? undefined}
-												/>
-											</div>
-										</DropdownMenuItem>
-										{org.ownerId === session?.user?.id && (
-											<div className="flex items-center gap-2">
-												<AddOrganization organizationId={org.id} />
-												<DialogAction
-													title="Delete Organization"
-													description="Are you sure you want to delete this organization?"
-													type="destructive"
-													onClick={async () => {
-														await deleteOrganization({
-															organizationId: org.id,
-														})
-															.then(() => {
-																refetch();
-																toast.success(
-																	"Organization deleted successfully",
-																);
-															})
-															.catch((error) => {
-																toast.error(
-																	error?.message ||
-																		"Error deleting organization",
-																);
-															});
-													}}
-												>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="group hover:bg-red-500/10"
-														isLoading={isRemoving}
-													>
-														<Trash2 className="size-4 text-primary group-hover:text-red-500" />
-													</Button>
-												</DialogAction>
-											</div>
-										)}
-									</div>
-								))}
-								{(user?.role === "owner" || isCloud) && (
-									<>
-										<DropdownMenuSeparator />
-										<AddOrganization />
-									</>
-								)}
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</SidebarMenuItem>
-
+					<div className="flex-1 min-w-0">
+						<OrgSwitcher collapsed={collapsed} />
+					</div>
 					{/* Notification Bell */}
-					<SidebarMenuItem className={cn(state === "collapsed" && "mt-2")}>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button
-									variant="ghost"
-									size="icon"
-									className={cn(
-										"relative",
-										state === "collapsed" && "h-8 w-8 p-1.5 mx-auto",
-									)}
-								>
-									<Bell className="size-4" />
-									{invitations && invitations.length > 0 && (
-										<span className="absolute -top-0 -right-0 flex size-4 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
-											{invitations.length}
-										</span>
-									)}
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								align="start"
-								side={"right"}
-								className="w-80"
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								variant="ghost"
+								size="icon"
+								className={cn(
+									"relative shrink-0",
+									collapsed ? "h-8 w-8 p-1.5 mx-auto" : "h-8 w-8",
+								)}
 							>
-								<DropdownMenuLabel>Pending Invitations</DropdownMenuLabel>
-								<div className="flex flex-col gap-2">
-									{invitations && invitations.length > 0 ? (
-										invitations.map((invitation) => (
-											<div key={invitation.id} className="flex flex-col gap-2">
-												<DropdownMenuItem
-													className="flex flex-col items-start gap-1 p-3"
-													onSelect={(e) => e.preventDefault()}
-												>
-													<div className="font-medium">
-														{invitation?.organization?.name}
-													</div>
-													<div className="text-xs text-muted-foreground">
-														Expires:{" "}
-														{new Date(invitation.expiresAt).toLocaleString()}
-													</div>
-													<div className="text-xs text-muted-foreground">
-														Role: {invitation.role}
-													</div>
-												</DropdownMenuItem>
-												<DialogAction
-													title="Accept Invitation"
-													description="Are you sure you want to accept this invitation?"
-													type="default"
-													onClick={async () => {
-														const { error } =
-															await authClient.organization.acceptInvitation({
-																invitationId: invitation.id,
-															});
+								<Bell className="size-4" />
+								{invitations && invitations.length > 0 && (
+									<span className="absolute -top-0 -right-0 flex size-4 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
+										{invitations.length}
+									</span>
+								)}
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="start" side="right" className="w-80">
+							<DropdownMenuLabel>Pending Invitations</DropdownMenuLabel>
+							<div className="flex flex-col gap-2">
+								{invitations && invitations.length > 0 ? (
+									invitations.map((invitation) => (
+										<div key={invitation.id} className="flex flex-col gap-2">
+											<DropdownMenuItem
+												className="flex flex-col items-start gap-1 p-3"
+												onSelect={(e) => e.preventDefault()}
+											>
+												<div className="font-medium">
+													{invitation?.organization?.name}
+												</div>
+												<div className="text-xs text-muted-foreground">
+													Expires:{" "}
+													{new Date(invitation.expiresAt).toLocaleString()}
+												</div>
+												<div className="text-xs text-muted-foreground">
+													Role: {invitation.role}
+												</div>
+											</DropdownMenuItem>
+											<DialogAction
+												title="Accept Invitation"
+												description="Are you sure you want to accept this invitation?"
+												type="default"
+												onClick={async () => {
+													const { error } =
+														await authClient.organization.acceptInvitation({
+															invitationId: invitation.id,
+														});
 
-														if (error) {
-															toast.error(
-																error.message || "Error accepting invitation",
-															);
-														} else {
-															toast.success("Invitation accepted successfully");
-															await refetchInvitations();
-															await refetch();
-														}
-													}}
-												>
-													<Button size="sm" variant="secondary">
-														Accept Invitation
-													</Button>
-												</DialogAction>
-											</div>
-										))
-									) : (
-										<DropdownMenuItem disabled>
-											No pending invitations
-										</DropdownMenuItem>
-									)}
-								</div>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</SidebarMenuItem>
-				</SidebarMenu>
-			)}
-		</>
+													if (error) {
+														toast.error(
+															error.message || "Error accepting invitation",
+														);
+													} else {
+														toast.success("Invitation accepted successfully");
+														await refetchInvitations();
+														await refetch();
+													}
+												}}
+											>
+												<Button size="sm" variant="secondary">
+													Accept Invitation
+												</Button>
+											</DialogAction>
+										</div>
+									))
+								) : (
+									<DropdownMenuItem disabled>
+										No pending invitations
+									</DropdownMenuItem>
+								)}
+							</div>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
+			</SidebarMenuItem>
+
+			{/* Project Switcher */}
+			<SidebarMenuItem>
+				<ProjectSwitcher collapsed={collapsed} />
+			</SidebarMenuItem>
+
+			{/* Environment Switcher */}
+			<SidebarMenuItem>
+				<EnvironmentSwitcher collapsed={collapsed} />
+			</SidebarMenuItem>
+		</SidebarMenu>
 	);
 }
 
@@ -786,10 +642,11 @@ export default function Page({ children }: Props) {
 	);
 
 	if (!isLoaded) {
-		return <div className="w-full h-screen bg-background" />; // Placeholder mientras se carga
+		return <div className="w-full h-screen bg-background" />;
 	}
 
 	return (
+		<ProjectContextProvider>
 		<SidebarProvider
 			defaultOpen={defaultOpen}
 			open={defaultOpen}
@@ -807,12 +664,7 @@ export default function Page({ children }: Props) {
 		>
 			<Sidebar collapsible="icon" variant="floating">
 				<SidebarHeader>
-					{/* <SidebarMenuButton
-						className="group-data-[collapsible=icon]:!p-0"
-						size="lg"
-					> */}
-					<LogoWrapper />
-					{/* </SidebarMenuButton> */}
+					<SidebarHeader_ />
 				</SidebarHeader>
 				<SidebarContent>
 					<SidebarGroup>
@@ -1069,5 +921,6 @@ export default function Page({ children }: Props) {
 				<div className="flex flex-col w-full p-4 pt-0">{children}</div>
 			</SidebarInset>
 		</SidebarProvider>
+		</ProjectContextProvider>
 	);
 }
