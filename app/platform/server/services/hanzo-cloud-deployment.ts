@@ -60,15 +60,16 @@ export class HanzoCloudDeploymentService {
       throw new Error("Hanzo Cloud deployment is not enabled");
     }
 
+    const app = application as any;
     const deploymentRequest: DeploymentRequest = {
-      projectId: application.projectId,
-      applicationId: application.id,
+      projectId: app.projectId || app.applicationId,
+      applicationId: app.applicationId || app.id,
       environment: options.environment || "production",
       region: options.region || "us-west-1",
       buildConfig: {
-        dockerfile: application.dockerfile || "Dockerfile",
-        buildArgs: application.buildArgs || {},
-        context: application.buildContext || ".",
+        dockerfile: app.dockerfile || "Dockerfile",
+        buildArgs: (typeof app.buildArgs === "object" ? app.buildArgs : {}) as Record<string, string>,
+        context: app.buildContext || ".",
       },
       resources: {
         cpu: options.resources?.cpu || 500, // 0.5 CPU
@@ -77,7 +78,7 @@ export class HanzoCloudDeploymentService {
       },
       scaling: options.scaling || HANZO_CLOUD_CONFIG.cloudFeatures.autoScaling,
       envVars: {
-        ...application.env,
+        ...(typeof app.env === "object" ? app.env : {}),
         ...options.envVars,
       },
     };
@@ -96,9 +97,10 @@ export class HanzoCloudDeploymentService {
       throw new Error("Hanzo Cloud deployment is not enabled");
     }
 
+    const c = compose as any;
     const deploymentRequest: DeploymentRequest = {
-      projectId: compose.projectId,
-      composeId: compose.id,
+      projectId: c.projectId || c.composeId,
+      composeId: c.composeId || c.id,
       environment: options.environment || "production",
       region: options.region || "us-west-1",
       buildConfig: {
@@ -110,7 +112,7 @@ export class HanzoCloudDeploymentService {
         disk: options.resources?.disk || 20, // 20 GB
       },
       envVars: {
-        ...compose.env,
+        ...(typeof c.env === "object" ? c.env : {}),
         ...options.envVars,
       },
     };
@@ -188,12 +190,7 @@ export class HanzoCloudDeploymentService {
     onLog: (log: string) => void
   ): Promise<void> {
     const eventSource = new EventSource(
-      `${this.apiEndpoint}/v1/deployments/${deploymentId}/logs?stream=true`,
-      {
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-      }
+      `${this.apiEndpoint}/v1/deployments/${deploymentId}/logs?stream=true`
     );
 
     eventSource.onmessage = (event) => {
