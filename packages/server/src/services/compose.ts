@@ -46,7 +46,9 @@ import { validUniqueServerAppName } from "./project";
 
 export type Compose = typeof compose.$inferSelect;
 
-export const createCompose = async (input: z.infer<typeof apiCreateCompose>) => {
+export const createCompose = async (
+	input: z.infer<typeof apiCreateCompose>,
+) => {
 	const appName = buildAppName("compose", input.appName);
 
 	const valid = await validUniqueServerAppName(appName);
