@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -53,7 +53,7 @@ export const ShowExternalPostgresCredentials = ({ postgresId }: Props) => {
 	const getIp = data?.server?.ipAddress || ip;
 	const [connectionUrl, setConnectionUrl] = useState("");
 
-	const form = useForm<DockerProvider>({
+	const form = useForm({
 		defaultValues: {},
 		resolver: zodResolver(DockerProviderSchema),
 	});
@@ -142,7 +142,7 @@ export const ShowExternalPostgresCredentials = ({ postgresId }: Props) => {
 															<Input
 																placeholder="5432"
 																{...field}
-																value={field.value || ""}
+																value={field.value as string}
 															/>
 														</FormControl>
 														<FormMessage />

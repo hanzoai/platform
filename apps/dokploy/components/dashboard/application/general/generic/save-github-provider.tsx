@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { CheckIcon, ChevronsUpDown, HelpCircle, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
@@ -75,7 +75,7 @@ export const SaveGithubProvider = ({ applicationId }: Props) => {
 	const { mutateAsync, isLoading: isSavingGithubProvider } =
 		api.application.saveGithubProvider.useMutation();
 
-	const form = useForm<GithubProvider>({
+	const form = useForm({
 		defaultValues: {
 			buildPath: "/",
 			repository: {

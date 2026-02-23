@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import {
 	CheckIcon,
 	ChevronsUpDown,
@@ -207,7 +207,7 @@ export const HandleBackup = ({
 			? api.backup.update.useMutation()
 			: api.backup.create.useMutation();
 
-	const form = useForm<z.infer<typeof Schema>>({
+	const form = useForm({
 		defaultValues: {
 			database: databaseType === "web-server" ? "dokploy" : "",
 			destinationId: "",
@@ -613,6 +613,7 @@ export const HandleBackup = ({
 													type="number"
 													placeholder={"keeps all the backups if left empty"}
 													{...field}
+													value={field.value as string}
 												/>
 											</FormControl>
 											<FormDescription>
