@@ -11,6 +11,7 @@ import { deploymentRouter } from "./routers/deployment";
 import { destinationRouter } from "./routers/destination";
 import { digitaloceanRouter } from "./routers/digitalocean";
 import { dockerRouter } from "./routers/docker";
+import { doksRouter } from "./routers/doks";
 import { domainRouter } from "./routers/domain";
 import { environmentRouter } from "./routers/environment";
 import { gitProviderRouter } from "./routers/git-provider";
@@ -51,6 +52,7 @@ export const appRouter = createTRPCRouter({
 	admin: adminRouter,
 	digitalocean: digitaloceanRouter,
 	docker: dockerRouter,
+	doks: doksRouter,
 	project: projectRouter,
 	application: applicationRouter,
 	mysql: mysqlRouter,

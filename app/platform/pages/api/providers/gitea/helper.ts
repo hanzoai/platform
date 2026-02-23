@@ -1,5 +1,5 @@
 import { findGiteaById } from "@hanzo/platform";
-import type { NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 
 export interface Gitea {
 	giteaId: string;
@@ -37,3 +37,8 @@ export const redirectWithError = (res: NextApiResponse, error: string) => {
 		`/dashboard/settings/git-providers?error=${encodeURIComponent(error)}`,
 	);
 };
+
+// Default export required by Next.js API route convention
+export default function handler(_req: NextApiRequest, res: NextApiResponse) {
+	return res.status(404).json({ error: "This is a helper module, not an API endpoint" });
+}
