@@ -16,7 +16,9 @@ import { validUniqueServerAppName } from "./project";
 
 export type Mariadb = typeof mariadb.$inferSelect;
 
-export const createMariadb = async (input: z.infer<typeof apiCreateMariaDB>) => {
+export const createMariadb = async (
+	input: z.infer<typeof apiCreateMariaDB>,
+) => {
 	const appName = buildAppName("mariadb", input.appName);
 
 	const valid = await validUniqueServerAppName(appName);
