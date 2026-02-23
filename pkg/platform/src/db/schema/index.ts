@@ -1,6 +1,8 @@
 export * from "./account";
 export * from "./ai";
 export * from "./application";
+export * from "./billing";
+
 export * from "./cloud-provider";
 export * from "./compute-pool";
 export * from "./compute-offer";
@@ -10,6 +12,7 @@ export * from "./certificate";
 export * from "./compose";
 export * from "./deployment";
 export * from "./destination";
+export * from "./doks-cluster";
 export * from "./domain";
 export * from "./environment";
 export * from "./git-provider";
