@@ -348,12 +348,15 @@ const { handler, api } = betterAuth({
 	],
 });
 
-export const auth = {
+const _auth = {
 	handler,
 	createApiKey: api.createApiKey,
 	registerSSOProvider: api.registerSSOProvider,
 	updateSSOProvider: api.updateSSOProvider,
 };
+
+export type AuthType = typeof _auth;
+export const auth: AuthType = _auth;
 
 export const validateRequest = async (request: IncomingMessage) => {
 	const apiKey = request.headers["x-api-key"] as string;
