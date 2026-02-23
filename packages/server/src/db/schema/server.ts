@@ -133,6 +133,9 @@ const createSchema = createInsertSchema(server, {
 	serverId: z.string().min(1),
 	name: z.string().min(1),
 	description: z.string().optional(),
+	// Override pgEnums so Zod 4 infers only string literals, not numeric enum indices
+	serverType: z.enum(["deploy", "build"]).optional(),
+	serverStatus: z.enum(["active", "inactive"]).optional(),
 });
 
 export const apiCreateServer = createSchema
@@ -168,10 +171,10 @@ export const apiUpdateServer = createSchema
 		port: true,
 		username: true,
 		sshKeyId: true,
-		serverType: true,
 	})
 	.required()
 	.extend({
+		serverType: z.enum(["deploy", "build"]),
 		command: z.string().optional(),
 	});
 

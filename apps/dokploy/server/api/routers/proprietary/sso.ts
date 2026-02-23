@@ -178,6 +178,7 @@ export const ssoRouter = createTRPCRouter({
 
 			const domain = input.domains.join(",");
 			const updateBody: {
+				providerId: string;
 				issuer: string;
 				domain: string;
 				oidcConfig?: (typeof input)["oidcConfig"];
@@ -185,6 +186,7 @@ export const ssoRouter = createTRPCRouter({
 			} = {
 				issuer: input.issuer,
 				domain,
+				providerId: input.providerId,
 			};
 			if (input.oidcConfig != null) {
 				updateBody.oidcConfig = input.oidcConfig;

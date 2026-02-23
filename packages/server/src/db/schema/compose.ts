@@ -162,7 +162,13 @@ const createSchema = createInsertSchema(compose, {
 	customGitSSHKeyId: z.string().optional(),
 	command: z.string().optional(),
 	composePath: z.string().min(1),
+	// Override pgEnums so Zod 4 infers only string literals, not numeric enum indices
 	composeType: z.enum(["docker-compose", "stack"]).optional(),
+	sourceType: z
+		.enum(["git", "github", "gitlab", "bitbucket", "gitea", "raw"])
+		.optional(),
+	triggerType: z.enum(["push", "tag"]).optional(),
+	composeStatus: z.enum(["idle", "running", "done", "error"]).optional(),
 	watchPaths: z.array(z.string()).optional(),
 });
 
