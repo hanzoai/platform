@@ -168,7 +168,9 @@ export const aiRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				return await suggestVariants({
-					...input,
+					aiId: input.aiId,
+					input: input.input,
+					serverId: input.serverId,
 					organizationId: ctx.session.activeOrganizationId,
 				});
 			} catch (error) {
@@ -210,7 +212,7 @@ export const aiRouter = createTRPCRouter({
 				appName: `${projectName}-${generatePassword(6)}`,
 				isolatedDeployment: true,
 				environmentId: input.environmentId,
-			});
+			} as any);
 
 			if (input.domains && input.domains?.length > 0) {
 				for (const domain of input.domains) {

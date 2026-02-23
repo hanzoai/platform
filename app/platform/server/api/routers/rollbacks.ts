@@ -10,10 +10,23 @@ import { apiFindOneRollback } from "@/server/db/schema";
 export const rollbackRouter = createTRPCRouter({
 	delete: protectedProcedure
 		.input(apiFindOneRollback)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
+				const currentRollback = await findRollbackById(input.rollbackId);
+				if (
+					currentRollback?.deployment?.application?.environment?.project
+						.organizationId !== ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to delete this rollback",
+					});
+				}
 				return removeRollbackById(input.rollbackId);
 			} catch (error) {
+				if (error instanceof TRPCError) {
+					throw error;
+				}
 				const message =
 					error instanceof Error
 						? error.message

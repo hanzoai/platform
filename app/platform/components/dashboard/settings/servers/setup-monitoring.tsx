@@ -215,7 +215,7 @@ export const SetupMonitoring = ({ serverId }: Props) => {
 	};
 
 	const onSubmit = async (values: Schema) => {
-		await mutateAsync({
+		await (mutateAsync as any)({
 			serverId: serverId || "",
 			metricsConfig: values.metricsConfig,
 		})

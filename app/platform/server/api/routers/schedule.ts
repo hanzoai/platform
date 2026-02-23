@@ -1,4 +1,11 @@
-import { IS_CLOUD, removeScheduleJob, scheduleJob } from "@hanzo/platform";
+import {
+	findApplicationById,
+	findComposeById,
+	findServerById,
+	IS_CLOUD,
+	removeScheduleJob,
+	scheduleJob,
+} from "@hanzo/platform";
 import { db } from "@hanzo/platform/db";
 import { deployments } from "@hanzo/platform/db/schema/deployment";
 import {
@@ -18,11 +25,57 @@ import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { removeJob, schedule } from "@/server/utils/backup";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+
+/**
+ * Verify org ownership for a schedule by checking its parent resource.
+ */
+async function assertScheduleOrgAccess(
+	scheduleRecord: {
+		applicationId?: string | null;
+		composeId?: string | null;
+		serverId?: string | null;
+	},
+	activeOrganizationId: string,
+): Promise<void> {
+	if (scheduleRecord.applicationId) {
+		const app = await findApplicationById(scheduleRecord.applicationId);
+		if (
+			app.environment.project.organizationId !== activeOrganizationId
+		) {
+			throw new TRPCError({
+				code: "UNAUTHORIZED",
+				message: "You are not authorized to access this schedule",
+			});
+		}
+	} else if (scheduleRecord.composeId) {
+		const compose = await findComposeById(scheduleRecord.composeId);
+		if (
+			compose.environment.project.organizationId !== activeOrganizationId
+		) {
+			throw new TRPCError({
+				code: "UNAUTHORIZED",
+				message: "You are not authorized to access this schedule",
+			});
+		}
+	} else if (scheduleRecord.serverId) {
+		const server = await findServerById(scheduleRecord.serverId);
+		if (server.organizationId !== activeOrganizationId) {
+			throw new TRPCError({
+				code: "UNAUTHORIZED",
+				message: "You are not authorized to access this schedule",
+			});
+		}
+	}
+}
+
 export const scheduleRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(createScheduleSchema)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			const newSchedule = await createSchedule(input);
+
+			// Verify org ownership on the newly created schedule
+			await assertScheduleOrgAccess(newSchedule, ctx.session.activeOrganizationId);
 
 			if (newSchedule?.enabled) {
 				if (IS_CLOUD) {
@@ -40,7 +93,11 @@ export const scheduleRouter = createTRPCRouter({
 
 	update: protectedProcedure
 		.input(updateScheduleSchema)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
+			// Verify org ownership before update
+			const existing = await findScheduleById(input.scheduleId);
+			await assertScheduleOrgAccess(existing, ctx.session.activeOrganizationId);
+
 			const updatedSchedule = await updateSchedule(input);
 
 			if (IS_CLOUD) {
@@ -70,18 +127,20 @@ export const scheduleRouter = createTRPCRouter({
 
 	delete: protectedProcedure
 		.input(z.object({ scheduleId: z.string() }))
-		.mutation(async ({ input }) => {
-			const schedule = await findScheduleById(input.scheduleId);
+		.mutation(async ({ input, ctx }) => {
+			const scheduleRecord = await findScheduleById(input.scheduleId);
+			await assertScheduleOrgAccess(scheduleRecord, ctx.session.activeOrganizationId);
+
 			await deleteSchedule(input.scheduleId);
 
 			if (IS_CLOUD) {
 				await removeJob({
-					cronSchedule: schedule.cronExpression,
-					scheduleId: schedule.scheduleId,
+					cronSchedule: scheduleRecord.cronExpression,
+					scheduleId: scheduleRecord.scheduleId,
 					type: "schedule",
 				});
 			} else {
-				removeScheduleJob(schedule.scheduleId);
+				removeScheduleJob(scheduleRecord.scheduleId);
 			}
 			return true;
 		}),
@@ -98,7 +157,40 @@ export const scheduleRouter = createTRPCRouter({
 				]),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
+			// Verify org ownership for the parent resource
+			if (input.scheduleType === "application") {
+				const app = await findApplicationById(input.id);
+				if (
+					app.environment.project.organizationId !==
+					ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this resource",
+					});
+				}
+			} else if (input.scheduleType === "compose") {
+				const compose = await findComposeById(input.id);
+				if (
+					compose.environment.project.organizationId !==
+					ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this resource",
+					});
+				}
+			} else if (input.scheduleType === "server") {
+				const server = await findServerById(input.id);
+				if (server.organizationId !== ctx.session.activeOrganizationId) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this resource",
+					});
+				}
+			}
+
 			const where = {
 				application: eq(schedules.applicationId, input.id),
 				compose: eq(schedules.composeId, input.id),
@@ -120,13 +212,18 @@ export const scheduleRouter = createTRPCRouter({
 
 	one: protectedProcedure
 		.input(z.object({ scheduleId: z.string() }))
-		.query(async ({ input }) => {
-			return await findScheduleById(input.scheduleId);
+		.query(async ({ input, ctx }) => {
+			const scheduleRecord = await findScheduleById(input.scheduleId);
+			await assertScheduleOrgAccess(scheduleRecord, ctx.session.activeOrganizationId);
+			return scheduleRecord;
 		}),
 
 	runManually: protectedProcedure
 		.input(z.object({ scheduleId: z.string().min(1) }))
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
+			const scheduleRecord = await findScheduleById(input.scheduleId);
+			await assertScheduleOrgAccess(scheduleRecord, ctx.session.activeOrganizationId);
+
 			try {
 				await runCommand(input.scheduleId);
 				return true;
