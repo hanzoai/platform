@@ -40,7 +40,7 @@
 	},
 	"dependencies": {
 		"resend": "^6.0.2",
-		"@better-auth/sso": "1.4.18",
+		"@better-auth/sso": "1.5.0-beta.16",
 		"@ai-sdk/anthropic": "^3.0.44",
 		"@ai-sdk/azure": "^3.0.30",
 		"@ai-sdk/cohere": "^3.0.21",
@@ -98,7 +98,7 @@
 		"ai": "^6.0.86",
 		"ai-sdk-ollama": "^3.7.0",
 		"bcrypt": "5.1.1",
-		"better-auth": "1.4.18",
+		"better-auth": "1.5.0-beta.16",
 		"bl": "6.0.11",
 		"boxen": "^7.1.1",
 		"bullmq": "5.67.3",
