@@ -36,14 +36,13 @@ export const sshKeysRelations = relations(sshKeys, ({ many, one }) => ({
 	}),
 }));
 
-export const apiCreateSshKey = z
-	.object({
-		name: z.string().min(1),
-		description: z.string().optional(),
-		organizationId: z.string().min(1),
-		publicKey: sshKeyCreate.shape.publicKey,
-		privateKey: sshKeyCreate.shape.privateKey,
-	});
+export const apiCreateSshKey = z.object({
+	name: z.string().min(1),
+	description: z.string().optional(),
+	organizationId: z.string().min(1),
+	publicKey: sshKeyCreate.shape.publicKey,
+	privateKey: sshKeyCreate.shape.privateKey,
+});
 
 export const apiFindOneSshKey = z.object({
 	sshKeyId: z.string().min(1),
