@@ -1,7 +1,7 @@
 import { relations } from "drizzle-orm";
 import { pgTable, text } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
+import { z } from "zod";
 import { sshKeyCreate, sshKeyType } from "../validations";
 import { organization } from "./account";
 import { applications } from "./application";
@@ -36,47 +36,28 @@ export const sshKeysRelations = relations(sshKeys, ({ many, one }) => ({
 	}),
 }));
 
-const createSchema = createInsertSchema(
-	sshKeys,
-	/* Private key is not stored in the DB */
-	sshKeyCreate.omit({ privateKey: true }).shape,
-);
+export const apiCreateSshKey = z
+	.object({
+		name: z.string().min(1),
+		description: z.string().optional(),
+		organizationId: z.string().min(1),
+		publicKey: sshKeyCreate.shape.publicKey,
+		privateKey: sshKeyCreate.shape.privateKey,
+	});
 
-export const apiCreateSshKey = createSchema
-	.pick({
-		name: true,
-		description: true,
-		privateKey: true,
-		publicKey: true,
-		organizationId: true,
-	})
-	.merge(sshKeyCreate.pick({ privateKey: true }));
-
-export const apiFindOneSshKey = createSchema
-	.pick({
-		sshKeyId: true,
-	})
-	.required();
+export const apiFindOneSshKey = z.object({
+	sshKeyId: z.string().min(1),
+});
 
 export const apiGenerateSSHKey = sshKeyType;
 
-export const apiRemoveSshKey = createSchema
-	.pick({
-		sshKeyId: true,
-	})
-	.required();
+export const apiRemoveSshKey = z.object({
+	sshKeyId: z.string().min(1),
+});
 
-export const apiUpdateSshKey = createSchema
-	.pick({
-		name: true,
-		description: true,
-		lastUsedAt: true,
-	})
-	.partial()
-	.merge(
-		createSchema
-			.pick({
-				sshKeyId: true,
-			})
-			.required(),
-	);
+export const apiUpdateSshKey = z.object({
+	sshKeyId: z.string().min(1),
+	name: z.string().optional(),
+	description: z.string().optional(),
+	lastUsedAt: z.string().optional(),
+});
