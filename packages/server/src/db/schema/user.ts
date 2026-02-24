@@ -7,6 +7,7 @@ import {
 	text,
 	timestamp,
 } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { account, apikey, organization } from "./account";
@@ -80,41 +81,76 @@ export const usersRelations = relations(user, ({ one, many }) => ({
 	schedules: many(schedules),
 }));
 
-export const apiCreateUserInvitation = z.object({
+const createSchema = createInsertSchema(user, {
+	id: z.string().min(1),
+	isRegistered: z.boolean().optional(),
+}).omit({
+	role: true,
+	trustedOrigins: true,
+	isValidEnterpriseLicense: true,
+});
+
+export const apiCreateUserInvitation = createSchema.pick({}).extend({
 	email: z.string().email(),
 });
 
-export const apiRemoveUser = z.object({
-	id: z.string().min(1),
-});
+export const apiRemoveUser = createSchema
+	.pick({
+		id: true,
+	})
+	.required();
 
-export const apiFindOneToken = z.object({
-	token: z.string().min(1),
-});
+export const apiFindOneToken = createSchema
+	.pick({})
+	.required()
+	.extend({
+		token: z.string().min(1),
+	});
 
-export const apiAssignPermissions = z.object({
-	id: z.string().min(1),
-	accessedProjects: z.array(z.string()).optional(),
-	accessedEnvironments: z.array(z.string()).optional(),
-	accessedServices: z.array(z.string()).optional(),
-	canCreateProjects: z.boolean().optional(),
-	canCreateServices: z.boolean().optional(),
-	canDeleteProjects: z.boolean().optional(),
-	canDeleteServices: z.boolean().optional(),
-	canAccessToDocker: z.boolean().optional(),
-	canAccessToTraefikFiles: z.boolean().optional(),
-	canAccessToAPI: z.boolean().optional(),
-	canAccessToSSHKeys: z.boolean().optional(),
-	canAccessToGitProviders: z.boolean().optional(),
-	canDeleteEnvironments: z.boolean().optional(),
-	canCreateEnvironments: z.boolean().optional(),
-});
+export const apiAssignPermissions = createSchema
+	.pick({
+		id: true,
+		// canCreateProjects: true,
+		// canCreateServices: true,
+		// canDeleteProjects: true,
+		// canDeleteServices: true,
+		// accessedProjects: true,
+		// accessedServices: true,
+		// canAccessToTraefikFiles: true,
+		// canAccessToDocker: true,
+		// canAccessToAPI: true,
+		// canAccessToSSHKeys: true,
+		// canAccessToGitProviders: true,
+	})
+	.extend({
+		accessedProjects: z.array(z.string()).optional(),
+		accessedEnvironments: z.array(z.string()).optional(),
+		accessedServices: z.array(z.string()).optional(),
+		canCreateProjects: z.boolean().optional(),
+		canCreateServices: z.boolean().optional(),
+		canDeleteProjects: z.boolean().optional(),
+		canDeleteServices: z.boolean().optional(),
+		canAccessToDocker: z.boolean().optional(),
+		canAccessToTraefikFiles: z.boolean().optional(),
+		canAccessToAPI: z.boolean().optional(),
+		canAccessToSSHKeys: z.boolean().optional(),
+		canAccessToGitProviders: z.boolean().optional(),
+		canDeleteEnvironments: z.boolean().optional(),
+		canCreateEnvironments: z.boolean().optional(),
+	})
+	.required();
 
-export const apiFindOneUser = z.object({
-	id: z.string().min(1),
-});
+export const apiFindOneUser = createSchema
+	.pick({
+		id: true,
+	})
+	.required();
 
-export const apiFindOneUserByAuth = z.object({});
+export const apiFindOneUserByAuth = createSchema
+	.pick({
+		// authId: true,
+	})
+	.required();
 
 export const apiTraefikConfig = z.object({
 	traefikConfig: z.string().min(1),
@@ -183,7 +219,7 @@ export const apiReadStatsLogs = z.object({
 		.optional(),
 });
 
-export const apiUpdateUser = z.object({
+export const apiUpdateUser = createSchema.partial().extend({
 	email: z
 		.string()
 		.email("Please enter a valid email address")
