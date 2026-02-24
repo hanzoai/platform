@@ -74,7 +74,7 @@ export const DeleteService = ({ id, type }: Props) => {
 		mongo: () => api.mongo.remove.useMutation(),
 		compose: () => api.compose.delete.useMutation(),
 	};
-	const { mutateAsync, isLoading } = mutationMap[type]
+	const { mutateAsync, isPending } = mutationMap[type]
 		? mutationMap[type]()
 		: api.mongo.remove.useMutation();
 	const { push } = useRouter();
@@ -130,7 +130,7 @@ export const DeleteService = ({ id, type }: Props) => {
 					variant="ghost"
 					size="icon"
 					className="group hover:bg-red-500/10 "
-					isLoading={isLoading}
+					isLoading={isPending}
 				>
 					<Trash2 className="size-4 text-primary group-hover:text-red-500" />
 				</Button>
@@ -228,7 +228,7 @@ export const DeleteService = ({ id, type }: Props) => {
 					</Button>
 
 					<Button
-						isLoading={isLoading}
+						isLoading={isPending}
 						disabled={isDisabled}
 						form="hook-form-delete-compose"
 						type="submit"

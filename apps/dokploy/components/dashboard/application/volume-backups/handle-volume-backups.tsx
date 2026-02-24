@@ -195,7 +195,7 @@ export const HandleVolumeBackups = ({
 		}
 	}, [form, volumeBackup, volumeBackupId]);
 
-	const { mutateAsync, isLoading } = volumeBackupId
+	const { mutateAsync, isPending } = volumeBackupId
 		? api.volumeBackups.update.useMutation()
 		: api.volumeBackups.create.useMutation();
 
@@ -630,7 +630,7 @@ export const HandleVolumeBackups = ({
 							)}
 						/>
 
-						<Button type="submit" isLoading={isLoading} className="w-full">
+						<Button type="submit" isLoading={isPending} className="w-full">
 							{volumeBackupId ? "Update" : "Create"} Volume Backup
 						</Button>
 					</form>

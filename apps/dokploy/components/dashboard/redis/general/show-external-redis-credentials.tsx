@@ -48,7 +48,7 @@ interface Props {
 export const ShowExternalRedisCredentials = ({ redisId }: Props) => {
 	const { data: ip } = api.settings.getIp.useQuery();
 	const { data, refetch } = api.redis.one.useQuery({ redisId });
-	const { mutateAsync, isLoading } = api.redis.saveExternalPort.useMutation();
+	const { mutateAsync, isPending } = api.redis.saveExternalPort.useMutation();
 	const [connectionUrl, setConnectionUrl] = useState("");
 	const getIp = data?.server?.ipAddress || ip;
 
@@ -154,7 +154,7 @@ export const ShowExternalRedisCredentials = ({ redisId }: Props) => {
 								)}
 
 								<div className="flex justify-end">
-									<Button type="submit" isLoading={isLoading}>
+									<Button type="submit" isLoading={isPending}>
 										Save
 									</Button>
 								</div>

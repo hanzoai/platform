@@ -51,8 +51,8 @@ export const EditGiteaProvider = ({ giteaId }: Props) => {
 		isLoading,
 		refetch,
 	} = api.gitea.one.useQuery({ giteaId });
-	const { mutateAsync, isLoading: isUpdating } = api.gitea.update.useMutation();
-	const { mutateAsync: testConnection, isLoading: isTesting } =
+	const { mutateAsync, isPending: isUpdating } = api.gitea.update.useMutation();
+	const { mutateAsync: testConnection, isPending: isTesting } =
 		api.gitea.testConnection.useMutation();
 	const url = useUrl();
 	const utils = api.useUtils();

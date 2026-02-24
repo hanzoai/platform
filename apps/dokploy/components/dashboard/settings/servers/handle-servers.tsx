@@ -77,7 +77,7 @@ export const HandleServers = ({ serverId, asButton = false }: Props) => {
 	);
 
 	const { data: sshKeys } = api.sshKey.all.useQuery();
-	const { mutateAsync, error, isLoading, isError } = serverId
+	const { mutateAsync, error, isPending, isError } = serverId
 		? api.server.update.useMutation()
 		: api.server.create.useMutation();
 	const form = useForm({
@@ -419,7 +419,7 @@ export const HandleServers = ({ serverId, asButton = false }: Props) => {
 
 					<DialogFooter>
 						<Button
-							isLoading={isLoading}
+							isLoading={isPending}
 							disabled={!canCreateMoreServers && !serverId}
 							form="hook-form-add-server"
 							type="submit"
