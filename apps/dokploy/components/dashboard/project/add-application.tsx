@@ -81,7 +81,7 @@ export const AddApplication = ({ environmentId, projectName }: Props) => {
 	// Self-hosted: show only if there are remote servers (Dokploy is default, hide if no remote servers)
 	const shouldShowServerDropdown = hasServers;
 
-	const { mutateAsync, isLoading, error, isError } =
+	const { mutateAsync, isPending, error, isError } =
 		api.application.create.useMutation();
 
 	const form = useForm<AddTemplate>({
@@ -283,7 +283,7 @@ export const AddApplication = ({ environmentId, projectName }: Props) => {
 					</form>
 
 					<DialogFooter>
-						<Button isLoading={isLoading} form="hook-form" type="submit">
+						<Button isLoading={isPending} form="hook-form" type="submit">
 							Create
 						</Button>
 					</DialogFooter>

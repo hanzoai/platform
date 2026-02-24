@@ -92,11 +92,9 @@ export const apiCreateDomain = createSchema.pick({
 	stripPath: true,
 });
 
-export const apiFindDomain = createSchema
-	.pick({
-		domainId: true,
-	})
-	.required();
+export const apiFindDomain = z.object({
+	domainId: z.string().min(1),
+});
 
 export const apiFindDomainByApplication = createSchema.pick({
 	applicationId: true,

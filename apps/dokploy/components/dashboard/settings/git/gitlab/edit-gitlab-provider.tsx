@@ -59,7 +59,7 @@ export const EditGitlabProvider = ({ gitlabId }: Props) => {
 	const utils = api.useUtils();
 	const [isOpen, setIsOpen] = useState(false);
 	const { mutateAsync, error, isError } = api.gitlab.update.useMutation();
-	const { mutateAsync: testConnection, isLoading } =
+	const { mutateAsync: testConnection, isPending } =
 		api.gitlab.testConnection.useMutation();
 	const form = useForm({
 		defaultValues: {
@@ -205,7 +205,7 @@ export const EditGitlabProvider = ({ gitlabId }: Props) => {
 									<Button
 										type="button"
 										variant={"secondary"}
-										isLoading={isLoading}
+										isLoading={isPending}
 										onClick={async () => {
 											await testConnection({
 												gitlabId,

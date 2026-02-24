@@ -233,7 +233,7 @@ export const RestoreBackup = ({
 		debouncedSetSearch(value);
 	};
 
-	const { data: files = [], isLoading } = api.backup.listBackupFiles.useQuery(
+	const { data: files = [], isPending } = api.backup.listBackupFiles.useQuery(
 		{
 			destinationId: destionationId,
 			search: debouncedSearchTerm,
@@ -442,7 +442,7 @@ export const RestoreBackup = ({
 													onValueChange={handleSearchChange}
 													className="h-9"
 												/>
-												{isLoading ? (
+												{isPending ? (
 													<div className="py-6 text-center text-sm">
 														Loading backup files...
 													</div>

@@ -43,7 +43,7 @@ interface Props {
 export const UpdatePostgres = ({ postgresId }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending } =
 		api.postgres.update.useMutation();
 	const { data } = api.postgres.one.useQuery(
 		{
@@ -148,7 +148,7 @@ export const UpdatePostgres = ({ postgresId }: Props) => {
 								/>
 								<DialogFooter>
 									<Button
-										isLoading={isLoading}
+										isLoading={isPending}
 										form="hook-form-update-postgres"
 										type="submit"
 										className="flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-offset-2"

@@ -58,7 +58,7 @@ export const SaveGitProvider = ({ applicationId }: Props) => {
 	const { data: sshKeys } = api.sshKey.all.useQuery();
 	const router = useRouter();
 
-	const { mutateAsync, isLoading } =
+	const { mutateAsync, isPending } =
 		api.application.saveGitProvider.useMutation();
 
 	const form = useForm({
@@ -317,7 +317,7 @@ export const SaveGitProvider = ({ applicationId }: Props) => {
 				</div>
 
 				<div className="flex flex-row justify-end">
-					<Button type="submit" className="w-fit" isLoading={isLoading}>
+					<Button type="submit" className="w-fit" isLoading={isPending}>
 						Save
 					</Button>
 				</div>

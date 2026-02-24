@@ -63,12 +63,12 @@ const randomImages = [
 ];
 
 export const ProfileForm = () => {
-	const { data, refetch, isLoading } = api.user.get.useQuery();
+	const { data, refetch, isPending } = api.user.get.useQuery();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
 	const {
 		mutateAsync,
-		isLoading: isUpdating,
+		isPending: isUpdating,
 		isError,
 		error,
 	} = api.user.update.useMutation();
@@ -167,7 +167,7 @@ export const ProfileForm = () => {
 
 					<CardContent className="space-y-2 py-8 border-t">
 						{isError && <AlertBlock type="error">{error?.message}</AlertBlock>}
-						{isLoading ? (
+						{isPending ? (
 							<div className="flex flex-row gap-2 items-center justify-center text-sm text-muted-foreground min-h-[35vh]">
 								<span>Loading...</span>
 								<Loader2 className="animate-spin size-4" />

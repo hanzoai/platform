@@ -88,7 +88,7 @@ export const SaveGiteaProvider = ({ applicationId }: Props) => {
 	const { data: giteaProviders } = api.gitea.giteaProviders.useQuery();
 	const { data, refetch } = api.application.one.useQuery({ applicationId });
 
-	const { mutateAsync, isLoading: isSavingGiteaProvider } =
+	const { mutateAsync, isPending: isSavingGiteaProvider } =
 		api.application.saveGiteaProvider.useMutation();
 
 	const form = useForm({
@@ -353,7 +353,7 @@ export const SaveGiteaProvider = ({ applicationId }: Props) => {
 														!field.value && "text-muted-foreground",
 													)}
 												>
-													{status === "loading" && fetchStatus === "fetching"
+													{status === "pending" && fetchStatus === "fetching"
 														? "Loading...."
 														: field.value
 															? branches?.find(
@@ -371,7 +371,7 @@ export const SaveGiteaProvider = ({ applicationId }: Props) => {
 													placeholder="Search branch..."
 													className="h-9"
 												/>
-												{status === "loading" && fetchStatus === "fetching" && (
+												{status === "pending" && fetchStatus === "fetching" && (
 													<span className="py-6 text-center text-sm text-muted-foreground">
 														Loading Branches....
 													</span>

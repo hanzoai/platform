@@ -128,7 +128,7 @@ export const ShowResources = ({ id, type }: Props) => {
 		mongo: () => api.mongo.update.useMutation(),
 	};
 
-	const { mutateAsync, isLoading } = mutationMap[type]
+	const { mutateAsync, isPending } = mutationMap[type]
 		? mutationMap[type]()
 		: api.mongo.update.useMutation();
 
@@ -517,7 +517,7 @@ export const ShowResources = ({ id, type }: Props) => {
 						</div>
 
 						<div className="flex w-full justify-end">
-							<Button isLoading={isLoading} type="submit">
+							<Button isLoading={isPending} type="submit">
 								Save
 							</Button>
 						</div>
