@@ -144,81 +144,66 @@ const createSchema = createInsertSchema(mysql, {
 	ulimitsSwarm: UlimitsSwarmSchema.nullable(),
 });
 
-const mysqlPasswordSchema = z
-	.string()
-	.regex(/^[a-zA-Z0-9@#%^&*()_+\-=[\]{}|;:,.<>?~`]*$/, {
-		message:
-			"Password contains invalid characters. Please avoid: $ ! ' \" \\ / and space characters for database compatibility",
-	});
-
-export const apiCreateMySql = z.object({
-	name: z.string().min(1),
-	appName: z
-		.string()
-		.min(1)
-		.max(63)
-		.regex(APP_NAME_REGEX, APP_NAME_MESSAGE)
-		.optional(),
-	dockerImage: z.string().default("mysql:8"),
-	environmentId: z.string().min(1),
-	description: z.string().optional(),
-	databaseName: z.string().min(1),
-	databaseUser: z.string().min(1),
-	databasePassword: mysqlPasswordSchema,
-	databaseRootPassword: mysqlPasswordSchema.optional(),
-	serverId: z.string().optional(),
+export const apiCreateMySql = createSchema.pick({
+	name: true,
+	appName: true,
+	dockerImage: true,
+	environmentId: true,
+	description: true,
+	databaseName: true,
+	databaseUser: true,
+	databasePassword: true,
+	databaseRootPassword: true,
+	serverId: true,
 });
 
 export const apiFindOneMySql = z.object({
 	mysqlId: z.string().min(1),
 });
 
-export const apiChangeMySqlStatus = z.object({
-	mysqlId: z.string().min(1),
-	applicationStatus: z.enum(["idle", "running", "done", "error"]),
-});
+export const apiChangeMySqlStatus = createSchema
+	.pick({
+		mysqlId: true,
+		applicationStatus: true,
+	})
+	.required();
 
-export const apiSaveEnvironmentVariablesMySql = z.object({
-	mysqlId: z.string().min(1),
-	env: z.string().optional(),
-});
+export const apiSaveEnvironmentVariablesMySql = createSchema
+	.pick({
+		mysqlId: true,
+		env: true,
+	})
+	.required();
 
-export const apiSaveExternalPortMySql = z.object({
-	mysqlId: z.string().min(1),
-	externalPort: z.number(),
-});
+export const apiSaveExternalPortMySql = createSchema
+	.pick({
+		mysqlId: true,
+		externalPort: true,
+	})
+	.required();
 
-export const apiResetMysql = z.object({
-	mysqlId: z.string().min(1),
-	appName: z.string().min(1),
-});
+export const apiResetMysql = createSchema
+	.pick({
+		mysqlId: true,
+		appName: true,
+	})
+	.required();
 
-export const apiDeployMySql = z.object({
-	mysqlId: z.string().min(1),
-});
+export const apiDeployMySql = createSchema
+	.pick({
+		mysqlId: true,
+	})
+	.required();
 
-export const apiUpdateMySql = z.object({
-	mysqlId: z.string().min(1),
-	name: z.string().min(1).optional(),
-	appName: z.string().optional(),
-	description: z.string().optional(),
-	dockerImage: z.string().optional(),
-	command: z.string().optional(),
-	args: z.array(z.string()).optional(),
-	env: z.string().optional(),
-	databaseName: z.string().min(1).optional(),
-	databaseUser: z.string().min(1).optional(),
-	databasePassword: mysqlPasswordSchema.optional(),
-	databaseRootPassword: mysqlPasswordSchema.optional(),
-	memoryReservation: z.string().optional(),
-	memoryLimit: z.string().optional(),
-	cpuReservation: z.string().optional(),
-	cpuLimit: z.string().optional(),
-	externalPort: z.number().optional(),
-	applicationStatus: z.enum(["idle", "running", "done", "error"]).optional(),
-	environmentId: z.string().optional(),
-});
+export const apiUpdateMySql = createSchema
+	.partial()
+	.extend({
+		mysqlId: z.string().min(1),
+	})
+	.omit({ serverId: true });
 
-export const apiRebuildMysql = z.object({
-	mysqlId: z.string().min(1),
-});
+export const apiRebuildMysql = createSchema
+	.pick({
+		mysqlId: true,
+	})
+	.required();

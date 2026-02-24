@@ -198,27 +198,12 @@ export const apiResetMariadb = createSchema
 	})
 	.required();
 
-export const apiUpdateMariaDB = z.object({
-	mariadbId: z.string().min(1),
-	name: z.string().min(1).optional(),
-	appName: z.string().optional(),
-	description: z.string().optional(),
-	dockerImage: z.string().optional(),
-	command: z.string().optional(),
-	args: z.array(z.string()).optional(),
-	env: z.string().optional(),
-	databaseName: z.string().min(1).optional(),
-	databaseUser: z.string().min(1).optional(),
-	databasePassword: z.string().optional(),
-	databaseRootPassword: z.string().optional(),
-	memoryReservation: z.string().optional(),
-	memoryLimit: z.string().optional(),
-	cpuReservation: z.string().optional(),
-	cpuLimit: z.string().optional(),
-	externalPort: z.number().optional(),
-	applicationStatus: z.enum(["idle", "running", "done", "error"]).optional(),
-	environmentId: z.string().optional(),
-});
+export const apiUpdateMariaDB = createSchema
+	.partial()
+	.extend({
+		mariadbId: z.string().min(1),
+	})
+	.omit({ serverId: true });
 
 export const apiRebuildMariadb = createSchema
 	.pick({

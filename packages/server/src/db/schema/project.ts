@@ -37,23 +37,31 @@ const createSchema = createInsertSchema(projects, {
 	description: z.string().optional(),
 });
 
-export const apiCreateProject = z.object({
-	name: z.string().min(1),
-	description: z.string().optional(),
-	env: z.string(),
+export const apiCreateProject = createSchema.pick({
+	name: true,
+	description: true,
+	env: true,
 });
 
 export const apiFindOneProject = z.object({
 	projectId: z.string().min(1),
 });
+export const apiRemoveProject = createSchema
+	.pick({
+		projectId: true,
+	})
+	.required();
 
-export const apiRemoveProject = z.object({
+// export const apiUpdateProject = createSchema
+// 	.pick({
+// 		name: true,
+// 		description: true,
+// 		projectId: true,
+// 		env: true,
+// 	})
+// 	.required();
+
+export const apiUpdateProject = createSchema.partial().extend({
 	projectId: z.string().min(1),
 });
-
-export const apiUpdateProject = z.object({
-	projectId: z.string().min(1),
-	name: z.string().min(1).optional(),
-	description: z.string().optional(),
-	env: z.string().optional(),
-});
+// .omit({ serverId: true });
