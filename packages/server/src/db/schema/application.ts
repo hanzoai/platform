@@ -555,7 +555,9 @@ export const apiUpdateApplication = z.object({
 	isPreviewDeploymentsActive: z.boolean().optional(),
 	previewRequireCollaboratorPermissions: z.boolean().optional(),
 	rollbackActive: z.boolean().optional(),
-	sourceType: z.enum(["docker", "git", "github", "gitlab", "bitbucket", "gitea", "drop"]).optional(),
+	sourceType: z
+		.enum(["docker", "git", "github", "gitlab", "bitbucket", "gitea", "drop"])
+		.optional(),
 	cleanCache: z.boolean().optional(),
 	repository: z.string().optional(),
 	owner: z.string().optional(),
@@ -588,7 +590,16 @@ export const apiUpdateApplication = z.object({
 	dockerfile: z.string().optional(),
 	dockerContextPath: z.string().optional(),
 	dockerBuildStage: z.string().optional(),
-	buildType: z.enum(["dockerfile", "heroku_buildpacks", "paketo_buildpacks", "nixpacks", "static", "railpack"]).optional(),
+	buildType: z
+		.enum([
+			"dockerfile",
+			"heroku_buildpacks",
+			"paketo_buildpacks",
+			"nixpacks",
+			"static",
+			"railpack",
+		])
+		.optional(),
 	publishDirectory: z.string().optional(),
 	isStaticSpa: z.boolean().optional(),
 	createEnvFile: z.boolean().optional(),
