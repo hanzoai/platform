@@ -144,79 +144,65 @@ const createSchema = createInsertSchema(mongo, {
 	ulimitsSwarm: UlimitsSwarmSchema.nullable(),
 });
 
-const mongoPasswordSchema = z
-	.string()
-	.regex(/^[a-zA-Z0-9@#%^&*()_+\-=[\]{}|;:,.<>?~`]*$/, {
-		message:
-			"Password contains invalid characters. Please avoid: $ ! ' \" \\ / and space characters for database compatibility",
-	});
-
-export const apiCreateMongo = z.object({
-	name: z.string().min(1),
-	appName: z
-		.string()
-		.min(1)
-		.max(63)
-		.regex(APP_NAME_REGEX, APP_NAME_MESSAGE)
-		.optional(),
-	dockerImage: z.string().default("mongo:15"),
-	environmentId: z.string().min(1),
-	description: z.string().optional(),
-	databaseUser: z.string().min(1),
-	databasePassword: mongoPasswordSchema,
-	serverId: z.string().optional(),
-	replicaSets: z.boolean().default(false),
+export const apiCreateMongo = createSchema.pick({
+	name: true,
+	appName: true,
+	dockerImage: true,
+	environmentId: true,
+	description: true,
+	databaseUser: true,
+	databasePassword: true,
+	serverId: true,
+	replicaSets: true,
 });
 
 export const apiFindOneMongo = z.object({
 	mongoId: z.string().min(1),
 });
 
-export const apiChangeMongoStatus = z.object({
-	mongoId: z.string().min(1),
-	applicationStatus: z.enum(["idle", "running", "done", "error"]),
-});
+export const apiChangeMongoStatus = createSchema
+	.pick({
+		mongoId: true,
+		applicationStatus: true,
+	})
+	.required();
 
-export const apiSaveEnvironmentVariablesMongo = z.object({
-	mongoId: z.string().min(1),
-	env: z.string().optional(),
-});
+export const apiSaveEnvironmentVariablesMongo = createSchema
+	.pick({
+		mongoId: true,
+		env: true,
+	})
+	.required();
 
-export const apiSaveExternalPortMongo = z.object({
-	mongoId: z.string().min(1),
-	externalPort: z.number(),
-});
+export const apiSaveExternalPortMongo = createSchema
+	.pick({
+		mongoId: true,
+		externalPort: true,
+	})
+	.required();
 
-export const apiDeployMongo = z.object({
-	mongoId: z.string().min(1),
-});
+export const apiDeployMongo = createSchema
+	.pick({
+		mongoId: true,
+	})
+	.required();
 
-export const apiUpdateMongo = z.object({
-	mongoId: z.string().min(1),
-	name: z.string().min(1).optional(),
-	appName: z.string().optional(),
-	description: z.string().optional(),
-	dockerImage: z.string().optional(),
-	command: z.string().optional(),
-	args: z.array(z.string()).optional(),
-	env: z.string().optional(),
-	databaseUser: z.string().min(1).optional(),
-	databasePassword: mongoPasswordSchema.optional(),
-	memoryReservation: z.string().optional(),
-	memoryLimit: z.string().optional(),
-	cpuReservation: z.string().optional(),
-	cpuLimit: z.string().optional(),
-	externalPort: z.number().optional(),
-	applicationStatus: z.enum(["idle", "running", "done", "error"]).optional(),
-	environmentId: z.string().optional(),
-	replicaSets: z.boolean().optional(),
-});
+export const apiUpdateMongo = createSchema
+	.partial()
+	.extend({
+		mongoId: z.string().min(1),
+	})
+	.omit({ serverId: true });
 
-export const apiResetMongo = z.object({
-	mongoId: z.string().min(1),
-	appName: z.string().min(1),
-});
+export const apiResetMongo = createSchema
+	.pick({
+		mongoId: true,
+		appName: true,
+	})
+	.required();
 
-export const apiRebuildMongo = z.object({
-	mongoId: z.string().min(1),
-});
+export const apiRebuildMongo = createSchema
+	.pick({
+		mongoId: true,
+	})
+	.required();

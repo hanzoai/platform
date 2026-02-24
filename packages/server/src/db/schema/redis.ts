@@ -174,24 +174,12 @@ export const apiResetRedis = createSchema
 	})
 	.required();
 
-export const apiUpdateRedis = z.object({
-	redisId: z.string().min(1),
-	name: z.string().min(1).optional(),
-	appName: z.string().optional(),
-	description: z.string().optional(),
-	dockerImage: z.string().optional(),
-	command: z.string().optional(),
-	args: z.array(z.string()).optional(),
-	env: z.string().optional(),
-	databasePassword: z.string().optional(),
-	memoryReservation: z.string().optional(),
-	memoryLimit: z.string().optional(),
-	cpuReservation: z.string().optional(),
-	cpuLimit: z.string().optional(),
-	externalPort: z.number().optional(),
-	applicationStatus: z.enum(["idle", "running", "done", "error"]).optional(),
-	environmentId: z.string().optional(),
-});
+export const apiUpdateRedis = createSchema
+	.partial()
+	.extend({
+		redisId: z.string().min(1),
+	})
+	.omit({ serverId: true });
 
 export const apiRebuildRedis = createSchema
 	.pick({
