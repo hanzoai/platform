@@ -66,5 +66,6 @@ export const apiUpdateGitlab = z.object({
 	name: z.string().min(1),
 	gitlabId: z.string().min(1),
 	gitlabUrl: z.string().min(1),
+	gitProviderId: z.string().min(1),
 	gitlabInternalUrl: z.string().optional().nullable(),
 });

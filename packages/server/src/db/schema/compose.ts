@@ -162,36 +162,28 @@ const createSchema = createInsertSchema(compose, {
 	customGitSSHKeyId: z.string().optional(),
 	command: z.string().optional(),
 	composePath: z.string().min(1),
-	// Override pgEnums so Zod 4 infers only string literals, not numeric enum indices
 	composeType: z.enum(["docker-compose", "stack"]).optional(),
-	sourceType: z
-		.enum(["git", "github", "gitlab", "bitbucket", "gitea", "raw"])
-		.optional(),
-	triggerType: z.enum(["push", "tag"]).optional(),
-	composeStatus: z.enum(["idle", "running", "done", "error"]).optional(),
 	watchPaths: z.array(z.string()).optional(),
 });
 
-export const apiCreateCompose = z.object({
-	name: z.string().min(1),
-	description: z.string().optional(),
-	environmentId: z.string().min(1),
-	composeType: z.enum(["docker-compose", "stack"]).optional(),
-	appName: z
-		.string()
-		.min(1)
-		.max(63)
-		.regex(APP_NAME_REGEX, APP_NAME_MESSAGE)
-		.optional(),
-	serverId: z.string().optional(),
-	composeFile: z.string().optional(),
+export const apiCreateCompose = createSchema.pick({
+	name: true,
+	description: true,
+	environmentId: true,
+	composeType: true,
+	appName: true,
+	serverId: true,
+	composeFile: true,
 });
 
-export const apiCreateComposeByTemplate = z.object({
-	environmentId: z.string().min(1),
-	id: z.string().min(1),
-	serverId: z.string().optional(),
-});
+export const apiCreateComposeByTemplate = createSchema
+	.pick({
+		environmentId: true,
+	})
+	.extend({
+		id: z.string().min(1),
+		serverId: z.string().optional(),
+	});
 
 export const apiFindCompose = z.object({
 	composeId: z.string().min(1),
@@ -219,25 +211,20 @@ export const apiFetchServices = z.object({
 	type: z.enum(["fetch", "cache"]).optional().default("cache"),
 });
 
-export const apiUpdateCompose = z.object({
-	composeId: z.string().min(1),
-	composeFile: z.string().optional(),
-	command: z.string().optional(),
-	name: z.string().min(1).optional(),
-	description: z.string().optional(),
-	env: z.string().optional(),
-	appName: z.string().optional(),
-	environmentId: z.string().optional(),
-	composeType: z.enum(["docker-compose", "stack"]).optional(),
-	sourceType: z
-		.enum(["git", "github", "gitlab", "bitbucket", "gitea", "raw"])
-		.optional(),
-	triggerType: z.enum(["push", "tag"]).optional(),
-	watchPaths: z.array(z.string()).optional(),
-	composePath: z.string().min(1).optional(),
-});
+export const apiUpdateCompose = createSchema
+	.partial()
+	.extend({
+		composeId: z.string(),
+		composeFile: z.string().optional(),
+		command: z.string().optional(),
+	})
+	.omit({ serverId: true });
 
-export const apiRandomizeCompose = z.object({
-	composeId: z.string().min(1),
-	suffix: z.string().optional(),
-});
+export const apiRandomizeCompose = createSchema
+	.pick({
+		composeId: true,
+	})
+	.extend({
+		suffix: z.string().optional(),
+		composeId: z.string().min(1),
+	});
