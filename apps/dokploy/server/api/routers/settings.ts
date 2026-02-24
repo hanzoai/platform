@@ -563,6 +563,7 @@ export const settingsRouter = createTRPCRouter({
 					"sshRouter",
 					"gitProvider",
 					"bitbucket",
+					"ai",
 					"github",
 					"gitlab",
 					"gitea",

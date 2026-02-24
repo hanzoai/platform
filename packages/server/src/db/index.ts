@@ -1,7 +1,11 @@
+import { and, eq } from "drizzle-orm";
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { dbUrl } from "./constants";
 import * as schema from "./schema";
+
+export { and, eq };
+export * from "./schema";
 
 declare global {
 	var db: PostgresJsDatabase<typeof schema> | undefined;
