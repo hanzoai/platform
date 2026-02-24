@@ -7,7 +7,6 @@ import {
 	pgTable,
 	text,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { organization } from "./account";
@@ -129,82 +128,59 @@ export const serverRelations = relations(server, ({ one, many }) => ({
 	schedules: many(schedules),
 }));
 
-const createSchema = createInsertSchema(server, {
-	serverId: z.string().min(1),
+export const apiCreateServer = z.object({
 	name: z.string().min(1),
 	description: z.string().optional(),
-	// Override pgEnums so Zod 4 infers only string literals, not numeric enum indices
+	ipAddress: z.string().min(1),
+	port: z.number(),
+	username: z.string().min(1),
+	sshKeyId: z.string().optional(),
 	serverType: z.enum(["deploy", "build"]).optional(),
-	serverStatus: z.enum(["active", "inactive"]).optional(),
 });
 
-export const apiCreateServer = createSchema
-	.pick({
-		name: true,
-		description: true,
-		ipAddress: true,
-		port: true,
-		username: true,
-		sshKeyId: true,
-		serverType: true,
-	})
-	.required();
+export const apiFindOneServer = z.object({
+	serverId: z.string().min(1),
+});
 
-export const apiFindOneServer = createSchema
-	.pick({
-		serverId: true,
-	})
-	.required();
+export const apiRemoveServer = z.object({
+	serverId: z.string().min(1),
+});
 
-export const apiRemoveServer = createSchema
-	.pick({
-		serverId: true,
-	})
-	.required();
+export const apiUpdateServer = z.object({
+	serverId: z.string().min(1),
+	name: z.string().min(1).optional(),
+	description: z.string().optional(),
+	ipAddress: z.string().min(1).optional(),
+	port: z.number().optional(),
+	username: z.string().min(1).optional(),
+	sshKeyId: z.string().optional(),
+	serverType: z.enum(["deploy", "build"]).optional(),
+	command: z.string().optional(),
+});
 
-export const apiUpdateServer = createSchema
-	.pick({
-		name: true,
-		description: true,
-		serverId: true,
-		ipAddress: true,
-		port: true,
-		username: true,
-		sshKeyId: true,
-	})
-	.required()
-	.extend({
-		serverType: z.enum(["deploy", "build"]),
-		command: z.string().optional(),
-	});
+const metricsConfigSchema = z.object({
+	server: z.object({
+		refreshRate: z.number().min(2),
+		port: z.number().min(1),
+		token: z.string(),
+		urlCallback: z.string().url(),
+		retentionDays: z.number().min(1),
+		cronJob: z.string().min(1),
+		thresholds: z.object({
+			cpu: z.number().min(0),
+			memory: z.number().min(0),
+		}),
+	}),
+	containers: z.object({
+		refreshRate: z.number().min(2),
+		services: z.object({
+			include: z.array(z.string()).optional(),
+			exclude: z.array(z.string()).optional(),
+		}),
+	}),
+});
 
-export const apiUpdateServerMonitoring = createSchema
-	.pick({
-		serverId: true,
-	})
-	.required()
-	.extend({
-		metricsConfig: z
-			.object({
-				server: z.object({
-					refreshRate: z.number().min(2),
-					port: z.number().min(1),
-					token: z.string(),
-					urlCallback: z.string().url(),
-					retentionDays: z.number().min(1),
-					cronJob: z.string().min(1),
-					thresholds: z.object({
-						cpu: z.number().min(0),
-						memory: z.number().min(0),
-					}),
-				}),
-				containers: z.object({
-					refreshRate: z.number().min(2),
-					services: z.object({
-						include: z.array(z.string()).optional(),
-						exclude: z.array(z.string()).optional(),
-					}),
-				}),
-			})
-			.required(),
-	});
+export const apiUpdateServerMonitoring = z.object({
+	serverId: z.string().min(1),
+	metricsConfig: metricsConfigSchema,
+});
