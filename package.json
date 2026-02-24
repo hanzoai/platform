@@ -46,6 +46,7 @@
 	},
 	"pnpm": {
 		"overrides": {
+			"drizzle-orm": "0.41.0",
 			"esbuild": "0.20.2"
 		},
 		"ignoredBuiltDependencies": [
