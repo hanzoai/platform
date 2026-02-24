@@ -116,54 +116,43 @@ export type ServiceType = NonNullable<
 	z.infer<typeof createSchema>["serviceType"]
 >;
 
-const serviceTypeEnum = z.enum([
-	"application",
-	"postgres",
-	"mysql",
-	"mariadb",
-	"mongo",
-	"redis",
-	"compose",
-]);
-
-export const apiCreateMount = z.object({
-	type: z.enum(["bind", "volume", "file"]),
-	hostPath: z.string().optional(),
-	volumeName: z.string().optional(),
-	content: z.string().optional(),
-	mountPath: z.string().min(1),
-	serviceType: serviceTypeEnum.default("application"),
-	filePath: z.string().optional(),
-	serviceId: z.string().min(1),
-});
+export const apiCreateMount = createSchema
+	.pick({
+		type: true,
+		hostPath: true,
+		volumeName: true,
+		content: true,
+		mountPath: true,
+		serviceType: true,
+		filePath: true,
+	})
+	.extend({
+		serviceId: z.string().min(1),
+	});
 
 export const apiFindOneMount = z.object({
 	mountId: z.string().min(1),
 });
 
-export const apiRemoveMount = z.object({
-	mountId: z.string().min(1),
-});
+export const apiRemoveMount = createSchema
+	.pick({
+		mountId: true,
+	})
+	// .extend({
+	// 	appName: z.string().min(1),
+	// })
+	.required();
 
-export const apiFindMountByApplicationId = z.object({
-	serviceId: z.string().min(1),
-	serviceType: serviceTypeEnum,
-});
+export const apiFindMountByApplicationId = createSchema
+	.extend({
+		serviceId: z.string().min(1),
+	})
+	.pick({
+		serviceId: true,
+		serviceType: true,
+	})
+	.required();
 
-export const apiUpdateMount = z.object({
+export const apiUpdateMount = createSchema.partial().extend({
 	mountId: z.string().min(1),
-	type: z.enum(["bind", "volume", "file"]).optional(),
-	hostPath: z.string().optional(),
-	volumeName: z.string().optional(),
-	filePath: z.string().optional(),
-	content: z.string().optional(),
-	serviceType: serviceTypeEnum.optional(),
-	mountPath: z.string().min(1).optional(),
-	applicationId: z.string().optional(),
-	postgresId: z.string().optional(),
-	mariadbId: z.string().optional(),
-	mongoId: z.string().optional(),
-	mysqlId: z.string().optional(),
-	redisId: z.string().optional(),
-	composeId: z.string().optional(),
 });
