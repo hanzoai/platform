@@ -73,7 +73,7 @@ export const ShowClusterSettings = ({ id, type }: Props) => {
 		mongo: () => api.mongo.update.useMutation(),
 	};
 
-	const { mutateAsync, isLoading } = mutationMap[type]
+	const { mutateAsync, isPending } = mutationMap[type]
 		? mutationMap[type]()
 		: api.mongo.update.useMutation();
 
@@ -236,7 +236,7 @@ export const ShowClusterSettings = ({ id, type }: Props) => {
 						)}
 
 						<div className="flex justify-end">
-							<Button isLoading={isLoading} type="submit" className="w-fit">
+							<Button isLoading={isPending} type="submit" className="w-fit">
 								Save
 							</Button>
 						</div>

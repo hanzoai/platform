@@ -163,7 +163,7 @@ const resetData = (data: ApplicationData): AddTemplate => {
 };
 
 export const ShowBuildChooseForm = ({ applicationId }: Props) => {
-	const { mutateAsync, isLoading } =
+	const { mutateAsync, isPending } =
 		api.application.saveBuildType.useMutation();
 	const { data, refetch } = api.application.one.useQuery(
 		{ applicationId },
@@ -528,7 +528,7 @@ export const ShowBuildChooseForm = ({ applicationId }: Props) => {
 							</>
 						)}
 						<div className="flex w-full justify-end">
-							<Button isLoading={isLoading} type="submit">
+							<Button isLoading={isPending} type="submit">
 								Save
 							</Button>
 						</div>

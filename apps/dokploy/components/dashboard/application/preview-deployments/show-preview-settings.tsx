@@ -80,7 +80,7 @@ interface Props {
 export const ShowPreviewSettings = ({ applicationId }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isEnabled, setIsEnabled] = useState(false);
-	const { mutateAsync: updateApplication, isLoading } =
+	const { mutateAsync: updateApplication, isPending } =
 		api.application.update.useMutation();
 
 	const { data, refetch } = api.application.one.useQuery({ applicationId });
@@ -535,7 +535,7 @@ export const ShowPreviewSettings = ({ applicationId }: Props) => {
 							Cancel
 						</Button>
 						<Button
-							isLoading={isLoading}
+							isLoading={isPending}
 							form="hook-form-delete-application"
 							type="submit"
 						>

@@ -52,7 +52,7 @@ export const AddCommandCompose = ({ composeId }: Props) => {
 
 	const utils = api.useUtils();
 
-	const { mutateAsync, isLoading } = api.compose.update.useMutation();
+	const { mutateAsync, isPending } = api.compose.update.useMutation();
 
 	const form = useForm<AddCommand>({
 		defaultValues: {
@@ -128,7 +128,7 @@ export const AddCommandCompose = ({ composeId }: Props) => {
 							/>
 						</div>
 						<div className="flex justify-end">
-							<Button isLoading={isLoading} type="submit" className="w-fit">
+							<Button isLoading={isPending} type="submit" className="w-fit">
 								Save
 							</Button>
 						</div>
