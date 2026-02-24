@@ -93,7 +93,7 @@ export const AdvancedEnvironmentSelector = ({
 			await createEnvironment.mutateAsync({
 				projectId,
 				name: name.trim(),
-				description: description.trim() || null,
+				description: description.trim() || undefined,
 			});
 
 			toast.success("Environment created successfully");
@@ -115,7 +115,7 @@ export const AdvancedEnvironmentSelector = ({
 			await updateEnvironment.mutateAsync({
 				environmentId: selectedEnvironment.environmentId,
 				name: name.trim(),
-				description: description.trim() || null,
+				description: description.trim() || undefined,
 			});
 
 			toast.success("Environment updated successfully");
@@ -168,7 +168,7 @@ export const AdvancedEnvironmentSelector = ({
 			const result = await duplicateEnvironment.mutateAsync({
 				environmentId: environment.environmentId,
 				name: `${environment.name}-copy`,
-				description: environment.description,
+				description: environment.description || undefined,
 			});
 
 			toast.success("Environment duplicated successfully");

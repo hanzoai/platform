@@ -57,7 +57,6 @@ interface Props {
 
 export const HandleAi = ({ aiId }: Props) => {
 	const utils = api.useUtils();
-	const [error, setError] = useState<string | null>(null);
 	const [open, setOpen] = useState(false);
 	const [modelPopoverOpen, setModelPopoverOpen] = useState(false);
 	const [modelSearch, setModelSearch] = useState("");
@@ -102,19 +101,19 @@ export const HandleAi = ({ aiId }: Props) => {
 	const apiKey = form.watch("apiKey");
 
 	const isOllama = apiUrl.includes(":11434") || apiUrl.includes("ollama");
-	const { data: models, isPending: isLoadingServerModels } =
-		api.ai.getModels.useQuery(
-			{
-				apiUrl: apiUrl ?? "",
-				apiKey: apiKey ?? "",
-			},
-			{
-				enabled: !!apiUrl && (isOllama || !!apiKey),
-				onError: (error) => {
-					setError(`Failed to fetch models: ${error.message}`);
-				},
-			},
-		);
+	const {
+		data: models,
+		isPending: isLoadingServerModels,
+		error: modelsError,
+	} = api.ai.getModels.useQuery(
+		{
+			apiUrl: apiUrl ?? "",
+			apiKey: apiKey ?? "",
+		},
+		{
+			enabled: !!apiUrl && (isOllama || !!apiKey),
+		},
+	);
 
 	const onSubmit = async (data: Schema) => {
 		try {
@@ -169,7 +168,9 @@ export const HandleAi = ({ aiId }: Props) => {
 					</DialogDescription>
 				</DialogHeader>
 				<Form {...form}>
-					{error && <AlertBlock type="error">{error}</AlertBlock>}
+					{modelsError && (
+						<AlertBlock type="error">{modelsError.message}</AlertBlock>
+					)}
 					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
 						<FormField
 							control={form.control}
