@@ -37,22 +37,22 @@ const createSchema = createInsertSchema(ai, {
 	isEnabled: z.boolean().optional(),
 });
 
-export const apiCreateAi = createSchema
-	.pick({
-		name: true,
-		apiUrl: true,
-		apiKey: true,
-		model: true,
-		isEnabled: true,
-	})
-	.required();
+export const apiCreateAi = z.object({
+	name: z.string().min(1, { message: "Name is required" }),
+	apiUrl: z.string().url({ message: "Please enter a valid URL" }),
+	apiKey: z.string(),
+	model: z.string().min(1, { message: "Model is required" }),
+	isEnabled: z.boolean().optional(),
+});
 
-export const apiUpdateAi = createSchema
-	.partial()
-	.extend({
-		aiId: z.string().min(1),
-	})
-	.omit({ organizationId: true });
+export const apiUpdateAi = z.object({
+	aiId: z.string().min(1),
+	name: z.string().min(1, { message: "Name is required" }).optional(),
+	apiUrl: z.string().url({ message: "Please enter a valid URL" }).optional(),
+	apiKey: z.string().optional(),
+	model: z.string().min(1, { message: "Model is required" }).optional(),
+	isEnabled: z.boolean().optional(),
+});
 
 export const deploySuggestionSchema = z.object({
 	environmentId: z.string().min(1),

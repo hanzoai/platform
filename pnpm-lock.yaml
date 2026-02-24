@@ -135,8 +135,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/server
       '@dokploy/trpc-openapi':
-        specifier: 0.0.13
-        version: 0.0.13(@trpc/server@11.10.0(typescript@5.9.3))(zod-openapi@5.4.6(zod@4.3.6))(zod@4.3.6)
+        specifier: 0.0.14
+        version: 0.0.14(@trpc/server@11.10.0(typescript@5.9.3))(zod-openapi@5.4.6(zod@4.3.6))(zod@4.3.6)
       '@faker-js/faker':
         specifier: ^8.4.1
         version: 8.4.1
@@ -408,7 +408,7 @@ importers:
         specifier: ^2.2.2
         version: 2.2.6
       swagger-ui-react:
-        specifier: ^5.31.1
+        specifier: ^5.31.2
         version: 5.31.2(@types/react@18.3.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       tailwind-merge:
         specifier: ^2.6.0
@@ -1282,11 +1282,11 @@ packages:
   '@codemirror/view@6.39.15':
     resolution: {integrity: sha512-aCWjgweIIXLBHh7bY6cACvXuyrZ0xGafjQ2VInjp4RM4gMfscK5uESiNdrH0pE+e1lZr2B4ONGsjchl2KsKZzg==}
 
-  '@dokploy/trpc-openapi@0.0.13':
-    resolution: {integrity: sha512-oDQtYgQUGHy3u6NNzeaM1nSY34/bEhpmxKHups+0XkSbdTmfcA3lioaffTWX6cCgqMX+/pK5oO747Rn8pHOOVg==}
+  '@dokploy/trpc-openapi@0.0.14':
+    resolution: {integrity: sha512-Kg5XIObHWk2v8PeHJcD0l9AJk8iukpYiUVvcaLgITylWGokkMGmyupfr1FZY/U3DZtBfmIsGKtP41dVOQ9XD9A==}
     peerDependencies:
       '@trpc/server': ^11.1.0
-      zod: ^4.0.0
+      zod: ^4.3.6
       zod-openapi: ^5.0.1
 
   '@drizzle-team/brocli@0.10.2':
@@ -8802,7 +8802,7 @@ snapshots:
       style-mod: 4.1.3
       w3c-keyname: 2.2.8
 
-  '@dokploy/trpc-openapi@0.0.13(@trpc/server@11.10.0(typescript@5.9.3))(zod-openapi@5.4.6(zod@4.3.6))(zod@4.3.6)':
+  '@dokploy/trpc-openapi@0.0.14(@trpc/server@11.10.0(typescript@5.9.3))(zod-openapi@5.4.6(zod@4.3.6))(zod@4.3.6)':
     dependencies:
       '@trpc/server': 11.10.0(typescript@5.9.3)
       co-body: 6.2.0
