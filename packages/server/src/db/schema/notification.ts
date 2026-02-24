@@ -464,11 +464,9 @@ export const apiTestNtfyConnection = apiCreateNtfy.pick({
 	priority: true,
 });
 
-export const apiFindOneNotification = notificationsSchema
-	.pick({
-		notificationId: true,
-	})
-	.required();
+export const apiFindOneNotification = z.object({
+	notificationId: z.string().min(1),
+});
 
 export const apiCreateCustom = notificationsSchema
 	.pick({
