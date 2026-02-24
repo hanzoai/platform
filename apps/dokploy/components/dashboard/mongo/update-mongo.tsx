@@ -43,7 +43,7 @@ interface Props {
 export const UpdateMongo = ({ mongoId }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending } =
 		api.mongo.update.useMutation();
 	const { data } = api.mongo.one.useQuery(
 		{
@@ -148,7 +148,7 @@ export const UpdateMongo = ({ mongoId }: Props) => {
 								/>
 								<DialogFooter>
 									<Button
-										isLoading={isLoading}
+										isLoading={isPending}
 										form="hook-form-update-mongo"
 										type="submit"
 									>

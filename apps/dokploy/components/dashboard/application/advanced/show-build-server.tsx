@@ -74,7 +74,7 @@ export const ShowBuildServer = ({ applicationId }: Props) => {
 	const { data: buildServers } = api.server.buildServers.useQuery();
 	const { data: registries } = api.registry.all.useQuery();
 
-	const { mutateAsync, isLoading } = api.application.update.useMutation();
+	const { mutateAsync, isPending } = api.application.update.useMutation();
 
 	const form = useForm<Schema>({
 		defaultValues: {
@@ -274,7 +274,7 @@ export const ShowBuildServer = ({ applicationId }: Props) => {
 						/>
 
 						<div className="flex w-full justify-end">
-							<Button isLoading={isLoading} type="submit">
+							<Button isLoading={isPending} type="submit">
 								Save
 							</Button>
 						</div>

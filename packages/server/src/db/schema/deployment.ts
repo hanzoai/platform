@@ -209,14 +209,9 @@ export const apiCreateDeploymentVolumeBackup = schema
 		volumeBackupId: z.string().min(1),
 	});
 
-export const apiFindAllByApplication = schema
-	.pick({
-		applicationId: true,
-	})
-	.extend({
-		applicationId: z.string().min(1),
-	})
-	.required();
+export const apiFindAllByApplication = z.object({
+	applicationId: z.string().min(1),
+});
 
 export const apiFindAllByCompose = schema
 	.pick({

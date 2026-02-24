@@ -192,7 +192,7 @@ export const HandleBackup = ({
 }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 
-	const { data, isLoading } = api.destination.all.useQuery();
+	const { data, isPending } = api.destination.all.useQuery();
 	const { data: backup } = api.backup.one.useQuery(
 		{
 			backupId: backupId ?? "",
@@ -202,7 +202,7 @@ export const HandleBackup = ({
 		},
 	);
 	const [cacheType, setCacheType] = useState<CacheType>("cache");
-	const { mutateAsync: createBackup, isLoading: isCreatingPostgresBackup } =
+	const { mutateAsync: createBackup, isPending: isCreatingPostgresBackup } =
 		backupId
 			? api.backup.update.useMutation()
 			: api.backup.create.useMutation();
@@ -396,7 +396,7 @@ export const HandleBackup = ({
 															!field.value && "text-muted-foreground",
 														)}
 													>
-														{isLoading
+														{isPending
 															? "Loading...."
 															: field.value
 																? data?.find(
@@ -415,7 +415,7 @@ export const HandleBackup = ({
 														placeholder="Search Destination..."
 														className="h-9"
 													/>
-													{isLoading && (
+													{isPending && (
 														<span className="py-6 text-center text-sm">
 															Loading Destinations....
 														</span>

@@ -74,7 +74,7 @@ export const ManageTraefikPorts = ({ children, serverId }: Props) => {
 			serverId,
 		});
 
-	const { mutateAsync: updatePorts, isLoading } =
+	const { mutateAsync: updatePorts, isPending } =
 		api.settings.updateTraefikPorts.useMutation();
 
 	const {
@@ -319,7 +319,7 @@ export const ManageTraefikPorts = ({ children, serverId }: Props) => {
 									type="submit"
 									variant="default"
 									className="text-sm"
-									isLoading={isLoading || isHealthCheckExecuting}
+									isLoading={isPending || isHealthCheckExecuting}
 								>
 									Save
 								</Button>
