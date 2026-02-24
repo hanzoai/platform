@@ -207,7 +207,7 @@ export const HandleVolumeBackups = ({
 
 		await mutateAsync({
 			...values,
-			keepLatestCount: preparedKeepLatestCount,
+			keepLatestCount: preparedKeepLatestCount ?? undefined,
 			destinationId: values.destinationId,
 			volumeBackupId: volumeBackupId || "",
 			serviceType: volumeBackupType,
