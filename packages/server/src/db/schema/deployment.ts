@@ -126,122 +126,84 @@ const schema = createInsertSchema(deployments, {
 	previewDeploymentId: z.string(),
 	buildServerId: z.string(),
 });
-export const apiCreateDeployment = schema
-	.pick({
-		title: true,
-		status: true,
-		logPath: true,
-		applicationId: true,
-		description: true,
-		previewDeploymentId: true,
-	})
-	.extend({
-		applicationId: z.string().min(1),
-	});
+export const apiCreateDeployment = z.object({
+	title: z.string().min(1),
+	status: z.string().default("running"),
+	logPath: z.string().min(1),
+	applicationId: z.string().min(1),
+	description: z.string().optional(),
+	previewDeploymentId: z.string().optional(),
+});
 
-export const apiCreateDeploymentPreview = schema
-	.pick({
-		title: true,
-		status: true,
-		logPath: true,
-		description: true,
-		previewDeploymentId: true,
-	})
-	.extend({
-		previewDeploymentId: z.string().min(1),
-	});
+export const apiCreateDeploymentPreview = z.object({
+	title: z.string().min(1),
+	status: z.string().default("running"),
+	logPath: z.string().min(1),
+	description: z.string().optional(),
+	previewDeploymentId: z.string().min(1),
+});
 
-export const apiCreateDeploymentCompose = schema
-	.pick({
-		title: true,
-		status: true,
-		logPath: true,
-		composeId: true,
-		description: true,
-	})
-	.extend({
-		composeId: z.string().min(1),
-	});
+export const apiCreateDeploymentCompose = z.object({
+	title: z.string().min(1),
+	status: z.string().default("running"),
+	logPath: z.string().min(1),
+	composeId: z.string().min(1),
+	description: z.string().optional(),
+});
 
-export const apiCreateDeploymentBackup = schema
-	.pick({
-		title: true,
-		status: true,
-		logPath: true,
-		backupId: true,
-		description: true,
-	})
-	.extend({
-		backupId: z.string().min(1),
-	});
+export const apiCreateDeploymentBackup = z.object({
+	title: z.string().min(1),
+	status: z.string().default("running"),
+	logPath: z.string().min(1),
+	backupId: z.string().min(1),
+	description: z.string().optional(),
+});
 
-export const apiCreateDeploymentServer = schema
-	.pick({
-		title: true,
-		status: true,
-		logPath: true,
-		serverId: true,
-		description: true,
-	})
-	.extend({
-		serverId: z.string().min(1),
-	});
+export const apiCreateDeploymentServer = z.object({
+	title: z.string().min(1),
+	status: z.string().default("running"),
+	logPath: z.string().min(1),
+	serverId: z.string().min(1),
+	description: z.string().optional(),
+});
 
-export const apiCreateDeploymentSchedule = schema
-	.pick({
-		title: true,
-		status: true,
-		logPath: true,
-		description: true,
-	})
-	.extend({
-		scheduleId: z.string().min(1),
-	});
+export const apiCreateDeploymentSchedule = z.object({
+	title: z.string().min(1),
+	status: z.string().default("running"),
+	logPath: z.string().min(1),
+	description: z.string().optional(),
+	scheduleId: z.string().min(1),
+});
 
-export const apiCreateDeploymentVolumeBackup = schema
-	.pick({
-		title: true,
-		status: true,
-		logPath: true,
-		description: true,
-	})
-	.extend({
-		volumeBackupId: z.string().min(1),
-	});
+export const apiCreateDeploymentVolumeBackup = z.object({
+	title: z.string().min(1),
+	status: z.string().default("running"),
+	logPath: z.string().min(1),
+	description: z.string().optional(),
+	volumeBackupId: z.string().min(1),
+});
 
 export const apiFindAllByApplication = z.object({
 	applicationId: z.string().min(1),
 });
 
-export const apiFindAllByCompose = schema
-	.pick({
-		composeId: true,
-	})
-	.extend({
-		composeId: z.string().min(1),
-	})
-	.required();
+export const apiFindAllByCompose = z.object({
+	composeId: z.string().min(1),
+});
 
-export const apiFindAllByServer = schema
-	.pick({
-		serverId: true,
-	})
-	.extend({
-		serverId: z.string().min(1),
-	})
-	.required();
+export const apiFindAllByServer = z.object({
+	serverId: z.string().min(1),
+});
 
-export const apiFindAllByType = z
-	.object({
-		id: z.string().min(1),
-		type: z.enum([
-			"application",
-			"compose",
-			"server",
-			"schedule",
-			"previewDeployment",
-			"backup",
-			"volumeBackup",
-		]),
-	})
-	.required();
+export const apiFindAllByType = z.object({
+	id: z.string().min(1),
+	type: z.enum([
+		"application",
+		"compose",
+		"server",
+		"schedule",
+		"previewDeployment",
+		"backup",
+		"volumeBackup",
+	]),
+});
