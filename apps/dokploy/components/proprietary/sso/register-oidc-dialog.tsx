@@ -113,8 +113,8 @@ export function RegisterOidcDialog({
 		? updateMutation.mutateAsync
 		: registerMutation.mutateAsync;
 	const isLoading = isEdit
-		? updateMutation.isLoading
-		: registerMutation.isLoading;
+		? updateMutation.isPending
+		: registerMutation.isPending;
 
 	const form = useForm<OidcProviderForm>({
 		resolver: zodResolver(oidcProviderSchema),

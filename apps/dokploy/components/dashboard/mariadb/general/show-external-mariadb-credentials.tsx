@@ -48,7 +48,7 @@ interface Props {
 export const ShowExternalMariadbCredentials = ({ mariadbId }: Props) => {
 	const { data: ip } = api.settings.getIp.useQuery();
 	const { data, refetch } = api.mariadb.one.useQuery({ mariadbId });
-	const { mutateAsync, isLoading } = api.mariadb.saveExternalPort.useMutation();
+	const { mutateAsync, isPending } = api.mariadb.saveExternalPort.useMutation();
 	const [connectionUrl, setConnectionUrl] = useState("");
 	const getIp = data?.server?.ipAddress || ip;
 	const form = useForm({
@@ -161,7 +161,7 @@ export const ShowExternalMariadbCredentials = ({ mariadbId }: Props) => {
 								)}
 
 								<div className="flex justify-end">
-									<Button type="submit" isLoading={isLoading}>
+									<Button type="submit" isLoading={isPending}>
 										Save
 									</Button>
 								</div>

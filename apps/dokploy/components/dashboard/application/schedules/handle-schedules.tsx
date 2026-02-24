@@ -275,7 +275,7 @@ export const HandleSchedules = ({ id, scheduleId, scheduleType }: Props) => {
 		}
 	}, [form, schedule, scheduleId]);
 
-	const { mutateAsync, isLoading } = scheduleId
+	const { mutateAsync, isPending } = scheduleId
 		? api.schedule.update.useMutation()
 		: api.schedule.create.useMutation();
 
@@ -662,7 +662,7 @@ echo "Hello, world!"
 							)}
 						/>
 
-						<Button type="submit" isLoading={isLoading} className="w-full">
+						<Button type="submit" isLoading={isPending} className="w-full">
 							{scheduleId ? "Update" : "Create"} Schedule
 						</Button>
 					</form>

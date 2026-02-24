@@ -69,7 +69,7 @@ export const UpdateTraefikConfig = ({ applicationId }: Props) => {
 		{ enabled: !!applicationId },
 	);
 
-	const { mutateAsync, isLoading, error, isError } =
+	const { mutateAsync, isPending, error, isError } =
 		api.application.updateTraefikConfig.useMutation();
 
 	const form = useForm<UpdateTraefikConfig>({
@@ -126,7 +126,7 @@ export const UpdateTraefikConfig = ({ applicationId }: Props) => {
 			}}
 		>
 			<DialogTrigger asChild>
-				<Button isLoading={isLoading}>Modify</Button>
+				<Button isLoading={isPending}>Modify</Button>
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-4xl">
 				<DialogHeader>
@@ -198,7 +198,7 @@ routers:
 							</p>
 						</div>
 						<Button
-							isLoading={isLoading}
+							isLoading={isPending}
 							form="hook-form-update-traefik-config"
 							type="submit"
 						>

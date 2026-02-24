@@ -64,7 +64,7 @@ export const HandlePorts = ({
 			enabled: !!portId,
 		},
 	);
-	const { mutateAsync, isLoading, error, isError } = portId
+	const { mutateAsync, isPending, error, isError } = portId
 		? api.port.update.useMutation()
 		: api.port.create.useMutation();
 
@@ -266,7 +266,7 @@ export const HandlePorts = ({
 
 					<DialogFooter>
 						<Button
-							isLoading={isLoading}
+							isLoading={isPending}
 							form="hook-form-add-port"
 							type="submit"
 						>

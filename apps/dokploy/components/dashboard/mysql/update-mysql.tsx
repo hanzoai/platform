@@ -42,7 +42,7 @@ interface Props {
 
 export const UpdateMysql = ({ mysqlId }: Props) => {
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending } =
 		api.mysql.update.useMutation();
 	const { data } = api.mysql.one.useQuery(
 		{
@@ -146,7 +146,7 @@ export const UpdateMysql = ({ mysqlId }: Props) => {
 								/>
 								<DialogFooter>
 									<Button
-										isLoading={isLoading}
+										isLoading={isPending}
 										form="hook-form-mysql-update"
 										type="submit"
 									>

@@ -58,7 +58,7 @@ export const SaveGitProviderCompose = ({ composeId }: Props) => {
 	const { data: sshKeys } = api.sshKey.all.useQuery();
 	const router = useRouter();
 
-	const { mutateAsync, isLoading } = api.compose.update.useMutation();
+	const { mutateAsync, isPending } = api.compose.update.useMutation();
 
 	const form = useForm({
 		defaultValues: {
@@ -318,7 +318,7 @@ export const SaveGitProviderCompose = ({ composeId }: Props) => {
 				</div>
 
 				<div className="flex flex-row justify-end">
-					<Button type="submit" className="w-fit" isLoading={isLoading}>
+					<Button type="submit" className="w-fit" isLoading={isPending}>
 						Save{" "}
 					</Button>
 				</div>
