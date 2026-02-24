@@ -530,12 +530,12 @@ export const settingsRouter = createTRPCRouter({
 	getOpenApiDocument: protectedProcedure.query(
 		async ({ ctx }): Promise<unknown> => {
 			const protocol = ctx.req.headers["x-forwarded-proto"];
-			const url = `${protocol}://${ctx.req.headers.host}/api`;
+			const url = `${protocol}://${ctx.req.headers.host}/api/trpc`;
 			const openApiDocument = generateOpenApiDocument(appRouter, {
 				title: "tRPC OpenAPI",
-				version: "1.0.0",
+				version: packageInfo.version,
 				baseUrl: url,
-				docsUrl: `${url}/settings.getOpenApiDocument`,
+				docsUrl: `${url}/trpc/settings.getOpenApiDocument`,
 				tags: [
 					"admin",
 					"docker",
@@ -572,7 +572,7 @@ export const settingsRouter = createTRPCRouter({
 			openApiDocument.info = {
 				title: "Dokploy API",
 				description: "Endpoints for dokploy",
-				version: "1.0.0",
+				version: packageInfo.version,
 			};
 
 			// Add security schemes configuration
