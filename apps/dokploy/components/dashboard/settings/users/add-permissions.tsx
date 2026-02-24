@@ -184,7 +184,7 @@ export const AddUserPermissions = ({ userId }: Props) => {
 		},
 	);
 
-	const { mutateAsync, isError, error, isLoading } =
+	const { mutateAsync, isError, error, isPending } =
 		api.user.assignPermissions.useMutation();
 
 	const form = useForm({
@@ -839,7 +839,7 @@ export const AddUserPermissions = ({ userId }: Props) => {
 						/>
 						<DialogFooter className="flex w-full flex-row justify-end md:col-span-2">
 							<Button
-								isLoading={isLoading}
+								isLoading={isPending}
 								form="hook-form-add-permissions"
 								type="submit"
 							>

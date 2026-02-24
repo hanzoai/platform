@@ -74,7 +74,7 @@ export const SaveBitbucketProvider = ({ applicationId }: Props) => {
 		api.bitbucket.bitbucketProviders.useQuery();
 	const { data, refetch } = api.application.one.useQuery({ applicationId });
 
-	const { mutateAsync, isLoading: isSavingBitbucketProvider } =
+	const { mutateAsync, isPending: isSavingBitbucketProvider } =
 		api.application.saveBitbucketProvider.useMutation();
 
 	const form = useForm({
@@ -333,7 +333,7 @@ export const SaveBitbucketProvider = ({ applicationId }: Props) => {
 														!field.value && "text-muted-foreground",
 													)}
 												>
-													{status === "loading" && fetchStatus === "fetching"
+													{status === "pending" && fetchStatus === "fetching"
 														? "Loading...."
 														: field.value
 															? branches?.find(
@@ -350,7 +350,7 @@ export const SaveBitbucketProvider = ({ applicationId }: Props) => {
 													placeholder="Search branch..."
 													className="h-9"
 												/>
-												{status === "loading" && fetchStatus === "fetching" && (
+												{status === "pending" && fetchStatus === "fetching" && (
 													<span className="py-6 text-center text-sm text-muted-foreground">
 														Loading Branches....
 													</span>

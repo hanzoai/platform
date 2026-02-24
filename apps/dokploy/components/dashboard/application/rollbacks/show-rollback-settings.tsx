@@ -71,7 +71,7 @@ export const ShowRollbackSettings = ({ applicationId, children }: Props) => {
 		},
 	);
 
-	const { mutateAsync: updateApplication, isLoading } =
+	const { mutateAsync: updateApplication, isPending } =
 		api.application.update.useMutation();
 
 	const { data: registries } = api.registry.all.useQuery();
@@ -212,7 +212,7 @@ export const ShowRollbackSettings = ({ applicationId, children }: Props) => {
 							/>
 						)}
 
-						<Button type="submit" className="w-full" isLoading={isLoading}>
+						<Button type="submit" className="w-full" isLoading={isPending}>
 							Save Settings
 						</Button>
 					</form>

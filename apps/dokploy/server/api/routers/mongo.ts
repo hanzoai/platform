@@ -20,7 +20,6 @@ import {
 	updateMongoById,
 } from "@dokploy/server";
 import { TRPCError } from "@trpc/server";
-import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
@@ -235,7 +234,7 @@ export const mongoRouter = createTRPCRouter({
 			},
 		})
 		.input(apiDeployMongo)
-		.subscription(async ({ input, ctx }) => {
+		.subscription(async function* ({ input, ctx, signal }) {
 			const mongo = await findMongoById(input.mongoId);
 			if (
 				mongo.environment.project.organizationId !==
@@ -246,11 +245,24 @@ export const mongoRouter = createTRPCRouter({
 					message: "You are not authorized to deploy this mongo",
 				});
 			}
-			return observable<string>((emit) => {
-				deployMongo(input.mongoId, (log) => {
-					emit.next(log);
-				});
+			const queue: string[] = [];
+			const done = false;
+
+			deployMongo(input.mongoId, (log) => {
+				queue.push(log);
 			});
+
+			while (!done || queue.length > 0) {
+				if (queue.length > 0) {
+					yield queue.shift()!;
+				} else {
+					await new Promise((r) => setTimeout(r, 50));
+				}
+
+				if (signal?.aborted) {
+					return;
+				}
+			}
 		}),
 
 	changeStatus: protectedProcedure

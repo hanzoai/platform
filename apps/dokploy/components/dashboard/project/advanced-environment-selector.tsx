@@ -334,9 +334,9 @@ export const AdvancedEnvironmentSelector = ({
 						</Button>
 						<Button
 							onClick={handleCreateEnvironment}
-							disabled={!name.trim() || createEnvironment.isLoading}
+							disabled={!name.trim() || createEnvironment.isPending}
 						>
-							{createEnvironment.isLoading ? "Creating..." : "Create"}
+							{createEnvironment.isPending ? "Creating..." : "Create"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -387,9 +387,9 @@ export const AdvancedEnvironmentSelector = ({
 						</Button>
 						<Button
 							onClick={handleUpdateEnvironment}
-							disabled={!name.trim() || updateEnvironment.isLoading}
+							disabled={!name.trim() || updateEnvironment.isPending}
 						>
-							{updateEnvironment.isLoading ? "Updating..." : "Update"}
+							{updateEnvironment.isPending ? "Updating..." : "Update"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -427,12 +427,12 @@ export const AdvancedEnvironmentSelector = ({
 							variant="destructive"
 							onClick={handleDeleteEnvironment}
 							disabled={
-								deleteEnvironment.isLoading ||
+								deleteEnvironment.isPending ||
 								haveServices ||
 								!selectedEnvironment
 							}
 						>
-							{deleteEnvironment.isLoading ? "Deleting..." : "Delete"}
+							{deleteEnvironment.isPending ? "Deleting..." : "Delete"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

@@ -69,11 +69,11 @@ export const ShowImport = ({ composeId }: Props) => {
 	} | null>(null);
 
 	const utils = api.useUtils();
-	const { mutateAsync: processTemplate, isLoading: isLoadingTemplate } =
+	const { mutateAsync: processTemplate, isPending: isLoadingTemplate } =
 		api.compose.processTemplate.useMutation();
 	const {
 		mutateAsync: importTemplate,
-		isLoading: isImporting,
+		isPending: isImporting,
 		isSuccess: isImportSuccess,
 	} = api.compose.import.useMutation();
 

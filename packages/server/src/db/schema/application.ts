@@ -382,11 +382,9 @@ export const apiCreateApplication = createSchema.pick({
 	serverId: true,
 });
 
-export const apiFindOneApplication = createSchema
-	.pick({
-		applicationId: true,
-	})
-	.required();
+export const apiFindOneApplication = z.object({
+	applicationId: z.string().min(1),
+});
 
 export const apiDeployApplication = createSchema
 	.pick({
@@ -522,11 +520,9 @@ export const apiSaveEnvironmentVariables = createSchema
 	})
 	.required();
 
-export const apiFindMonitoringStats = createSchema
-	.pick({
-		appName: true,
-	})
-	.required();
+export const apiFindMonitoringStats = z.object({
+	appName: z.string().min(1),
+});
 
 export const apiUpdateApplication = createSchema
 	.partial()

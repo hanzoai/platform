@@ -69,7 +69,7 @@ export const HandleAi = ({ aiId }: Props) => {
 			enabled: !!aiId,
 		},
 	);
-	const { mutateAsync, isLoading } = aiId
+	const { mutateAsync, isPending } = aiId
 		? api.ai.update.useMutation()
 		: api.ai.create.useMutation();
 
@@ -102,7 +102,7 @@ export const HandleAi = ({ aiId }: Props) => {
 	const apiKey = form.watch("apiKey");
 
 	const isOllama = apiUrl.includes(":11434") || apiUrl.includes("ollama");
-	const { data: models, isLoading: isLoadingServerModels } =
+	const { data: models, isPending: isLoadingServerModels } =
 		api.ai.getModels.useQuery(
 			{
 				apiUrl: apiUrl ?? "",
@@ -372,7 +372,7 @@ export const HandleAi = ({ aiId }: Props) => {
 						/>
 
 						<div className="flex justify-end  gap-2 pt-4">
-							<Button type="submit" isLoading={isLoading}>
+							<Button type="submit" isLoading={isPending}>
 								{aiId ? "Update" : "Create"}
 							</Button>
 						</div>

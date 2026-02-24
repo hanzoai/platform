@@ -74,7 +74,7 @@ export const SaveGitlabProvider = ({ applicationId }: Props) => {
 	const { data: gitlabProviders } = api.gitlab.gitlabProviders.useQuery();
 	const { data, refetch } = api.application.one.useQuery({ applicationId });
 
-	const { mutateAsync, isLoading: isSavingGitlabProvider } =
+	const { mutateAsync, isPending: isSavingGitlabProvider } =
 		api.application.saveGitlabProvider.useMutation();
 
 	const form = useForm({
@@ -351,7 +351,7 @@ export const SaveGitlabProvider = ({ applicationId }: Props) => {
 														!field.value && "text-muted-foreground",
 													)}
 												>
-													{status === "loading" && fetchStatus === "fetching"
+													{status === "pending" && fetchStatus === "fetching"
 														? "Loading...."
 														: field.value
 															? branches?.find(
@@ -368,7 +368,7 @@ export const SaveGitlabProvider = ({ applicationId }: Props) => {
 													placeholder="Search branch..."
 													className="h-9"
 												/>
-												{status === "loading" && fetchStatus === "fetching" && (
+												{status === "pending" && fetchStatus === "fetching" && (
 													<span className="py-6 text-center text-sm text-muted-foreground">
 														Loading Branches....
 													</span>

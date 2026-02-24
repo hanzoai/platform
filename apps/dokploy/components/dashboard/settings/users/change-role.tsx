@@ -49,7 +49,7 @@ export const ChangeRole = ({ memberId, currentRole, userEmail }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const utils = api.useUtils();
 
-	const { mutateAsync, isError, error, isLoading } =
+	const { mutateAsync, isError, error, isPending } =
 		api.organization.updateMemberRole.useMutation();
 
 	const form = useForm<ChangeRoleSchema>({
@@ -146,7 +146,7 @@ export const ChangeRole = ({ memberId, currentRole, userEmail }: Props) => {
 
 				<DialogFooter>
 					<Button
-						isLoading={isLoading}
+						isLoading={isPending}
 						form="hook-form-change-role"
 						type="submit"
 					>
