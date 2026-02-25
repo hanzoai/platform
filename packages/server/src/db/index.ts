@@ -9,22 +9,30 @@ export * from "./schema";
 
 type Database = PostgresJsDatabase<typeof schema>;
 
-declare global {
-	var db: Database | undefined;
-}
+/**
+ * Evita problemas de redeclaración global en monorepos.
+ * No usamos `declare global`.
+ */
+const globalForDb = globalThis as unknown as {
+	db?: Database;
+};
 
 let dbConnection: Database;
+
 if (process.env.NODE_ENV === "production") {
+	// En producción no usamos global cache
 	dbConnection = drizzle(postgres(dbUrl), {
 		schema,
 	});
 } else {
-	if (!global.db)
-		global.db = drizzle(postgres(dbUrl), {
+	// En desarrollo reutilizamos conexión para evitar múltiples conexiones
+	if (!globalForDb.db) {
+		globalForDb.db = drizzle(postgres(dbUrl), {
 			schema,
 		});
+	}
 
-	dbConnection = global.db;
+	dbConnection = globalForDb.db;
 }
 
 export const db: Database = dbConnection;
