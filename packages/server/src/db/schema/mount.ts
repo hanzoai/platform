@@ -130,11 +130,9 @@ export const apiCreateMount = createSchema
 		serviceId: z.string().min(1),
 	});
 
-export const apiFindOneMount = createSchema
-	.pick({
-		mountId: true,
-	})
-	.required();
+export const apiFindOneMount = z.object({
+	mountId: z.string().min(1),
+});
 
 export const apiRemoveMount = createSchema
 	.pick({
