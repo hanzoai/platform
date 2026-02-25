@@ -1,5 +1,6 @@
 import { normalizeTrustedOrigin } from "@dokploy/server";
 import { IS_CLOUD } from "@dokploy/server/constants";
+import { db } from "@dokploy/server/db";
 import { member, ssoProvider, user } from "@dokploy/server/db/schema";
 import { ssoProviderBodySchema } from "@dokploy/server/db/schema/sso";
 import {
@@ -15,7 +16,6 @@ import {
 	enterpriseProcedure,
 	publicProcedure,
 } from "@/server/api/trpc";
-import { db } from "@/server/db";
 
 export const ssoRouter = createTRPCRouter({
 	showSignInWithSSO: publicProcedure.query(async () => {

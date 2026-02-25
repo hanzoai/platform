@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import { boolean, integer, pgTable, text } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { applications } from "./application";
@@ -104,45 +105,12 @@ export const volumeBackupsRelations = relations(
 	}),
 );
 
-const serviceTypeEnum = z.enum([
-	"application",
-	"postgres",
-	"mysql",
-	"mariadb",
-	"mongo",
-	"redis",
-	"compose",
-]);
-
-export const createVolumeBackupSchema = z.object({
-	name: z.string().min(1),
-	volumeName: z.string().min(1),
-	prefix: z.string().min(1),
-	serviceType: serviceTypeEnum.default("application"),
-	appName: z.string().min(1).optional(),
-	serviceName: z.string().optional(),
-	turnOff: z.boolean().default(false),
-	cronExpression: z.string().min(1),
-	keepLatestCount: z.number().optional(),
-	enabled: z.boolean().optional(),
-	applicationId: z.string().optional(),
-	postgresId: z.string().optional(),
-	mariadbId: z.string().optional(),
-	mongoId: z.string().optional(),
-	mysqlId: z.string().optional(),
-	redisId: z.string().optional(),
-	composeId: z.string().optional(),
-	destinationId: z.string().min(1),
+export const createVolumeBackupSchema = createInsertSchema(volumeBackups).omit({
+	volumeBackupId: true,
 });
 
-export const updateVolumeBackupSchema = z.object({
+export const updateVolumeBackupSchema = createVolumeBackupSchema.extend({
 	volumeBackupId: z.string().min(1),
-	name: z.string().min(1).optional(),
-	destinationId: z.string().optional(),
-	cronExpression: z.string().optional(),
-	keepLatestCount: z.number().optional(),
-	enabled: z.boolean().optional(),
-	turnOff: z.boolean().optional(),
 });
 
 export const apiFindOneVolumeBackup = z.object({

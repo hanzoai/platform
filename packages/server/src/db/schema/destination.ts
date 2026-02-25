@@ -46,33 +46,43 @@ const createSchema = createInsertSchema(destinations, {
 	region: z.string(),
 });
 
-export const apiCreateDestination = z.object({
-	name: z.string().min(1),
-	provider: z.string(),
-	accessKey: z.string(),
-	bucket: z.string(),
-	region: z.string(),
-	endpoint: z.string(),
-	secretAccessKey: z.string(),
-	serverId: z.string().optional(),
-});
+export const apiCreateDestination = createSchema
+	.pick({
+		name: true,
+		provider: true,
+		accessKey: true,
+		bucket: true,
+		region: true,
+		endpoint: true,
+		secretAccessKey: true,
+	})
+	.required()
+	.extend({
+		serverId: z.string().optional(),
+	});
 
 export const apiFindOneDestination = z.object({
 	destinationId: z.string().min(1),
 });
 
-export const apiRemoveDestination = z.object({
-	destinationId: z.string().min(1),
-});
+export const apiRemoveDestination = createSchema
+	.pick({
+		destinationId: true,
+	})
+	.required();
 
-export const apiUpdateDestination = z.object({
-	destinationId: z.string().min(1),
-	name: z.string().min(1).optional(),
-	accessKey: z.string().optional(),
-	bucket: z.string().optional(),
-	region: z.string().optional(),
-	endpoint: z.string().optional(),
-	provider: z.string().optional(),
-	secretAccessKey: z.string().optional(),
-	serverId: z.string().optional(),
-});
+export const apiUpdateDestination = createSchema
+	.pick({
+		name: true,
+		accessKey: true,
+		bucket: true,
+		region: true,
+		endpoint: true,
+		secretAccessKey: true,
+		destinationId: true,
+		provider: true,
+	})
+	.required()
+	.extend({
+		serverId: z.string().optional(),
+	});
