@@ -46,12 +46,8 @@
 	},
 	"pnpm": {
 		"overrides": {
-			"drizzle-orm": "0.41.0",
 			"esbuild": "0.20.2"
 		},
-		"ignoredBuiltDependencies": [
-			"@prisma/client"
-		],
 		"onlyBuiltDependencies": [
 			"@scarf/scarf",
 			"@tree-sitter-grammars/tree-sitter-yaml",
@@ -66,7 +62,9 @@
 			"sharp",
 			"ssh2",
 			"tree-sitter",
-			"tree-sitter-json"
+			"tree-sitter-json",
+			"@prisma/engines",
+			"prisma"
 		]
 	}
 }
