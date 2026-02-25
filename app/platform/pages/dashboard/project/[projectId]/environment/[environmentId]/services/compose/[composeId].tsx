@@ -402,6 +402,7 @@ export async function getServerSideProps(
 			session: session as any,
 			user: user as any,
 		},
+		// @ts-expect-error -- strictNullChecks:false breaks tRPC v11 transformer type inference
 		transformer: superjson,
 	});
 

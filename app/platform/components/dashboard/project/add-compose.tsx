@@ -75,7 +75,7 @@ export const AddCompose = ({ environmentId, projectName }: Props) => {
 	const slug = slugify(projectName);
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 	const { data: servers } = api.server.withSSHKey.useQuery();
-	const { mutateAsync, isLoading, error, isError } =
+	const { mutateAsync, isPending: isLoading, error, isError } =
 		api.compose.create.useMutation();
 
 	// Get environment data to extract projectId

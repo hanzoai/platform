@@ -34,7 +34,7 @@ export const ComposeFileEditor = ({ composeId }: Props) => {
 		{ enabled: !!composeId },
 	);
 
-	const { mutateAsync, isLoading } = api.compose.update.useMutation();
+	const { mutateAsync, isPending: isLoading } = api.compose.update.useMutation();
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
 	const form = useForm<AddComposeFile>({

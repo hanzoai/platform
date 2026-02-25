@@ -49,7 +49,7 @@ export const UpdateServerIp = ({ children }: Props) => {
 	const { data } = api.user.get.useQuery();
 	const { data: ip } = api.server.publicIp.useQuery();
 
-	const { mutateAsync, isLoading, error, isError } =
+	const { mutateAsync, isPending: isLoading, error, isError } =
 		api.user.update.useMutation();
 
 	const form = useForm<Schema>({

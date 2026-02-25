@@ -58,7 +58,7 @@ export const SaveGitProviderCompose = ({ composeId }: Props) => {
 	const { data: sshKeys } = api.sshKey.all.useQuery();
 	const router = useRouter();
 
-	const { mutateAsync, isLoading } = api.compose.update.useMutation();
+	const { mutateAsync, isPending: isLoading } = api.compose.update.useMutation();
 
 	const form = useForm<GitProvider>({
 		defaultValues: {

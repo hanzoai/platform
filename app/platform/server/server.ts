@@ -13,6 +13,7 @@ import {
 	setupDirectories,
 	auth,
 } from "@hanzo/platform";
+import { createPlatformZapServer } from "@hanzo/platform/services/zap-bridge";
 import { config } from "dotenv";
 import next from "next";
 import { toNodeHandler } from "better-auth/node";
@@ -120,6 +121,11 @@ void app.prepare().then(async () => {
 			startUsageCollectionSchedule();
 			startBillingSchedule();
 			console.log("✅ Billing jobs started");
+		}
+
+		// Start ZAP bridge for AI agent/MCP access
+		if (process.env.ZAP_ENABLED !== "false") {
+			createPlatformZapServer();
 		}
 
 		server.listen(PORT, HOST);

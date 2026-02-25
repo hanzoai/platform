@@ -48,7 +48,7 @@ interface Props {
 export const ShowExternalMongoCredentials = ({ mongoId }: Props) => {
 	const { data: ip } = api.settings.getIp.useQuery();
 	const { data, refetch } = api.mongo.one.useQuery({ mongoId });
-	const { mutateAsync, isLoading } = api.mongo.saveExternalPort.useMutation();
+	const { mutateAsync, isPending: isLoading } = api.mongo.saveExternalPort.useMutation();
 	const [connectionUrl, setConnectionUrl] = useState("");
 	const getIp = data?.server?.ipAddress || ip;
 	const form = useForm<DockerProvider>({
