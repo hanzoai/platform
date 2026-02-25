@@ -42,7 +42,7 @@ interface Props {
 
 export const UpdateRedis = ({ redisId }: Props) => {
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending: isLoading } =
 		api.redis.update.useMutation();
 	const { data } = api.redis.one.useQuery(
 		{

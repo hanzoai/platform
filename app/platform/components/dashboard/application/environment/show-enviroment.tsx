@@ -60,7 +60,7 @@ export const ShowEnvironment = ({ id, type }: Props) => {
 		mongo: () => api.mongo.update.useMutation(),
 		compose: () => api.compose.update.useMutation(),
 	};
-	const { mutateAsync, isLoading } = mutationMap[type]
+	const { mutateAsync, isPending: isLoading } = mutationMap[type]
 		? mutationMap[type]()
 		: api.mongo.update.useMutation();
 

@@ -48,7 +48,7 @@ interface Props {
 export const ShowExternalMysqlCredentials = ({ mysqlId }: Props) => {
 	const { data: ip } = api.settings.getIp.useQuery();
 	const { data, refetch } = api.mysql.one.useQuery({ mysqlId });
-	const { mutateAsync, isLoading } = api.mysql.saveExternalPort.useMutation();
+	const { mutateAsync, isPending: isLoading } = api.mysql.saveExternalPort.useMutation();
 	const [connectionUrl, setConnectionUrl] = useState("");
 	const getIp = data?.server?.ipAddress || ip;
 	const form = useForm<DockerProvider>({
