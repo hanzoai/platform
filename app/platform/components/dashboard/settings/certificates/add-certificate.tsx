@@ -62,7 +62,7 @@ export const AddCertificate = () => {
 	const utils = api.useUtils();
 
 	const { data: isCloud } = api.settings.isCloud.useQuery();
-	const { mutateAsync, isError, error, isLoading } =
+	const { mutateAsync, isError, error, isPending: isLoading } =
 		api.certificates.create.useMutation();
 	const { data: servers } = api.server.withSSHKey.useQuery();
 	const hasServers = servers && servers.length > 0;

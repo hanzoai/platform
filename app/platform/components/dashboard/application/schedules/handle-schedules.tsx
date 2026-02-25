@@ -255,7 +255,7 @@ export const HandleSchedules = ({ id, scheduleId, scheduleType }: Props) => {
 		}
 	}, [form, schedule, scheduleId]);
 
-	const { mutateAsync, isLoading } = scheduleId
+	const { mutateAsync, isPending: isLoading } = scheduleId
 		? api.schedule.update.useMutation()
 		: api.schedule.create.useMutation();
 

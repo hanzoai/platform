@@ -87,7 +87,7 @@ export const UpdateVolume = ({
 		},
 	);
 
-	const { mutateAsync, isLoading, error, isError } =
+	const { mutateAsync, isPending: isLoading, error, isError } =
 		api.mounts.update.useMutation();
 
 	const form = useForm<UpdateMount>({

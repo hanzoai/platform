@@ -76,7 +76,7 @@ export const DuplicateProject = ({
 		selectedServiceIds.includes(service.id),
 	);
 
-	const { mutateAsync: duplicateProject, isLoading } =
+	const { mutateAsync: duplicateProject, isPending: isLoading } =
 		api.project.duplicate.useMutation({
 			onSuccess: async (newProject) => {
 				await utils.project.all.invalidate();

@@ -17,29 +17,29 @@ interface Props {
 }
 export const ShowStorageActions = ({ serverId }: Props) => {
 	const { t } = useTranslation("settings");
-	const { mutateAsync: cleanAll, isLoading: cleanAllIsLoading } =
+	const { mutateAsync: cleanAll, isPending: cleanAllIsLoading } =
 		api.settings.cleanAll.useMutation();
 
 	const {
 		mutateAsync: cleanDockerBuilder,
-		isLoading: cleanDockerBuilderIsLoading,
+		isPending: cleanDockerBuilderIsLoading,
 	} = api.settings.cleanDockerBuilder.useMutation();
 
 	const { mutateAsync: cleanMonitoring } =
 		api.settings.cleanMonitoring.useMutation();
 	const {
 		mutateAsync: cleanUnusedImages,
-		isLoading: cleanUnusedImagesIsLoading,
+		isPending: cleanUnusedImagesIsLoading,
 	} = api.settings.cleanUnusedImages.useMutation();
 
 	const {
 		mutateAsync: cleanUnusedVolumes,
-		isLoading: cleanUnusedVolumesIsLoading,
+		isPending: cleanUnusedVolumesIsLoading,
 	} = api.settings.cleanUnusedVolumes.useMutation();
 
 	const {
 		mutateAsync: cleanStoppedContainers,
-		isLoading: cleanStoppedContainersIsLoading,
+		isPending: cleanStoppedContainersIsLoading,
 	} = api.settings.cleanStoppedContainers.useMutation();
 
 	return (
