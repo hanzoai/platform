@@ -28,7 +28,7 @@ export const StepTwo = ({ templateInfo, setTemplateInfo }: StepProps) => {
 	const suggestions = templateInfo.suggestions || [];
 	const selectedVariant = templateInfo.details;
 
-	const { mutateAsync, isLoading, error, isError } =
+	const { mutateAsync, isPending: isLoading, error, isError } =
 		api.ai.suggest.useMutation();
 
 	useEffect(() => {

@@ -74,7 +74,7 @@ export const DeleteService = ({ id, type }: Props) => {
 		mongo: () => api.mongo.remove.useMutation(),
 		compose: () => api.compose.delete.useMutation(),
 	};
-	const { mutateAsync, isLoading } = mutationMap[type]
+	const { mutateAsync, isPending: isLoading } = mutationMap[type]
 		? mutationMap[type]()
 		: api.mongo.remove.useMutation();
 	const { push } = useRouter();

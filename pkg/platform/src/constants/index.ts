@@ -2,7 +2,7 @@ import path from "node:path";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 
-export const IS_CLOUD = process.env.IS_CLOUD === "true";
+export const IS_CLOUD = process.env.IS_CLOUD === "true" || !!process.env.KUBERNETES_SERVICE_HOST;
 export const DOCKER_ENABLED = process.env.DOCKER_ENABLED !== "false" && !IS_CLOUD;
 
 // Lazy-loaded Docker instance - only connects when actually needed

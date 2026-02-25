@@ -15,7 +15,7 @@ import { HandleSSHKeys } from "./handle-ssh-keys";
 
 export const ShowDestinations = () => {
 	const { data, isLoading, refetch } = api.sshKey.all.useQuery();
-	const { mutateAsync, isLoading: isRemoving } =
+	const { mutateAsync, isPending: isRemoving } =
 		api.sshKey.remove.useMutation();
 
 	return (

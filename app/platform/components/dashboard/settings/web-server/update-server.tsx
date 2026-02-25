@@ -45,7 +45,7 @@ export const UpdateServer = ({
 	const [isUpdateAvailable, setIsUpdateAvailable] = useState(
 		!!updateData?.updateAvailable,
 	);
-	const { mutateAsync: getUpdateData, isLoading } =
+	const { mutateAsync: getUpdateData, isPending: isLoading } =
 		api.settings.getUpdateData.useMutation();
 	const { data: platformVersion } = api.settings.getHanzoVersion.useQuery();
 	const { data: releaseTag } = api.settings.getReleaseTag.useQuery();
