@@ -60,7 +60,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 	const { data: servers } = api.server.withSSHKey.useQuery();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
-	const { mutateAsync, isError, error, isLoading } = destinationId
+	const { mutateAsync, isError, error, isPending: isLoading } = destinationId
 		? api.destination.update.useMutation()
 		: api.destination.create.useMutation();
 
@@ -75,7 +75,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 	);
 	const {
 		mutateAsync: testConnection,
-		isLoading: isLoadingConnection,
+		isPending: isLoadingConnection,
 		error: connectionError,
 		isError: isErrorConnection,
 	} = api.destination.testConnection.useMutation();

@@ -81,7 +81,7 @@ export const AddApplication = ({ environmentId, projectName }: Props) => {
 	// Self-hosted: show only if there are remote servers (Hanzo is default, hide if no remote servers)
 	const shouldShowServerDropdown = hasServers;
 
-	const { mutateAsync, isLoading, error, isError } =
+	const { mutateAsync, isPending: isLoading, error, isError } =
 		api.application.create.useMutation();
 
 	const form = useForm<AddTemplate>({

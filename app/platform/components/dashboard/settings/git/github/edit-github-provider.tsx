@@ -53,7 +53,7 @@ export const EditGithubProvider = ({ githubId }: Props) => {
 	const utils = api.useUtils();
 	const [isOpen, setIsOpen] = useState(false);
 	const { mutateAsync, error, isError } = api.github.update.useMutation();
-	const { mutateAsync: testConnection, isLoading } =
+	const { mutateAsync: testConnection, isPending: isLoading } =
 		api.github.testConnection.useMutation();
 	const form = useForm<Schema>({
 		defaultValues: {

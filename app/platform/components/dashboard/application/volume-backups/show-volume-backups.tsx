@@ -54,10 +54,10 @@ export const ShowVolumeBackups = ({
 
 	const utils = api.useUtils();
 
-	const { mutateAsync: deleteVolumeBackup, isLoading: isDeleting } =
+	const { mutateAsync: deleteVolumeBackup, isPending: isDeleting } =
 		api.volumeBackups.delete.useMutation();
 
-	const { mutateAsync: runManually, isLoading } =
+	const { mutateAsync: runManually, isPending: isLoading } =
 		api.volumeBackups.runManually.useMutation();
 
 	return (

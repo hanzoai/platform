@@ -16,7 +16,7 @@ import { HandleAi } from "./handle-ai";
 
 export const AiForm = () => {
 	const { data: aiConfigs, refetch, isLoading } = api.ai.getAll.useQuery();
-	const { mutateAsync, isLoading: isRemoving } = api.ai.delete.useMutation();
+	const { mutateAsync, isPending: isRemoving } = api.ai.delete.useMutation();
 
 	return (
 		<div className="w-full">

@@ -1,0 +1,463 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: gitlab-push-binding
+  namespace: tekton-builds
+spec:
+  params:
+    - name: kind
+      value: willbereplaced
+    - name: resourcename
+      value: willbereplaced
+    - name: agnostnamespace
+      value: willbereplaced
+    - name: resourcenamespace
+      value: willbereplaced
+    - name: containerregistry
+      value: willbereplaced
+    - name: gitlabpat
+      value: willbereplaced
+    - name: gitbranch
+      value: willbereplaced
+    - name: gitsubpath
+      value: willbereplaced
+    - name: gitwatchpath
+      value: willbereplaced
+    - name: imagename
+      value: willbereplaced
+    - name: dockerfile
+      value: willbereplaced
+    - name: testimage
+      value: willbereplaced
+    - name: testenabled
+      value: willbereplaced
+    - name: testcommand
+      value: willbereplaced
+    - name: gitrevision
+      value: $(body.after)
+    - name: gitrepo
+      value: $(body.repository.url)
+    - name: gitcommitter
+      value: $(body.user_username)
+    - name: gitcommiturl
+      value: $(body.commits[0].url)
+    - name: gitrepourl
+      value: $(body.repository.git_http_url)
+    - name: gitreponame
+      value: $(body.project.path_with_namespace)
+    - name: gitcommitmessage
+      value: $(body.commits[0].message)
+    - name: gitcommittimestamp
+      value: $(body.commits[0].timestamp)
+    - name: gitlabprojectid
+      value: $(body.project.id)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: gitlab-template
+  namespace: tekton-builds
+spec:
+  params:
+    - name: kind
+    - name: resourcename
+    - name: agnostnamespace
+    - name: resourcenamespace
+    - name: containerregistry
+    - name: gitlabpat
+    - name: gitbranch
+    - name: gitsubpath
+    - name: gitwatchpath
+    - name: gitrevision
+    - name: gitrepo
+    - name: imagename
+    - name: dockerfile
+    - name: testimage
+      default: 'node:22-alpine'
+    - name: testenabled
+      default: 'true'
+    - name: testcommand
+      default: ''
+    - name: gitcommitter
+    - name: gitcommiturl
+    - name: gitrepourl
+    - name: gitreponame
+    - name: gitcommitmessage
+    - name: gitcommittimestamp
+    - name: gitlabprojectid
+      default: ''
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: TaskRun
+      metadata:
+        generateName: gitlab-run-
+      spec:
+        serviceAccountName: tekton-triggers-gitlab-sa
+        workspaces:
+          - name: ws
+            emptyDir: {}
+        taskSpec:
+          workspaces:
+            - name: ws
+          steps:
+            - name: report-pending
+              image: bitnamilegacy/git:2.44.0
+              env:
+                - name: GITLAB_PAT
+                  value: $(tt.params.gitlabpat)
+                - name: GIT_REPO_URL
+                  value: $(tt.params.gitrepourl)
+                - name: GIT_REVISION
+                  value: $(tt.params.gitrevision)
+                - name: GITLAB_PROJECT_ID
+                  value: $(tt.params.gitlabprojectid)
+              script: |
+                #!/bin/bash
+                if [ -z "${GITLAB_PROJECT_ID}" ] || [ -z "${GIT_REVISION}" ] || [ -z "${GITLAB_PAT}" ]; then
+                  echo "Missing required params for status reporting, skipping..."
+                  exit 0
+                fi
+                # URL-encode the project ID (it may be a path like owner/repo)
+                ENCODED_PROJECT_ID=$(echo "${GITLAB_PROJECT_ID}" | sed 's|/|%2F|g')
+                curl -s -X POST \
+                  -H "PRIVATE-TOKEN: ${GITLAB_PAT}" \
+                  -H "Content-Type: application/json" \
+                  "https://gitlab.com/api/v4/projects/${ENCODED_PROJECT_ID}/statuses/${GIT_REVISION}" \
+                  -d "{\"state\":\"pending\",\"context\":\"hanzo-paas/ci\",\"name\":\"hanzo-paas/ci\",\"description\":\"Pipeline started\",\"target_url\":\"https://platform.hanzo.ai\"}"
+                echo "Posted pending commit status for ${GIT_REVISION}"
+            - name: setup
+              image: bitnamilegacy/git:2.44.0
+              onError: continue
+              env:
+                - name: GIT_REPO
+                  value: $(tt.params.gitrepo)
+                - name: GIT_BRANCH
+                  value: $(tt.params.gitbranch)
+                - name: GIT_REVISION
+                  value: $(tt.params.gitrevision)
+                - name: GIT_COMMITTER_USERNAME
+                  value: $(tt.params.gitcommitter)
+                - name: SUB_PATH
+                  value: $(tt.params.gitsubpath)
+                - name: GIT_WATCH_PATH
+                  value: $(tt.params.gitwatchpath)
+                - name: GIT_COMMIT_URL
+                  value: $(tt.params.gitcommiturl)
+                - name: GIT_REPO_URL
+                  value: $(tt.params.gitrepourl)
+                - name: GIT_REPO_NAME
+                  value: $(tt.params.gitreponame)
+                - name: GIT_COMMIT_MESSAGE
+                  value: $(tt.params.gitcommitmessage)
+                - name: GIT_COMMIT_TIMESTAMP
+                  value: $(tt.params.gitcommittimestamp)
+              script: |
+                #!/bin/bash
+                export URL=$(echo $(tt.params.gitrepourl) | sed "s|://|://oauth2:$(tt.params.gitlabpat)@|")
+                export REPO_NAME=$(basename -s .git "$(tt.params.gitreponame)")
+                cd $(workspaces.ws.path)
+
+                # Clone the repository and check for errors
+                if ! git clone ${URL} -b $(tt.params.gitbranch); then
+                  echo "Failed to clone the repository. Exiting..."
+                  exit 0
+                fi
+
+                cd ${REPO_NAME}
+
+                # Set the file dates to the same as the repo after cloning
+                git ls-tree -r --long HEAD | while read -r mode type object size filename; do
+                  commit_date=$(git log -1 --format="%ct" -- "$filename")
+                  touch -d "@$commit_date" "$filename"
+                done
+
+                # Do not check commits if this is an initial manual run
+                if [[ ! $(context.taskRun.name) =~ "manual-run-" ]]; then
+                  # If watch paths are defined, then check for the changed files
+                  if [ "$(tt.params.gitwatchpath)" != "" ]; then
+                    git diff --name-only $(git log -1 --pretty=%P $(tt.params.gitrevision) | awk '{print $1}')..$(tt.params.gitrevision) > /tmp/changed_files
+                    
+                    # Split watch paths by comma and check each one
+                    IFS=',' read -ra WATCH_PATHS <<< "$(tt.params.gitwatchpath)"
+                    CHANGES_FOUND=0
+                    
+                    for WATCH_PATH in "${WATCH_PATHS[@]}"; do
+                      # Trim whitespace
+                      WATCH_PATH=$(echo "$WATCH_PATH" | xargs)
+                      NUM_CHANGES=$(grep -c "^${WATCH_PATH}" /tmp/changed_files)
+                      
+                      if [ ${NUM_CHANGES} -gt 0 ]; then
+                        echo "Changes detected in watch path: ${WATCH_PATH}"
+                        CHANGES_FOUND=1
+                        break
+                      fi
+                    done
+                    
+                    # If there are no changes in any watch path, exit with Error
+                    if [ ${CHANGES_FOUND} -eq 0 ]; then
+                      echo "No changed files in any of the specified watch paths, exiting..."
+                      exit 1
+                    fi
+                  fi
+                fi
+
+                echo "$(tt.params.containerregistry)/$(tt.params.imagename):$(echo $(tt.params.gitrevision) | head -c 7)" > $(workspaces.ws.path)/image
+            - name: test
+              image: $(tt.params.testimage)
+              onError: continue
+              script: |
+                #!/bin/sh
+
+                CANCEL_PIPELINE=$(cat $(steps.step-setup.exitCode.path))
+                if [ ${CANCEL_PIPELINE} -eq 1 ]; then
+                  echo "Pipeline cancelled. No changes detected in repo subpath of this container..."
+                  exit 0
+                fi
+
+                # Check if tests are enabled
+                if [ "$(tt.params.testenabled)" != "true" ]; then
+                  echo "Tests disabled via testenabled param, skipping..."
+                  exit 0
+                fi
+
+                export REPO_NAME=$(basename -s .git "$(tt.params.gitreponame)")
+                cd $(workspaces.ws.path)/${REPO_NAME}/$(tt.params.gitsubpath)
+
+                # If a custom test command is provided, use it
+                if [ -n "$(tt.params.testcommand)" ]; then
+                  echo "Running custom test command: $(tt.params.testcommand)"
+                  eval "$(tt.params.testcommand)"
+                  exit $?
+                fi
+
+                # Auto-detect project type and run appropriate test command
+                if [ -f "go.mod" ]; then
+                  echo "Detected Go project (go.mod found)"
+                  go test -v -race -count=1 ./...
+                  exit $?
+                fi
+
+                if [ -f "package.json" ]; then
+                  echo "Detected Node.js project (package.json found)"
+                  TEST_SCRIPT=$(cat package.json | grep -c '"test"')
+                  if [ ${TEST_SCRIPT} -gt 0 ]; then
+                    npm ci && npm test
+                    exit $?
+                  else
+                    echo "No test script found in package.json, skipping..."
+                    exit 0
+                  fi
+                fi
+
+                if [ -f "Cargo.toml" ]; then
+                  echo "Detected Rust project (Cargo.toml found)"
+                  cargo test
+                  exit $?
+                fi
+
+                if [ -f "pyproject.toml" ]; then
+                  echo "Detected Python project (pyproject.toml found)"
+                  pip install -e ".[test]" && pytest -v
+                  exit $?
+                fi
+
+                echo "No recognized project type detected, skipping tests..."
+                exit 0
+            - name: build
+              image: gcr.io/kaniko-project/executor:v1.21.1-debug
+              script: |
+                #!/busybox/sh
+
+                CANCEL_PIPELINE=$(cat $(steps.step-setup.exitCode.path))
+                if [ ${CANCEL_PIPELINE} -eq 1 ]; then
+                  echo "Pipeline cancelled. No changes detected in repo subpath of this container..."
+                  exit 0
+                fi
+
+                # Check if tests failed
+                TEST_EXIT=$(cat $(steps.step-test.exitCode.path))
+                if [ ${TEST_EXIT} -ne 0 ]; then
+                  echo "Tests failed (exit code: ${TEST_EXIT}). Aborting build..."
+                  exit 1
+                fi
+
+                export IMAGE=$(cat $(workspaces.ws.path)/image)
+                export REPO_NAME=$(basename -s .git "$(tt.params.gitreponame)")
+                echo "Context: $(workspaces.ws.path)/${REPO_NAME}/$(tt.params.gitsubpath)"
+                echo "Watch path: $(workspaces.ws.path)/${REPO_NAME}/$(tt.params.gitwatchpath)"
+                echo "Dockerfile: $(tt.params.dockerfile)"
+                echo "Image: ${IMAGE}"
+                /kaniko/executor \
+                  --destination=${IMAGE} \
+                  --context=$(workspaces.ws.path)/${REPO_NAME}/$(tt.params.gitsubpath) \
+                  --dockerfile=$(tt.params.dockerfile) \
+                  --cache=true \
+                  --cache-repo=$(tt.params.containerregistry)/$(tt.params.imagename)-cache \
+                  --insecure
+            - name: deploy
+              image: bitnamilegacy/kubectl:1.29.2
+              script: |
+                #!/usr/bin/bash
+
+                CANCEL_PIPELINE=$(cat $(steps.step-setup.exitCode.path))
+                if [ ${CANCEL_PIPELINE} -eq 1 ]; then
+                  echo "Pipeline cancelled. No changes detected in repo subpath of this container..."
+                  exit 0
+                fi
+
+                export IMAGE=$(cat $(workspaces.ws.path)/image | sed 's/registry.$(tt.params.agnostnamespace):5000/localhost:30050/')
+                kubectl set image $(tt.params.kind)/$(tt.params.resourcename) $(tt.params.resourcename)=${IMAGE} -n $(tt.params.resourcenamespace)
+                kubectl rollout status $(tt.params.kind)/$(tt.params.resourcename) -n $(tt.params.resourcenamespace) -w
+                kubectl annotate $(tt.params.kind)/$(tt.params.resourcename) kubernetes.io/change-cause="Update image to ${IMAGE}" -n $(tt.params.resourcenamespace)
+            - name: report-status
+              image: bitnamilegacy/git:2.44.0
+              script: |
+                #!/bin/bash
+                GITLAB_PAT="$(tt.params.gitlabpat)"
+                GIT_REVISION="$(tt.params.gitrevision)"
+                GITLAB_PROJECT_ID="$(tt.params.gitlabprojectid)"
+
+                if [ -z "${GITLAB_PROJECT_ID}" ] || [ -z "${GIT_REVISION}" ] || [ -z "${GITLAB_PAT}" ]; then
+                  echo "Missing required params for status reporting, skipping..."
+                  exit 0
+                fi
+
+                ENCODED_PROJECT_ID=$(echo "${GITLAB_PROJECT_ID}" | sed 's|/|%2F|g')
+
+                # Determine overall status from previous step exit codes
+                SETUP_EXIT=$(cat $(steps.step-setup.exitCode.path))
+                TEST_EXIT=$(cat $(steps.step-test.exitCode.path))
+                BUILD_EXIT=$(cat $(steps.step-build.exitCode.path))
+                DEPLOY_EXIT=$(cat $(steps.step-deploy.exitCode.path))
+
+                if [ ${SETUP_EXIT} -eq 1 ]; then
+                  STATE="success"
+                  DESCRIPTION="No changes detected, pipeline skipped"
+                elif [ ${TEST_EXIT} -ne 0 ]; then
+                  STATE="failed"
+                  DESCRIPTION="Tests failed (exit code: ${TEST_EXIT})"
+                elif [ ${BUILD_EXIT} -ne 0 ]; then
+                  STATE="failed"
+                  DESCRIPTION="Build failed (exit code: ${BUILD_EXIT})"
+                elif [ ${DEPLOY_EXIT} -ne 0 ]; then
+                  STATE="failed"
+                  DESCRIPTION="Deploy failed (exit code: ${DEPLOY_EXIT})"
+                else
+                  STATE="success"
+                  DESCRIPTION="Pipeline completed successfully"
+                fi
+
+                curl -s -X POST \
+                  -H "PRIVATE-TOKEN: ${GITLAB_PAT}" \
+                  -H "Content-Type: application/json" \
+                  "https://gitlab.com/api/v4/projects/${ENCODED_PROJECT_ID}/statuses/${GIT_REVISION}" \
+                  -d "{\"state\":\"${STATE}\",\"context\":\"hanzo-paas/ci\",\"name\":\"hanzo-paas/ci\",\"description\":\"${DESCRIPTION}\",\"target_url\":\"https://platform.hanzo.ai\"}"
+                echo "Posted ${STATE} commit status for ${GIT_REVISION}: ${DESCRIPTION}"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tekton-triggers-gitlab-sa
+  namespace: tekton-builds
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-secret
+  namespace: tekton-builds
+type: Opaque
+stringData:
+  secretToken: '1234567'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: triggers-gitlab-eventlistener-binding
+  namespace: tekton-builds
+subjects:
+  - kind: ServiceAccount
+    name: tekton-triggers-gitlab-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-roles
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: triggers-gitlab-eventlistener-clusterbinding
+subjects:
+  - kind: ServiceAccount
+    name: tekton-triggers-gitlab-sa
+    namespace: tekton-builds
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-clusterroles
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: gitlab-listener
+  namespace: tekton-builds
+spec:
+  triggers:
+    - name: gitlab-listener
+      interceptors:
+        - ref:
+            name: 'gitlab'
+          params:
+            - name: 'secretRef'
+              value:
+                secretName: gitlab-secret
+                secretKey: secretToken
+            - name: 'eventTypes'
+              value: ['Push Hook']
+        - name: 'Only for the specific branch'
+          ref:
+            name: 'cel'
+          params:
+            - name: 'filter'
+              value: "body.ref == 'refs/heads/master'"
+      bindings:
+        - ref: gitlab-push-binding
+      template:
+        ref: gitlab-template
+  resources:
+    kubernetesResource:
+      spec:
+        template:
+          spec:
+            serviceAccountName: tekton-triggers-gitlab-sa
+            containers:
+              - resources:
+                  requests:
+                    memory: '64Mi'
+                    cpu: '50m'
+                  limits:
+                    memory: '128Mi'
+                    cpu: '100m'
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tekton-ingress
+  namespace: tekton-builds
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 500m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: '6000'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '6000'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '6000'
+    nginx.ingress.kubernetes.io/proxy-next-upstream-timeout: '6000'
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /tekton-gitlab/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: el-gitlab-listener
+                port:
+                  number: 8080
