@@ -78,7 +78,7 @@ export const HandleServers = ({ serverId }: Props) => {
 	);
 
 	const { data: sshKeys } = api.sshKey.all.useQuery();
-	const { mutateAsync, error, isLoading, isError } = serverId
+	const { mutateAsync, error, isPending: isLoading, isError } = serverId
 		? api.server.update.useMutation()
 		: api.server.create.useMutation();
 	const form = useForm<Schema>({

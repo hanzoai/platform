@@ -49,7 +49,7 @@ export const EditScript = ({ serverId }: Props) => {
 		},
 	);
 
-	const { mutateAsync, isLoading } = api.server.update.useMutation();
+	const { mutateAsync, isPending: isLoading } = api.server.update.useMutation();
 
 	const { data: defaultCommand } = api.server.getDefaultCommand.useQuery(
 		{

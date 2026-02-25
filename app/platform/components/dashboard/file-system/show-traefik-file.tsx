@@ -48,7 +48,7 @@ export const ShowTraefikFile = ({ path, serverId }: Props) => {
 	);
 	const [canEdit, setCanEdit] = useState(true);
 
-	const { mutateAsync, isLoading, error, isError } =
+	const { mutateAsync, isPending: isLoading, error, isError } =
 		api.settings.updateTraefikFile.useMutation();
 
 	const form = useForm<UpdateServerMiddlewareConfig>({

@@ -61,7 +61,7 @@ export const HandleAi = ({ aiId }: Props) => {
 			enabled: !!aiId,
 		},
 	);
-	const { mutateAsync, isLoading } = aiId
+	const { mutateAsync, isPending: isLoading } = aiId
 		? api.ai.update.useMutation()
 		: api.ai.create.useMutation();
 
@@ -90,19 +90,25 @@ export const HandleAi = ({ aiId }: Props) => {
 	const apiKey = form.watch("apiKey");
 
 	const isOllama = apiUrl.includes(":11434") || apiUrl.includes("ollama");
-	const { data: models, isLoading: isLoadingServerModels } =
-		api.ai.getModels.useQuery(
-			{
-				apiUrl: apiUrl ?? "",
-				apiKey: apiKey ?? "",
-			},
-			{
-				enabled: !!apiUrl && (isOllama || !!apiKey),
-				onError: (error) => {
-					setError(`Failed to fetch models: ${error.message}`);
-				},
-			},
-		);
+	const {
+		data: models,
+		isLoading: isLoadingServerModels,
+		error: modelsError,
+	} = api.ai.getModels.useQuery(
+		{
+			apiUrl: apiUrl ?? "",
+			apiKey: apiKey ?? "",
+		},
+		{
+			enabled: !!apiUrl && (isOllama || !!apiKey),
+		},
+	);
+
+	useEffect(() => {
+		if (modelsError) {
+			setError(`Failed to fetch models: ${modelsError.message}`);
+		}
+	}, [modelsError]);
 
 	useEffect(() => {
 		const apiUrl = form.watch("apiUrl");
