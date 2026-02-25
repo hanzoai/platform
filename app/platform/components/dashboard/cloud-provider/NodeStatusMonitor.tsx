@@ -229,7 +229,7 @@ export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps)
 							onClick={confirmRemove}
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 						>
-							{removeMutation.isLoading ? (
+							{removeMutation.isPending ? (
 								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
 							) : (
 								<Trash2 className="h-4 w-4 mr-2" />

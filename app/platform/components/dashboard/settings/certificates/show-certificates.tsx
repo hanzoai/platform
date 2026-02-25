@@ -15,7 +15,7 @@ import { AddCertificate } from "./add-certificate";
 import { getCertificateChainInfo, getExpirationStatus } from "./utils";
 
 export const ShowCertificates = () => {
-	const { mutateAsync, isLoading: isRemoving } =
+	const { mutateAsync, isPending: isRemoving } =
 		api.certificates.remove.useMutation();
 	const { data, isLoading, refetch } = api.certificates.all.useQuery();
 

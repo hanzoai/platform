@@ -43,7 +43,7 @@ interface Props {
 export const UpdatePostgres = ({ postgresId }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending: isLoading } =
 		api.postgres.update.useMutation();
 	const { data } = api.postgres.one.useQuery(
 		{

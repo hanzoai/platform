@@ -35,7 +35,7 @@ interface Props {
 export const ShowPreviewDeployments = ({ applicationId }: Props) => {
 	const { data } = api.application.one.useQuery({ applicationId });
 
-	const { mutateAsync: deletePreviewDeployment, isLoading } =
+	const { mutateAsync: deletePreviewDeployment, isPending: isLoading } =
 		api.previewDeployment.delete.useMutation();
 
 	const {
