@@ -7,7 +7,6 @@
 
 import {
 	createWSClient,
-	experimental_formDataLink,
 	httpBatchLink,
 	splitLink,
 	wsLink,
@@ -23,7 +22,7 @@ const getBaseUrl = () => {
 };
 
 const getWsUrl = () => {
-	if (typeof window === "undefined") return null;
+	if (typeof window === "undefined") return "";
 
 	const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 	const host = window.location.host;
@@ -31,53 +30,44 @@ const getWsUrl = () => {
 	return `${protocol}${host}/drawer-logs`;
 };
 
-// Create WebSocket client with delayed connection
-const createLazyWSClient = () => {
+/**
+ * Create WebSocket client using tRPC v11's built-in lazy mode.
+ * In v11, createWSClient supports lazy: { enabled: true } which
+ * defers the connection until the first subscription is made.
+ */
+const getWsClient = () => {
 	if (typeof window === "undefined") return null;
 
-	let actualClient: ReturnType<typeof createWSClient> | null = null;
-
-	return {
-		request: (op: any, callbacks: any) => {
-			if (!actualClient) {
-				const wsUrl = getWsUrl();
-				if (wsUrl) {
-					actualClient = createWSClient({ url: wsUrl });
-				}
-			}
-			return actualClient?.request(op, callbacks) || (() => {});
+	return createWSClient({
+		url: getWsUrl(),
+		lazy: {
+			enabled: true,
+			closeMs: 0,
 		},
-		close: () => {
-			if (actualClient) {
-				actualClient.close();
-				actualClient = null;
-			}
-		},
-		getConnection: () => {
-			if (!actualClient) {
-				const wsUrl = getWsUrl();
-				if (wsUrl) {
-					actualClient = createWSClient({ url: wsUrl });
-				}
-			}
-			return actualClient!.getConnection();
-		},
-	};
+	});
 };
 
-const wsClient = createLazyWSClient();
+const wsClient = getWsClient();
 
 /** A set of type-safe react-query hooks for your tRPC API. */
 export const api = createTRPCNext<AppRouter>({
+	/**
+	 * In tRPC v11, the transformer moves from inside config() to the
+	 * top-level createTRPCNext options.
+	 *
+	 * @see https://trpc.io/docs/v11/data-transformers
+	 *
+	 * Note: tRPC v11 uses a conditional type to check the transformer flag:
+	 *   `undefined extends TOptions["transformer"] ? false : true`
+	 * With strictNullChecks disabled, undefined is assignable to all types,
+	 * so this always resolves to false. The @ts-expect-error suppresses the
+	 * resulting type error. The runtime behavior is correct.
+	 */
+	// @ts-expect-error -- strictNullChecks:false breaks tRPC v11 transformer type inference
+	transformer: superjson,
+
 	config() {
 		return {
-			/**
-			 * Transformer used for data de-serialization from the server.
-			 *
-			 * @see https://trpc.io/docs/data-transformers
-			 */
-			transformer: superjson,
-
 			/**
 			 * Links used to determine request flow from client to server.
 			 *
@@ -88,15 +78,13 @@ export const api = createTRPCNext<AppRouter>({
 					condition: (op) => op.type === "subscription",
 					true: wsLink({
 						client: wsClient!,
+						// @ts-expect-error -- strictNullChecks:false breaks tRPC v11 transformer type inference
+						transformer: superjson,
 					}),
-					false: splitLink({
-						condition: (op) => op.input instanceof FormData,
-						true: experimental_formDataLink({
-							url: `${getBaseUrl()}/api/trpc`,
-						}),
-						false: httpBatchLink({
-							url: `${getBaseUrl()}/api/trpc`,
-						}),
+					false: httpBatchLink({
+						url: `${getBaseUrl()}/api/trpc`,
+						// @ts-expect-error -- strictNullChecks:false breaks tRPC v11 transformer type inference
+						transformer: superjson,
 					}),
 				}),
 			],

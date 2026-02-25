@@ -52,7 +52,7 @@ export function AddOrganization({ organizationId }: Props) {
 			enabled: !!organizationId,
 		},
 	);
-	const { mutateAsync, isLoading } = organizationId
+	const { mutateAsync, isPending: isLoading } = organizationId
 		? api.organization.update.useMutation()
 		: api.organization.create.useMutation();
 	const { refetch: refetchActiveOrganization } =

@@ -41,7 +41,7 @@ interface Props {
 export const EnvironmentVariables = ({ environmentId, children }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending: isLoading } =
 		api.environment.update.useMutation();
 	const { data } = api.environment.one.useQuery(
 		{
