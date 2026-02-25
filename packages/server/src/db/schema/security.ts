@@ -42,14 +42,18 @@ export const apiFindOneSecurity = z.object({
 	securityId: z.string().min(1),
 });
 
-export const apiCreateSecurity = z.object({
-	applicationId: z.string().min(1),
-	username: z.string().min(1),
-	password: z.string().min(1),
-});
+export const apiCreateSecurity = createSchema
+	.pick({
+		applicationId: true,
+		username: true,
+		password: true,
+	})
+	.required();
 
-export const apiUpdateSecurity = z.object({
-	securityId: z.string().min(1),
-	username: z.string().min(1),
-	password: z.string().min(1),
-});
+export const apiUpdateSecurity = createSchema
+	.pick({
+		securityId: true,
+		username: true,
+		password: true,
+	})
+	.required();

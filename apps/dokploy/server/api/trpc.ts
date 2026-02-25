@@ -7,6 +7,8 @@
  * need to use are documented accordingly near the end.
  */
 
+// import { getServerAuthSession } from "@/server/auth";
+import { db } from "@dokploy/server/db";
 import { hasValidLicense } from "@dokploy/server/index";
 import { validateRequest } from "@dokploy/server/lib/auth";
 import type { OpenApiMeta } from "@dokploy/trpc-openapi";
@@ -15,8 +17,6 @@ import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
 import type { Session, User } from "better-auth";
 import superjson from "superjson";
 import { ZodError } from "zod";
-// import { getServerAuthSession } from "@/server/auth";
-import { db } from "@/server/db";
 
 /**
  * 1. CONTEXT
