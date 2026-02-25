@@ -43,7 +43,7 @@ interface Props {
 export const UpdateApplication = ({ applicationId }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending: isLoading } =
 		api.application.update.useMutation();
 	const { data } = api.application.one.useQuery(
 		{

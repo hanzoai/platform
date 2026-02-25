@@ -68,7 +68,7 @@ export const ProfileForm = () => {
 
 	const {
 		mutateAsync,
-		isLoading: isUpdating,
+		isPending: isUpdating,
 		isError,
 		error,
 	} = api.user.update.useMutation();
