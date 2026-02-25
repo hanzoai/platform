@@ -7,11 +7,13 @@ import * as schema from "./schema";
 export { and, eq };
 export * from "./schema";
 
+type Database = PostgresJsDatabase<typeof schema>;
+
 declare global {
-	var db: PostgresJsDatabase<typeof schema> | undefined;
+	var db: Database | undefined;
 }
 
-export let db: PostgresJsDatabase<typeof schema>;
+export let db: Database;
 if (process.env.NODE_ENV === "production") {
 	db = drizzle(postgres(dbUrl), {
 		schema,
