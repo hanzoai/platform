@@ -57,7 +57,7 @@
     "dockerode": "4.0.2",
     "dotenv": "16.4.5",
     "drizzle-dbml-generator": "0.10.0",
-    "drizzle-orm": "0.41.0",
+    "drizzle-orm": "catalog:",
     "drizzle-zod": "0.5.1",
     "yaml": "2.8.1",
     "lodash": "4.17.21",
