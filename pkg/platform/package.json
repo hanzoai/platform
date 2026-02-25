@@ -33,6 +33,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@kubernetes/client-node": "^1.0.0",
     "@ai-sdk/anthropic": "^2.0.5",
     "@ai-sdk/azure": "^2.0.16",
     "@ai-sdk/cohere": "^2.0.4",
@@ -47,7 +48,7 @@
     "@oslojs/crypto": "1.0.1",
     "@oslojs/encoding": "1.1.0",
     "@react-email/components": "^0.0.21",
-    "@trpc/server": "^10.45.2",
+    "@trpc/server": "^11.0.0",
     "adm-zip": "^0.5.16",
     "ai": "^5.0.17",
     "ai-sdk-ollama": "^0.5.1",

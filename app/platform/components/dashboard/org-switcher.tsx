@@ -49,7 +49,7 @@ export function OrgSwitcher({ collapsed }: { collapsed?: boolean }) {
 		refetch,
 		isLoading,
 	} = api.organization.all.useQuery();
-	const { mutateAsync: deleteOrganization, isLoading: isRemoving } =
+	const { mutateAsync: deleteOrganization, isPending: isRemoving } =
 		api.organization.delete.useMutation();
 	const utils = api.useUtils();
 

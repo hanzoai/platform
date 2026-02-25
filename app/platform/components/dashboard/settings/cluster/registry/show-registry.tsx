@@ -13,7 +13,7 @@ import { api } from "@/utils/api";
 import { HandleRegistry } from "./handle-registry";
 
 export const ShowRegistry = () => {
-	const { mutateAsync, isLoading: isRemoving } =
+	const { mutateAsync, isPending: isRemoving } =
 		api.registry.remove.useMutation();
 	const { data, isLoading, refetch } = api.registry.all.useQuery();
 
