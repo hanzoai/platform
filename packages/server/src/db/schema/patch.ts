@@ -62,13 +62,13 @@ const createSchema = createInsertSchema(patch, {
 	composeId: z.string().optional(),
 });
 
-export const apiCreatePatch = z.object({
-	filePath: z.string().min(1),
-	content: z.string(),
-	type: z.enum(["create", "update", "delete"]).optional(),
-	enabled: z.boolean().optional(),
-	applicationId: z.string().optional(),
-	composeId: z.string().optional(),
+export const apiCreatePatch = createSchema.pick({
+	filePath: true,
+	content: true,
+	type: true,
+	enabled: true,
+	applicationId: true,
+	composeId: true,
 });
 
 export const apiFindPatch = z.object({
@@ -83,13 +83,12 @@ export const apiFindPatchesByComposeId = z.object({
 	composeId: z.string().min(1),
 });
 
-export const apiUpdatePatch = z.object({
-	patchId: z.string().min(1),
-	filePath: z.string().min(1).optional(),
-	content: z.string().optional(),
-	type: z.enum(["create", "update", "delete"]).optional(),
-	enabled: z.boolean().optional(),
-});
+export const apiUpdatePatch = createSchema
+	.partial()
+	.extend({
+		patchId: z.string().min(1),
+	})
+	.omit({ applicationId: true, composeId: true });
 
 export const apiDeletePatch = z.object({
 	patchId: z.string().min(1),
