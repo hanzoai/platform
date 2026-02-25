@@ -39,22 +39,26 @@ const createSchema = createInsertSchema(ports, {
 	protocol: z.enum(["tcp", "udp"]).default("tcp"),
 });
 
-export const apiCreatePort = z.object({
-	publishedPort: z.number(),
-	publishMode: z.enum(["ingress", "host"]).default("ingress"),
-	targetPort: z.number(),
-	protocol: z.enum(["tcp", "udp"]).default("tcp"),
-	applicationId: z.string().min(1),
-});
+export const apiCreatePort = createSchema
+	.pick({
+		publishedPort: true,
+		publishMode: true,
+		targetPort: true,
+		protocol: true,
+		applicationId: true,
+	})
+	.required();
 
 export const apiFindOnePort = z.object({
 	portId: z.string().min(1),
 });
 
-export const apiUpdatePort = z.object({
-	portId: z.string().min(1),
-	publishedPort: z.number(),
-	publishMode: z.enum(["ingress", "host"]),
-	targetPort: z.number(),
-	protocol: z.enum(["tcp", "udp"]),
-});
+export const apiUpdatePort = createSchema
+	.pick({
+		portId: true,
+		publishedPort: true,
+		publishMode: true,
+		targetPort: true,
+		protocol: true,
+	})
+	.required();
