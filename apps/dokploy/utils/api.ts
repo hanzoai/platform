@@ -73,12 +73,10 @@ const links =
 
 export const api = createTRPCNext<AppRouter>({
 	config() {
-		return {
-			transformer: superjson,
-			links,
-		};
+		return { links };
 	},
 	ssr: false,
+	transformer: superjson,
 });
 
 export type RouterInputs = inferRouterInputs<AppRouter>;
