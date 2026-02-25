@@ -43,7 +43,7 @@ export const EditTraefikEnv = ({ children, serverId }: Props) => {
 		serverId,
 	});
 
-	const { mutateAsync, isLoading, error, isError } =
+	const { mutateAsync, isPending: isLoading, error, isError } =
 		api.settings.writeTraefikEnv.useMutation();
 
 	const form = useForm<Schema>({
