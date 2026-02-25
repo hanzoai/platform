@@ -13,9 +13,9 @@ declare global {
 	var db: Database | undefined;
 }
 
-export let db: Database;
+let dbConnection: Database;
 if (process.env.NODE_ENV === "production") {
-	db = drizzle(postgres(dbUrl), {
+	dbConnection = drizzle(postgres(dbUrl), {
 		schema,
 	});
 } else {
@@ -24,7 +24,9 @@ if (process.env.NODE_ENV === "production") {
 			schema,
 		});
 
-	db = global.db;
+	dbConnection = global.db;
 }
+
+export const db: Database = dbConnection;
 
 export { dbUrl };
