@@ -133,6 +133,7 @@ const createSchema = createInsertSchema(server, {
 	serverId: z.string().min(1),
 	name: z.string().min(1),
 	description: z.string().optional(),
+	serverType: z.enum(["deploy", "build"]).optional(),
 });
 
 export const apiCreateServer = createSchema

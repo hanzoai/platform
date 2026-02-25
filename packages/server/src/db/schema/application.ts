@@ -331,6 +331,7 @@ const createSchema = createInsertSchema(applications, {
 	sourceType: z
 		.enum(["github", "docker", "git", "gitlab", "bitbucket", "gitea", "drop"])
 		.optional(),
+	triggerType: z.enum(["push", "tag"]).optional(),
 	applicationStatus: z.enum(["idle", "running", "done", "error"]),
 	buildType: z.enum([
 		"dockerfile",
