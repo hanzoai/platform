@@ -3,3 +3,7 @@ packages:
   - "apps/dokploy"
   - "apps/schedules"
   - "packages/server"
+
+# Single source of truth for shared dependency versions (use in package.json: "drizzle-orm": "catalog:")
+catalog:
+  drizzle-orm: "0.41.0"
