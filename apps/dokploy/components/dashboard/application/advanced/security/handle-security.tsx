@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { PenBoxIcon, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -55,7 +55,7 @@ export const HandleSecurity = ({
 		},
 	);
 
-	const { mutateAsync, isLoading, error, isError } = securityId
+	const { mutateAsync, isPending, error, isError } = securityId
 		? api.security.update.useMutation()
 		: api.security.create.useMutation();
 
@@ -163,7 +163,7 @@ export const HandleSecurity = ({
 
 					<DialogFooter>
 						<Button
-							isLoading={isLoading}
+							isLoading={isPending}
 							form="hook-form-add-security"
 							type="submit"
 						>
