@@ -171,9 +171,8 @@ export const HandleServers = ({ serverId, asButton = false }: Props) => {
 				</DialogHeader>
 				<div>
 					<p className="text-primary text-sm font-medium">
-						You will need to purchase or rent a Virtual Private Server (VPS) to
-						proceed, we recommend to use one of these providers since has been
-						heavily tested.
+						You may need to purchase or rent a Virtual Private Server (VPS) to
+						proceed. We recommend using one of these heavily tested providers:
 					</p>
 					<ul className="list-inside list-disc pl-4 text-sm text-muted-foreground mt-4">
 						<li>
