@@ -1,6 +1,6 @@
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import copy from "copy-to-clipboard";
-import _ from "lodash";
+import debounce from "lodash/debounce";
 import {
 	CheckIcon,
 	ChevronsUpDown,
@@ -224,7 +224,7 @@ export const RestoreBackup = ({
 	const currentDatabaseType = form.watch("databaseType");
 	const metadata = form.watch("metadata");
 
-	const debouncedSetSearch = _.debounce((value: string) => {
+	const debouncedSetSearch = debounce((value: string) => {
 		setDebouncedSearchTerm(value);
 	}, 350);
 
