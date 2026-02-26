@@ -46,7 +46,7 @@ export const HandleSecurity = ({
 }: Props) => {
 	const utils = api.useUtils();
 	const [isOpen, setIsOpen] = useState(false);
-	const { data } = api.security.one.useQuery(
+	const { data, refetch } = api.security.one.useQuery(
 		{
 			securityId: securityId ?? "",
 		},
@@ -88,6 +88,7 @@ export const HandleSecurity = ({
 				await utils.application.readTraefikConfig.invalidate({
 					applicationId,
 				});
+				await refetch();
 				setIsOpen(false);
 			})
 			.catch(() => {
