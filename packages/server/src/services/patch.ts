@@ -149,6 +149,10 @@ export const generateApplyPatchesCommand = async ({
 	const resultPatches = await findPatchesByEntityId(id, type);
 	const patches = resultPatches.filter((p) => p.enabled);
 
+	if (patches.length === 0) {
+		return "";
+	}
+
 	let command = `echo "Applying ${patches.length} patch(es)...";`;
 
 	for (const p of patches) {
