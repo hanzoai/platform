@@ -263,6 +263,9 @@ export const findMountsByApplicationId = async (
 		case "redis":
 			sqlChunks.push(eq(mounts.redisId, serviceId));
 			break;
+		case "compose":
+			sqlChunks.push(eq(mounts.composeId, serviceId));
+			break;
 		default:
 			throw new Error(`Unknown service type: ${serviceType}`);
 	}
