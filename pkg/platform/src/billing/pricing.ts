@@ -39,9 +39,11 @@ export function normalizePlanType(plan: string): PlanType {
 
 export interface PlanConfig {
   name: string;
+  description?: string;
   monthlyFee: number;
   annualFee: number | null; // null = not available / contact sales
   monthlyCredits: number;
+  features?: string[];
   limits: {
     maxRAMPerService: number;
     maxCPUPerService: number;
@@ -149,9 +151,11 @@ export async function getPlans(): Promise<Record<PlanType, PlanConfig>> {
         const id = normalizePlanType(p.id ?? p.name?.toLowerCase() ?? "developer");
         plans[id] = {
           name: p.name ?? id,
+          description: p.description ?? undefined,
           monthlyFee: p.priceMonthly ?? p.monthlyFee ?? 0,
           annualFee: p.priceAnnual != null ? p.priceAnnual * 12 : (p.annualFee ?? null),
           monthlyCredits: p.limits?.freeCredit ?? p.monthlyCredits ?? p.priceMonthly ?? 0,
+          features: Array.isArray(p.features) ? p.features : undefined,
           limits: {
             maxRAMPerService: p.limits?.maxRAMPerService ?? PLANS[id]?.limits.maxRAMPerService ?? 4,
             maxCPUPerService: p.limits?.maxCPUPerService ?? PLANS[id]?.limits.maxCPUPerService ?? 4,
