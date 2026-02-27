@@ -11,8 +11,12 @@ import {
   createManualTopup,
   createCustomerPortalSession,
 } from "@hanzo/platform/billing/stripe-service";
-import { PLANS } from "@hanzo/platform/billing/pricing";
+import { getPlans, normalizePlanType } from "@hanzo/platform/billing/pricing";
+import type { PlanType } from "@hanzo/platform/billing/pricing";
 import { findUserById } from "@hanzo/platform";
+
+// Accept canonical + legacy plan names for backward compat.
+const planEnum = z.enum(["developer", "pro", "team", "enterprise", "hobby"]);
 
 export const billingRouter = createTRPCRouter({
   getWallet: protectedProcedure.query(async ({ ctx }) => {
@@ -33,16 +37,19 @@ export const billingRouter = createTRPCRouter({
   }),
 
   createSubscription: protectedProcedure
-    .input(z.object({ plan: z.enum(["hobby", "pro"]) }))
+    .input(z.object({ plan: planEnum }))
     .mutation(async ({ ctx, input }) => {
       const user = await findUserById(ctx.user.id);
       const wallet = await getOrganizationWallet(ctx.session.activeOrganizationId);
+
+      // Normalize legacy "hobby" -> "developer" before passing downstream.
+      const plan = normalizePlanType(input.plan) as PlanType;
 
       return await createSubscription({
         organizationId: ctx.session.activeOrganizationId,
         ownerId: user.id,
         ownerEmail: user.email,
-        plan: input.plan,
+        plan,
         stripeCustomerId: wallet?.stripeCustomerId,
       });
     }),
@@ -60,7 +67,9 @@ export const billingRouter = createTRPCRouter({
       });
     }),
 
-  getPlans: protectedProcedure.query(() => PLANS),
+  getPlans: protectedProcedure.query(async () => {
+    return await getPlans();
+  }),
 
   createPortalSession: protectedProcedure.mutation(async ({ ctx }) => {
     return await createCustomerPortalSession(ctx.session.activeOrganizationId);
