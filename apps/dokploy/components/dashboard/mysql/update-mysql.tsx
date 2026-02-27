@@ -89,7 +89,7 @@ export const UpdateMysql = ({ mysqlId }: Props) => {
 	};
 
 	return (
-	<Dialog open={isOpen} onOpenChange={setIsOpen}>
+		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			<DialogTrigger asChild>
 				<Button
 					variant="ghost"
