@@ -13,6 +13,7 @@ import {
 	Image,
 	Star,
 	Brain,
+	Palette,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -63,8 +64,13 @@ interface CloudPlan {
 interface PricingData {
 	cloudPlans: CloudPlan[];
 	models: any[];
-	tools: Record<string, any>;
+	tools: any[];
 	gpu: any[];
+	blockStorage: {
+		pricePerGBMonthly: number;
+		minSizeGB: number;
+		maxSizeGB: number;
+	} | null;
 	loading: boolean;
 }
 
@@ -72,29 +78,44 @@ function usePricingData(): PricingData {
 	const [data, setData] = useState<PricingData>({
 		cloudPlans: [],
 		models: [],
-		tools: {},
+		tools: [],
 		gpu: [],
+		blockStorage: null,
 		loading: true,
 	});
 
 	useEffect(() => {
 		Promise.all([
-			fetch(`${PRICING_API}/v1/pricing/cloud/plans`).then((r) => r.json()).catch(() => null),
-			fetch(`${PRICING_API}/v1/pricing`).then((r) => r.json()).catch(() => null),
-		]).then(([cloudData, fullData]) => {
-			setData({
-				cloudPlans: cloudData?.plans ?? [],
-				models: fullData?.hanzoModels ?? [],
-				tools: fullData?.tools ?? {},
-				gpu: fullData?.cloud?.gpu ?? [],
-				loading: false,
+			fetch(`${PRICING_API}/v1/pricing/cloud/plans`)
+				.then((r) => r.json())
+				.catch(() => null),
+			fetch(`${PRICING_API}/v1/pricing`)
+				.then((r) => r.json())
+				.catch(() => null),
+		])
+			.then(([cloudData, fullData]) => {
+				setData({
+					cloudPlans: cloudData?.plans ?? [],
+					models: fullData?.hanzoModels ?? [],
+					tools: Array.isArray(fullData?.tools) ? fullData.tools : [],
+					gpu: fullData?.infrastructure?.gpu ?? [],
+					blockStorage: fullData?.cloud?.blockStorage ?? null,
+					loading: false,
+				});
+			})
+			.catch(() => {
+				setData((prev) => ({ ...prev, loading: false }));
 			});
-		}).catch(() => {
-			setData((prev) => ({ ...prev, loading: false }));
-		});
 	}, []);
 
 	return data;
+}
+
+/** Format a price number with a unit string for tool pricing display. */
+function formatToolPrice(price: number, unit: string): string {
+	if (price >= 1) return `$${price}/${unit}`;
+	if (price >= 0.01) return `$${price.toFixed(2)}/${unit}`;
+	return `$${price}/${unit}`;
 }
 
 export const ShowBilling = () => {
@@ -107,7 +128,9 @@ export const ShowBilling = () => {
 		api.billing.createPortalSession.useMutation();
 
 	const [isAnnual, setIsAnnual] = useState(false);
-	const [activeTab, setActiveTab] = useState<"subscription" | "cloud" | "ai">("subscription");
+	const [activeTab, setActiveTab] = useState<
+		"subscription" | "cloud" | "ai"
+	>("subscription");
 	const pricing = usePricingData();
 
 	const handleSubscribe = async (plan: PlanType) => {
@@ -128,18 +151,31 @@ export const ShowBilling = () => {
 	const currentPlan = wallet?.plan || "developer";
 	const planOrder: PlanType[] = ["developer", "pro", "team", "enterprise"];
 
-	// Group models by category
+	// Group models by category from API data
 	const chatModels = pricing.models.filter(
-		(m: any) => m.name?.startsWith("zen4") && !m.name?.includes("coder"),
+		(m: any) =>
+			m.name?.startsWith("zen4") &&
+			!m.name?.includes("coder") &&
+			!m.pricingUnit,
 	);
 	const codeModels = pricing.models.filter(
-		(m: any) => m.name?.includes("coder"),
+		(m: any) => m.name?.includes("coder") && !m.pricingUnit,
 	);
 	const multimodalModels = pricing.models.filter(
-		(m: any) => m.name?.startsWith("zen3") && !m.name?.includes("embed") && !m.name?.includes("rerank"),
+		(m: any) =>
+			m.name?.startsWith("zen3") &&
+			!m.name?.includes("embed") &&
+			!m.name?.includes("rerank") &&
+			!m.pricingUnit,
 	);
 	const embeddingModels = pricing.models.filter(
 		(m: any) => m.name?.includes("embed") || m.name?.includes("rerank"),
+	);
+	const audioModels = pricing.models.filter(
+		(m: any) => m.pricingUnit === "minute",
+	);
+	const imageModels = pricing.models.filter(
+		(m: any) => m.pricingUnit === "image" || m.pricingUnit === "step",
 	);
 
 	return (
@@ -152,7 +188,8 @@ export const ShowBilling = () => {
 							Billing & Pricing
 						</CardTitle>
 						<CardDescription>
-							Platform subscriptions, cloud compute, and AI model pricing
+							Platform subscriptions, cloud compute, and AI model
+							pricing
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-6 py-8 border-t">
@@ -160,14 +197,20 @@ export const ShowBilling = () => {
 						{wallet && (
 							<div className="flex flex-col gap-2 p-4 rounded-lg border bg-muted/30">
 								<div className="flex items-center justify-between">
-									<span className="text-sm font-medium">Current Balance</span>
+									<span className="text-sm font-medium">
+										Current Balance
+									</span>
 									<span className="text-lg font-bold">
-										${(balance?.balance ?? 0).toFixed(2)}
+										$
+										{(balance?.balance ?? 0).toFixed(2)}
 									</span>
 								</div>
 								<div className="flex items-center justify-between text-sm text-muted-foreground">
 									<span>Current Plan</span>
-									<Badge variant="secondary" className="capitalize">
+									<Badge
+										variant="secondary"
+										className="capitalize"
+									>
 										{currentPlan}
 									</Badge>
 								</div>
@@ -185,14 +228,22 @@ export const ShowBilling = () => {
 						{/* Section Tabs */}
 						<Tabs
 							value={activeTab}
-							onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+							onValueChange={(v) =>
+								setActiveTab(v as typeof activeTab)
+							}
 							className="w-full"
 						>
 							<TabsList className="w-full grid grid-cols-3">
-								<TabsTrigger value="subscription" className="gap-1.5">
+								<TabsTrigger
+									value="subscription"
+									className="gap-1.5"
+								>
 									<Sparkles className="size-3.5" /> Plans
 								</TabsTrigger>
-								<TabsTrigger value="cloud" className="gap-1.5">
+								<TabsTrigger
+									value="cloud"
+									className="gap-1.5"
+								>
 									<Server className="size-3.5" /> Cloud
 								</TabsTrigger>
 								<TabsTrigger value="ai" className="gap-1.5">
@@ -206,13 +257,20 @@ export const ShowBilling = () => {
 							<div className="space-y-6">
 								<Tabs
 									value={isAnnual ? "annual" : "monthly"}
-									onValueChange={(e) => setIsAnnual(e === "annual")}
+									onValueChange={(e) =>
+										setIsAnnual(e === "annual")
+									}
 								>
 									<TabsList>
-										<TabsTrigger value="monthly">Monthly</TabsTrigger>
+										<TabsTrigger value="monthly">
+											Monthly
+										</TabsTrigger>
 										<TabsTrigger value="annual">
 											Annual{" "}
-											<Badge variant="outline" className="ml-1.5 text-xs">
+											<Badge
+												variant="outline"
+												className="ml-1.5 text-xs"
+											>
 												Save 20%
 											</Badge>
 										</TabsTrigger>
@@ -228,12 +286,16 @@ export const ShowBilling = () => {
 										{planOrder.map((planKey) => {
 											const plan = plans?.[planKey];
 											if (!plan) return null;
-											const Icon = planIcons[planKey] || Sparkles;
-											const isCurrent = currentPlan === planKey;
-											const isEnterprise = planKey === "enterprise";
+											const Icon =
+												planIcons[planKey] || Sparkles;
+											const isCurrent =
+												currentPlan === planKey;
+											const isEnterprise =
+												planKey === "enterprise";
 											const isPro = planKey === "pro";
 											const monthlyPrice =
-												isAnnual && plan.annualFee != null
+												isAnnual &&
+												plan.annualFee != null
 													? plan.annualFee / 12
 													: plan.monthlyFee;
 
@@ -245,7 +307,8 @@ export const ShowBilling = () => {
 														isPro
 															? "border-primary shadow-md ring-1 ring-primary/20"
 															: "border-border",
-														isCurrent && "bg-muted/20",
+														isCurrent &&
+															"bg-muted/20",
 													)}
 												>
 													<div className="flex items-center gap-2 mb-3">
@@ -254,21 +317,31 @@ export const ShowBilling = () => {
 															{plan.name}
 														</h3>
 														{isPro && (
-															<Badge className="ml-auto">Popular</Badge>
+															<Badge className="ml-auto">
+																Popular
+															</Badge>
 														)}
 														{isCurrent && (
-															<Badge variant="outline" className="ml-auto">
+															<Badge
+																variant="outline"
+																className="ml-auto"
+															>
 																Current
 															</Badge>
 														)}
 													</div>
 													<div className="mb-4">
 														{isEnterprise ? (
-															<p className="text-2xl font-bold">Custom</p>
+															<p className="text-2xl font-bold">
+																Custom
+															</p>
 														) : (
 															<>
 																<span className="text-3xl font-bold">
-																	${monthlyPrice.toFixed(0)}
+																	$
+																	{monthlyPrice.toFixed(
+																		0,
+																	)}
 																</span>
 																<span className="text-sm text-muted-foreground">
 																	/mo
@@ -277,13 +350,23 @@ export const ShowBilling = () => {
 														)}
 													</div>
 													<div className="text-sm text-muted-foreground mb-4">
-														{planKey === "developer" && "Free tier with $5 credit"}
-														{planKey === "pro" && "For developers shipping products"}
-														{planKey === "team" && "SSO, shared billing, custom training"}
-														{planKey === "enterprise" && "Custom SLA & dedicated support"}
+														{planKey ===
+															"developer" &&
+															"Free tier with $5 credit"}
+														{planKey === "pro" &&
+															"For developers shipping products"}
+														{planKey === "team" &&
+															"SSO, shared billing, custom training"}
+														{planKey ===
+															"enterprise" &&
+															"Custom SLA & dedicated support"}
 													</div>
 													{isEnterprise ? (
-														<Button variant="outline" className="w-full mt-auto" asChild>
+														<Button
+															variant="outline"
+															className="w-full mt-auto"
+															asChild
+														>
 															<Link href="mailto:sales@hanzo.ai">
 																Contact Sales
 															</Link>
@@ -292,21 +375,38 @@ export const ShowBilling = () => {
 														<Button
 															variant="outline"
 															className="w-full mt-auto"
-															onClick={handleManageSubscription}
+															onClick={
+																handleManageSubscription
+															}
 														>
 															Manage Plan
 														</Button>
 													) : (
 														<Button
-															className={cn("w-full mt-auto", isPro && "bg-primary")}
-															variant={isPro ? "default" : "outline"}
-															disabled={isSubscribing}
-															onClick={() => handleSubscribe(planKey)}
+															className={cn(
+																"w-full mt-auto",
+																isPro &&
+																	"bg-primary",
+															)}
+															variant={
+																isPro
+																	? "default"
+																	: "outline"
+															}
+															disabled={
+																isSubscribing
+															}
+															onClick={() =>
+																handleSubscribe(
+																	planKey,
+																)
+															}
 														>
 															{isSubscribing && (
 																<Loader2 className="animate-spin mr-2 size-4" />
 															)}
-															{plan.monthlyFee === 0
+															{plan.monthlyFee ===
+															0
 																? "Get Started Free"
 																: `Upgrade to ${plan.name}`}
 														</Button>
@@ -324,16 +424,20 @@ export const ShowBilling = () => {
 									</h4>
 									<div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-muted-foreground">
 										<div className="flex items-center gap-1.5">
-											<CheckIcon className="size-3.5 text-primary" /> Zero egress fees
+											<CheckIcon className="size-3.5 text-primary" />{" "}
+											Zero egress fees
 										</div>
 										<div className="flex items-center gap-1.5">
-											<CheckIcon className="size-3.5 text-primary" /> DDoS protection
+											<CheckIcon className="size-3.5 text-primary" />{" "}
+											DDoS protection
 										</div>
 										<div className="flex items-center gap-1.5">
-											<CheckIcon className="size-3.5 text-primary" /> Automated backups
+											<CheckIcon className="size-3.5 text-primary" />{" "}
+											Automated backups
 										</div>
 										<div className="flex items-center gap-1.5">
-											<CheckIcon className="size-3.5 text-primary" /> 100+ AI models
+											<CheckIcon className="size-3.5 text-primary" />{" "}
+											100+ AI models
 										</div>
 									</div>
 								</div>
@@ -344,7 +448,8 @@ export const ShowBilling = () => {
 						{activeTab === "cloud" && (
 							<div className="space-y-6">
 								<p className="text-sm text-muted-foreground">
-									Cloud VM plans for deploying services. Same pricing across all regions.
+									Cloud VM plans for deploying services. Same
+									pricing across all regions.
 								</p>
 
 								{pricing.loading ? (
@@ -353,7 +458,8 @@ export const ShowBilling = () => {
 									</div>
 								) : pricing.cloudPlans.length === 0 ? (
 									<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-										Unable to load cloud plans. Please try again later.
+										Unable to load cloud plans. Please try
+										again later.
 									</div>
 								) : (
 									<>
@@ -370,14 +476,20 @@ export const ShowBilling = () => {
 												>
 													{plan.popular && (
 														<div className="absolute -top-2.5 left-3 px-2 py-0.5 bg-primary text-primary-foreground text-xs font-medium rounded-full flex items-center gap-1">
-															<Star className="size-3" /> Most Popular
+															<Star className="size-3" />{" "}
+															Most Popular
 														</div>
 													)}
 													<div className="flex items-baseline justify-between mb-2">
-														<h3 className="font-semibold">{plan.name}</h3>
+														<h3 className="font-semibold">
+															{plan.name}
+														</h3>
 														<div>
 															<span className="text-xl font-bold">
-																${plan.priceMonthly}
+																$
+																{
+																	plan.priceMonthly
+																}
 															</span>
 															<span className="text-xs text-muted-foreground">
 																/mo
@@ -386,13 +498,19 @@ export const ShowBilling = () => {
 													</div>
 													<div className="space-y-1 text-xs text-muted-foreground">
 														<div>
-															{plan.vcpus} vCPU ({plan.cpuType}) &middot;{" "}
-															{plan.memoryGB} GB RAM
+															{plan.vcpus} vCPU (
+															{plan.cpuType})
+															&middot;{" "}
+															{plan.memoryGB} GB
+															RAM
 														</div>
 														<div>
-															{plan.diskGB} GB SSD &middot; Up to{" "}
-															{plan.maxVMs} VM
-															{plan.maxVMs > 1 ? "s" : ""}
+															{plan.diskGB} GB
+															SSD &middot; Up
+															to {plan.maxVMs} VM
+															{plan.maxVMs > 1
+																? "s"
+																: ""}
 														</div>
 													</div>
 													{plan.freeTier && (
@@ -404,52 +522,84 @@ export const ShowBilling = () => {
 											))}
 										</div>
 
-										{/* GPU Tiers */}
-										<div className="space-y-3">
-											<h4 className="text-sm font-semibold flex items-center gap-1.5">
-												<Cpu className="size-4" /> GPU Compute
-											</h4>
-											<div className="grid gap-3 md:grid-cols-3">
-												{[
-													{ name: "GPU Standard", gpu: "1x NVIDIA H100", vram: "80 GB", price: "$3.48/hr" },
-													{ name: "GPU Pro", gpu: "2x NVIDIA H100", vram: "160 GB", price: "$6.96/hr" },
-													{ name: "GPU Ultra", gpu: "4x NVIDIA H100", vram: "320 GB", price: "$13.92/hr" },
-												].map((tier) => (
-													<div key={tier.name} className="rounded-lg border p-3 bg-card">
-														<div className="font-medium text-sm">{tier.name}</div>
-														<div className="text-xs text-muted-foreground mt-1">
-															{tier.gpu} &middot; {tier.vram}
-														</div>
-														<div className="text-sm font-bold mt-1.5">{tier.price}</div>
-													</div>
-												))}
+										{/* GPU Tiers — from pricing API */}
+										{pricing.gpu.length > 0 && (
+											<div className="space-y-3">
+												<h4 className="text-sm font-semibold flex items-center gap-1.5">
+													<Cpu className="size-4" />{" "}
+													GPU Compute
+												</h4>
+												<div className="grid gap-3 md:grid-cols-3">
+													{pricing.gpu.map(
+														(tier: any) => (
+															<div
+																key={tier.name}
+																className="rounded-lg border p-3 bg-card"
+															>
+																<div className="font-medium text-sm">
+																	{tier.name}
+																</div>
+																<div className="text-xs text-muted-foreground mt-1">
+																	{tier.gpu}{" "}
+																	&middot;{" "}
+																	{tier.vram}
+																</div>
+																<div className="text-sm font-bold mt-1.5">
+																	$
+																	{tier.price}
+																	/hr
+																</div>
+															</div>
+														),
+													)}
+												</div>
+												<p className="text-xs text-muted-foreground">
+													72% cheaper than AWS. No
+													commitment required.
+												</p>
 											</div>
-											<p className="text-xs text-muted-foreground">
-												72% cheaper than AWS. No commitment required.
-											</p>
-										</div>
+										)}
 
-										{/* Storage & Extras */}
+										{/* Storage & Extras — from pricing API */}
 										<div className="p-4 rounded-lg border bg-muted/20">
 											<h4 className="text-sm font-semibold mb-3">
 												Additional Services
 											</h4>
 											<div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
 												<div className="text-center p-2 rounded bg-background border">
-													<div className="font-bold">$0.08</div>
-													<div className="text-xs text-muted-foreground">/GB storage/mo</div>
+													<div className="font-bold">
+														$
+														{pricing.blockStorage
+															?.pricePerGBMonthly ??
+															"—"}
+													</div>
+													<div className="text-xs text-muted-foreground">
+														/GB storage/mo
+													</div>
 												</div>
 												<div className="text-center p-2 rounded bg-background border">
-													<div className="font-bold">$0</div>
-													<div className="text-xs text-muted-foreground">egress fees</div>
+													<div className="font-bold">
+														$0
+													</div>
+													<div className="text-xs text-muted-foreground">
+														egress fees
+													</div>
 												</div>
 												<div className="text-center p-2 rounded bg-background border">
-													<div className="font-bold">Included</div>
-													<div className="text-xs text-muted-foreground">DDoS protection</div>
+													<div className="font-bold">
+														Included
+													</div>
+													<div className="text-xs text-muted-foreground">
+														DDoS protection
+													</div>
 												</div>
 												<div className="text-center p-2 rounded bg-background border">
-													<div className="font-bold">Included</div>
-													<div className="text-xs text-muted-foreground">automated backups</div>
+													<div className="font-bold">
+														Included
+													</div>
+													<div className="text-xs text-muted-foreground">
+														automated backups
+													</div>
 												</div>
 											</div>
 										</div>
@@ -462,7 +612,8 @@ export const ShowBilling = () => {
 						{activeTab === "ai" && (
 							<div className="space-y-6">
 								<p className="text-sm text-muted-foreground">
-									All models available through the Hanzo AI Gateway. Zero markup on third-party models.
+									All models available through the Hanzo AI
+									Gateway. Zero markup on third-party models.
 								</p>
 
 								{pricing.loading ? (
@@ -471,7 +622,8 @@ export const ShowBilling = () => {
 									</div>
 								) : pricing.models.length === 0 ? (
 									<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-										Unable to load model pricing. Please try again later.
+										Unable to load model pricing. Please try
+										again later.
 									</div>
 								) : (
 									<>
@@ -479,7 +631,9 @@ export const ShowBilling = () => {
 										{chatModels.length > 0 && (
 											<ModelSection
 												title="Zen4 Chat & Reasoning"
-												icon={<Brain className="size-4" />}
+												icon={
+													<Brain className="size-4" />
+												}
 												models={chatModels}
 											/>
 										)}
@@ -488,7 +642,9 @@ export const ShowBilling = () => {
 										{codeModels.length > 0 && (
 											<ModelSection
 												title="Zen4 Coder"
-												icon={<Cpu className="size-4" />}
+												icon={
+													<Cpu className="size-4" />
+												}
 												models={codeModels}
 											/>
 										)}
@@ -497,7 +653,9 @@ export const ShowBilling = () => {
 										{multimodalModels.length > 0 && (
 											<ModelSection
 												title="Zen3 Multimodal"
-												icon={<Image className="size-4" />}
+												icon={
+													<Image className="size-4" />
+												}
 												models={multimodalModels}
 											/>
 										)}
@@ -506,72 +664,185 @@ export const ShowBilling = () => {
 										{embeddingModels.length > 0 && (
 											<ModelSection
 												title="Embeddings & Reranking"
-												icon={<Sparkles className="size-4" />}
+												icon={
+													<Sparkles className="size-4" />
+												}
 												models={embeddingModels}
 											/>
 										)}
 
-										{/* Audio Pricing */}
-										<div className="space-y-3">
-											<h4 className="text-sm font-semibold flex items-center gap-1.5">
-												<Mic className="size-4" /> Audio & Speech
-											</h4>
-											<div className="rounded-lg border overflow-hidden">
-												<table className="w-full text-sm">
-													<thead>
-														<tr className="border-b bg-muted/30">
-															<th className="px-3 py-2 text-left font-medium">Model</th>
-															<th className="px-3 py-2 text-right font-medium">Price/min</th>
-															<th className="px-3 py-2 text-right font-medium">vs OpenAI</th>
-														</tr>
-													</thead>
-													<tbody>
-														<tr className="border-b">
-															<td className="px-3 py-2">Zen3 Audio Fast</td>
-															<td className="px-3 py-2 text-right font-mono">$0.0009</td>
-															<td className="px-3 py-2 text-right text-green-500 font-medium">85% cheaper</td>
-														</tr>
-														<tr className="border-b">
-															<td className="px-3 py-2">Zen3 Audio</td>
-															<td className="px-3 py-2 text-right font-mono">$0.0015</td>
-															<td className="px-3 py-2 text-right text-green-500 font-medium">75% cheaper</td>
-														</tr>
-														<tr className="border-b">
-															<td className="px-3 py-2">Zen3 ASR (streaming)</td>
-															<td className="px-3 py-2 text-right font-mono">$0.0035</td>
-															<td className="px-3 py-2 text-right text-muted-foreground">real-time</td>
-														</tr>
-													</tbody>
-												</table>
+										{/* Image Generation — from pricing API */}
+										{imageModels.length > 0 && (
+											<div className="space-y-3">
+												<h4 className="text-sm font-semibold flex items-center gap-1.5">
+													<Palette className="size-4" />{" "}
+													Image Generation
+												</h4>
+												<div className="rounded-lg border overflow-hidden">
+													<table className="w-full text-sm">
+														<thead>
+															<tr className="border-b bg-muted/30">
+																<th className="px-3 py-2 text-left font-medium">
+																	Model
+																</th>
+																<th className="px-3 py-2 text-right font-medium">
+																	Price
+																</th>
+																<th className="px-3 py-2 text-right font-medium">
+																	Tier
+																</th>
+															</tr>
+														</thead>
+														<tbody>
+															{imageModels.map(
+																(m: any) => (
+																	<tr
+																		key={
+																			m.name
+																		}
+																		className="border-b last:border-0"
+																	>
+																		<td className="px-3 py-2">
+																			<div className="font-medium">
+																				{m.fullName ||
+																					m.name}
+																			</div>
+																			{m.description && (
+																				<div className="text-xs text-muted-foreground line-clamp-1">
+																					{
+																						m.description
+																					}
+																				</div>
+																			)}
+																		</td>
+																		<td className="px-3 py-2 text-right font-mono">
+																			$
+																			{
+																				m
+																					.pricing
+																					?.perUnit
+																			}
+																			/
+																			{
+																				m.pricingUnit
+																			}
+																		</td>
+																		<td className="px-3 py-2 text-right">
+																			<Badge
+																				variant="outline"
+																				className="text-xs capitalize"
+																			>
+																				{m.tier ||
+																					"—"}
+																			</Badge>
+																		</td>
+																	</tr>
+																),
+															)}
+														</tbody>
+													</table>
+												</div>
 											</div>
-										</div>
+										)}
 
-										{/* Tool Pricing */}
-										<div className="space-y-3">
-											<h4 className="text-sm font-semibold">Tool Pricing</h4>
-											<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-												{[
-													{ name: "Web Search", price: "$0.005/query" },
-													{ name: "Code Interpreter", price: "$0.03/min" },
-													{ name: "File Storage", price: "$0.20/GB/mo" },
-													{ name: "Image Generation", price: "$0.04/image" },
-													{ name: "Speech-to-Text", price: "$0.0009/min" },
-													{ name: "Text-to-Speech", price: "$15/1M chars" },
-												].map((tool) => (
-													<div
-														key={tool.name}
-														className="rounded-lg border p-3 bg-card"
-													>
-														<div className="text-xs text-muted-foreground">
-															{tool.name}
-														</div>
-														<div className="text-sm font-bold mt-0.5">
-															{tool.price}
-														</div>
-													</div>
-												))}
+										{/* Audio & Speech — from pricing API */}
+										{audioModels.length > 0 && (
+											<div className="space-y-3">
+												<h4 className="text-sm font-semibold flex items-center gap-1.5">
+													<Mic className="size-4" />{" "}
+													Audio & Speech
+												</h4>
+												<div className="rounded-lg border overflow-hidden">
+													<table className="w-full text-sm">
+														<thead>
+															<tr className="border-b bg-muted/30">
+																<th className="px-3 py-2 text-left font-medium">
+																	Model
+																</th>
+																<th className="px-3 py-2 text-right font-medium">
+																	Price/min
+																</th>
+																<th className="px-3 py-2 text-right font-medium">
+																	Tier
+																</th>
+															</tr>
+														</thead>
+														<tbody>
+															{audioModels.map(
+																(m: any) => (
+																	<tr
+																		key={
+																			m.name
+																		}
+																		className="border-b last:border-0"
+																	>
+																		<td className="px-3 py-2">
+																			<div className="font-medium">
+																				{m.fullName ||
+																					m.name}
+																			</div>
+																			{m.description && (
+																				<div className="text-xs text-muted-foreground line-clamp-1">
+																					{
+																						m.description
+																					}
+																				</div>
+																			)}
+																		</td>
+																		<td className="px-3 py-2 text-right font-mono">
+																			$
+																			{
+																				m
+																					.pricing
+																					?.perUnit
+																			}
+																		</td>
+																		<td className="px-3 py-2 text-right">
+																			<Badge
+																				variant="outline"
+																				className="text-xs capitalize"
+																			>
+																				{m.tier ||
+																					"—"}
+																			</Badge>
+																		</td>
+																	</tr>
+																),
+															)}
+														</tbody>
+													</table>
+												</div>
 											</div>
-										</div>
+										)}
+
+										{/* Tool Pricing — from pricing API */}
+										{pricing.tools.length > 0 && (
+											<div className="space-y-3">
+												<h4 className="text-sm font-semibold">
+													Tool Pricing
+												</h4>
+												<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+													{pricing.tools.map(
+														(tool: any) => (
+															<div
+																key={tool.name}
+																className="rounded-lg border p-3 bg-card"
+															>
+																<div className="text-xs text-muted-foreground">
+																	{tool.name}
+																</div>
+																<div className="text-sm font-bold mt-0.5">
+																	{formatToolPrice(
+																		tool.price,
+																		tool.unit,
+																	)}
+																</div>
+															</div>
+														),
+													)}
+												</div>
+											</div>
+										)}
 
 										{/* Third-party */}
 										<div className="p-4 rounded-lg border bg-muted/20">
@@ -579,10 +850,14 @@ export const ShowBilling = () => {
 												100+ Third-Party Models
 											</h4>
 											<p className="text-xs text-muted-foreground">
-												GPT-5, Claude Opus 4.6, Gemini 3.1 Pro, DeepSeek R1, Llama 4,
-												Mistral Large, and more — all at provider pricing with{" "}
-												<span className="font-medium text-foreground">zero markup</span>.
-												Same API key, same endpoint.
+												GPT-5, Claude Opus 4.6, Gemini
+												3.1 Pro, DeepSeek R1, Llama 4,
+												Mistral Large, and more — all at
+												provider pricing with{" "}
+												<span className="font-medium text-foreground">
+													zero markup
+												</span>
+												. Same API key, same endpoint.
 											</p>
 										</div>
 									</>
@@ -642,21 +917,30 @@ function ModelSection({
 				<table className="w-full text-sm">
 					<thead>
 						<tr className="border-b bg-muted/30">
-							<th className="px-3 py-2 text-left font-medium">Model</th>
+							<th className="px-3 py-2 text-left font-medium">
+								Model
+							</th>
 							<th className="px-3 py-2 text-left font-medium hidden md:table-cell">
 								Architecture
 							</th>
 							<th className="px-3 py-2 text-right font-medium hidden md:table-cell">
 								Context
 							</th>
-							<th className="px-3 py-2 text-right font-medium">Tier</th>
+							<th className="px-3 py-2 text-right font-medium">
+								Tier
+							</th>
 						</tr>
 					</thead>
 					<tbody>
 						{models.map((m: any) => (
-							<tr key={m.name} className="border-b last:border-0">
+							<tr
+								key={m.name}
+								className="border-b last:border-0"
+							>
 								<td className="px-3 py-2">
-									<div className="font-medium">{m.fullName || m.name}</div>
+									<div className="font-medium">
+										{m.fullName || m.name}
+									</div>
 									{m.description && (
 										<div className="text-xs text-muted-foreground line-clamp-1">
 											{m.description}
@@ -666,7 +950,9 @@ function ModelSection({
 								<td className="px-3 py-2 text-xs text-muted-foreground hidden md:table-cell">
 									{m.specs?.arch || "—"}
 									{m.specs?.params && (
-										<div className="text-xs">{m.specs.params}</div>
+										<div className="text-xs">
+											{m.specs.params}
+										</div>
 									)}
 								</td>
 								<td className="px-3 py-2 text-right text-xs text-muted-foreground hidden md:table-cell">
@@ -675,7 +961,10 @@ function ModelSection({
 										: "—"}
 								</td>
 								<td className="px-3 py-2 text-right">
-									<Badge variant="outline" className="text-xs capitalize">
+									<Badge
+										variant="outline"
+										className="text-xs capitalize"
+									>
 										{m.tier || "—"}
 									</Badge>
 								</td>
