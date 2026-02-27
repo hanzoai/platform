@@ -68,7 +68,7 @@ export const WelcomeSuscription = () => {
 	return (
 		<Dialog open={isOpen}>
 			<DialogContent className="sm:max-w-7xl min-h-[75vh]">
-				{showConfetti ?? "Flaso"}
+				{/* confetti handled below */}
 				<div className="flex justify-center items-center w-full">
 					{showConfetti && (
 						<ConfettiExplosion
