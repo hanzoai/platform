@@ -1,15 +1,16 @@
 import { db } from "../db";
 import { organizationWallet, walletTransactions } from "../db/schema";
 import { eq } from "drizzle-orm";
-import { PLANS, type PlanType } from "./pricing";
+import { PLANS, normalizePlanType, type PlanType } from "./pricing";
 
 // Type assertion helpers for Drizzle insert operations
 // This works around a type inference issue with the wallet schema
 type WalletInsert = typeof organizationWallet.$inferInsert;
 type TxInsert = typeof walletTransactions.$inferInsert;
 
-export async function createOrganizationWallet(organizationId: string, ownerId: string, plan: PlanType = "hobby") {
-  const planConfig = PLANS[plan];
+export async function createOrganizationWallet(organizationId: string, ownerId: string, plan: string = "developer") {
+  const normalizedPlan = normalizePlanType(plan);
+  const planConfig = PLANS[normalizedPlan];
   const cycleStart = new Date();
   const cycleEnd = new Date(cycleStart);
   cycleEnd.setDate(cycleEnd.getDate() + 30);
@@ -19,7 +20,7 @@ export async function createOrganizationWallet(organizationId: string, ownerId: 
     ownerId,
     balance: planConfig.monthlyCredits.toString(),
     monthlyCredits: planConfig.monthlyCredits.toString(),
-    plan,
+    plan: normalizedPlan, // always store the canonical name
     cycleStart,
     cycleEnd,
   } as WalletInsert).returning();
@@ -31,7 +32,7 @@ export async function createOrganizationWallet(organizationId: string, ownerId: 
     amount: planConfig.monthlyCredits.toString(),
     balanceBefore: "0",
     balanceAfter: planConfig.monthlyCredits.toString(),
-    description: `Initial ${plan} plan credits`,
+    description: `Initial ${normalizedPlan} plan credits`,
   } as TxInsert);
 
   return wallet!;
@@ -117,7 +118,9 @@ export async function resetMonthlyCredits(organizationId: string) {
   const wallet = await getOrganizationWallet(organizationId);
   if (!wallet) throw new Error(`No wallet`);
 
-  const planConfig = PLANS[wallet.plan as PlanType];
+  // Normalize legacy plan names from DB before looking up config.
+  const normalizedPlan = normalizePlanType(wallet.plan);
+  const planConfig = PLANS[normalizedPlan];
   const currentBalance = Number(wallet.balance);
   const newBalance = currentBalance + planConfig.monthlyCredits;
 
@@ -137,7 +140,7 @@ export async function resetMonthlyCredits(organizationId: string) {
     amount: planConfig.monthlyCredits.toString(),
     balanceBefore: currentBalance.toString(),
     balanceAfter: newBalance.toString(),
-    description: `Monthly ${wallet.plan} plan credits`,
+    description: `Monthly ${normalizedPlan} plan credits`,
   } as TxInsert);
 
   return updated!;
