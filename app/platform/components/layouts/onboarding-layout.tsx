@@ -11,6 +11,13 @@ interface Props {
 export const OnboardingLayout = ({ children }: Props) => {
 	return (
 		<div className="container relative min-h-svh flex-col items-center justify-center flex lg:max-w-none lg:grid lg:grid-cols-2 lg:px-0 w-full">
+			<Link
+				href="https://hanzo.ai"
+				className="absolute top-6 left-6 z-30 flex items-center gap-3 text-lg font-medium text-primary lg:hidden"
+			>
+				<Logo className="size-8" />
+				Hanzo
+			</Link>
 			<div className="relative hidden h-full flex-col  p-10 text-primary dark:border-r lg:flex">
 				<div className="absolute inset-0 bg-muted" />
 				<Link
