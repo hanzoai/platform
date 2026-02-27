@@ -5,7 +5,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { createOrganizationWallet, addCreditsToWallet } from "@hanzo/platform/billing/wallet-service";
-import { PLANS } from "@hanzo/platform/billing/pricing";
+import { PLANS, normalizePlanType } from "@hanzo/platform/billing/pricing";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2024-09-30.acacia" });
 
@@ -26,7 +26,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!organizationId) break;
 
         if (session.mode === "subscription" && plan) {
-          const wallet = await createOrganizationWallet(organizationId, ownerId!, plan as "hobby" | "pro");
+          // normalizePlanType handles legacy "hobby" -> "developer"
+          const wallet = await createOrganizationWallet(organizationId, ownerId!, plan);
           await db.update(organizationWallet)
             .set({ stripeCustomerId: session.customer as string, stripeSubscriptionId: session.subscription as string } as any)
             .where(eq(organizationWallet.organizationId, organizationId));
@@ -46,8 +47,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { organizationId, plan } = subscription.metadata;
         if (!organizationId) break;
 
-        const planConfig = PLANS[plan as keyof typeof PLANS];
-        await addCreditsToWallet(organizationId, planConfig.monthlyCredits, "monthly_credit", `Monthly ${plan} credits`);
+        const normalizedPlan = normalizePlanType(plan);
+        const planConfig = PLANS[normalizedPlan];
+        await addCreditsToWallet(organizationId, planConfig.monthlyCredits, "monthly_credit", `Monthly ${normalizedPlan} credits`);
         break;
       }
 
