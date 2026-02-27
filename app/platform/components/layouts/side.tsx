@@ -79,6 +79,7 @@ import { EnvironmentSwitcher } from "../dashboard/environment-switcher";
 import { OrgSwitcher } from "../dashboard/org-switcher";
 import { ProjectSwitcher } from "../dashboard/project-switcher";
 import { DialogAction } from "../shared/dialog-action";
+import { Logo } from "../shared/logo";
 import { Button } from "../ui/button";
 import { ProjectContextProvider } from "@/hooks/use-project-context";
 import { UpdateServerButton } from "./update-server";
@@ -893,11 +894,14 @@ export default function Page({ children }: Props) {
 				<SidebarRail />
 			</Sidebar>
 			<SidebarInset>
-				{!includesProjects && (
+				{!includesProjects ? (
 					<header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
 						<div className="flex items-center justify-between w-full px-4">
 							<div className="flex items-center gap-2">
 								<SidebarTrigger className="-ml-1" />
+								<Link href="/dashboard/projects" className="flex items-center">
+									<Logo className="size-6" />
+								</Link>
 								<Separator orientation="vertical" className="mr-2 h-4" />
 								<Breadcrumb>
 									<BreadcrumbList>
@@ -914,6 +918,15 @@ export default function Page({ children }: Props) {
 									</BreadcrumbList>
 								</Breadcrumb>
 							</div>
+						</div>
+					</header>
+				) : (
+					<header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+						<div className="flex items-center gap-2 px-4">
+							<SidebarTrigger className="-ml-1" />
+							<Link href="/dashboard/projects" className="flex items-center">
+								<Logo className="size-6" />
+							</Link>
 						</div>
 					</header>
 				)}
