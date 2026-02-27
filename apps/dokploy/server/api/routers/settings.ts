@@ -734,10 +734,6 @@ export const settingsRouter = createTRPCRouter({
 						filePath: "/etc/dokploy/traefik/dynamic/access.log",
 						format: "json",
 						bufferingSize: 100,
-						filters: {
-							retryAttempts: true,
-							minDuration: "10ms",
-						},
 					},
 				};
 				currentConfig.accessLog = config.accessLog;
