@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { paths } from "@hanzo/platform/constants";
-import type { User } from "@hanzo/platform/services/user";
+import type { webServerSettings } from "@hanzo/platform/db/schema/web-server-settings";
 import { parse, stringify } from "yaml";
 import {
 	loadOrCreateConfig,
@@ -12,10 +12,10 @@ import type { FileConfig } from "./file-types";
 import type { MainTraefikConfig } from "./types";
 
 export const updateServerTraefik = (
-	user: User | null,
+	settings: typeof webServerSettings.$inferSelect | null,
 	newHost: string | null,
 ) => {
-	const { https, certificateType } = user || {};
+	const { https, certificateType } = settings || {};
 	const appName = "platform";
 	const config: FileConfig = loadOrCreateConfig(appName);
 
@@ -23,11 +23,18 @@ export const updateServerTraefik = (
 	config.http.routers = config.http.routers || {};
 	config.http.services = config.http.services || {};
 
+	// Get or create router config, but always update the rule with newHost
 	const currentRouterConfig = config.http.routers[`${appName}-router-app`] || {
-		rule: `Host(\`${newHost}\`)`,
 		service: `${appName}-service-app`,
 		entryPoints: ["web"],
+		rule: `Host(\`${newHost}\`)`,
 	};
+
+	// Always update the rule with the new host
+	if (newHost) {
+		currentRouterConfig.rule = `Host(\`${newHost}\`)`;
+	}
+
 	config.http.routers[`${appName}-router-app`] = currentRouterConfig;
 
 	config.http.services = {

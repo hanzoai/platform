@@ -8,8 +8,9 @@ import {
 } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
+import type { z } from "zod";
 
-export const createSshKey = async (input: typeof apiCreateSshKey._type) => {
+export const createSshKey = async (input: z.infer<typeof apiCreateSshKey>) => {
 	await db.transaction(async (tx) => {
 		const insertData: any = {
 			name: input.name,
@@ -39,7 +40,7 @@ export const createSshKey = async (input: typeof apiCreateSshKey._type) => {
 };
 
 export const removeSSHKeyById = async (
-	sshKeyId: (typeof apiRemoveSshKey._type)["sshKeyId"],
+	sshKeyId: z.infer<typeof apiRemoveSshKey>["sshKeyId"],
 ) => {
 	const result = await db
 		.delete(sshKeys)
@@ -52,7 +53,7 @@ export const removeSSHKeyById = async (
 export const updateSSHKeyById = async ({
 	sshKeyId,
 	...input
-}: typeof apiUpdateSshKey._type) => {
+}: z.infer<typeof apiUpdateSshKey>) => {
 	const result = await db
 		.update(sshKeys)
 		.set(input)
@@ -63,7 +64,7 @@ export const updateSSHKeyById = async ({
 };
 
 export const findSSHKeyById = async (
-	sshKeyId: (typeof apiFindOneSshKey._type)["sshKeyId"],
+	sshKeyId: z.infer<typeof apiFindOneSshKey>["sshKeyId"],
 ) => {
 	const sshKey = await db.query.sshKeys.findFirst({
 		where: eq(sshKeys.sshKeyId, sshKeyId),
