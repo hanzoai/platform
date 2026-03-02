@@ -1,8 +1,13 @@
-import { Bell, Loader2, Mail, MessageCircleMore, Trash2 } from "lucide-react";
+import { Bell, Loader2, Mail, PenBoxIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
 	DiscordIcon,
+	GotifyIcon,
+	LarkIcon,
+	NtfyIcon,
+	ResendIcon,
 	SlackIcon,
+	TeamsIcon,
 	TelegramIcon,
 } from "@/components/icons/notification-icons";
 import { DialogAction } from "@/components/shared/dialog-action";
@@ -18,7 +23,7 @@ import { api } from "@/utils/api";
 import { HandleNotifications } from "./handle-notifications";
 
 export const ShowNotifications = () => {
-	const { data, isLoading, refetch } = api.notification.all.useQuery();
+	const { data, isPending, refetch } = api.notification.all.useQuery();
 	const { mutateAsync, isPending: isRemoving } =
 		api.notification.remove.useMutation();
 
@@ -33,11 +38,11 @@ export const ShowNotifications = () => {
 						</CardTitle>
 						<CardDescription>
 							Add your providers to receive notifications, like Discord, Slack,
-							Telegram, Email.
+							Telegram, Teams, Email, Resend, Lark.
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-2 py-8 border-t">
-						{isLoading ? (
+						{isPending ? (
 							<div className="flex flex-row gap-2 items-center justify-center text-sm text-muted-foreground min-h-[25vh]">
 								<span>Loading...</span>
 								<Loader2 className="animate-spin size-4" />
@@ -83,14 +88,34 @@ export const ShowNotifications = () => {
 																	<Mail className="size-6 text-muted-foreground" />
 																</div>
 															)}
+															{notification.notificationType === "resend" && (
+																<div className="flex  items-center justify-center rounded-lg ">
+																	<ResendIcon className="size-6 text-muted-foreground" />
+																</div>
+															)}
 															{notification.notificationType === "gotify" && (
 																<div className="flex  items-center justify-center rounded-lg ">
-																	<MessageCircleMore className="size-6 text-muted-foreground" />
+																	<GotifyIcon className="size-6" />
 																</div>
 															)}
 															{notification.notificationType === "ntfy" && (
 																<div className="flex  items-center justify-center rounded-lg ">
-																	<MessageCircleMore className="size-6 text-muted-foreground" />
+																	<NtfyIcon className="size-6" />
+																</div>
+															)}
+															{notification.notificationType === "custom" && (
+																<div className="flex  items-center justify-center rounded-lg ">
+																	<PenBoxIcon className="size-6 text-muted-foreground" />
+																</div>
+															)}
+															{notification.notificationType === "lark" && (
+																<div className="flex  items-center justify-center rounded-lg">
+																	<LarkIcon className="size-7 text-muted-foreground" />
+																</div>
+															)}
+															{notification.notificationType === "teams" && (
+																<div className="flex  items-center justify-center rounded-lg">
+																	<TeamsIcon className="size-7 text-muted-foreground" />
 																</div>
 															)}
 
