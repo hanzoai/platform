@@ -86,7 +86,7 @@ export const setupLocalServerSSHKey = async () => {
 	if (!fs.existsSync(sshKeyPath)) {
 		// Generate new SSH key if it hasn't been created yet
 		await execAsync(
-			`ssh-keygen -t rsa -b 4096 -f ${sshKeyPath} -N "" -C "dokploy-local-access"`,
+			`ssh-keygen -t rsa -b 4096 -f ${sshKeyPath} -N "" -C "hanzo-local-access"`,
 		);
 	}
 
