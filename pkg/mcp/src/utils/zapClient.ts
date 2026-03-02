@@ -40,7 +40,7 @@ function getZapConfig(): ZapConfig | null {
 
   return {
     url: url.replace(/\/$/, ""),
-    authToken: process.env.ZAP_AUTH_TOKEN,
+    authToken: process.env.ZAP_AUTH_TOKEN ?? "",
     timeout: parseInt(process.env.ZAP_TIMEOUT || "30000", 10),
   };
 }
