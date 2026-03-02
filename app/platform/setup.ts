@@ -1,5 +1,8 @@
 import { exit } from "node:process";
-import { execAsync } from "@hanzo/platform";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
+
+const execAsync = promisify(exec);
 import { setupDirectories } from "@hanzo/platform/setup/config-paths";
 import { initializePostgres } from "@hanzo/platform/setup/postgres-setup";
 import { initializeRedis } from "@hanzo/platform/setup/redis-setup";
@@ -12,6 +15,7 @@ import {
 	createDefaultServerTraefikConfig,
 	createDefaultTraefikConfig,
 	initializeStandaloneTraefik,
+	TRAEFIK_VERSION,
 } from "@hanzo/platform/setup/traefik-setup";
 
 (async () => {
@@ -22,11 +26,11 @@ import {
 		await initializeNetwork();
 		createDefaultTraefikConfig();
 		createDefaultServerTraefikConfig();
-		await execAsync("docker pull traefik:v3.5.0");
+		await execAsync(`docker pull traefik:v${TRAEFIK_VERSION}`);
 		await initializeStandaloneTraefik();
 		await initializeRedis();
 		await initializePostgres();
-		console.log("Hanzo setup completed");
+		console.log("Hanzo Platform setup completed");
 		exit(0);
 	} catch (e) {
 		console.error("Error in platform setup", e);

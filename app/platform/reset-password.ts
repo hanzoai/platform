@@ -1,4 +1,4 @@
-import { findAdmin, generateRandomPassword } from "@hanzo/platform";
+import { findOwner, generateRandomPassword } from "@hanzo/platform";
 import { db } from "@hanzo/platform/db";
 import { account } from "@hanzo/platform/db/schema";
 import { eq } from "drizzle-orm";
@@ -7,13 +7,13 @@ import { eq } from "drizzle-orm";
 	try {
 		const randomPassword = await generateRandomPassword();
 
-		const result = await findAdmin();
+		const result = await findOwner();
 
 		const update = await db
 			.update(account)
 			.set({
 				password: randomPassword.hashedPassword,
-			} as any)
+			})
 			.where(eq(account.userId, result.userId));
 
 		if (update) {
