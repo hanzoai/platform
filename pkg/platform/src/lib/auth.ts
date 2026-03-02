@@ -53,7 +53,7 @@ const { handler, api } = betterAuth({
 			enabled: true,
 			async trustedProviders() {
 				const fromDb = await getTrustedProviders();
-				return ["github", "google", ...fromDb];
+				return ["github", "google", ...fromDb] as string[];
 			},
 			allowDifferentEmails: true,
 		},
@@ -137,10 +137,10 @@ const { handler, api } = betterAuth({
 			create: {
 				before: async (_user, context) => {
 					if (!IS_CLOUD) {
-						const xHanzo PlatformToken =
+						const xHanzoPlatformToken =
 							context?.request?.headers?.get("x-hanzo-token");
-						if (xHanzo PlatformToken) {
-							const user = await getUserByToken(xHanzo PlatformToken);
+						if (xHanzoPlatformToken) {
+							const user = await getUserByToken(xHanzoPlatformToken);
 							if (!user) {
 								throw new APIError("BAD_REQUEST", {
 									message: "User not found",
@@ -342,9 +342,9 @@ const { handler, api } = betterAuth({
 
 const _auth = {
 	handler,
-	createApiKey: api.createApiKey,
-	registerSSOProvider: api.registerSSOProvider,
-	updateSSOProvider: api.updateSSOProvider,
+	createApiKey: (api as any).createApiKey,
+	registerSSOProvider: (api as any).registerSSOProvider,
+	updateSSOProvider: (api as any).updateSSOProvider,
 };
 
 export type AuthType = typeof _auth;
@@ -354,7 +354,7 @@ export const validateRequest = async (request: IncomingMessage) => {
 	const apiKey = request.headers["x-api-key"] as string;
 	if (apiKey) {
 		try {
-			const { valid, key, error } = await api.verifyApiKey({
+			const { valid, key, error } = await (api as any).verifyApiKey({
 				body: {
 					key: apiKey,
 				},
@@ -445,7 +445,7 @@ export const validateRequest = async (request: IncomingMessage) => {
 		headers: new Headers({
 			cookie: request.headers.cookie || "",
 		}),
-	});
+	}) as any;
 
 	if (!session?.session || !session.user) {
 		return {

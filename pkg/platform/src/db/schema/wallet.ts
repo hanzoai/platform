@@ -2,7 +2,7 @@ import { relations } from "drizzle-orm";
 import { boolean, index, integer, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { organization } from "./account";
-import { users_temp } from "./user";
+import { user } from "./user";
 import { applications } from "./application";
 
 export const organizationWallet = pgTable(
@@ -10,7 +10,7 @@ export const organizationWallet = pgTable(
 	{
 		walletId: uuid("wallet_id").defaultRandom().primaryKey(),
 		organizationId: text("organization_id").notNull().unique().references(() => organization.id, { onDelete: "cascade" }),
-		ownerId: text("owner_id").notNull().references(() => users_temp.id, { onDelete: "cascade" }),
+		ownerId: text("owner_id").notNull().references(() => user.id, { onDelete: "cascade" }),
 		balance: numeric("balance", { precision: 10, scale: 2 }).notNull().default("0"),
 		monthlyCredits: numeric("monthly_credits", { precision: 10, scale: 2 }).notNull().default("0"),
 		purchasedCredits: numeric("purchased_credits", { precision: 10, scale: 2 }).notNull().default("0"),
@@ -61,7 +61,7 @@ export const appUsageMetrics = pgTable(
 		metricId: uuid("metric_id").defaultRandom().primaryKey(),
 		applicationId: text("application_id").notNull().references(() => applications.applicationId, { onDelete: "cascade" }),
 		organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
-		ownerId: text("owner_id").notNull().references(() => users_temp.id, { onDelete: "cascade" }),
+		ownerId: text("owner_id").notNull().references(() => user.id, { onDelete: "cascade" }),
 		periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
 		periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
 		durationSeconds: integer("duration_seconds").notNull(),
@@ -92,7 +92,7 @@ export const aiUsageMetrics = pgTable(
 		metricId: uuid("metric_id").defaultRandom().primaryKey(),
 		requestId: text("request_id").notNull().unique(),
 		organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
-		userId: text("user_id").notNull().references(() => users_temp.id, { onDelete: "cascade" }),
+		userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
 		applicationId: text("application_id"),
 		provider: text("provider").notNull(),
 		model: text("model").notNull(),
@@ -121,7 +121,7 @@ export const balanceAlertHistory = pgTable(
 	"balance_alert_history",
 	{
 		alertId: uuid("alert_id").defaultRandom().primaryKey(),
-		userId: text("user_id").notNull().references(() => users_temp.id, { onDelete: "cascade" }),
+		userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
 		alertType: text("alert_type").notNull(),
 		balanceAtAlert: numeric("balance_at_alert", { precision: 10, scale: 2 }).notNull(),
 		threshold: numeric("threshold", { precision: 10, scale: 2 }),
@@ -137,9 +137,9 @@ export const organizationWalletRelations = relations(organizationWallet, ({ one,
 		fields: [organizationWallet.organizationId],
 		references: [organization.id],
 	}),
-	owner: one(users_temp, {
+	owner: one(user, {
 		fields: [organizationWallet.ownerId],
-		references: [users_temp.id],
+		references: [user.id],
 	}),
 	transactions: many(walletTransactions),
 }));
@@ -164,9 +164,9 @@ export const appUsageMetricsRelations = relations(appUsageMetrics, ({ one }) => 
 		fields: [appUsageMetrics.organizationId],
 		references: [organization.id],
 	}),
-	owner: one(users_temp, {
+	owner: one(user, {
 		fields: [appUsageMetrics.ownerId],
-		references: [users_temp.id],
+		references: [user.id],
 	}),
 }));
 
