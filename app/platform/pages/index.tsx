@@ -10,9 +10,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
-import { SignInWithGithub } from "@/components/proprietary/auth/sign-in-with-github";
-import { SignInWithGoogle } from "@/components/proprietary/auth/sign-in-with-google";
-import { SignInWithSSO } from "@/components/proprietary/sso/sign-in-with-sso";
+import { SignInWithGithub } from "@/components/auth/sign-in-with-github";
+import { SignInWithGoogle } from "@/components/auth/sign-in-with-google";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
@@ -40,7 +39,6 @@ import {
 } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
-import { api } from "@/utils/api";
 
 const LoginSchema = z.object({
 	email: z.string().email(),
@@ -58,7 +56,6 @@ interface Props {
 }
 export default function Home({ IS_CLOUD }: Props) {
 	const router = useRouter();
-	const { data: showSignInWithSSO } = api.sso.showSignInWithSSO.useQuery();
 	const [isLoginLoading, setIsLoginLoading] = useState(false);
 	const [isTwoFactorLoading, setIsTwoFactorLoading] = useState(false);
 	const [isBackupCodeLoading, setIsBackupCodeLoading] = useState(false);
@@ -232,11 +229,7 @@ export default function Home({ IS_CLOUD }: Props) {
 			<CardContent className="p-0">
 				{!isTwoFactor ? (
 					<>
-						{showSignInWithSSO ? (
-							<SignInWithSSO>{loginContent}</SignInWithSSO>
-						) : (
-							loginContent
-						)}
+						{loginContent}
 					</>
 				) : (
 					<>
