@@ -208,12 +208,12 @@ describe("getRegistryTag", () => {
 	});
 
 	describe("special characters in username", () => {
-		it("should handle Harbor robot account username with $ (e.g. robot$library+dokploy)", () => {
+		it("should handle Harbor robot account username with $ (e.g. robot$library+hanzo)", () => {
 			const registry = createMockRegistry({
-				username: "robot$library+dokploy",
+				username: "robot$library+hanzo",
 			});
 			const result = getRegistryTag(registry, "nginx");
-			expect(result).toBe("docker.io/robot$library+dokploy/nginx");
+			expect(result).toBe("docker.io/robot$library+hanzo/nginx");
 		});
 
 		it("should handle username with $ and other special characters", () => {

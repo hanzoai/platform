@@ -229,12 +229,12 @@ export const suggestVariants = async ({
 		          1. ALWAYS use 'image:' field, NEVER use 'build:' field
 		          2. NEVER use 'build: .' or any build directive - we don't have local Dockerfiles
 		          3. Use images from Docker Hub or other public registries (e.g., docker.io, ghcr.io, quay.io)
-		          4. For dependencies (databases, redis, etc.), use official images (e.g., postgres:16, redis:7, etc.)
+		          4. For dependencies (databases, redis, etc.), use Hanzo images (e.g., ghcr.io/hanzoai/sql:18, ghcr.io/hanzoai/kv:8, etc.)
 		          5. Always specify image tags - avoid using 'latest' tag, use specific versions when possible
 		          6. Examples of correct image usage:
 		             - image: sendingtk/chatwoot:develop
-		             - image: postgres:16-alpine
-		             - image: redis:7-alpine
+		             - image: ghcr.io/hanzoai/sql:18
+		             - image: ghcr.io/hanzoai/kv:8
 		             - image: chatwoot/chatwoot:latest
 		          7. Examples of INCORRECT usage (DO NOT USE):
 		             - build: .

@@ -108,7 +108,7 @@ export const AddCompose = ({ environmentId, projectName }: Props) => {
 			environmentId,
 			composeType: data.composeType,
 			appName: data.appName,
-			serverId: data.serverId === "dokploy" ? undefined : data.serverId,
+			serverId: data.serverId === "hanzo" ? undefined : data.serverId,
 		})
 			.then(async () => {
 				toast.success("Compose Created");
@@ -203,7 +203,7 @@ export const AddCompose = ({ environmentId, projectName }: Props) => {
 										<Select
 											onValueChange={field.onChange}
 											defaultValue={
-												field.value || (!isCloud ? "dokploy" : undefined)
+												field.value || (!isCloud ? "hanzo" : undefined)
 											}
 										>
 											<SelectTrigger>
@@ -214,7 +214,7 @@ export const AddCompose = ({ environmentId, projectName }: Props) => {
 											<SelectContent>
 												<SelectGroup>
 													{!isCloud && (
-														<SelectItem value="dokploy">
+														<SelectItem value="hanzo">
 															<span className="flex items-center gap-2 justify-between w-full">
 																<span>Hanzo Platform</span>
 																<span className="text-muted-foreground text-xs self-center">
