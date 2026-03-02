@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { PenBoxIcon, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -60,7 +60,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 	const { data: servers } = api.server.withSSHKey.useQuery();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
-	const { mutateAsync, isError, error, isPending: isLoading } = destinationId
+	const { mutateAsync, isError, error, isPending } = destinationId
 		? api.destination.update.useMutation()
 		: api.destination.create.useMutation();
 
@@ -75,7 +75,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 	);
 	const {
 		mutateAsync: testConnection,
-		isPending: isLoadingConnection,
+		isPending: isPendingConnection,
 		error: connectionError,
 		isError: isErrorConnection,
 	} = api.destination.testConnection.useMutation();
@@ -109,7 +109,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 	}, [form, form.reset, form.formState.isSubmitSuccessful, destination]);
 
 	const onSubmit = async (data: AddDestination) => {
-		await (mutateAsync as any)({
+		await mutateAsync({
 			provider: data.provider || "",
 			accessKey: data.accessKeyId,
 			bucket: data.bucket,
@@ -122,6 +122,9 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 			.then(async () => {
 				toast.success(`Destination ${destinationId ? "Updated" : "Created"}`);
 				await utils.destination.all.invalidate();
+				if (destinationId) {
+					await utils.destination.one.invalidate({ destinationId });
+				}
 				setOpen(false);
 			})
 			.catch(() => {
@@ -217,7 +220,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 					</DialogDescription>
 				</DialogHeader>
 				{(isError || isErrorConnection) && (
-					<AlertBlock type="error" className="break-words">
+					<AlertBlock type="error" className="w-full">
 						{connectionError?.message || error?.message}
 					</AlertBlock>
 				)}
@@ -318,7 +321,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 										<FormLabel>Bucket</FormLabel>
 									</div>
 									<FormControl>
-										<Input placeholder={"platform-bucket"} {...field} />
+										<Input placeholder={"dokploy-bucket"} {...field} />
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -407,7 +410,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 								<Button
 									type="button"
 									variant={"secondary"}
-									isLoading={isLoadingConnection}
+									isLoading={isPendingConnection}
 									onClick={async () => {
 										await handleTestConnection(form.getValues("serverId"));
 									}}
@@ -417,7 +420,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 							</div>
 						) : (
 							<Button
-								isLoading={isLoadingConnection}
+								isLoading={isPendingConnection}
 								type="button"
 								variant="secondary"
 								onClick={async () => {
@@ -429,7 +432,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 						)}
 
 						<Button
-							isLoading={isLoading}
+							isLoading={isPending}
 							form="hook-form-destination-add"
 							type="submit"
 						>

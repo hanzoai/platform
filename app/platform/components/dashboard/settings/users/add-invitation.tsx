@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -158,6 +158,7 @@ export const AddInvitation = () => {
 											</FormControl>
 											<SelectContent>
 												<SelectItem value="member">Member</SelectItem>
+												<SelectItem value="admin">Admin</SelectItem>
 											</SelectContent>
 										</Select>
 										<FormDescription>
