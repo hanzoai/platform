@@ -34,7 +34,7 @@ export const createSecurity = async (
 				.insert(security)
 				.values({
 					...data,
-				})
+				} as typeof security.$inferInsert)
 				.returning()
 				.then((res) => res[0]);
 
