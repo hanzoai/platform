@@ -1,6 +1,5 @@
 import {
 	createBackup,
-	findApplicationById,
 	findBackupById,
 	findComposeByBackupId,
 	findComposeById,
@@ -44,7 +43,6 @@ import {
 	restoreWebServerBackup,
 } from "@hanzo/platform/utils/restore";
 import { TRPCError } from "@trpc/server";
-import { observable } from "@trpc/server/observable";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
@@ -55,51 +53,6 @@ import {
 	apiUpdateBackup,
 } from "@/server/db/schema";
 import { removeJob, schedule, updateJob } from "@/server/utils/backup";
-
-/**
- * Resolve the organizationId for a backup by looking up its parent
- * database service or compose resource.
- */
-async function getBackupOrganizationId(
-	backup: Awaited<ReturnType<typeof findBackupById>>,
-): Promise<string> {
-	if (backup.databaseType === "postgres" && backup.postgres) {
-		const pg = await findPostgresById(backup.postgres.postgresId);
-		return pg.environment.project.organizationId;
-	}
-	if (backup.databaseType === "mysql" && backup.mysql) {
-		const my = await findMySqlById(backup.mysql.mysqlId);
-		return my.environment.project.organizationId;
-	}
-	if (backup.databaseType === "mariadb" && backup.mariadb) {
-		const maria = await findMariadbById(backup.mariadb.mariadbId);
-		return maria.environment.project.organizationId;
-	}
-	if (backup.databaseType === "mongo" && backup.mongo) {
-		const mongo = await findMongoById(backup.mongo.mongoId);
-		return mongo.environment.project.organizationId;
-	}
-	if (backup.backupType === "compose" && backup.compose) {
-		const compose = await findComposeById(backup.compose.composeId);
-		return compose.environment.project.organizationId;
-	}
-	throw new TRPCError({
-		code: "BAD_REQUEST",
-		message: "Cannot determine backup ownership",
-	});
-}
-
-function assertOrgMatch(
-	backupOrgId: string,
-	activeOrgId: string,
-): void {
-	if (backupOrgId !== activeOrgId) {
-		throw new TRPCError({
-			code: "UNAUTHORIZED",
-			message: "You are not authorized to access this backup",
-		});
-	}
-}
 
 interface RcloneFile {
 	Path: string;
@@ -116,15 +69,11 @@ interface RcloneFile {
 export const backupRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(apiCreateBackup)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
 				const newBackup = await createBackup(input);
 
 				const backup = await findBackupById(newBackup.backupId);
-
-				// Verify org ownership
-				const backupOrgId = await getBackupOrganizationId(backup);
-				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
 
 				if (IS_CLOUD && backup.enabled) {
 					const databaseType = backup.databaseType;
@@ -173,23 +122,15 @@ export const backupRouter = createTRPCRouter({
 				});
 			}
 		}),
-	one: protectedProcedure
-		.input(apiFindOneBackup)
-		.query(async ({ input, ctx }) => {
-			const backup = await findBackupById(input.backupId);
-			const backupOrgId = await getBackupOrganizationId(backup);
-			assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
-			return backup;
-		}),
+	one: protectedProcedure.input(apiFindOneBackup).query(async ({ input }) => {
+		const backup = await findBackupById(input.backupId);
+
+		return backup;
+	}),
 	update: protectedProcedure
 		.input(apiUpdateBackup)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
-				// Verify org ownership before update
-				const existingBackup = await findBackupById(input.backupId);
-				const backupOrgId = await getBackupOrganizationId(existingBackup);
-				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
-
 				await updateBackupById(input.backupId, input);
 				const backup = await findBackupById(input.backupId);
 
@@ -226,13 +167,8 @@ export const backupRouter = createTRPCRouter({
 		}),
 	remove: protectedProcedure
 		.input(apiRemoveBackup)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
-				// Verify org ownership before delete
-				const existingBackup = await findBackupById(input.backupId);
-				const backupOrgId = await getBackupOrganizationId(existingBackup);
-				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
-
 				const value = await removeBackupById(input.backupId);
 				if (IS_CLOUD && value) {
 					removeJob({
@@ -255,16 +191,13 @@ export const backupRouter = createTRPCRouter({
 		}),
 	manualBackupPostgres: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
 				const backup = await findBackupById(input.backupId);
-				const backupOrgId = await getBackupOrganizationId(backup);
-				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
-
 				const postgres = await findPostgresByBackupId(backup.backupId);
-				await runPostgresBackup(postgres as any, backup);
+				await runPostgresBackup(postgres, backup);
 
-				await keepLatestNBackups(backup, (postgres as any)?.serverId);
+				await keepLatestNBackups(backup, postgres?.serverId);
 				return true;
 			} catch (error) {
 				const message =
@@ -280,15 +213,12 @@ export const backupRouter = createTRPCRouter({
 
 	manualBackupMySql: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
 				const backup = await findBackupById(input.backupId);
-				const backupOrgId = await getBackupOrganizationId(backup);
-				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
-
 				const mysql = await findMySqlByBackupId(backup.backupId);
-				await runMySqlBackup(mysql as any, backup);
-				await keepLatestNBackups(backup, (mysql as any)?.serverId);
+				await runMySqlBackup(mysql, backup);
+				await keepLatestNBackups(backup, mysql?.serverId);
 				return true;
 			} catch (error) {
 				throw new TRPCError({
@@ -300,15 +230,12 @@ export const backupRouter = createTRPCRouter({
 		}),
 	manualBackupMariadb: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
 				const backup = await findBackupById(input.backupId);
-				const backupOrgId = await getBackupOrganizationId(backup);
-				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
-
 				const mariadb = await findMariadbByBackupId(backup.backupId);
-				await runMariadbBackup(mariadb as any, backup);
-				await keepLatestNBackups(backup, (mariadb as any)?.serverId);
+				await runMariadbBackup(mariadb, backup);
+				await keepLatestNBackups(backup, mariadb?.serverId);
 				return true;
 			} catch (error) {
 				throw new TRPCError({
@@ -320,15 +247,12 @@ export const backupRouter = createTRPCRouter({
 		}),
 	manualBackupCompose: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
 				const backup = await findBackupById(input.backupId);
-				const backupOrgId = await getBackupOrganizationId(backup);
-				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
-
 				const compose = await findComposeByBackupId(backup.backupId);
-				await runComposeBackup(compose as any, backup);
-				await keepLatestNBackups(backup, (compose as any)?.serverId);
+				await runComposeBackup(compose, backup);
+				await keepLatestNBackups(backup, compose?.serverId);
 				return true;
 			} catch (error) {
 				throw new TRPCError({
@@ -340,15 +264,12 @@ export const backupRouter = createTRPCRouter({
 		}),
 	manualBackupMongo: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
 				const backup = await findBackupById(input.backupId);
-				const backupOrgId = await getBackupOrganizationId(backup);
-				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
-
 				const mongo = await findMongoByBackupId(backup.backupId);
-				await runMongoBackup(mongo as any, backup);
-				await keepLatestNBackups(backup, (mongo as any)?.serverId);
+				await runMongoBackup(mongo, backup);
+				await keepLatestNBackups(backup, mongo?.serverId);
 				return true;
 			} catch (error) {
 				throw new TRPCError({
@@ -360,12 +281,10 @@ export const backupRouter = createTRPCRouter({
 		}),
 	manualBackupWebServer: protectedProcedure
 		.input(apiFindOneBackup)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			const backup = await findBackupById(input.backupId);
-			const backupOrgId = await getBackupOrganizationId(backup);
-			assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
-
 			await runWebServerBackup(backup);
+			await keepLatestNBackups(backup);
 			return true;
 		}),
 	listBackupFiles: protectedProcedure
@@ -376,15 +295,9 @@ export const backupRouter = createTRPCRouter({
 				serverId: z.string().optional(),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
+		.query(async ({ input }) => {
 			try {
 				const destination = await findDestinationById(input.destinationId);
-				if (destination.organizationId !== ctx.session.activeOrganizationId) {
-					throw new TRPCError({
-						code: "UNAUTHORIZED",
-						message: "You are not authorized to access this destination",
-					});
-				}
 				const rcloneFlags = getS3Credentials(destination);
 				const bucketPath = `:s3:${destination.bucket}`;
 
@@ -461,67 +374,59 @@ export const backupRouter = createTRPCRouter({
 			},
 		})
 		.input(apiRestoreBackup)
-		.subscription(async ({ input, ctx }) => {
+		.subscription(async function* ({ input, signal }) {
 			const destination = await findDestinationById(input.destinationId);
-			if (destination.organizationId !== ctx.session.activeOrganizationId) {
-				throw new TRPCError({
-					code: "UNAUTHORIZED",
-					message: "You are not authorized to access this destination",
-				});
-			}
+			const queue: string[] = [];
+			const done = false;
 			if (input.backupType === "database") {
 				if (input.databaseType === "postgres") {
 					const postgres = await findPostgresById(input.databaseId);
 
-					return observable<string>((emit) => {
-						restorePostgresBackup(postgres, destination, input, (log) => {
-							emit.next(log);
-						});
+					restorePostgresBackup(postgres, destination, input, (log) => {
+						queue.push(log);
 					});
 				}
+
 				if (input.databaseType === "mysql") {
 					const mysql = await findMySqlById(input.databaseId);
-					return observable<string>((emit) => {
-						restoreMySqlBackup(mysql, destination, input, (log) => {
-							emit.next(log);
-						});
+					restoreMySqlBackup(mysql, destination, input, (log) => {
+						queue.push(log);
 					});
 				}
 				if (input.databaseType === "mariadb") {
 					const mariadb = await findMariadbById(input.databaseId);
-					return observable<string>((emit) => {
-						restoreMariadbBackup(mariadb, destination, input, (log) => {
-							emit.next(log);
-						});
+					restoreMariadbBackup(mariadb, destination, input, (log) => {
+						queue.push(log);
 					});
 				}
 				if (input.databaseType === "mongo") {
 					const mongo = await findMongoById(input.databaseId);
-					return observable<string>((emit) => {
-						restoreMongoBackup(mongo, destination, input, (log) => {
-							emit.next(log);
-						});
+					restoreMongoBackup(mongo, destination, input, (log) => {
+						queue.push(log);
 					});
 				}
 				if (input.databaseType === "web-server") {
-					return observable<string>((emit) => {
-						restoreWebServerBackup(destination, input.backupFile, (log) => {
-							emit.next(log);
-						});
+					restoreWebServerBackup(destination, input.backupFile, (log) => {
+						queue.push(log);
 					});
 				}
 			}
 			if (input.backupType === "compose") {
 				const compose = await findComposeById(input.databaseId);
-				return observable<string>((emit) => {
-					restoreComposeBackup(compose, destination, input, (log) => {
-						emit.next(log);
-					});
+				restoreComposeBackup(compose, destination, input, (log) => {
+					queue.push(log);
 				});
 			}
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: `Unsupported backup type: ${input.backupType}`,
-			});
+			while (!done || queue.length > 0) {
+				if (queue.length > 0) {
+					yield queue.shift()!;
+				} else {
+					await new Promise((r) => setTimeout(r, 50));
+				}
+
+				if (signal?.aborted) {
+					return;
+				}
+			}
 		}),
 });

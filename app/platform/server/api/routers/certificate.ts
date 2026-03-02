@@ -4,10 +4,10 @@ import {
 	IS_CLOUD,
 	removeCertificateById,
 } from "@hanzo/platform";
+import { db } from "@hanzo/platform/db";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { adminProcedure, createTRPCRouter } from "@/server/api/trpc";
-import { db } from "@/server/db";
 import {
 	apiCreateCertificate,
 	apiFindCertificate,
