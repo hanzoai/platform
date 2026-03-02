@@ -2,17 +2,16 @@ import { db } from "@hanzo/platform/db";
 import { type apiCreateBackup, backups } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
+import type { z } from "zod";
 
 export type Backup = typeof backups.$inferSelect;
 
 export type BackupSchedule = Awaited<ReturnType<typeof findBackupById>>;
 export type BackupScheduleList = Awaited<ReturnType<typeof findBackupsByDbId>>;
-export const createBackup = async (input: typeof apiCreateBackup._type) => {
+export const createBackup = async (input: z.infer<typeof apiCreateBackup>) => {
 	const newBackup = await db
 		.insert(backups)
-		.values({
-			...input,
-		} as any)
+		.values({ ...input } as typeof backups.$inferInsert)
 		.returning()
 		.then((value) => value[0]);
 
@@ -55,7 +54,7 @@ export const updateBackupById = async (
 		.update(backups)
 		.set({
 			...backupData,
-		} as any)
+		})
 		.where(eq(backups.backupId, backupId))
 		.returning();
 
