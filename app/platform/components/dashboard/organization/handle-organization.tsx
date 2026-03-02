@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { PenBoxIcon, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -52,7 +52,7 @@ export function AddOrganization({ organizationId }: Props) {
 			enabled: !!organizationId,
 		},
 	);
-	const { mutateAsync, isPending: isLoading } = organizationId
+	const { mutateAsync, isPending } = organizationId
 		? api.organization.update.useMutation()
 		: api.organization.create.useMutation();
 	const { refetch: refetchActiveOrganization } =
@@ -76,7 +76,7 @@ export function AddOrganization({ organizationId }: Props) {
 	}, [organization, form]);
 
 	const onSubmit = async (values: OrganizationFormValues) => {
-		await (mutateAsync as any)({
+		await mutateAsync({
 			name: values.name,
 			logo: values.logo,
 			organizationId: organizationId ?? "",
@@ -177,7 +177,7 @@ export function AddOrganization({ organizationId }: Props) {
 							)}
 						/>
 						<DialogFooter>
-							<Button type="submit" isLoading={isLoading}>
+							<Button type="submit" isLoading={isPending}>
 								{organizationId ? "Update organization" : "Create organization"}
 							</Button>
 						</DialogFooter>

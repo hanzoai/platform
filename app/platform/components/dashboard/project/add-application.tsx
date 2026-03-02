@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { Folder, HelpCircle } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -77,11 +77,11 @@ export const AddApplication = ({ environmentId, projectName }: Props) => {
 
 	const hasServers = servers && servers.length > 0;
 	// Show dropdown logic based on cloud environment
-	// Cloud: show only if there are remote servers (no Hanzo option)
-	// Self-hosted: show only if there are remote servers (Hanzo is default, hide if no remote servers)
+	// Cloud: show only if there are remote servers (no Hanzo Platform option)
+	// Self-hosted: show only if there are remote servers (Hanzo Platform is default, hide if no remote servers)
 	const shouldShowServerDropdown = hasServers;
 
-	const { mutateAsync, isPending: isLoading, error, isError } =
+	const { mutateAsync, isPending, error, isError } =
 		api.application.create.useMutation();
 
 	const form = useForm<AddTemplate>({
@@ -98,7 +98,7 @@ export const AddApplication = ({ environmentId, projectName }: Props) => {
 			name: data.name,
 			appName: data.appName,
 			description: data.description,
-			serverId: data.serverId === "platform" ? undefined : data.serverId,
+			serverId: data.serverId === "dokploy" ? undefined : data.serverId,
 			environmentId,
 		})
 			.then(async () => {
@@ -150,8 +150,8 @@ export const AddApplication = ({ environmentId, projectName }: Props) => {
 											placeholder="Frontend"
 											{...field}
 											onChange={(e) => {
-												const val = e.target.value?.trim() || "";
-												const serviceName = slugify(val);
+												const val = e.target.value || "";
+												const serviceName = slugify(val.trim());
 												form.setValue("appName", `${slug}-${serviceName}`);
 												field.onChange(val);
 											}}
@@ -191,20 +191,20 @@ export const AddApplication = ({ environmentId, projectName }: Props) => {
 										<Select
 											onValueChange={field.onChange}
 											defaultValue={
-												field.value || (!isCloud ? "platform" : undefined)
+												field.value || (!isCloud ? "dokploy" : undefined)
 											}
 										>
 											<SelectTrigger>
 												<SelectValue
-													placeholder={!isCloud ? "Hanzo" : "Select a Server"}
+													placeholder={!isCloud ? "Hanzo Platform" : "Select a Server"}
 												/>
 											</SelectTrigger>
 											<SelectContent>
 												<SelectGroup>
 													{!isCloud && (
-														<SelectItem value="platform">
+														<SelectItem value="dokploy">
 															<span className="flex items-center gap-2 justify-between w-full">
-																<span>Hanzo</span>
+																<span>Hanzo Platform</span>
 																<span className="text-muted-foreground text-xs self-center">
 																	Default
 																</span>
@@ -283,7 +283,7 @@ export const AddApplication = ({ environmentId, projectName }: Props) => {
 					</form>
 
 					<DialogFooter>
-						<Button isLoading={isLoading} form="hook-form" type="submit">
+						<Button isLoading={isPending} form="hook-form" type="submit">
 							Create
 						</Button>
 					</DialogFooter>
