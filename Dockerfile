@@ -56,8 +56,13 @@ COPY --from=build /prod/platform/components.json ./components.json
 COPY --from=build /prod/platform/node_modules ./node_modules
 
 
-# Install docker
-RUN curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh --version 28.5.2 && rm get-docker.sh && curl https://rclone.org/install.sh | bash
+# Install Docker CLI (static binary — avoids apt GPG issues under QEMU)
+ARG DOCKER_VERSION=28.5.2
+RUN ARCH=$(uname -m) && \
+    case "$ARCH" in x86_64) DARCH=x86_64;; aarch64) DARCH=aarch64;; *) DARCH=x86_64;; esac && \
+    curl -fsSL "https://download.docker.com/linux/static/stable/${DARCH}/docker-${DOCKER_VERSION}.tgz" \
+      | tar xz --strip-components=1 -C /usr/local/bin docker/docker && \
+    curl https://rclone.org/install.sh | bash
 
 # Install Nixpacks and tsx
 # | VERBOSE=1 VERSION=1.21.0 bash
