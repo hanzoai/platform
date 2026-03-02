@@ -29,7 +29,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { organization } from "./account";
-import { users_temp } from "./user";
+import { user } from "./user";
 
 // ============================================================================
 // Enums
@@ -83,7 +83,7 @@ export const computePool = pgTable(
 			.references(() => organization.id, { onDelete: "cascade" }),
 		ownerId: text("owner_id")
 			.notNull()
-			.references(() => users_temp.id, { onDelete: "cascade" }),
+			.references(() => user.id, { onDelete: "cascade" }),
 
 		// Identity
 		name: text("name").notNull(),
@@ -271,9 +271,9 @@ export const computePoolRelations = relations(computePool, ({ one, many }) => ({
 		fields: [computePool.organizationId],
 		references: [organization.id],
 	}),
-	owner: one(users_temp, {
+	owner: one(user, {
 		fields: [computePool.ownerId],
-		references: [users_temp.id],
+		references: [user.id],
 	}),
 	nodes: many(computeNode),
 }));
@@ -322,7 +322,7 @@ export const apiUpdateComputePool = createPoolSchema
 const createNodeSchema = createInsertSchema(computeNode, {
 	name: z.string().min(1).max(100),
 	hostname: z.string().optional(),
-	ipAddress: z.string().ip().optional(),
+	ipAddress: z.string().optional(),
 	port: z.number().int().min(1).max(65535).optional(),
 	region: z.string().min(1),
 	cpuCores: z.number().int().min(1),

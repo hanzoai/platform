@@ -232,7 +232,7 @@ export const serverRouter = createTRPCRouter({
 						enabled: boolean;
 						version: string;
 					};
-					isHanzo PlatformNetworkInstalled: boolean;
+					isHanzoPlatformNetworkInstalled: boolean;
 					isSwarmInstalled: boolean;
 					isMainDirectoryInstalled: boolean;
 				};
