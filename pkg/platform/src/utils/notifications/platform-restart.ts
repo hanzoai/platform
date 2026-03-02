@@ -1,6 +1,6 @@
 import { db } from "@hanzo/platform/db";
 import { notifications } from "@hanzo/platform/db/schema";
-import Hanzo PlatformRestartEmail from "@hanzo/platform/emails/emails/platform-restart";
+import HanzoRestartEmail from "@hanzo/platform/emails/emails/platform-restart";
 import { renderAsync } from "@react-email/components";
 import { format } from "date-fns";
 import { eq } from "drizzle-orm";
@@ -18,12 +18,12 @@ import {
 	sendTelegramNotification,
 } from "./utils";
 
-export const sendHanzo PlatformRestartNotifications = async () => {
+export const sendHanzoPlatformRestartNotifications = async () => {
 	try {
 		const date = new Date();
 		const unixDate = ~~(Number(date) / 1000);
 		const notificationList = await db.query.notifications.findMany({
-			where: eq(notifications.platformRestart, true),
+			where: eq(notifications.hanzoRestart, true),
 			with: {
 				email: true,
 				discord: true,
@@ -57,7 +57,7 @@ export const sendHanzo PlatformRestartNotifications = async () => {
 			try {
 				if (email || resend) {
 					const template = await renderAsync(
-						Hanzo PlatformRestartEmail({ date: date.toLocaleString() }),
+						HanzoRestartEmail({ date: date.toLocaleString() }),
 					).catch();
 
 					if (email) {
