@@ -11,7 +11,7 @@ version: "3.8"
 
 services:
   db:
-    image: postgres:latest
+    image: ghcr.io/hanzoai/sql:18
     secrets:
       - db_password
 

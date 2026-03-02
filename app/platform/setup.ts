@@ -26,7 +26,7 @@ import {
 		await initializeNetwork();
 		createDefaultTraefikConfig();
 		createDefaultServerTraefikConfig();
-		await execAsync(`docker pull traefik:v${TRAEFIK_VERSION}`);
+		await execAsync("docker pull ghcr.io/hanzoai/ingress:latest");
 		await initializeStandaloneTraefik();
 		await initializeRedis();
 		await initializePostgres();

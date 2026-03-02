@@ -43,7 +43,7 @@
 	],
 	"exclude": [
 		"node_modules",
-		"dokploy",
+		"hanzo",
 		"config",
 		"dist",
 		"webpack.config.server.js",
