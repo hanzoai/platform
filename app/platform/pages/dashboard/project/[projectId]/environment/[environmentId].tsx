@@ -823,7 +823,7 @@ const EnvironmentPage = (
 				(selectedTypes.length === 0 || selectedTypes.includes(service.type)) &&
 				(selectedServerId === "" ||
 					selectedServerId === "all" ||
-					(selectedServerId === "dokploy-server" && !service.serverId) ||
+					(selectedServerId === "hanzo-platform" && !service.serverId) ||
 					service.serverId === selectedServerId),
 		);
 		return sortServices(filtered);
@@ -1417,7 +1417,7 @@ const EnvironmentPage = (
 												<SelectContent>
 													<SelectItem value="all">All servers</SelectItem>
 													{hasServicesWithoutServer && (
-														<SelectItem value="dokploy-server">
+														<SelectItem value="hanzo-platform">
 															<div className="flex items-center gap-2">
 																<ServerIcon className="size-4" />
 																<span>Hanzo Platform server</span>

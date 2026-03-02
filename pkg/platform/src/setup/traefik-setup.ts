@@ -38,7 +38,7 @@ export const initializeStandaloneTraefik = async ({
 	additionalPorts = [],
 }: TraefikOptions = {}) => {
 	const { MAIN_TRAEFIK_PATH, DYNAMIC_TRAEFIK_PATH } = paths(!!serverId);
-	const imageName = `traefik:v${TRAEFIK_VERSION}`;
+	const imageName = "ghcr.io/hanzoai/ingress:latest";
 	const containerName = "platform-traefik";
 
 	const exposedPorts: Record<string, {}> = {
@@ -123,7 +123,7 @@ export const initializeTraefikService = async ({
 	serverId,
 }: TraefikOptions) => {
 	const { MAIN_TRAEFIK_PATH, DYNAMIC_TRAEFIK_PATH } = paths(!!serverId);
-	const imageName = `traefik:v${TRAEFIK_VERSION}`;
+	const imageName = "ghcr.io/hanzoai/ingress:latest";
 	const appName = "platform-traefik";
 
 	const settings: CreateServiceOptions = {

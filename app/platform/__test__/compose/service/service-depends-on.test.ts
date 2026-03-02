@@ -24,7 +24,7 @@ services:
     image: myapi:latest
 
   db:
-    image: postgres:latest
+    image: ghcr.io/hanzoai/sql:18
 
 networks:
   default:
@@ -69,7 +69,7 @@ test("Add suffix to service names with depends_on (array) in compose file", () =
 	expect(actualComposeData.services).toHaveProperty(`db-${suffix}`);
 	expect(actualComposeData.services).not.toHaveProperty("db");
 	expect(actualComposeData.services?.[`db-${suffix}`]?.image).toBe(
-		"postgres:latest",
+		"ghcr.io/hanzoai/sql:18",
 	);
 	expect(actualComposeData.services).toHaveProperty(`api-${suffix}`);
 	expect(actualComposeData.services).not.toHaveProperty("api");
@@ -94,7 +94,7 @@ services:
     image: myapi:latest
 
   db:
-    image: postgres:latest
+    image: ghcr.io/hanzoai/sql:18
 
 networks:
   default:
@@ -139,7 +139,7 @@ test("Add suffix to service names with depends_on (object) in compose file", () 
 	expect(actualComposeData.services).toHaveProperty(`db-${suffix}`);
 	expect(actualComposeData.services).not.toHaveProperty("db");
 	expect(actualComposeData.services?.[`db-${suffix}`]?.image).toBe(
-		"postgres:latest",
+		"ghcr.io/hanzoai/sql:18",
 	);
 	expect(actualComposeData.services).toHaveProperty(`api-${suffix}`);
 	expect(actualComposeData.services).not.toHaveProperty("api");
