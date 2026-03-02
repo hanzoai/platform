@@ -1303,7 +1303,7 @@ const tools: ToolDef[] = [
 				nodeSize: args.nodeSize,
 				nodeCount: args.nodeCount,
 				ha: args.ha,
-			});
+			} as any);
 		},
 	},
 	{
@@ -1389,7 +1389,7 @@ const tools: ToolDef[] = [
 				name: args.name,
 				size: args.size,
 				count: args.count,
-			});
+			} as any);
 		},
 	},
 	{
