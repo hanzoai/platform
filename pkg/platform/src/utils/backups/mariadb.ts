@@ -3,8 +3,8 @@ import {
 	createDeploymentBackup,
 	updateDeploymentStatus,
 } from "@hanzo/platform/services/deployment";
-import type { Mariadb } from "@hanzo/platform/services/mariadb";
 import { findEnvironmentById } from "@hanzo/platform/services/environment";
+import type { Mariadb } from "@hanzo/platform/services/mariadb";
 import { findProjectById } from "@hanzo/platform/services/project";
 import { sendDatabaseBackupNotifications } from "../notifications/database-backup";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
