@@ -1,109 +1,264 @@
-name: Build Docker images
+name: Build & Deploy Platform
 
 on:
   push:
     branches: [main, canary]
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  ORG: hanzoai
+
 jobs:
-  build-and-push-cloud-image:
-    runs-on: ubuntu-latest
-
+  # ── Build platform (self-hosted) ─────────────────────────────────────
+  platform-amd64:
+    runs-on: hanzo-amd64
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - id: meta
+        run: |
+          VERSION=$(jq -r .version app/platform/package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.ORG }}/platform:amd64-${{ github.sha }}
+          platforms: linux/amd64
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache-amd64
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache-amd64,mode=max
 
-      - name: Set tag and version
-        id: meta-cloud
+  platform-arm64:
+    runs-on: hanzo-arm64
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.ORG }}/platform:arm64-${{ github.sha }}
+          platforms: linux/arm64
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache-arm64
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache-arm64,mode=max
+
+  platform-manifest:
+    needs: [platform-amd64, platform-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
         run: |
           VERSION=$(jq -r .version app/platform/package.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "tags=ghcr.io/hanzoai/platform:latest,ghcr.io/hanzoai/platform:${VERSION}" >> $GITHUB_OUTPUT
+            echo "suffix=latest" >> $GITHUB_OUTPUT
           else
-            echo "tags=ghcr.io/hanzoai/platform:canary" >> $GITHUB_OUTPUT
+            echo "suffix=canary" >> $GITHUB_OUTPUT
+          fi
+      - name: Create and push multi-arch manifest
+        run: |
+          IMG=${{ env.REGISTRY }}/${{ env.ORG }}/platform
+          SHA=${{ github.sha }}
+          VERSION=${{ steps.meta.outputs.version }}
+          SUFFIX=${{ steps.meta.outputs.suffix }}
+
+          # Create manifest for :latest or :canary
+          docker manifest create ${IMG}:${SUFFIX} \
+            ${IMG}:amd64-${SHA} \
+            ${IMG}:arm64-${SHA}
+          docker manifest push ${IMG}:${SUFFIX}
+
+          # Also tag with version on main
+          if [ "${SUFFIX}" = "latest" ]; then
+            docker manifest create ${IMG}:${VERSION} \
+              ${IMG}:amd64-${SHA} \
+              ${IMG}:arm64-${SHA}
+            docker manifest push ${IMG}:${VERSION}
           fi
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+  # ── Build platform-cloud ─────────────────────────────────────────────
+  cloud-amd64:
+    runs-on: hanzo-amd64
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - uses: docker/setup-buildx-action@v3
+      - id: meta
+        run: |
+          VERSION=$(jq -r .version app/platform/package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.cloud
           push: true
-          tags: ${{ steps.meta-cloud.outputs.tags }}
+          tags: ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:amd64-${{ github.sha }}
           platforms: linux/amd64
           build-args: |
             NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache-amd64
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache-amd64,mode=max
 
-  build-and-push-schedule-image:
-    runs-on: ubuntu-latest
-
+  cloud-arm64:
+    runs-on: hanzo-arm64
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.cloud
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:arm64-${{ github.sha }}
+          platforms: linux/arm64
+          build-args: |
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache-arm64
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache-arm64,mode=max
 
-      - name: Set tag and version
-        id: meta-schedule
+  cloud-manifest:
+    needs: [cloud-amd64, cloud-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        run: |
+          VERSION=$(jq -r .version app/platform/package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "suffix=latest" >> $GITHUB_OUTPUT
+          else
+            echo "suffix=canary" >> $GITHUB_OUTPUT
+          fi
+      - name: Create and push multi-arch manifest
+        run: |
+          IMG=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud
+          SHA=${{ github.sha }}
+          VERSION=${{ steps.meta.outputs.version }}
+          SUFFIX=${{ steps.meta.outputs.suffix }}
+
+          docker manifest create ${IMG}:${SUFFIX} \
+            ${IMG}:amd64-${SHA} \
+            ${IMG}:arm64-${SHA}
+          docker manifest push ${IMG}:${SUFFIX}
+
+          if [ "${SUFFIX}" = "latest" ]; then
+            docker manifest create ${IMG}:${VERSION} \
+              ${IMG}:amd64-${SHA} \
+              ${IMG}:arm64-${SHA}
+            docker manifest push ${IMG}:${VERSION}
+          fi
+
+  # ── Build schedule + server (amd64-only for now) ─────────────────────
+  schedule:
+    runs-on: hanzo-amd64
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - id: meta
         run: |
           VERSION=$(jq -r .version app/platform/package.json)
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "tags=ghcr.io/hanzoai/platform-schedule:latest,ghcr.io/hanzoai/platform-schedule:${VERSION}" >> $GITHUB_OUTPUT
+            echo "tags=${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:latest,${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:${VERSION}" >> $GITHUB_OUTPUT
           else
-            echo "tags=ghcr.io/hanzoai/platform-schedule:canary" >> $GITHUB_OUTPUT
+            echo "tags=${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:canary" >> $GITHUB_OUTPUT
           fi
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.schedule
           push: true
-          tags: ${{ steps.meta-schedule.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
           platforms: linux/amd64
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:buildcache,mode=max
 
-  build-and-push-server-image:
-    runs-on: ubuntu-latest
-
+  server:
+    runs-on: hanzo-amd64
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set tag and version
-        id: meta-server
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - id: meta
         run: |
           VERSION=$(jq -r .version app/platform/package.json)
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "tags=ghcr.io/hanzoai/platform-server:latest,ghcr.io/hanzoai/platform-server:${VERSION}" >> $GITHUB_OUTPUT
+            echo "tags=${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:latest,${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:${VERSION}" >> $GITHUB_OUTPUT
           else
-            echo "tags=ghcr.io/hanzoai/platform-server:canary" >> $GITHUB_OUTPUT
+            echo "tags=${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:canary" >> $GITHUB_OUTPUT
           fi
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.server
           push: true
-          tags: ${{ steps.meta-server.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
           platforms: linux/amd64
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:buildcache,mode=max
