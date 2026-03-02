@@ -1,16 +1,14 @@
 import path from "node:path";
+import { CLEANUP_CRON_JOB } from "@hanzo/platform/constants";
 import { member } from "@hanzo/platform/db/schema";
 import type { BackupSchedule } from "@hanzo/platform/services/backup";
 import { getAllServers } from "@hanzo/platform/services/server";
+import { getWebServerSettings } from "@hanzo/platform/services/web-server-settings";
 import { eq } from "drizzle-orm";
 import { scheduleJob } from "node-schedule";
 import { db } from "../../db/index";
 import { startLogCleanup } from "../access-log/handler";
-import {
-	cleanUpDockerBuilder,
-	cleanUpSystemPrune,
-	cleanUpUnusedImages,
-} from "../docker/utils";
+import { cleanupAll } from "../docker/utils";
 import { sendDockerCleanupNotifications } from "../notifications/docker-cleanup";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
 import { getS3Credentials, scheduleBackup } from "./utils";
@@ -29,16 +27,22 @@ export const initCronJobs = async () => {
 		return;
 	}
 
-	if (admin.user.enableDockerCleanup) {
-		scheduleJob("docker-cleanup", "0 0 * * *", async () => {
-			console.log(
-				`Docker Cleanup ${new Date().toLocaleString()}]  Running docker cleanup`,
-			);
-			await cleanUpUnusedImages();
-			await cleanUpDockerBuilder();
-			await cleanUpSystemPrune();
-			await sendDockerCleanupNotifications(admin.user.id);
-		});
+	const webServerSettings = await getWebServerSettings();
+
+	if (webServerSettings?.enableDockerCleanup) {
+		try {
+			scheduleJob("docker-cleanup", CLEANUP_CRON_JOB, async () => {
+				console.log(
+					`Docker Cleanup ${new Date().toLocaleString()}]  Running docker cleanup`,
+				);
+
+				await cleanupAll();
+
+				await sendDockerCleanupNotifications(admin.user.id);
+			});
+		} catch (error) {
+			console.error("[Backup] Docker Cleanup Error", error);
+		}
 	}
 
 	const servers = await getAllServers();
@@ -46,18 +50,22 @@ export const initCronJobs = async () => {
 	for (const server of servers) {
 		const { serverId, enableDockerCleanup, name } = server;
 		if (enableDockerCleanup) {
-			scheduleJob(serverId as string, "0 0 * * *", async () => {
-				console.log(
-					`SERVER-BACKUP[${new Date().toLocaleString()}] Running Cleanup ${name}`,
-				);
-				await cleanUpUnusedImages(serverId as string);
-				await cleanUpDockerBuilder(serverId as string);
-				await cleanUpSystemPrune(serverId as string);
-				await sendDockerCleanupNotifications(
-					admin.user.id,
-					`Docker cleanup for Server ${name} (${serverId})`,
-				);
-			});
+			try {
+				scheduleJob(serverId, CLEANUP_CRON_JOB, async () => {
+					console.log(
+						`SERVER-BACKUP[${new Date().toLocaleString()}] Running Cleanup ${name}`,
+					);
+
+					await cleanupAll(serverId);
+
+					await sendDockerCleanupNotifications(
+						admin.user.id,
+						`Docker cleanup for Server ${name} (${serverId})`,
+					);
+				});
+			} catch (error) {
+				console.error(`[Backup] ${error}`);
+			}
 		}
 	}
 
@@ -86,9 +94,16 @@ export const initCronJobs = async () => {
 		}
 	}
 
-	if (admin?.user.logCleanupCron) {
-		console.log("Starting log requests cleanup", admin.user.logCleanupCron);
-		await startLogCleanup(admin.user.logCleanupCron);
+	if (webServerSettings?.logCleanupCron) {
+		try {
+			console.log(
+				"Starting log requests cleanup",
+				webServerSettings.logCleanupCron,
+			);
+			await startLogCleanup(webServerSettings.logCleanupCron);
+		} catch (error) {
+			console.error("[Backup] Log Cleanup Error", error);
+		}
 	}
 };
 
@@ -107,7 +122,7 @@ export const keepLatestNBackups = async (
 			backup.prefix,
 		);
 
-		// --include "*.sql.gz" or "*.zip" ensures nothing else other than the platform backup files are touched by rclone
+		// --include "*.sql.gz" or "*.zip" ensures nothing else other than the dokploy backup files are touched by rclone
 		const rcloneList = `rclone lsf ${rcloneFlags.join(" ")} --include "*${backup.databaseType === "web-server" ? ".zip" : ".sql.gz"}" ${backupFilesPath}`;
 		// when we pipe the above command with this one, we only get the list of files we want to delete
 		const sortAndPickUnwantedBackups = `sort -r | tail -n +$((${backup.keepLatestCount}+1)) | xargs -I{}`;
