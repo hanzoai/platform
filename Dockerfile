@@ -6,13 +6,24 @@ RUN corepack enable
 RUN corepack prepare pnpm@10.22.0 --activate
 
 FROM base AS build
-COPY . /usr/src/app
 WORKDIR /usr/src/app
 
+# System deps for native modules (cached unless base image changes)
 RUN apt-get update && apt-get install -y python3 make g++ git python3-pip pkg-config libsecret-1-dev && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
+# Copy only package manifests first (cached unless deps change)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY app/api/package.json ./app/api/
+COPY app/platform/package.json ./app/platform/
+COPY app/schedules/package.json ./app/schedules/
+COPY pkg/platform/package.json ./pkg/platform/
+COPY pkg/mcp/package.json ./pkg/mcp/
+
+# Install dependencies (cached unless package.json or lockfile changes)
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --no-frozen-lockfile
+
+# Now copy source code (this layer rebuilds on any source change)
+COPY . .
 
 # Deploy only the platform app
 
