@@ -45,9 +45,9 @@ export const UpdateServer = ({
 	const [isUpdateAvailable, setIsUpdateAvailable] = useState(
 		!!updateData?.updateAvailable,
 	);
-	const { mutateAsync: getUpdateData, isPending: isLoading } =
+	const { mutateAsync: getUpdateData, isPending } =
 		api.settings.getUpdateData.useMutation();
-	const { data: platformVersion } = api.settings.getHanzoVersion.useQuery();
+	const { data: dokployVersion } = api.settings.getHanzoVersion.useQuery();
 	const { data: releaseTag } = api.settings.getReleaseTag.useQuery();
 	const [latestVersion, setLatestVersion] = useState(
 		updateData?.latestVersion ?? "",
@@ -131,11 +131,13 @@ export const UpdateServer = ({
 					<DialogTitle className="text-2xl font-semibold">
 						Web Server Update
 					</DialogTitle>
-					{platformVersion && (
+					{dokployVersion && (
 						<div className="flex items-center gap-1.5 rounded-full px-3 py-1 mr-2 bg-muted">
 							<Server className="h-4 w-4 text-muted-foreground" />
 							<span className="text-sm text-muted-foreground">
-								{platformVersion} | {releaseTag}
+								{dokployVersion}{" "}
+								{(releaseTag === "canary" || releaseTag === "feature") &&
+									`(${releaseTag})`}
 							</span>
 						</div>
 					)}
@@ -145,7 +147,7 @@ export const UpdateServer = ({
 				{!hasCheckedUpdate && (
 					<div className="mb-8">
 						<p className="text text-muted-foreground">
-							Check for new releases and update Hanzo.
+							Check for new releases and update Hanzo Platform.
 							<br />
 							<br />
 							We recommend checking for updates regularly to ensure you have the
@@ -194,7 +196,7 @@ export const UpdateServer = ({
 				)}
 
 				{/* Up to date state */}
-				{hasCheckedUpdate && !isUpdateAvailable && !isLoading && (
+				{hasCheckedUpdate && !isUpdateAvailable && !isPending && (
 					<div className="mb-8">
 						<div className="flex flex-col items-center gap-6 mb-6">
 							<div className="rounded-full p-4 bg-emerald-400/40">
@@ -213,7 +215,7 @@ export const UpdateServer = ({
 					</div>
 				)}
 
-				{hasCheckedUpdate && isLoading && (
+				{hasCheckedUpdate && isPending && (
 					<div className="mb-8">
 						<div className="flex flex-col items-center gap-6 mb-6">
 							<div className="rounded-full p-4 bg-[#5B9DFF]/40 text-foreground">
@@ -237,7 +239,7 @@ export const UpdateServer = ({
 							<div className="text-[#5B9DFF]">
 								We recommend reviewing the{" "}
 								<Link
-									href="https://github.com/Hanzo/platform/releases"
+									href="https://github.com/Hanzo Platform/dokploy/releases"
 									target="_blank"
 									className="text-white underline hover:text-zinc-200"
 								>
@@ -250,7 +252,7 @@ export const UpdateServer = ({
 				)}
 
 				<div className="flex items-center justify-between pt-2">
-					<ToggleAutoCheckUpdates disabled={isLoading} />
+					<ToggleAutoCheckUpdates disabled={isPending} />
 				</div>
 
 				<div className="space-y-4 flex items-center justify-end mt-4	">
@@ -264,9 +266,9 @@ export const UpdateServer = ({
 							<Button
 								variant="secondary"
 								onClick={handleCheckUpdates}
-								disabled={isLoading}
+								disabled={isPending}
 							>
-								{isLoading ? (
+								{isPending ? (
 									<>
 										<RefreshCcw className="h-4 w-4 animate-spin" />
 										Checking for updates

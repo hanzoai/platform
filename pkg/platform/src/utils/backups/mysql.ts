@@ -3,8 +3,8 @@ import {
 	createDeploymentBackup,
 	updateDeploymentStatus,
 } from "@hanzo/platform/services/deployment";
-import type { MySql } from "@hanzo/platform/services/mysql";
 import { findEnvironmentById } from "@hanzo/platform/services/environment";
+import type { MySql } from "@hanzo/platform/services/mysql";
 import { findProjectById } from "@hanzo/platform/services/project";
 import { sendDatabaseBackupNotifications } from "../notifications/database-backup";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
