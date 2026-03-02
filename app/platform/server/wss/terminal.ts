@@ -17,8 +17,8 @@ mkdir -p $HOME/.ssh && \\
 chmod 700 $HOME/.ssh && \\
 touch $HOME/.ssh/authorized_keys && \\
 chmod 600 $HOME/.ssh/authorized_keys && \\
-cat /etc/platform/ssh/auto_generated-platform-local.pub >> $HOME/.ssh/authorized_keys && \\
-echo "✓ Hanzo SSH key added successfully. Reopen the terminal in Hanzo to reconnect."
+cat /etc/platform/ssh/auto_generated-dokploy-local.pub >> $HOME/.ssh/authorized_keys && \\
+echo "✓ Hanzo Platform SSH key added successfully. Reopen the terminal in Hanzo Platform to reconnect."
 # ----------------------------------------`;
 
 const COMMAND_TO_GRANT_PERMISSION_ACCESS = `
@@ -97,7 +97,12 @@ export const setupTerminalWebSocketServer = (
 
 		const isLocalServer = serverId === "local";
 
-		if (isLocalServer && !IS_CLOUD) {
+		if (isLocalServer) {
+			if (IS_CLOUD) {
+				ws.send("This feature is not available in the cloud version.");
+				ws.close();
+				return;
+			}
 			const port = Number(url.searchParams.get("port"));
 			const username = url.searchParams.get("username");
 

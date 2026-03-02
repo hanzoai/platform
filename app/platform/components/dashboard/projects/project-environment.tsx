@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { FileIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -41,7 +41,7 @@ interface Props {
 export const ProjectEnvironment = ({ projectId, children }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isPending: isLoading } =
+	const { mutateAsync, error, isError, isPending } =
 		api.project.update.useMutation();
 	const { data } = api.project.one.useQuery(
 		{
@@ -80,6 +80,21 @@ export const ProjectEnvironment = ({ projectId, children }: Props) => {
 			})
 			.finally(() => {});
 	};
+
+	// Add keyboard shortcut for Ctrl+S/Cmd+S
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if ((e.ctrlKey || e.metaKey) && e.key === "s" && !isPending && isOpen) {
+				e.preventDefault();
+				form.handleSubmit(onSubmit)();
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => {
+			document.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [form, onSubmit, isPending, isOpen]);
 
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -140,7 +155,7 @@ PORT=3000
 									)}
 								/>
 								<DialogFooter>
-									<Button isLoading={isLoading} type="submit">
+									<Button isLoading={isPending} type="submit">
 										Update
 									</Button>
 								</DialogFooter>

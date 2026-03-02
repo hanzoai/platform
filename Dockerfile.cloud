@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
-FROM node:20.16.0-slim AS base
+FROM node:24.4.0-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
-RUN corepack prepare pnpm@9.12.0 --activate
+RUN corepack prepare pnpm@10.22.0 --activate
 
 FROM base AS build
 COPY . /usr/src/app
@@ -16,32 +16,19 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=@hanzo/platform 
 
 
 # Deploy only the platform app
-ARG NEXT_PUBLIC_UMAMI_HOST
-ENV NEXT_PUBLIC_UMAMI_HOST=$NEXT_PUBLIC_UMAMI_HOST
-
-ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
-ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID
-
 ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 ENV NODE_ENV=production
-# Limit Node.js heap to prevent OOM in constrained builders
-ENV NODE_OPTIONS="--max-old-space-size=4096"
-
-# Build platform package first
 RUN pnpm --filter=@hanzo/platform build
-
-# Build Next.js app (memory-intensive step)
 RUN pnpm --filter=./app/platform run build
 
-# Deploy production deps and copy build artifacts
-RUN pnpm --filter=./app/platform --prod deploy /prod/platform && \
-    cp -R /usr/src/app/app/platform/.next /prod/platform/.next && \
-    cp -R /usr/src/app/app/platform/dist /prod/platform/dist
+RUN pnpm --filter=./app/platform --prod deploy --legacy /prod/platform
+
+RUN cp -R /usr/src/app/app/platform/.next /prod/platform/.next
+RUN cp -R /usr/src/app/app/platform/dist /prod/platform/dist
 
 FROM base AS platform
-LABEL org.opencontainers.image.source=https://github.com/hanzoai/platform
 WORKDIR /app
 
 # Set production
