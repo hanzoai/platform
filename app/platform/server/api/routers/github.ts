@@ -6,9 +6,9 @@ import {
 	updateGithub,
 	updateGitProvider,
 } from "@hanzo/platform";
+import { db } from "@hanzo/platform/db";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { db } from "@/server/db";
 import {
 	apiFindGithubBranches,
 	apiFindOneGithub,
@@ -138,6 +138,6 @@ export const githubRouter = createTRPCRouter({
 
 			await updateGithub(input.githubId, {
 				...input,
-			} as any);
+			});
 		}),
 });

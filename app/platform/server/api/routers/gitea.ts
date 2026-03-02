@@ -8,9 +8,9 @@ import {
 	updateGitea,
 	updateGitProvider,
 } from "@hanzo/platform";
+import { db } from "@hanzo/platform/db";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { db } from "@/server/db";
 import {
 	apiCreateGitea,
 	apiFindGiteaBranches,
