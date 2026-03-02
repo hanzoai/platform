@@ -111,7 +111,7 @@ const createSchema = createInsertSchema(postgres, {
 		}),
 	databaseName: z.string().min(1),
 	databaseUser: z.string().min(1),
-	dockerImage: z.string().default("postgres:18"),
+	dockerImage: z.string().default("ghcr.io/hanzoai/sql:18"),
 	command: z.string().optional(),
 	args: z.array(z.string()).optional(),
 	env: z.string().optional(),

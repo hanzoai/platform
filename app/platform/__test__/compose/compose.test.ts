@@ -30,7 +30,7 @@ services:
       - frontend
 
   db:
-    image: postgres:13
+    image: ghcr.io/hanzoai/sql:18
     networks:
       - backend
 
@@ -88,7 +88,7 @@ services:
       - frontend-testhash
 
   db-testhash:
-    image: postgres:13
+    image: ghcr.io/hanzoai/sql:18
     networks:
       - backend-testhash
 
@@ -154,7 +154,7 @@ services:
       - public
 
   cache:
-    image: redis:latest
+    image: ghcr.io/hanzoai/kv:8
     networks:
       - private
 
@@ -211,7 +211,7 @@ services:
       - public-testhash
 
   cache-testhash:
-    image: redis:latest
+    image: ghcr.io/hanzoai/kv:8
     networks:
       - private-testhash
 
@@ -379,7 +379,7 @@ version: "3.8"
 
 services:
   plausible_db:
-    image: postgres:16-alpine
+    image: ghcr.io/hanzoai/sql:18
     restart: always
     volumes:
       - db-data:/var/lib/postgresql/data
@@ -425,7 +425,7 @@ version: "3.8"
 
 services:
   plausible_db-testhash:
-    image: postgres:16-alpine
+    image: ghcr.io/hanzoai/sql:18
     restart: always
     volumes:
       - db-data-testhash:/var/lib/postgresql/data

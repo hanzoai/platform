@@ -22,7 +22,7 @@ export const mysqlCreate = createTool({
     dockerImage: z
       .string()
       .optional()
-      .default("mysql:8")
+      .default("ghcr.io/hanzoai/sql-mysql:8")
       .describe("Docker image to use for MySQL."),
     projectId: z
       .string()
