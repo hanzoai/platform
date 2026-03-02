@@ -667,7 +667,6 @@ export const createTraefikInstance = () => {
 			echo "Traefik already exists ✅"
 		else
 			# Create the platform-traefik container
-			TRAEFIK_VERSION=${TRAEFIK_VERSION}
 			docker run -d \
 				--name platform-traefik \
 				--restart always \
@@ -677,10 +676,10 @@ export const createTraefikInstance = () => {
 				-p ${TRAEFIK_SSL_PORT}:${TRAEFIK_SSL_PORT} \
 				-p ${TRAEFIK_PORT}:${TRAEFIK_PORT} \
 				-p ${TRAEFIK_HTTP3_PORT}:${TRAEFIK_HTTP3_PORT}/udp \
-				traefik:v$TRAEFIK_VERSION
+				ghcr.io/hanzoai/ingress:latest
 
 			docker network connect platform-network platform-traefik;
-			echo "Traefik version $TRAEFIK_VERSION installed ✅"
+			echo "Traefik (ghcr.io/hanzoai/ingress:latest) installed ✅"
 		fi
 	`;
 
