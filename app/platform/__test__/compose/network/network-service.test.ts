@@ -97,7 +97,7 @@ version: "3.8"
 
 services:
   redis:
-    image: redis:alpine
+    image: ghcr.io/hanzoai/kv:8
     networks:
       backend:
 
@@ -140,7 +140,7 @@ services:
           - api
 
   redis:
-    image: redis:alpine
+    image: ghcr.io/hanzoai/kv:8
     networks:
       backend:
 
@@ -232,7 +232,7 @@ services:
         aliases:
           - api
   redis:
-    image: redis:alpine
+    image: ghcr.io/hanzoai/kv:8
     networks:
       platform-network:
   db:

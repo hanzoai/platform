@@ -129,7 +129,7 @@ export const ShowCustomCommand = ({ id, type }: Props) => {
 											<FormItem>
 												<FormLabel>Docker Image</FormLabel>
 												<FormControl>
-													<Input placeholder="postgres:18" {...field} />
+													<Input placeholder="ghcr.io/hanzoai/sql:18" {...field} />
 												</FormControl>
 
 												<FormMessage />
