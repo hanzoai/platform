@@ -121,7 +121,7 @@ const createSchema = createInsertSchema(mariadb, {
 				"Password contains invalid characters. Please avoid: $ ! ' \" \\ / and space characters for database compatibility",
 		})
 		.optional(),
-	dockerImage: z.string().default("mariadb:6"),
+	dockerImage: z.string().default("ghcr.io/hanzoai/sql-maria:11"),
 	command: z.string().optional(),
 	args: z.array(z.string()).optional(),
 	env: z.string().optional(),
