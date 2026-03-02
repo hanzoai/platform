@@ -6,32 +6,21 @@ import {
 } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
+import type { z } from "zod";
 
 export type Server = typeof server.$inferSelect;
 
 export const createServer = async (
-	input: typeof apiCreateServer._type,
+	input: z.infer<typeof apiCreateServer>,
 	organizationId: string,
 ) => {
-	const insertData: any = {
-		name: input.name,
-		ipAddress: input.ipAddress,
-		port: input.port,
-		username: input.username,
-		organizationId: organizationId,
-		createdAt: new Date().toISOString(),
-	};
-	
-	if (input.description) {
-		insertData.description = input.description;
-	}
-	if (input.sshKeyId) {
-		insertData.sshKeyId = input.sshKeyId;
-	}
-	
 	const newServer = await db
 		.insert(server)
-		.values(insertData)
+		.values({
+			...input,
+			organizationId: organizationId,
+			createdAt: new Date().toISOString(),
+		} as typeof server.$inferInsert)
 		.returning()
 		.then((value) => value[0]);
 
@@ -125,7 +114,9 @@ export const updateServerById = async (
 ) => {
 	const result = await db
 		.update(server)
-		.set(serverData as any)
+		.set({
+			...serverData,
+		})
 		.where(eq(server.serverId, serverId))
 		.returning()
 		.then((res) => res[0]);
@@ -135,5 +126,5 @@ export const updateServerById = async (
 
 export const getAllServers = async () => {
 	const servers = await db.query.server.findMany();
-	return servers as unknown as Server[];
+	return servers;
 };

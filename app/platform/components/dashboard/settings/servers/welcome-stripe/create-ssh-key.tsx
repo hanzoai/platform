@@ -12,19 +12,19 @@ import { api } from "@/utils/api";
 export const CreateSSHKey = () => {
 	const { data, refetch } = api.sshKey.all.useQuery();
 	const generateMutation = api.sshKey.generate.useMutation();
-	const { mutateAsync, isPending: isLoading } = api.sshKey.create.useMutation();
+	const { mutateAsync, isPending } = api.sshKey.create.useMutation();
 	const hasCreatedKey = useRef(false);
 	const [selectedOption, setSelectedOption] = useState<"manual" | "provider">(
 		"manual",
 	);
 
 	const cloudSSHKey = data?.find(
-		(sshKey) => sshKey.name === "platform-cloud-ssh-key",
+		(sshKey) => sshKey.name === "dokploy-cloud-ssh-key",
 	);
 
 	useEffect(() => {
 		const createKey = async () => {
-			if (!data || cloudSSHKey || hasCreatedKey.current || isLoading) {
+			if (!data || cloudSSHKey || hasCreatedKey.current || isPending) {
 				return;
 			}
 
@@ -35,8 +35,8 @@ export const CreateSSHKey = () => {
 					type: "rsa",
 				});
 				await mutateAsync({
-					name: "platform-cloud-ssh-key",
-					description: "Used on Hanzo Cloud",
+					name: "dokploy-cloud-ssh-key",
+					description: "Used on Hanzo Platform Cloud",
 					privateKey: keys.privateKey,
 					publicKey: keys.publicKey,
 					organizationId: "",
@@ -55,7 +55,7 @@ export const CreateSSHKey = () => {
 		<Card className="h-full bg-transparent">
 			<CardContent>
 				<div className="grid w-full gap-4 pt-4">
-					{isLoading || !cloudSSHKey ? (
+					{isPending || !cloudSSHKey ? (
 						<div className="min-h-[25vh] justify-center flex items-center gap-4">
 							<Loader2
 								className="animate-spin text-muted-foreground"
@@ -172,7 +172,7 @@ export const CreateSSHKey = () => {
 											etc.)
 										</p>
 										<Link
-											href="https://docs.hanzo.ai/docs/core/multi-server/instructions#requirements"
+											href="https://docs.hanzo.ai/docs/core/remote-servers/instructions#requirements"
 											target="_blank"
 											className="text-primary flex flex-row gap-2 mt-2"
 										>
