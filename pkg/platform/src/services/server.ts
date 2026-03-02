@@ -125,6 +125,6 @@ export const updateServerById = async (
 };
 
 export const getAllServers = async () => {
-	const servers = await db.query.server.findMany();
+	const servers = await db.query.server.findMany() as unknown as Server[];
 	return servers;
 };

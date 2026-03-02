@@ -41,6 +41,7 @@ export * from "./web-server-settings";
 
 // Hanzo-specific schemas
 export * from "./billing";
+export * from "./wallet";
 export * from "./cloud-provider";
 export * from "./compute-offer";
 export * from "./compute-pool";

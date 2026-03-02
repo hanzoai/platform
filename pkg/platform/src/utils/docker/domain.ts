@@ -214,7 +214,7 @@ export const addDomainToCompose = async (
 
 		if (!compose.isolatedDeployment) {
 			// Add the platform-network to the service
-			result.services[serviceName].networks = addHanzo PlatformNetworkToService(
+			result.services[serviceName].networks = addHanzoPlatformNetworkToService(
 				result.services[serviceName].networks,
 			);
 		}
@@ -222,7 +222,7 @@ export const addDomainToCompose = async (
 
 	// Add platform-network to the root of the compose file
 	if (!compose.isolatedDeployment) {
-		result.networks = addHanzo PlatformNetworkToRoot(result.networks);
+		result.networks = addHanzoPlatformNetworkToRoot(result.networks);
 	}
 
 	return result;
@@ -323,7 +323,7 @@ export const createDomainLabels = (
 	return labels;
 };
 
-export const addHanzo PlatformNetworkToService = (
+export const addHanzoPlatformNetworkToService = (
 	networkService: DefinitionsService["networks"],
 ) => {
 	let networks = networkService;
@@ -352,7 +352,7 @@ export const addHanzo PlatformNetworkToService = (
 	return networks;
 };
 
-export const addHanzo PlatformNetworkToRoot = (
+export const addHanzoPlatformNetworkToRoot = (
 	networkRoot: PropertiesNetworks | undefined,
 ) => {
 	let networks = networkRoot;
