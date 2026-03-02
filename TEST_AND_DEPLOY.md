@@ -42,7 +42,7 @@ export STRIPE_HOBBY_PRICE_ID="price_1QykWyJ03IK6WYmUMiX8dlsB"
 export STRIPE_PRO_PRICE_ID="price_1QymLmJ03IK6WYmUxlhDa1Gs"
 
 # 2. Start database
-docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=amukds4wi9001583845717ad2 -e POSTGRES_USER=hanzo -e POSTGRES_DB=hanzo postgres:15
+docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=amukds4wi9001583845717ad2 -e POSTGRES_USER=hanzo -e POSTGRES_DB=hanzo ghcr.io/hanzoai/sql:18
 
 # 3. Run migration
 pnpm db:push
