@@ -1,4 +1,3 @@
-import { validateRequest } from "@hanzo/platform";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import type { GetServerSidePropsContext, NextPage } from "next";
 import dynamic from "next/dynamic";
@@ -70,43 +69,7 @@ const Home: NextPage = () => {
 };
 
 export default Home;
-export async function getServerSideProps(context: GetServerSidePropsContext) {
-	const { req, res } = context;
-	const { user, session } = await validateRequest(context.req);
-	if (!user) {
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/",
-			},
-		};
-	}
-	const helpers = createServerSideHelpers({
-		router: appRouter,
-		ctx: {
-			req: req as any,
-			res: res as any,
-			db: null as any,
-			session: session as any,
-			user: user as any,
-		},
-		transformer: superjson,
-	});
-	if (user.role === "member") {
-		const userR = await helpers.user.one.fetch({
-			userId: user.id,
-		});
-
-		if (!userR?.canAccessToAPI) {
-			return {
-				redirect: {
-					permanent: true,
-					destination: "/",
-				},
-			};
-		}
-	}
-
+export async function getServerSideProps() {
 	return {
 		props: {},
 	};

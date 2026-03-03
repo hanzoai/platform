@@ -5,18 +5,20 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./db": {
-      "import": "./src/db/index.ts",
-      "require": "./dist/db/index.cjs.js"
-    },
-    "./setup/*": {
-      "import": "./src/setup/*.ts",
-      "require": "./dist/setup/index.cjs.js"
-    },
-    "./constants": {
-      "import": "./src/constants/index.ts",
-      "require": "./dist/constants.cjs.js"
-    }
+    "./package.json": "./package.json",
+    "./constants": "./src/constants/index.ts",
+    "./db": "./src/db/index.ts",
+    "./db/schema": "./src/db/schema/index.ts",
+    "./db/schema/*": "./src/db/schema/*.ts",
+    "./lib/auth": "./src/lib/auth.ts",
+    "./services/*": "./src/services/*.ts",
+    "./templates/*": "./src/templates/*.ts",
+    "./utils/*": "./src/utils/*.ts",
+    "./utils/ai/*": "./src/utils/ai/*.ts",
+    "./utils/backups/*": "./src/utils/backups/*.ts",
+    "./utils/process/*": "./src/utils/process/*.ts",
+    "./utils/restore": "./src/utils/restore/index.ts",
+    "./*": "./src/*.ts"
   },
   "scripts": {
     "build": "npm run switch:prod && rm -rf ./dist && tsc --project tsconfig.server.json && tsc-alias -p tsconfig.server.json",

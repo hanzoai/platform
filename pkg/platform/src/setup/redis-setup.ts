@@ -4,7 +4,7 @@ import { pullImage } from "../utils/docker/utils";
 
 export const initializeRedis = async () => {
 	const imageName = "redis:7";
-	const containerName = "platform-redis";
+	const containerName = "hanzo-redis";
 
 	const settings: CreateServiceOptions = {
 		Name: containerName,
