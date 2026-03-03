@@ -1,12 +1,29 @@
 -- Hanzo rebrand migration: rename dokploy references
--- 1. Rename notification column dokployRestart -> hanzoRestart
-ALTER TABLE "notification" RENAME COLUMN "dokployRestart" TO "hanzoRestart";
+-- All statements are idempotent (safe to re-run)
 
--- 2. Rename scheduleType enum value 'dokploy-server' -> 'hanzo-platform'
-ALTER TYPE "scheduleType" RENAME VALUE 'dokploy-server' TO 'hanzo-platform';
+-- 1. Rename notification column dokployRestart -> hanzoRestart (if not already renamed)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'notification' AND column_name = 'dokployRestart'
+  ) THEN
+    ALTER TABLE "notification" RENAME COLUMN "dokployRestart" TO "hanzoRestart";
+  END IF;
+END $$;
+
+-- 2. Rename scheduleType enum value 'dokploy-server' -> 'hanzo-platform' (if not already renamed)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_enum WHERE enumlabel = 'dokploy-server'
+    AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'scheduleType')
+  ) THEN
+    ALTER TYPE "scheduleType" RENAME VALUE 'dokploy-server' TO 'hanzo-platform';
+  END IF;
+END $$;
 
 -- 3. Update metricsConfig default JSON in webServerSettings
--- (existing rows with "Dokploy" in metricsConfig.server.type are handled by app code)
 ALTER TABLE "web_server_settings" ALTER COLUMN "metricsConfig" SET DEFAULT '{"server":{"type":"Hanzo Platform","refreshRate":60,"port":4500,"token":"","retentionDays":2,"cronJob":"","urlCallback":"","thresholds":{"cpu":0,"memory":0}},"containers":{"refreshRate":60,"services":{"include":[],"exclude":[]}}}'::jsonb;
 
 -- 4. Update existing metricsConfig rows from "Dokploy" to "Hanzo Platform"
