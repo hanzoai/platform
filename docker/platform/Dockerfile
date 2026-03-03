@@ -21,7 +21,7 @@ COPY . .
 
 # Run build commands:
 # 1. Build the platform package
-RUN pnpm --filter=@hanzo/platform build
+RUN pnpm --filter=@hanzo/core build
 # 2. Build the cloud (Next.js) app
 RUN pnpm --filter=./app/cloud run build
 
