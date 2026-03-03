@@ -1,7 +1,7 @@
 import { findComposeById } from "@hanzo/core/services/compose";
 import { dump, load } from "js-yaml";
 import { addAppNameToAllServiceNames } from "./collision/root-network";
-import { generateRandomHash } from "./compose";
+import { generateRandomHash, addSuffixToAllVolumes } from "./compose";
 import { addSuffixToAllProperties } from "./compose";
 import type { ComposeSpecification } from "./types";
 
@@ -21,7 +21,7 @@ export const randomizeIsolatedDeploymentComposeFile = async (
 	suffix?: string,
 ) => {
 	const compose = await findComposeById(composeId);
-	const composeFile = compose.composeFile;
+	const composeFile = compose?.composeFile;
 	const composeData = load(composeFile || "") as ComposeSpecification;
 
 	const randomSuffix = suffix || compose?.appName || generateRandomHash();
