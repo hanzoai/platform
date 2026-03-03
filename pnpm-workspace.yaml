@@ -1,6 +1,6 @@
 packages:
-  - "app/dokploy"
   - "app/api"
+  - "app/dash"
   - "app/monitoring"
   - "app/schedules"
   - "app/models"
