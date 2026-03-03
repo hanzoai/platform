@@ -3,7 +3,7 @@ import * as bcrypt from "bcrypt";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { admin, apiKey, organization, twoFactor } from "better-auth/plugins";
+import { admin, apiKey, organization, twoFactor, genericOAuth } from "better-auth/plugins";
 import { and, desc, eq } from "drizzle-orm";
 import { IS_CLOUD } from "../constants";
 import { db } from "../db";
@@ -12,6 +12,9 @@ import { getUserByToken } from "../services/admin";
 import { updateUser } from "../services/user";
 import { sendEmail } from "../verification/send-verification-email";
 import { getPublicIpWithFallback } from "../wss/utils";
+
+// Hanzo IAM OIDC configuration
+const HANZO_IAM_URL = process.env.HANZO_IAM_URL || "https://iam.hanzo.ai";
 
 const { handler, api } = betterAuth({
 	database: drizzleAdapter(db, {
@@ -218,6 +221,23 @@ const { handler, api } = betterAuth({
 				}
 			},
 		}),
+		// Hanzo IAM OIDC provider
+		...(process.env.HANZO_IAM_CLIENT_ID
+			? [
+					genericOAuth({
+						config: [
+							{
+								providerId: "hanzo",
+								discoveryUrl: `${HANZO_IAM_URL}/.well-known/openid-configuration`,
+								clientId: process.env.HANZO_IAM_CLIENT_ID as string,
+								clientSecret: process.env.HANZO_IAM_CLIENT_SECRET as string,
+								scopes: ["openid", "profile", "email"],
+								pkce: true,
+							},
+						],
+					}),
+				]
+			: []),
 		...(IS_CLOUD
 			? [
 					admin({
