@@ -54,7 +54,7 @@ export const stackRegistry: StackCategory[] = [
 					],
 					defaultValues: {
 						repoOrRegistry: "registry",
-						"registry.imageUrl": "docker.io/mongo:7.0.7",
+						"registry.imageUrl": "ghcr.io/hanzoai/docdb:latest",
 						"networking.containerPort": 27017,
 						"networking.tcpProxy.enabled": false,
 						"podConfig.restartPolicy": "Always",
@@ -131,7 +131,7 @@ export const stackRegistry: StackCategory[] = [
 					],
 					defaultValues: {
 						repoOrRegistry: "registry",
-						"registry.imageUrl": "docker.io/postgres:16",
+						"registry.imageUrl": "ghcr.io/hanzoai/sql:18",
 						"networking.containerPort": 5432,
 						"networking.tcpProxy.enabled": false,
 						"podConfig.restartPolicy": "Always",
@@ -207,7 +207,7 @@ export const stackRegistry: StackCategory[] = [
 					],
 					defaultValues: {
 						repoOrRegistry: "registry",
-						"registry.imageUrl": "docker.io/mysql:8.4",
+						"registry.imageUrl": "ghcr.io/hanzoai/sql-mysql:8",
 						"networking.containerPort": 3306,
 						"networking.tcpProxy.enabled": false,
 						"podConfig.restartPolicy": "Always",
@@ -282,7 +282,7 @@ export const stackRegistry: StackCategory[] = [
 					],
 					defaultValues: {
 						repoOrRegistry: "registry",
-						"registry.imageUrl": "docker.io/mariadb:11.2",
+						"registry.imageUrl": "ghcr.io/hanzoai/sql-maria:11",
 						"networking.containerPort": 3306,
 						"networking.tcpProxy.enabled": false,
 						"podConfig.restartPolicy": "Always",
@@ -365,7 +365,7 @@ export const stackRegistry: StackCategory[] = [
 					],
 					defaultValues: {
 						repoOrRegistry: "registry",
-						"registry.imageUrl": "docker.io/redis:7.2.5",
+						"registry.imageUrl": "ghcr.io/hanzoai/kv:8",
 						"networking.containerPort": 6379,
 						"networking.tcpProxy.enabled": false,
 						"podConfig.restartPolicy": "Always",
@@ -497,7 +497,7 @@ export const stackRegistry: StackCategory[] = [
 					defaultValues: {
 						repoOrRegistry: "registry",
 						"registry.imageUrl":
-							"quay.io/minio/minio:RELEASE.2024-05-10T01-41-38Z",
+							"ghcr.io/hanzoai/storage:latest",
 						"networking.containerPort": 9000,
 						"networking.tcpProxy.enabled": false,
 						"podConfig.restartPolicy": "Always",
