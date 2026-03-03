@@ -130,7 +130,7 @@ const Service = (
 <<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/application/[applicationId].tsx
 					Application: {data?.name} - {data?.project.name} | Hanzo
 ========
-					Application: {data?.name} - {data?.environment.project.name} | Dokploy
+					Application: {data?.name} - {data?.environment.project.name} | Hanzo Platform
 >>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/application/[applicationId].tsx
 				</title>
 			</Head>

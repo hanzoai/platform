@@ -142,8 +142,8 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 
 	const hasServers = servers && servers.length > 0;
 	// Show dropdown logic based on cloud environment
-	// Cloud: show only if there are remote servers (no Dokploy option)
-	// Self-hosted: show only if there are remote servers (Dokploy is default, hide if no remote servers)
+	// Cloud: show only if there are remote servers (no Hanzo Platform option)
+	// Self-hosted: show only if there are remote servers (Hanzo Platform is default, hide if no remote servers)
 	const shouldShowServerDropdown = hasServers;
 
 	return (
@@ -470,7 +470,7 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 																	<SelectTrigger>
 																		<SelectValue
 																			placeholder={
-																				!isCloud ? "Dokploy" : "Select a Server"
+																				!isCloud ? "Hanzo Platform" : "Select a Server"
 																			}
 																		/>
 																	</SelectTrigger>
@@ -479,7 +479,7 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 																			{!isCloud && (
 																				<SelectItem value="dokploy">
 																					<span className="flex items-center gap-2 justify-between w-full">
-																						<span>Dokploy</span>
+																						<span>Hanzo Platform</span>
 																						<span className="text-muted-foreground text-xs self-center">
 																							Default
 																						</span>

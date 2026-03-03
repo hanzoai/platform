@@ -255,15 +255,15 @@ const setupDirectories = () => {
 };
 
 const setupMainDirectory = () => `
-	# Check if the /etc/dokploy directory exists
-	if [ -d /etc/dokploy ]; then
-		echo "/etc/dokploy already exists ✅"
+	# Check if the /etc/hanzo directory exists
+	if [ -d /etc/hanzo ]; then
+		echo "/etc/hanzo already exists ✅"
 	else
-		# Create the /etc/dokploy directory
-		mkdir -p /etc/dokploy
-		chmod 777 /etc/dokploy
+		# Create the /etc/hanzo directory
+		mkdir -p /etc/hanzo
+		chmod 777 /etc/hanzo
 
-		echo "Directory /etc/dokploy created ✅"
+		echo "Directory /etc/hanzo created ✅"
 	fi
 `;
 
@@ -325,15 +325,15 @@ export const setupSwarm = () => `
 	`;
 
 const setupNetwork = () => `
-	# Check if the dokploy-network already exists
-	if docker network ls | grep -q 'dokploy-network'; then
-		echo "Network dokploy-network already exists ✅"
+	# Check if the hanzo-network already exists
+	if docker network ls | grep -q 'hanzo-network'; then
+		echo "Network hanzo-network already exists ✅"
 	else
-		# Create the dokploy-network if it doesn't exist
-		if docker network create --driver overlay --attachable dokploy-network; then
+		# Create the hanzo-network if it doesn't exist
+		if docker network create --driver overlay --attachable hanzo-network; then
 			echo "Network created ✅"
 		else
-			echo "Failed to create dokploy-network ❌" >&2
+			echo "Failed to create hanzo-network ❌" >&2
 			exit 1
 		fi
 	fi
@@ -397,7 +397,7 @@ if [ -x "$(command -v snap)" ]; then
     SNAP_DOCKER_INSTALLED=$(snap list docker >/dev/null 2>&1 && echo "true" || echo "false")
     if [ "$SNAP_DOCKER_INSTALLED" = "true" ]; then
         echo " - Docker is installed via snap."
-        echo "   Please note that Dokploy does not support Docker installed via snap."
+        echo "   Please note that Hanzo Platform does not support Docker installed via snap."
         echo "   Please remove Docker with snap (snap remove docker) and reexecute this script."
         exit 1
     fi
@@ -526,13 +526,13 @@ const createTraefikConfig = () => {
 	const config = getDefaultServerTraefikConfig();
 
 	const command = `
-	if [ -f "/etc/dokploy/traefik/dynamic/acme.json" ]; then
-		chmod 600 "/etc/dokploy/traefik/dynamic/acme.json"
+	if [ -f "/etc/hanzo/traefik/dynamic/acme.json" ]; then
+		chmod 600 "/etc/hanzo/traefik/dynamic/acme.json"
 	fi
-	if [ -f "/etc/dokploy/traefik/traefik.yml" ]; then
+	if [ -f "/etc/hanzo/traefik/traefik.yml" ]; then
 		echo "Traefik config already exists ✅"
 	else
-		echo "${config}" > /etc/dokploy/traefik/traefik.yml
+		echo "${config}" > /etc/hanzo/traefik/traefik.yml
 	fi
 	`;
 
@@ -542,10 +542,10 @@ const createTraefikConfig = () => {
 const createDefaultMiddlewares = () => {
 	const config = getDefaultMiddlewares();
 	const command = `
-	if [ -f "/etc/dokploy/traefik/dynamic/middlewares.yml" ]; then
+	if [ -f "/etc/hanzo/traefik/dynamic/middlewares.yml" ]; then
 		echo "Middlewares config already exists ✅"
 	else
-		echo "${config}" > /etc/dokploy/traefik/dynamic/middlewares.yml
+		echo "${config}" > /etc/hanzo/traefik/dynamic/middlewares.yml
 	fi
 	`;
 	return command;
@@ -564,30 +564,30 @@ export const installRClone = () => `
 export const createTraefikInstance = () => {
 	const command = `
 	    # Check if dokpyloy-traefik exists
-		if docker service inspect dokploy-traefik > /dev/null 2>&1; then
+		if docker service inspect hanzo-traefik > /dev/null 2>&1; then
 			echo "Migrating Traefik to Standalone..."
-			docker service rm dokploy-traefik
+			docker service rm hanzo-traefik
 			sleep 8
 			echo "Traefik migrated to Standalone ✅"
 		fi
 
-		if docker inspect dokploy-traefik > /dev/null 2>&1; then
+		if docker inspect hanzo-traefik > /dev/null 2>&1; then
 			echo "Traefik already exists ✅"
 		else
-			# Create the dokploy-traefik container
+			# Create the hanzo-traefik container
 			TRAEFIK_VERSION=${TRAEFIK_VERSION}
 			docker run -d \
-				--name dokploy-traefik \
+				--name hanzo-traefik \
 				--restart always \
-				-v /etc/dokploy/traefik/traefik.yml:/etc/traefik/traefik.yml \
-				-v /etc/dokploy/traefik/dynamic:/etc/dokploy/traefik/dynamic \
+				-v /etc/hanzo/traefik/traefik.yml:/etc/traefik/traefik.yml \
+				-v /etc/hanzo/traefik/dynamic:/etc/hanzo/traefik/dynamic \
 				-v /var/run/docker.sock:/var/run/docker.sock \
 				-p ${TRAEFIK_SSL_PORT}:${TRAEFIK_SSL_PORT} \
 				-p ${TRAEFIK_PORT}:${TRAEFIK_PORT} \
 				-p ${TRAEFIK_HTTP3_PORT}:${TRAEFIK_HTTP3_PORT}/udp \
 				traefik:v$TRAEFIK_VERSION
 
-			docker network connect dokploy-network dokploy-traefik;
+			docker network connect hanzo-network hanzo-traefik;
 			echo "Traefik version $TRAEFIK_VERSION installed ✅"
 		fi
 	`;

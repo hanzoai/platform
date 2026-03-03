@@ -27,7 +27,7 @@ const baseAdmin: User = {
 			},
 		},
 		server: {
-			type: "Dokploy",
+			type: "Hanzo Platform",
 			cronJob: "",
 			port: 4500,
 			refreshRate: 20,

@@ -105,7 +105,7 @@ const Postgresql = (
 <<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/postgres/[postgresId].tsx
 					Database: {data?.name} - {data?.project.name} | Hanzo
 ========
-					Database: {data?.name} - {data?.environment?.project?.name} | Dokploy
+					Database: {data?.name} - {data?.environment?.project?.name} | Hanzo Platform
 >>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/postgres/[postgresId].tsx
 				</title>
 			</Head>

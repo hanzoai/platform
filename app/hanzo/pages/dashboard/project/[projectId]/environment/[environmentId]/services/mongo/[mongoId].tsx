@@ -105,7 +105,7 @@ const Mongo = (
 <<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/mongo/[mongoId].tsx
 					Database: {data?.name} - {data?.project.name} | Hanzo
 ========
-					Database: {data?.name} - {data?.environment?.project?.name} | Dokploy
+					Database: {data?.name} - {data?.environment?.project?.name} | Hanzo Platform
 >>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/mongo/[mongoId].tsx
 				</title>
 			</Head>
