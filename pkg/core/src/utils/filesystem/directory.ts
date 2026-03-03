@@ -1,7 +1,7 @@
 import fs, { promises as fsPromises } from "node:fs";
 import path from "node:path";
-import { paths } from "@hanzo/core/constants";
-import type { Application } from "@hanzo/core/services/application";
+import { paths } from "@hanzo/platform/constants";
+import type { Application } from "@hanzo/platform/services/application";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
 
 export const recreateDirectory = async (pathFolder: string): Promise<void> => {

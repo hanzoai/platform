@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Platform daemon executable
+cd /home/z/platform/app/hanzo
+
+# Load environment variables
+export NODE_ENV=${NODE_ENV:-production}
+source /home/z/platform/app/hanzo/.env 2>/dev/null || true
+
+# Start the server
+exec node -r dotenv/config dist/server.mjs "$@"

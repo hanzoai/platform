@@ -1,6 +1,6 @@
-import { db } from "@hanzo/core/db";
-import { notifications } from "@hanzo/core/db/schema";
-import DatabaseBackupEmail from "@hanzo/core/emails/emails/database-backup";
+import { db } from "@hanzo/platform/db";
+import { notifications } from "@hanzo/platform/db/schema";
+import DatabaseBackupEmail from "@hanzo/platform/emails/emails/database-backup";
 import { renderAsync } from "@react-email/components";
 import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";

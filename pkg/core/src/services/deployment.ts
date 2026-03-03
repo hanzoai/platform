@@ -1,13 +1,13 @@
 import { existsSync, promises as fsPromises } from "node:fs";
 import path from "node:path";
-import { paths } from "@hanzo/core/constants";
-import { db } from "@hanzo/core/db";
+import { paths } from "@hanzo/platform/constants";
+import { db } from "@hanzo/platform/db";
 import {
 	type apiCreateDeployment,
 	deployments,
-} from "@hanzo/core/db/schema";
+} from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
-import { removeDirectoryIfExistsContent } from "@hanzo/core/utils/filesystem/directory";
+import { removeDirectoryIfExistsContent } from "@hanzo/platform/utils/filesystem/directory";
 import { format } from "date-fns";
 import { desc, eq } from "drizzle-orm";
 import {
@@ -16,7 +16,7 @@ import {
 	updateApplicationStatus,
 } from "./application";
 
-import { execAsyncRemote, killProcess, killRemoteProcess } from "@hanzo/core/utils/process/execAsync";
+import { execAsyncRemote, killProcess, killRemoteProcess } from "@hanzo/platform/utils/process/execAsync";
 
 export type Deployment = typeof deployments.$inferSelect;
 

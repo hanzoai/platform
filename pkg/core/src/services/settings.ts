@@ -1,10 +1,10 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { docker } from "@hanzo/core/constants";
+import { docker } from "@hanzo/platform/constants";
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@hanzo/core/utils/process/execAsync";
+} from "@hanzo/platform/utils/process/execAsync";
 import {
 	initializeStandaloneTraefik,
 	initializeTraefikService,

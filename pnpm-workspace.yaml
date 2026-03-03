@@ -1,4 +1,3 @@
 packages:
-  - "apps/api"
-  - "apps/schedules"
-  - "packages/server"
+  - "app/*"
+  - "pkg/*"

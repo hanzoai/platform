@@ -2,7 +2,7 @@ import type { WriteStream } from "node:fs";
 import {
 	buildCustomDocker,
 	getDockerCommand,
-} from "@hanzo/core/utils/builders/docker-file";
+} from "@hanzo/platform/utils/builders/docker-file";
 import { createFile, getCreateFileCommand } from "../docker/utils";
 import { getBuildAppDirectory } from "../filesystem/directory";
 import type { ApplicationNested } from ".";
