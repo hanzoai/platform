@@ -1,8 +1,8 @@
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { IS_CLOUD, paths } from "@hanzo/core/constants";
-import type { Destination } from "@hanzo/core/services/destination";
+import { IS_CLOUD, paths } from "@hanzo/platform/constants";
+import type { Destination } from "@hanzo/platform/services/destination";
 import { getS3Credentials } from "../backups/utils";
 import { execAsync } from "../process/execAsync";
 

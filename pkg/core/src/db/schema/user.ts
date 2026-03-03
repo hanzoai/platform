@@ -1,4 +1,4 @@
-import { paths } from "@hanzo/core/constants";
+import { paths } from "@hanzo/platform/constants";
 import { relations } from "drizzle-orm";
 import {
 	boolean,

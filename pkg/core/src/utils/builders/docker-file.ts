@@ -1,5 +1,5 @@
 import type { WriteStream } from "node:fs";
-import { prepareEnvironmentVariables } from "@hanzo/core/utils/docker/utils";
+import { prepareEnvironmentVariables } from "@hanzo/platform/utils/docker/utils";
 import {
 	getBuildAppDirectory,
 	getDockerContextPath,

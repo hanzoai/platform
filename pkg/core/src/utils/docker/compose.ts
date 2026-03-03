@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { findComposeById } from "@hanzo/core/services/compose";
+import { findComposeById } from "@hanzo/platform/services/compose";
 import { dump, load } from "js-yaml";
 import { addSuffixToAllConfigs } from "./compose/configs";
 import { addSuffixToAllNetworks } from "./compose/network";

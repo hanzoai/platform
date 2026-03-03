@@ -1,15 +1,15 @@
-import { db } from "@hanzo/core/db";
+import { db } from "@hanzo/platform/db";
 import {
 	type apiCreateMongo,
 	backups,
 	buildAppName,
 	compose,
 	mongo,
-} from "@hanzo/core/db/schema";
-import { generatePassword } from "@hanzo/core/templates";
-import { buildMongo } from "@hanzo/core/utils/databases/mongo";
-import { pullImage } from "@hanzo/core/utils/docker/utils";
-import { execAsyncRemote } from "@hanzo/core/utils/process/execAsync";
+} from "@hanzo/platform/db/schema";
+import { generatePassword } from "@hanzo/platform/templates";
+import { buildMongo } from "@hanzo/platform/utils/databases/mongo";
+import { pullImage } from "@hanzo/platform/utils/docker/utils";
+import { execAsyncRemote } from "@hanzo/platform/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq, getTableColumns } from "drizzle-orm";
 import { validUniqueServerAppName } from "./project";
