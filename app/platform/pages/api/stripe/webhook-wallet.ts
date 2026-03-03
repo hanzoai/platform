@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { organizationId, plan } = subscription.metadata;
         if (!organizationId) break;
 
-        const normalizedPlan = normalizePlanType(plan);
+        const normalizedPlan = normalizePlanType(plan || "");
         const planConfig = PLANS[normalizedPlan];
         await addCreditsToWallet(organizationId, planConfig.monthlyCredits, "monthly_credit", `Monthly ${normalizedPlan} credits`);
         break;
