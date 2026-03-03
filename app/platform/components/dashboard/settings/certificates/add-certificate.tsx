@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { HelpCircle, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -62,13 +62,13 @@ export const AddCertificate = () => {
 	const utils = api.useUtils();
 
 	const { data: isCloud } = api.settings.isCloud.useQuery();
-	const { mutateAsync, isError, error, isPending: isLoading } =
+	const { mutateAsync, isError, error, isPending } =
 		api.certificates.create.useMutation();
 	const { data: servers } = api.server.withSSHKey.useQuery();
 	const hasServers = servers && servers.length > 0;
 	// Show dropdown logic based on cloud environment
-	// Cloud: show only if there are remote servers (no Hanzo option)
-	// Self-hosted: show only if there are remote servers (Hanzo is default, hide if no remote servers)
+	// Cloud: show only if there are remote servers (no Hanzo Platform option)
+	// Self-hosted: show only if there are remote servers (Hanzo Platform is default, hide if no remote servers)
 	const shouldShowServerDropdown = hasServers;
 
 	const form = useForm<AddCertificate>({
@@ -90,7 +90,7 @@ export const AddCertificate = () => {
 			certificateData: data.certificateData,
 			privateKey: data.privateKey,
 			autoRenew: data.autoRenew,
-			serverId: data.serverId === "platform" ? undefined : data.serverId,
+			serverId: data.serverId === "dokploy" ? undefined : data.serverId,
 			organizationId: "",
 		})
 			.then(async () => {
@@ -199,20 +199,20 @@ export const AddCertificate = () => {
 										<Select
 											onValueChange={field.onChange}
 											defaultValue={
-												field.value || (!isCloud ? "platform" : undefined)
+												field.value || (!isCloud ? "dokploy" : undefined)
 											}
 										>
 											<SelectTrigger>
 												<SelectValue
-													placeholder={!isCloud ? "Hanzo" : "Select a Server"}
+													placeholder={!isCloud ? "Hanzo Platform" : "Select a Server"}
 												/>
 											</SelectTrigger>
 											<SelectContent>
 												<SelectGroup>
 													{!isCloud && (
-														<SelectItem value="platform">
+														<SelectItem value="dokploy">
 															<span className="flex items-center gap-2 justify-between w-full">
-																<span>Hanzo</span>
+																<span>Hanzo Platform</span>
 																<span className="text-muted-foreground text-xs self-center">
 																	Default
 																</span>
@@ -247,7 +247,7 @@ export const AddCertificate = () => {
 
 					<DialogFooter className="flex w-full flex-row !justify-end">
 						<Button
-							isLoading={isLoading}
+							isLoading={isPending}
 							form="hook-form-add-certificate"
 							type="submit"
 						>

@@ -8,12 +8,13 @@ import {
 	findComposeById,
 	findDeploymentById,
 	findServerById,
+	removeDeployment,
 	updateDeploymentStatus,
 } from "@hanzo/platform";
+import { db } from "@hanzo/platform/db";
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@/server/db";
 import {
 	apiFindAllByApplication,
 	apiFindAllByCompose,
@@ -70,40 +71,7 @@ export const deploymentRouter = createTRPCRouter({
 
 	allByType: protectedProcedure
 		.input(apiFindAllByType)
-		.query(async ({ input, ctx }) => {
-			// Verify the caller owns the parent resource before listing deployments
-			if (input.type === "application") {
-				const app = await findApplicationById(input.id);
-				if (
-					app.environment.project.organizationId !==
-					ctx.session.activeOrganizationId
-				) {
-					throw new TRPCError({
-						code: "UNAUTHORIZED",
-						message: "You are not authorized to access this resource",
-					});
-				}
-			} else if (input.type === "compose") {
-				const compose = await findComposeById(input.id);
-				if (
-					compose.environment.project.organizationId !==
-					ctx.session.activeOrganizationId
-				) {
-					throw new TRPCError({
-						code: "UNAUTHORIZED",
-						message: "You are not authorized to access this resource",
-					});
-				}
-			} else if (input.type === "server") {
-				const server = await findServerById(input.id);
-				if (server.organizationId !== ctx.session.activeOrganizationId) {
-					throw new TRPCError({
-						code: "UNAUTHORIZED",
-						message: "You are not authorized to access this resource",
-					});
-				}
-			}
-
+		.query(async ({ input }) => {
 			const deploymentsList = await db.query.deployments.findMany({
 				where: eq(deployments[`${input.type}Id`], input.id),
 				orderBy: desc(deployments.createdAt),
@@ -121,24 +89,8 @@ export const deploymentRouter = createTRPCRouter({
 				deploymentId: z.string().min(1),
 			}),
 		)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			const deployment = await findDeploymentById(input.deploymentId);
-
-			// Verify org ownership via the associated application
-			if (deployment.application) {
-				const app = await findApplicationById(
-					deployment.application.applicationId,
-				);
-				if (
-					app.environment.project.organizationId !==
-					ctx.session.activeOrganizationId
-				) {
-					throw new TRPCError({
-						code: "UNAUTHORIZED",
-						message: "You are not authorized to kill this process",
-					});
-				}
-			}
 
 			if (!deployment.pid) {
 				throw new TRPCError({
@@ -155,5 +107,15 @@ export const deploymentRouter = createTRPCRouter({
 			}
 
 			await updateDeploymentStatus(deployment.deploymentId, "error");
+		}),
+
+	removeDeployment: protectedProcedure
+		.input(
+			z.object({
+				deploymentId: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			return await removeDeployment(input.deploymentId);
 		}),
 });
