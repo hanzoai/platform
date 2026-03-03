@@ -471,7 +471,7 @@ export const HandleVolumeBackups = ({
 														</SelectTrigger>
 													</FormControl>
 													<SelectContent>
-														{mountsByService?.map((volume) => (
+														{mountsByService?.map((volume: { Name: string }) => (
 															<SelectItem
 																key={volume.Name}
 																value={volume.Name || ""}
@@ -509,7 +509,7 @@ export const HandleVolumeBackups = ({
 												</SelectTrigger>
 											</FormControl>
 											<SelectContent>
-												{mounts?.map((mount) => (
+												{mounts?.map((mount: { Name: string }) => (
 													<SelectItem key={mount.Name} value={mount.Name || ""}>
 														{mount.Name}
 													</SelectItem>
