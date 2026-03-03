@@ -1,7 +1,7 @@
 import { findServerById } from "@hanzo/platform/services/server";
+import { getWebServerSettings } from "@hanzo/platform/services/web-server-settings";
 import type { ContainerCreateOptions } from "dockerode";
 import { IS_CLOUD } from "../constants";
-import { findUserById } from "../services/admin";
 import { getHanzoImageTag } from "../services/settings";
 import { pullImage, pullRemoteImage } from "../utils/docker/utils";
 import { execAsync, execAsyncRemote } from "../utils/process/execAsync";
@@ -11,14 +11,14 @@ export const setupMonitoring = async (serverId: string) => {
 	const server = await findServerById(serverId);
 
 	const containerName = "platform-monitoring";
-	let imageName = "platform/monitoring:latest";
+	let imageName = "hanzoai/monitoring:latest";
 
 	if (
 		(getHanzoImageTag() !== "latest" ||
 			process.env.NODE_ENV === "development") &&
 		!IS_CLOUD
 	) {
-		imageName = "platform/monitoring:canary";
+		imageName = "hanzoai/monitoring:canary";
 	}
 
 	const settings: ContainerCreateOptions = {
@@ -45,7 +45,7 @@ export const setupMonitoring = async (serverId: string) => {
 				"/sys:/host/sys:ro",
 				"/etc/os-release:/etc/os-release:ro",
 				"/proc:/host/proc:ro",
-				"/etc/platform/monitoring/monitoring.db:/app/monitoring.db",
+				"/etc/hanzoai/monitoring/monitoring.db:/app/monitoring.db",
 			],
 			NetworkMode: "host",
 		},
@@ -57,7 +57,7 @@ export const setupMonitoring = async (serverId: string) => {
 	try {
 		await execAsyncRemote(
 			serverId,
-			"mkdir -p /etc/platform/monitoring && touch /etc/platform/monitoring/monitoring.db",
+			"mkdir -p /etc/hanzoai/monitoring && touch /etc/hanzoai/monitoring/monitoring.db",
 		);
 		if (serverId) {
 			await pullRemoteImage(imageName, serverId);
@@ -83,23 +83,23 @@ export const setupMonitoring = async (serverId: string) => {
 	}
 };
 
-export const setupWebMonitoring = async (userId: string) => {
-	const user = await findUserById(userId);
+export const setupWebMonitoring = async () => {
+	const webServerSettings = await getWebServerSettings();
 
 	const containerName = "platform-monitoring";
-	let imageName = "platform/monitoring:latest";
+	let imageName = "hanzoai/monitoring:latest";
 
 	if (
 		(getHanzoImageTag() !== "latest" ||
 			process.env.NODE_ENV === "development") &&
 		!IS_CLOUD
 	) {
-		imageName = "platform/monitoring:canary";
+		imageName = "hanzoai/monitoring:canary";
 	}
 
 	const settings: ContainerCreateOptions = {
 		name: containerName,
-		Env: [`METRICS_CONFIG=${JSON.stringify(user?.metricsConfig)}`],
+		Env: [`METRICS_CONFIG=${JSON.stringify(webServerSettings?.metricsConfig)}`],
 		Image: imageName,
 		HostConfig: {
 			// Memory: 100 * 1024 * 1024, // 100MB en bytes
@@ -110,9 +110,9 @@ export const setupWebMonitoring = async (userId: string) => {
 				Name: "always",
 			},
 			PortBindings: {
-				[`${user?.metricsConfig?.server?.port}/tcp`]: [
+				[`${webServerSettings?.metricsConfig?.server?.port}/tcp`]: [
 					{
-						HostPort: user?.metricsConfig?.server?.port.toString(),
+						HostPort: webServerSettings?.metricsConfig?.server?.port.toString(),
 					},
 				],
 			},
@@ -121,18 +121,18 @@ export const setupWebMonitoring = async (userId: string) => {
 				"/sys:/host/sys:ro",
 				"/etc/os-release:/etc/os-release:ro",
 				"/proc:/host/proc:ro",
-				"/etc/platform/monitoring/monitoring.db:/app/monitoring.db",
+				"/etc/hanzoai/monitoring/monitoring.db:/app/monitoring.db",
 			],
 			// NetworkMode: "host",
 		},
 		ExposedPorts: {
-			[`${user?.metricsConfig?.server?.port}/tcp`]: {},
+			[`${webServerSettings?.metricsConfig?.server?.port}/tcp`]: {},
 		},
 	};
 	const docker = await getRemoteDocker();
 	try {
 		await execAsync(
-			"mkdir -p /etc/platform/monitoring && touch /etc/platform/monitoring/monitoring.db",
+			"mkdir -p /etc/hanzoai/monitoring && touch /etc/hanzoai/monitoring/monitoring.db",
 		);
 		await pullImage(imageName);
 

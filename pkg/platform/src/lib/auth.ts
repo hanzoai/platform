@@ -1,42 +1,64 @@
 import type { IncomingMessage } from "node:http";
+import { sso } from "@better-auth/sso";
 import * as bcrypt from "bcrypt";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { admin, apiKey, organization, genericOAuth } from "better-auth/plugins";
+import { admin, apiKey, organization, twoFactor } from "better-auth/plugins";
 import { and, desc, eq } from "drizzle-orm";
-import { IS_CLOUD } from "../constants";
+import { BETTER_AUTH_SECRET, IS_CLOUD } from "../constants";
 import { db } from "../db";
 import * as schema from "../db/schema";
-import { getUserByToken } from "../services/admin";
-import { updateUser } from "../services/user";
+import {
+	getTrustedOrigins,
+	getTrustedProviders,
+	getUserByToken,
+} from "../services/admin";
+import {
+	getWebServerSettings,
+	updateWebServerSettings,
+} from "../services/web-server-settings";
+import { getHubSpotUTK, submitToHubSpot } from "../utils/tracking/hubspot";
 import { sendEmail } from "../verification/send-verification-email";
 import { getPublicIpWithFallback } from "../wss/utils";
-
-// IAM OIDC configuration (prefer IAM_* env vars)
-const IAM_URL = (
-	process.env.IAM_URL ||
-	process.env.IAM_ENDPOINT ||
-	process.env.HANZO_IAM_URL ||
-	process.env.HANZO_IAM_ENDPOINT ||
-	process.env.HANZO_IAM_SERVER_URL ||
-	"https://hanzo.id"
-).replace(/\/$/, "");
-const IAM_CLIENT_ID =
-	process.env.IAM_CLIENT_ID ||
-	process.env.HANZO_IAM_CLIENT_ID ||
-	process.env.HANZO_CLIENT_ID;
-const IAM_CLIENT_SECRET =
-	process.env.IAM_CLIENT_SECRET ||
-	process.env.HANZO_IAM_CLIENT_SECRET ||
-	process.env.HANZO_CLIENT_SECRET;
 
 const { handler, api } = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: "pg",
 		schema: schema,
 	}),
-	appName: "Hanzo",
+	disabledPaths: [
+		"/sso/register",
+		"/organization/create",
+		"/organization/update",
+		"/organization/delete",
+	],
+	secret: BETTER_AUTH_SECRET,
+	...(!IS_CLOUD
+		? {
+				advanced: {
+					useSecureCookies: false,
+					defaultCookieAttributes: {
+						sameSite: "lax",
+						secure: false,
+						httpOnly: true,
+						path: "/",
+					},
+				},
+			}
+		: {}),
+
+	account: {
+		accountLinking: {
+			enabled: true,
+			async trustedProviders() {
+				const fromDb = await getTrustedProviders();
+				return ["github", "google", ...fromDb];
+			},
+			allowDifferentEmails: true,
+		},
+	},
+	appName: "Hanzo Platform",
 	socialProviders: {
 		github: {
 			clientId: process.env.GITHUB_CLIENT_ID as string,
@@ -50,26 +72,29 @@ const { handler, api } = betterAuth({
 	logger: {
 		disabled: process.env.NODE_ENV === "production",
 	},
-	...(!IS_CLOUD && {
-		async trustedOrigins() {
-			const admin = await db.query.member.findFirst({
-				where: eq(schema.member.role, "owner"),
-				with: {
-					user: true,
-				},
-			});
-
-			if (admin) {
-				return [
-					...(admin.user.serverIp
-						? [`http://${admin.user.serverIp}:3000`]
-						: []),
-					...(admin.user.host ? [`https://${admin.user.host}`] : []),
-				];
-			}
-			return [];
-		},
-	}),
+	async trustedOrigins() {
+		if (IS_CLOUD) {
+			return getTrustedOrigins();
+		}
+		const [trustedOrigins, settings] = await Promise.all([
+			getTrustedOrigins(),
+			getWebServerSettings(),
+		]);
+		if (!settings) return [];
+		const devOrigins =
+			process.env.NODE_ENV === "development"
+				? [
+						"http://localhost:3000",
+						"https://absolutely-handy-falcon.ngrok-free.app",
+					]
+				: [];
+		return [
+			...(settings?.serverIp ? [`http://${settings?.serverIp}:3000`] : []),
+			...(settings?.host ? [`https://${settings?.host}`] : []),
+			...devOrigins,
+			...trustedOrigins,
+		];
+	},
 	emailVerification: {
 		sendOnSignUp: true,
 		autoSignInAfterVerification: true,
@@ -112,25 +137,20 @@ const { handler, api } = betterAuth({
 			create: {
 				before: async (_user, context) => {
 					if (!IS_CLOUD) {
-						// Allow OAuth/SSO users through (they arrive via the
-						// generic-oauth callback, not the signup form).
-						const isOAuthCallback =
-							context?.request?.url?.includes("/callback/") ||
-							context?.request?.url?.includes("/oauth2/");
-						if (isOAuthCallback) {
-							return;
-						}
-
-						const xHanzoToken =
-							context?.request?.headers?.get("x-platform-token");
-						if (xHanzoToken) {
-							const user = await getUserByToken(xHanzoToken);
+						const xHanzo PlatformToken =
+							context?.request?.headers?.get("x-dokploy-token");
+						if (xHanzo PlatformToken) {
+							const user = await getUserByToken(xHanzo PlatformToken);
 							if (!user) {
 								throw new APIError("BAD_REQUEST", {
 									message: "User not found",
 								});
 							}
 						} else {
+							const isSSORequest = context?.path.includes("/sso");
+							if (isSSORequest) {
+								return;
+							}
 							const isAdminPresent = await db.query.member.findFirst({
 								where: eq(schema.member.role, "owner"),
 							});
@@ -142,15 +162,41 @@ const { handler, api } = betterAuth({
 						}
 					}
 				},
-				after: async (user) => {
+				after: async (user, context) => {
+					const isSSORequest = context?.path.includes("/sso");
 					const isAdminPresent = await db.query.member.findFirst({
 						where: eq(schema.member.role, "owner"),
 					});
 
 					if (!IS_CLOUD) {
-						await updateUser(user.id, {
+						await updateWebServerSettings({
 							serverIp: await getPublicIpWithFallback(),
 						});
+					}
+
+					if (IS_CLOUD) {
+						try {
+							const hutk = getHubSpotUTK(
+								context?.request?.headers?.get("cookie") || undefined,
+							);
+							// Cast to include additional fields
+							const userWithFields = user as typeof user & {
+								lastName?: string;
+							};
+							const hubspotSuccess = await submitToHubSpot(
+								{
+									email: user.email,
+									firstName: user.name || "", // name is mapped to firstName column
+									lastName: userWithFields.lastName || "",
+								},
+								hutk,
+							);
+							if (!hubspotSuccess) {
+								console.error("Failed to submit to HubSpot");
+							}
+						} catch (error) {
+							console.error("Error submitting to HubSpot", error);
+						}
 					}
 
 					if (IS_CLOUD || !isAdminPresent) {
@@ -170,7 +216,31 @@ const { handler, api } = betterAuth({
 								organizationId: organization?.id || "",
 								role: "owner",
 								createdAt: new Date(),
+								isDefault: true, // Mark first organization as default
 							});
+						});
+					} else if (isSSORequest) {
+						const providerId = context?.params?.providerId;
+						if (!providerId) {
+							throw new APIError("BAD_REQUEST", {
+								message: "Provider ID is required",
+							});
+						}
+						const provider = await db.query.ssoProvider.findFirst({
+							where: eq(schema.ssoProvider.providerId, providerId),
+						});
+
+						if (!provider) {
+							throw new APIError("BAD_REQUEST", {
+								message: "Provider not found",
+							});
+						}
+						await db.insert(schema.member).values({
+							userId: user.id,
+							organizationId: provider?.organizationId || "",
+							role: "member",
+							createdAt: new Date(),
+							isDefault: true,
 						});
 					}
 				},
@@ -179,9 +249,14 @@ const { handler, api } = betterAuth({
 		session: {
 			create: {
 				before: async (session) => {
+					// Find the default organization for this user
+					// Priority: 1) isDefault=true, 2) most recently created
 					const member = await db.query.member.findFirst({
 						where: eq(schema.member.userId, session.userId),
-						orderBy: desc(schema.member.createdAt),
+						orderBy: [
+							desc(schema.member.isDefault),
+							desc(schema.member.createdAt),
+						],
 						with: {
 							organization: true,
 						},
@@ -202,7 +277,10 @@ const { handler, api } = betterAuth({
 		updateAge: 60 * 60 * 24,
 	},
 	user: {
-		modelName: "users_temp",
+		modelName: "user",
+		fields: {
+			name: "firstName", // Map better-auth's default 'name' field to 'firstName' column
+		},
 		additionalFields: {
 			role: {
 				type: "string",
@@ -219,13 +297,30 @@ const { handler, api } = betterAuth({
 				type: "boolean",
 				defaultValue: false,
 			},
+			lastName: {
+				type: "string",
+				required: false,
+				input: true,
+				defaultValue: "",
+			},
+			enableEnterpriseFeatures: {
+				type: "boolean",
+				required: false,
+				input: false,
+			},
+			isValidEnterpriseLicense: {
+				type: "boolean",
+				required: false,
+				input: false,
+			},
 		},
 	},
 	plugins: [
 		apiKey({
 			enableMetadata: true,
 		}),
-		// twoFactor(), // Disabled due to better-auth bug: "Body is not allowed with GET or HEAD methods"
+		sso(),
+		twoFactor(),
 		organization({
 			async sendInvitationEmail(data, _request) {
 				if (IS_CLOUD) {
@@ -239,29 +334,12 @@ const { handler, api } = betterAuth({
 						email: data.email,
 						subject: "Invitation to join organization",
 						text: `
-					<p>You are invited to join ${data.organization.name} on Hanzo. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
+					<p>You are invited to join ${data.organization.name} on Hanzo Platform. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
 					`,
 					});
 				}
 			},
 		}),
-		// Hanzo IAM OIDC provider
-		...(IAM_CLIENT_ID && IAM_CLIENT_SECRET
-			? [
-					genericOAuth({
-						config: [
-							{
-								providerId: "hanzo",
-								discoveryUrl: `${IAM_URL}/.well-known/openid-configuration`,
-								clientId: IAM_CLIENT_ID as string,
-								clientSecret: IAM_CLIENT_SECRET as string,
-								scopes: ["openid", "profile", "email"],
-								pkce: true,
-							},
-						],
-					}),
-				]
-			: []),
 		...(IS_CLOUD
 			? [
 					admin({
@@ -272,10 +350,15 @@ const { handler, api } = betterAuth({
 	],
 });
 
-export const auth = {
+const _auth = {
 	handler,
 	createApiKey: api.createApiKey,
+	registerSSOProvider: api.registerSSOProvider,
+	updateSSOProvider: api.updateSSOProvider,
 };
+
+export type AuthType = typeof _auth;
+export const auth: AuthType = _auth;
 
 export const validateRequest = async (request: IncomingMessage) => {
 	const apiKey = request.headers["x-api-key"] as string;
@@ -288,7 +371,7 @@ export const validateRequest = async (request: IncomingMessage) => {
 			});
 
 			if (error) {
-				throw new Error(error.message || "Error verifying API key");
+				throw new Error(error.message?.toString() || "Error verifying API key");
 			}
 			if (!valid || !key) {
 				return {
@@ -332,16 +415,11 @@ export const validateRequest = async (request: IncomingMessage) => {
 				},
 			});
 
-			const {
-				id,
-				name,
-				email,
-				emailVerified,
-				image,
-				createdAt,
-				updatedAt,
-				twoFactorEnabled,
-			} = apiKeyRecord.user;
+			// When accessing from DB, use actual column names
+			const userFromDb = apiKeyRecord.user as typeof apiKeyRecord.user & {
+				firstName: string;
+				lastName: string;
+			};
 
 			const mockSession = {
 				session: {
@@ -349,16 +427,18 @@ export const validateRequest = async (request: IncomingMessage) => {
 					activeOrganizationId: organizationId || "",
 				},
 				user: {
-					id,
-					name,
-					email,
-					emailVerified,
-					image,
-					createdAt,
-					updatedAt,
-					twoFactorEnabled,
+					id: userFromDb.id,
+					name: userFromDb.firstName, // Map firstName back to name for better-auth
+					email: userFromDb.email,
+					emailVerified: userFromDb.emailVerified,
+					image: userFromDb.image,
+					createdAt: userFromDb.createdAt,
+					updatedAt: userFromDb.updatedAt,
+					twoFactorEnabled: userFromDb.twoFactorEnabled,
 					role: member?.role || "member",
 					ownerId: member?.organization.ownerId || apiKeyRecord.user.id,
+					enableEnterpriseFeatures: userFromDb.enableEnterpriseFeatures,
+					isValidEnterpriseLicense: userFromDb.isValidEnterpriseLicense,
 				},
 			};
 
@@ -386,26 +466,37 @@ export const validateRequest = async (request: IncomingMessage) => {
 		};
 	}
 
-	// TypeScript now knows session and session.user are not null
-	// But we need to help it understand with non-null assertions
-	const member = await db.query.member.findFirst({
-		where: and(
-			eq(schema.member.userId, session.user!.id),
-			eq(
-				schema.member.organizationId,
-				session.session!.activeOrganizationId || "",
+	if (session?.user) {
+		const member = await db.query.member.findFirst({
+			where: and(
+				eq(schema.member.userId, session.user.id),
+				...(session.session.activeOrganizationId
+					? [
+							eq(
+								schema.member.organizationId,
+								session.session.activeOrganizationId || "",
+							),
+						]
+					: []),
 			),
-		),
-		with: {
-			organization: true,
-		},
-	});
+			orderBy: [desc(schema.member.isDefault), desc(schema.member.createdAt)],
+			with: {
+				organization: true,
+				user: true,
+			},
+		});
 
-	session.user!.role = member?.role || "member";
-	if (member) {
-		session.user!.ownerId = member.organization.ownerId;
-	} else {
-		session.user!.ownerId = session.user!.id;
+		session.user.role = member?.role || "member";
+		session.user.enableEnterpriseFeatures =
+			member?.user.enableEnterpriseFeatures || false;
+		session.user.isValidEnterpriseLicense =
+			member?.user.isValidEnterpriseLicense || false;
+		session.session.activeOrganizationId = member?.organization.id || "";
+		if (member) {
+			session.user.ownerId = member.organization.ownerId;
+		} else {
+			session.user.ownerId = session.user.id;
+		}
 	}
 
 	return session;

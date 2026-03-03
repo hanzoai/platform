@@ -70,7 +70,7 @@ import {
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 
-const TEMPLATE_BASE_URL_KEY = "platform_template_base_url";
+const TEMPLATE_BASE_URL_KEY = "dokploy_template_base_url";
 
 interface Props {
 	environmentId: string;
@@ -116,7 +116,7 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 	);
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 	const { data: servers } = api.server.withSSHKey.useQuery();
-	const { data: tags, isLoading: isLoadingTags } = api.compose.getTags.useQuery(
+	const { data: tags, isPending: isLoadingTags } = api.compose.getTags.useQuery(
 		{ baseUrl: customBaseUrl },
 		{
 			enabled: open,
@@ -125,7 +125,7 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 	const utils = api.useUtils();
 
 	const [serverId, setServerId] = useState<string | undefined>(undefined);
-	const { mutateAsync, isPending: isLoading, error, isError } =
+	const { mutateAsync, isPending, error, isError } =
 		api.compose.deployTemplate.useMutation();
 
 	const templates =
@@ -142,8 +142,8 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 
 	const hasServers = servers && servers.length > 0;
 	// Show dropdown logic based on cloud environment
-	// Cloud: show only if there are remote servers (no Hanzo option)
-	// Self-hosted: show only if there are remote servers (Hanzo is default, hide if no remote servers)
+	// Cloud: show only if there are remote servers (no Hanzo Platform option)
+	// Self-hosted: show only if there are remote servers (Hanzo Platform is default, hide if no remote servers)
 	const shouldShowServerDropdown = hasServers;
 
 	return (
@@ -464,22 +464,22 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 																		setServerId(e);
 																	}}
 																	defaultValue={
-																		!isCloud ? "platform" : undefined
+																		!isCloud ? "dokploy" : undefined
 																	}
 																>
 																	<SelectTrigger>
 																		<SelectValue
 																			placeholder={
-																				!isCloud ? "Hanzo" : "Select a Server"
+																				!isCloud ? "Hanzo Platform" : "Select a Server"
 																			}
 																		/>
 																	</SelectTrigger>
 																	<SelectContent>
 																		<SelectGroup>
 																			{!isCloud && (
-																				<SelectItem value="platform">
+																				<SelectItem value="dokploy">
 																					<span className="flex items-center gap-2 justify-between w-full">
-																						<span>Hanzo</span>
+																						<span>Hanzo Platform</span>
 																						<span className="text-muted-foreground text-xs self-center">
 																							Default
 																						</span>
@@ -512,11 +512,11 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 													<AlertDialogFooter>
 														<AlertDialogCancel>Cancel</AlertDialogCancel>
 														<AlertDialogAction
-															disabled={isLoading}
+															disabled={isPending}
 															onClick={async () => {
 																const promise = mutateAsync({
 																	serverId:
-																		serverId === "platform"
+																		serverId === "dokploy"
 																			? undefined
 																			: serverId,
 																	environmentId,
