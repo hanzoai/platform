@@ -88,7 +88,7 @@ export const settingsRouter = createTRPCRouter({
 		if (IS_CLOUD) {
 			return true;
 		}
-		await reloadDockerResource("dokploy", undefined, packageInfo.version);
+		await reloadDockerResource("hanzo", undefined, packageInfo.version);
 		return true;
 	}),
 	cleanRedis: adminProcedure.mutation(async () => {
@@ -374,7 +374,7 @@ export const settingsRouter = createTRPCRouter({
 		if (IS_CLOUD) {
 			return true;
 		}
-		const traefikConfig = readConfig("dokploy");
+		const traefikConfig = readConfig("hanzo");
 		return traefikConfig;
 	}),
 	updateWebServerTraefikConfig: adminProcedure
@@ -383,7 +383,7 @@ export const settingsRouter = createTRPCRouter({
 			if (IS_CLOUD) {
 				return true;
 			}
-			writeConfig("dokploy", input.traefikConfig);
+			writeConfig("hanzo", input.traefikConfig);
 			return true;
 		}),
 
@@ -424,7 +424,7 @@ export const settingsRouter = createTRPCRouter({
 				"--force",
 				"--image",
 				`hanzoai/platform:${data.latestVersion}`,
-				"dokploy",
+				"hanzo",
 			]);
 		}
 
@@ -572,7 +572,7 @@ export const settingsRouter = createTRPCRouter({
 
 			openApiDocument.info = {
 				title: "Hanzo Platform API",
-				description: "Endpoints for dokploy",
+				description: "Endpoints for Hanzo Platform",
 				version: packageInfo.version,
 			};
 
@@ -911,11 +911,12 @@ export const settingsRouter = createTRPCRouter({
 		return getLogCleanupStatus();
 	}),
 
-	getHanzo PlatformCloudIps: adminProcedure.query(async () => {
+	// NOTE: DOKPLOY_CLOUD_IPS env var kept for backward compatibility
+	getHanzoCloudIps: adminProcedure.query(async () => {
 		if (!IS_CLOUD) {
 			return [];
 		}
-		const ips = process.env.DOKPLOY_CLOUD_IPS?.split(",");
+		const ips = (process.env.HANZO_CLOUD_IPS ?? process.env.DOKPLOY_CLOUD_IPS)?.split(",");
 		return ips;
 	}),
 });
