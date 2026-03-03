@@ -13,6 +13,9 @@ importers:
 
   .:
     dependencies:
+      '@hanzo/iam':
+        specifier: 0.4.1
+        version: 0.4.1(react@18.2.0)
       '@hanzo/ui':
         specifier: link:../ui/pkg/ui
         version: link:../ui/pkg/ui
@@ -1616,6 +1619,15 @@ packages:
 
   '@hanzo/iam@0.4.0':
     resolution: {integrity: sha512-jxQlQ6jIMlV09aMmA/sjHCu1aCgeaihNh39P2t47sLD8/y7z0BKB5VXuqpNGlUfHghcY1JID1xD+cowASXSzlg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: '>=17'
+    peerDependenciesMeta:
+      react:
+        optional: true
+
+  '@hanzo/iam@0.4.1':
+    resolution: {integrity: sha512-askNiSg/RZc6WpQFIz7EOFT4OT8hFyOlDwyihp36sIv3uquKKrMwRDKA3RxDrSF80SyXvQCbQxxllgrxFmh0IA==}
     engines: {node: '>=18'}
     peerDependencies:
       react: '>=17'
@@ -10552,6 +10564,12 @@ snapshots:
       yargs: 17.7.2
 
   '@hanzo/iam@0.4.0(react@18.2.0)':
+    dependencies:
+      jose: 6.1.3
+    optionalDependencies:
+      react: 18.2.0
+
+  '@hanzo/iam@0.4.1(react@18.2.0)':
     dependencies:
       jose: 6.1.3
     optionalDependencies:

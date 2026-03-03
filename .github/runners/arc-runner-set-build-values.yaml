@@ -23,11 +23,11 @@ template:
       name: runner
       resources:
         limits:
-          cpu: "6"
-          memory: 12Gi
+          cpu: "8"
+          memory: 28Gi
         requests:
           cpu: "2"
-          memory: 4Gi
+          memory: 8Gi
       volumeMounts:
       - mountPath: /home/runner/externals
         name: dind-externals
@@ -40,11 +40,11 @@ template:
       name: dind
       resources:
         limits:
-          cpu: "6"
-          memory: 12Gi
+          cpu: "8"
+          memory: 28Gi
         requests:
           cpu: "1"
-          memory: 2Gi
+          memory: 4Gi
       securityContext:
         privileged: true
       volumeMounts:
@@ -63,7 +63,7 @@ template:
       - mountPath: /home/runner/tmpDir
         name: dind-externals
     nodeSelector:
-      doks.digitalocean.com/node-pool: runner-pool
+      doks.digitalocean.com/node-pool: runner-pool-32g
     serviceAccountName: hanzo-deploy
     tolerations:
     - effect: NoSchedule
