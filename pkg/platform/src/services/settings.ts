@@ -24,7 +24,7 @@ export const getHanzoImageTag = () => {
 };
 
 export const getHanzoImage = () => {
-	return `hanzo/hanzo:${getHanzoImageTag()}`;
+	return `hanzoai/platform:${getHanzoImageTag()}`;
 };
 
 export const pullLatestRelease = async () => {
@@ -63,7 +63,7 @@ export const getUpdateData = async (): Promise<IUpdateData> => {
 		return DEFAULT_UPDATE_DATA;
 	}
 
-	const baseUrl = "https://hub.docker.com/v2/repositories/hanzo/hanzo/tags";
+	const baseUrl = "https://hub.docker.com/v2/repositories/hanzoai/platform/tags";
 	let url: string | null = `${baseUrl}?page_size=100`;
 	let allResults: { digest: string; name: string }[] = [];
 	while (url) {
