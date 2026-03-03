@@ -8,9 +8,9 @@ import {
 	updateGitlab,
 	updateGitProvider,
 } from "@hanzo/platform";
+import { db } from "@hanzo/platform/db";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { db } from "@/server/db";
 import {
 	apiCreateGitlab,
 	apiFindGitlabBranches,
@@ -112,7 +112,7 @@ export const gitlabRouter = createTRPCRouter({
 					message: "You are not allowed to access this Gitlab provider",
 				});
 			}
-			return await getGitlabBranches(input as any);
+			return await getGitlabBranches(input);
 		}),
 	testConnection: protectedProcedure
 		.input(apiGitlabTestConnection)
@@ -161,11 +161,11 @@ export const gitlabRouter = createTRPCRouter({
 
 				await updateGitlab(input.gitlabId, {
 					...input,
-				} as any);
+				});
 			} else {
 				await updateGitlab(input.gitlabId, {
 					...input,
-				} as any);
+				});
 			}
 		}),
 });

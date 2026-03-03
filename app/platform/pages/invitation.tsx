@@ -1,5 +1,5 @@
 import { getUserByToken, IS_CLOUD } from "@hanzo/platform";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -27,7 +27,10 @@ import { api } from "@/utils/api";
 const registerSchema = z
 	.object({
 		name: z.string().min(1, {
-			message: "Name is required",
+			message: "First name is required",
+		}),
+		lastName: z.string().min(1, {
+			message: "Last name is required",
 		}),
 		email: z
 			.string()
@@ -92,6 +95,7 @@ const Invitation = ({
 	const form = useForm<Register>({
 		defaultValues: {
 			name: "",
+			lastName: "",
 			email: "",
 			password: "",
 			confirmPassword: "",
@@ -115,9 +119,10 @@ const Invitation = ({
 				email: values.email,
 				password: values.password,
 				name: values.name,
+				lastName: values.lastName,
 				fetchOptions: {
 					headers: {
-						"x-platform-token": token,
+						"x-dokploy-token": token,
 					},
 				},
 			});
@@ -197,12 +202,22 @@ const Invitation = ({
 													name="name"
 													render={({ field }) => (
 														<FormItem>
-															<FormLabel>Name</FormLabel>
+															<FormLabel>First Name</FormLabel>
 															<FormControl>
-																<Input
-																	placeholder="Enter your name"
-																	{...field}
-																/>
+																<Input placeholder="John" {...field} />
+															</FormControl>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+												<FormField
+													control={form.control}
+													name="lastName"
+													render={({ field }) => (
+														<FormItem>
+															<FormLabel>Last Name</FormLabel>
+															<FormControl>
+																<Input placeholder="Doe" {...field} />
 															</FormControl>
 															<FormMessage />
 														</FormItem>
@@ -305,8 +320,66 @@ export default Invitation;
 Invitation.getLayout = (page: ReactElement) => {
 	return <OnboardingLayout>{page}</OnboardingLayout>;
 };
-export async function getServerSideProps() {
-	return {
-		props: {},
-	};
+export async function getServerSideProps(ctx: GetServerSidePropsContext) {
+	const { query } = ctx;
+
+	const token = query.token;
+
+	// if (IS_CLOUD) {
+	// 	return {
+	// 		redirect: {
+	// 			permanent: true,
+	// 			destination: "/",
+	// 		},
+	// 	};
+	// }
+
+	if (typeof token !== "string") {
+		return {
+			redirect: {
+				permanent: true,
+				destination: "/",
+			},
+		};
+	}
+
+	try {
+		const invitation = await getUserByToken(token);
+
+		if (invitation.userAlreadyExists) {
+			return {
+				props: {
+					isCloud: IS_CLOUD,
+					token: token,
+					invitation: invitation,
+					userAlreadyExists: true,
+				},
+			};
+		}
+
+		if (invitation.isExpired) {
+			return {
+				redirect: {
+					permanent: true,
+					destination: "/",
+				},
+			};
+		}
+
+		return {
+			props: {
+				isCloud: IS_CLOUD,
+				token: token,
+				invitation: invitation,
+			},
+		};
+	} catch (error) {
+		console.log("error", error);
+		return {
+			redirect: {
+				permanent: true,
+				destination: "/",
+			},
+		};
+	}
 }

@@ -7,11 +7,12 @@ import {
 } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
+import type { z } from "zod";
 
 export type Bitbucket = typeof bitbucket.$inferSelect;
 
 export const createBitbucket = async (
-	input: typeof apiCreateBitbucket._type,
+	input: z.infer<typeof apiCreateBitbucket>,
 	organizationId: string,
 	userId: string,
 ) => {
@@ -23,7 +24,7 @@ export const createBitbucket = async (
 				organizationId: organizationId,
 				name: input.name,
 				userId: userId,
-			} as any)
+			})
 			.returning()
 			.then((response) => response[0]);
 
@@ -39,7 +40,7 @@ export const createBitbucket = async (
 			.values({
 				...input,
 				gitProviderId: newGitProvider?.gitProviderId,
-			} as any)
+			})
 			.returning()
 			.then((response) => response[0]);
 	});
@@ -65,7 +66,7 @@ export const findBitbucketById = async (bitbucketId: string) => {
 
 export const updateBitbucket = async (
 	bitbucketId: string,
-	input: typeof apiUpdateBitbucket._type,
+	input: z.infer<typeof apiUpdateBitbucket>,
 ) => {
 	return await db.transaction(async (tx) => {
 		// First get the current bitbucket provider to get gitProviderId
@@ -88,7 +89,7 @@ export const updateBitbucket = async (
 				appPassword: input.appPassword,
 				apiToken: input.apiToken,
 				bitbucketWorkspaceName: input.bitbucketWorkspaceName,
-			} as any)
+			})
 			.where(eq(bitbucket.bitbucketId, bitbucketId))
 			.returning();
 
@@ -98,7 +99,7 @@ export const updateBitbucket = async (
 				.set({
 					name: input.name,
 					organizationId: input.organizationId,
-				} as any)
+				})
 				.where(eq(gitProvider.gitProviderId, currentProvider.gitProviderId))
 				.returning();
 		}
