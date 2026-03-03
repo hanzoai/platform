@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { CheckIcon, ChevronsUpDown, HelpCircle, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
@@ -75,7 +75,7 @@ export const SaveGithubProviderCompose = ({ composeId }: Props) => {
 	const { mutateAsync, isPending: isSavingGithubProvider } =
 		api.compose.update.useMutation();
 
-	const form = useForm<GithubProvider>({
+	const form = useForm({
 		defaultValues: {
 			composePath: "./docker-compose.yml",
 			repository: {
@@ -94,7 +94,7 @@ export const SaveGithubProviderCompose = ({ composeId }: Props) => {
 	const repository = form.watch("repository");
 	const githubId = form.watch("githubId");
 	const triggerType = form.watch("triggerType");
-	const { data: repositories, isLoading: isLoadingRepositories } =
+	const { data: repositories, isPending: isLoadingRepositories } =
 		api.github.getGithubRepositories.useQuery(
 			{
 				githubId,
@@ -234,13 +234,13 @@ export const SaveGithubProviderCompose = ({ composeId }: Props) => {
 														!field.value && "text-muted-foreground",
 													)}
 												>
-													{isLoadingRepositories
-														? "Loading...."
-														: field.value.owner
-															? repositories?.find(
+													{!field.value.owner
+														? "Select repository"
+														: isLoadingRepositories
+															? "Loading...."
+															: (repositories?.find(
 																	(repo) => repo.name === field.value.repo,
-																)?.name
-															: "Select repository"}
+																)?.name ?? "Select repository")}
 
 													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 												</Button>
@@ -252,11 +252,15 @@ export const SaveGithubProviderCompose = ({ composeId }: Props) => {
 													placeholder="Search repository..."
 													className="h-9"
 												/>
-												{isLoadingRepositories && (
+												{!githubId ? (
+													<span className="py-6 text-center text-sm text-muted-foreground">
+														Select a GitHub account first
+													</span>
+												) : isLoadingRepositories ? (
 													<span className="py-6 text-center text-sm">
 														Loading Repositories....
 													</span>
-												)}
+												) : null}
 												<CommandEmpty>No repositories found.</CommandEmpty>
 												<ScrollArea className="h-96">
 													<CommandGroup>
