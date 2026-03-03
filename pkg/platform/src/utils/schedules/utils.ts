@@ -124,7 +124,7 @@ export const runCommand = async (scheduleId: string) => {
 				throw error;
 			}
 		}
-	} else if (scheduleType === "hanzo-platform") {
+	} else if (scheduleType === "platform-server") {
 		try {
 			const writeStream = createWriteStream(deployment.logPath, { flags: "a" });
 			const { SCHEDULES_PATH } = paths();

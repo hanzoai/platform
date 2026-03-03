@@ -29,7 +29,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { organization } from "./account";
-import { users_temp } from "./user";
+import { user } from "./user";
 import { computePool, computeNode, nodeType } from "./compute-pool";
 import { organizationWallet, walletTransactions } from "./wallet";
 
@@ -236,7 +236,7 @@ export const computeLease = pgTable(
 			.references(() => organization.id, { onDelete: "cascade" }),
 		userId: text("user_id")
 			.notNull()
-			.references(() => users_temp.id, { onDelete: "cascade" }),
+			.references(() => user.id, { onDelete: "cascade" }),
 
 		// Assigned node
 		nodeId: text("node_id")
@@ -440,9 +440,9 @@ export const computeLeaseRelations = relations(computeLease, ({ one, many }) => 
 		fields: [computeLease.organizationId],
 		references: [organization.id],
 	}),
-	user: one(users_temp, {
+	user: one(user, {
 		fields: [computeLease.userId],
-		references: [users_temp.id],
+		references: [user.id],
 	}),
 	wallet: one(organizationWallet, {
 		fields: [computeLease.walletId],
@@ -489,7 +489,7 @@ const resourceSpecSchema = z.object({
 	publicIpv6: z.boolean().optional(),
 	nodeType: z.enum(["validator", "worker", "storage", "gpu", "inference"]).optional(),
 	regions: z.array(z.string()).optional(),
-	nodeSelector: z.record(z.string()).optional(),
+	nodeSelector: z.record(z.string(), z.string()).optional(),
 });
 
 const slaSchema = z.object({
@@ -586,8 +586,8 @@ export const apiCreateComputeLease = z.object({
 	accessCredentials: z.object({
 		sshPublicKey: z.string().optional(),
 	}).optional(),
-	labels: z.record(z.string()).optional(),
-	metadata: z.record(z.unknown()).optional(),
+	labels: z.record(z.string(), z.string()).optional(),
+	metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const apiTerminateLease = z.object({
