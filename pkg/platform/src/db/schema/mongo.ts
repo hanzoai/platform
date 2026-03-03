@@ -117,7 +117,7 @@ const createSchema = createInsertSchema(mongo, {
 				"Password contains invalid characters. Please avoid: $ ! ' \" \\ / and space characters for database compatibility",
 		}),
 	databaseUser: z.string().min(1),
-	dockerImage: z.string().default("mongo:15"),
+	dockerImage: z.string().default("ghcr.io/hanzoai/docdb:latest"),
 	command: z.string().optional(),
 	args: z.array(z.string()).optional(),
 	env: z.string().optional(),
