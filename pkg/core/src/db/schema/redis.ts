@@ -6,7 +6,7 @@ import { z } from "zod";
 import { environments } from "./environment";
 import { mounts } from "./mount";
 import { projects } from "./project";
-import { server } from "./server";
+import { server } from "./hanzo-server";
 import {
 	applicationStatus,
 	type HealthCheckSwarm,

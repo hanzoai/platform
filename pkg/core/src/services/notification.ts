@@ -596,14 +596,6 @@ export const findNotificationById = async (notificationId: string) => {
 	return notification;
 };
 
-export const removeNotificationById = async (notificationId: string) => {
-	const result = await db
-		.delete(notifications)
-		.where(eq(notifications.notificationId, notificationId))
-		.returning();
-
-	return result[0];
-};
 
 export const updateNotificationById = async (
 	notificationId: string,

@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  hanzo-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: hanzo-platform
+    restart: always
+    networks:
+      - hanzo-network
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@hanzo-postgres:5432/platform
+      - REDIS_URL=redis://hanzo-redis:6379
+      - IS_CLOUD=false
+      - PORT=3000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  hanzo-network:
+    external: true

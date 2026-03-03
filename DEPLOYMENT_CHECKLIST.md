@@ -36,7 +36,7 @@
 - Database: `hanzo` → `hanzo`
 - Containers: `hanzo-*` → `hanzo-*`
 - Paths: `/etc/hanzo` → `/etc/hanzo`
-- Package: `@hanzo/server` → `@hanzo/platform`
+- Package: `@hanzo/platform` → `@hanzo/platform`
 - Docker images: `hanzo/*` → `hanzoai/*`
 
 ## Local Testing Commands
