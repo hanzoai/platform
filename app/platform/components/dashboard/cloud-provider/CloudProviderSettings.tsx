@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { Cloud, CheckCircle, XCircle, Loader2, Eye, EyeOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -166,6 +166,7 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 					slug: values.slug,
 					apiToken: values.apiToken,
 					defaultRegion: values.defaultRegion,
+					providerType: "digitalocean",
 				});
 			}
 		} finally {

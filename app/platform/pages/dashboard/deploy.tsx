@@ -28,7 +28,7 @@ const DeployPage = () => {
   const [deployments, setDeployments] = useState<Map<string, string>>(new Map());
   const { toast } = useToast();
 
-  // Load compose files from current repo
+  // Compose files loaded from current repo
   const [repoFiles] = useState<string[] | undefined>(undefined);
 
   // Parse YAML to Compose Spec
