@@ -1,38 +1,40 @@
-version: '3.8'
-
 services:
   # Hanzo Platform Application
   platform:
-    image: hanzoai/platform:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev-mount
     container_name: hanzo-platform
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
+    restart: always
+    expose:
+      - "3000"
     environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://hanzo:hanzo123@postgres:5432/hanzo
-      REDIS_URL: redis://redis:6379
-      NEXTAUTH_URL: https://platform.hanzo.ai
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-your-secret-key-here}
-      SERVER_IP: ${SERVER_IP:-platform.hanzo.ai}
-      DOCKER_HOST: unix:///var/run/docker.sock
+      NODE_ENV: development
+      DATABASE_URL: postgresql://hanzo:amukds4wi9001583845717ad2@hanzo-postgres:5432/hanzo
+      REDIS_URL: redis://hanzo-redis:6379
+      IS_CLOUD: "false"
+      PORT: "3000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - hanzo_data:/app/data
+      - ..:/app
+      - pnpm-store:/root/.local/share/pnpm/store
+    networks:
+      - hanzo-network
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - hanzo-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.platform.rule=Host(`platform.hanzo.ai`)"
-      - "traefik.http.routers.platform.entrypoints=websecure"
-      - "traefik.http.routers.platform.tls=true"
-      - "traefik.http.routers.platform.tls.certresolver=letsencrypt"
-      - "traefik.http.services.platform.loadbalancer.server.port=3000"
+      - "traefik.http.routers.hanzo-platform-http.rule=Host(`platform.hanzo.ai`)"
+      - "traefik.http.routers.hanzo-platform-http.entrypoints=web"
+      - "traefik.http.routers.hanzo-platform-https.rule=Host(`platform.hanzo.ai`)"
+      - "traefik.http.routers.hanzo-platform-https.entrypoints=websecure"
+      - "traefik.http.routers.hanzo-platform-https.tls=true"
+      - "traefik.http.routers.hanzo-platform-https.tls.certresolver=letsencrypt"
+      - "traefik.http.services.hanzo-platform.loadbalancer.server.port=3000"
+      - "traefik.docker.network=hanzo-network"
 
   # PostgreSQL Database
   postgres:
@@ -94,11 +96,11 @@ services:
 
 networks:
   hanzo-network:
-    name: hanzo-network
-    driver: bridge
+    external: true
 
 volumes:
   postgres_data:
   redis_data:
   hanzo_data:
   traefik_certs:
+  pnpm-store:

@@ -130,7 +130,6 @@ process_items() {
 
     local items_json=""
     local first=true
-    for item in "$parent_dir"/*; do
         [ -e "$item" ] || continue
         process_item "$item" item_json
         if [ "$first" = true ]; then
@@ -416,3 +415,27 @@ export const writeTraefikSetup = async (input: TraefikOptions) => {
 		throw new Error("Traefik resource type not found");
 	}
 };
+
+
+// Stub implementations - TODO: Implement these properly
+
+// cleanStoppedContainers is exported from utils/docker/utils.ts
+
+// cleanUpDockerBuilder is exported from utils/docker/utils.ts
+
+// cleanUpSystemPrune is exported from utils/docker/utils.ts
+
+// cleanUpUnusedImages is exported from utils/docker/utils.ts
+
+
+// canAccessToTraefikFiles is exported from user.ts
+
+
+// cleanUpUnusedVolumes is exported from utils/docker/utils.ts
+
+// Additional stub implementations
+
+
+// Auto-generated stubs
+
+// Auto-generated stubs
