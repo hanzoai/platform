@@ -51,13 +51,22 @@ const MyApp = ({
 			<Head>
 				<title>Hanzo</title>
 			</Head>
-			{process.env.NEXT_PUBLIC_UMAMI_HOST &&
-				process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
-					<Script
-						src={process.env.NEXT_PUBLIC_UMAMI_HOST}
-						data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
-					/>
-				)}
+			{(process.env.NEXT_PUBLIC_HANZO_ANALYTICS_SITE_ID || process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID) && (
+				<Script
+					src={`${process.env.NEXT_PUBLIC_HANZO_ANALYTICS_URL || process.env.NEXT_PUBLIC_UMAMI_HOST || "https://analytics.hanzo.ai"}/script.js`}
+					data-website-id={process.env.NEXT_PUBLIC_HANZO_ANALYTICS_SITE_ID || process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+					defer
+				/>
+			)}
+			{process.env.NEXT_PUBLIC_POSTHOG_KEY && (
+				<Script
+					id="posthog-init"
+					strategy="afterInteractive"
+					dangerouslySetInnerHTML={{
+						__html: `!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+" (stub)"},o="capture identify alias reset opt_in_capturing opt_out_capturing has_opted_out_capturing has_opted_in_capturing register register_once unregister".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||(window.posthog=[]));posthog.init('${process.env.NEXT_PUBLIC_POSTHOG_KEY}',{api_host:'${process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://insights.hanzo.ai"}',person_profiles:'identified_only'});`,
+					}}
+				/>
+			)}
 
 			<ThemeProvider
 				attribute="class"
