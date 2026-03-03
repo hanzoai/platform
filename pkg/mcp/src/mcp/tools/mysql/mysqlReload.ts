@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const mysqlReload = createTool({
   name: "mysql-reload",
-  description: "Reloads a MySQL database configuration in Hanzo.",
+  description: "Reloads a MySQL database configuration in Platform.",
   schema: z.object({
     mysqlId: z.string().describe("The ID of the MySQL database to reload."),
     appName: z.string().min(1).describe("The app name for the MySQL database."),

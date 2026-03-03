@@ -6,7 +6,7 @@ import { createTool } from "../toolFactory.js";
 export const applicationSaveDockerProvider = createTool({
   name: "application-saveDockerProvider",
   description:
-    "Saves Docker provider configuration for an application in Hanzo.",
+    "Saves Docker provider configuration for an application in Platform.",
   schema: z.object({
     applicationId: z
       .string()

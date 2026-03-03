@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationReload = createTool({
   name: "application-reload",
-  description: "Reloads an application in Hanzo.",
+  description: "Reloads an application in Platform.",
   schema: z.object({
     applicationId: z.string().describe("The ID of the application to reload."),
     appName: z.string().describe("The app name of the application to reload."),

@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const mysqlSaveEnvironment = createTool({
   name: "mysql-saveEnvironment",
-  description: "Saves environment variables for a MySQL database in Hanzo.",
+  description: "Saves environment variables for a MySQL database in Platform.",
   schema: z.object({
     mysqlId: z.string().describe("The ID of the MySQL database to configure."),
     env: z

@@ -3,7 +3,7 @@ import { allTools } from "./mcp/tools/index.js";
 
 export function createServer() {
   const server = new McpServer({
-    name: "hanzo",
+    name: "platform",
     version: "1.0.0",
   });
 

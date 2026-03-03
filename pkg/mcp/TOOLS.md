@@ -1,6 +1,6 @@
-# Hanzo MCP Server - Tools Documentation
+# Platform MCP Server - Tools Documentation
 
-This document provides detailed information about all available tools in the Hanzo MCP Server.
+This document provides detailed information about all available tools in the Platform MCP Server.
 
 ## 📊 Overview
 
@@ -10,20 +10,20 @@ This document provides detailed information about all available tools in the Han
 - **PostgreSQL Tools**: 13
 - **MySQL Tools**: 13
 
-All tools include semantic annotations to help MCP clients understand their behavior and are designed to interact with the Hanzo API.
+All tools include semantic annotations to help MCP clients understand their behavior and are designed to interact with the Platform API.
 
 ## 🗂️ Project Management Tools
 
 ### `project-all`
 
-- **Description**: Lists all projects in Hanzo
+- **Description**: Lists all projects in Platform
 - **Input Schema**: None
 - **Annotations**: Read-only, Idempotent
 - **Example**: `{}`
 
 ### `project-one`
 
-- **Description**: Gets a specific project by its ID in Hanzo
+- **Description**: Gets a specific project by its ID in Platform
 - **Input Schema**:
   ```json
   {
@@ -35,7 +35,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 ### `project-create`
 
-- **Description**: Creates a new project in Hanzo
+- **Description**: Creates a new project in Platform
 - **Input Schema**:
   ```json
   {
@@ -50,7 +50,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 ### `project-update`
 
-- **Description**: Updates an existing project in Hanzo
+- **Description**: Updates an existing project in Platform
 - **Input Schema**:
   ```json
   {
@@ -68,7 +68,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 ### `project-duplicate`
 
-- **Description**: Duplicates an existing project in Hanzo with optional service selection
+- **Description**: Duplicates an existing project in Platform with optional service selection
 - **Input Schema**:
   ```json
   {
@@ -90,7 +90,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 ### `project-remove`
 
-- **Description**: Removes/deletes an existing project in Hanzo
+- **Description**: Removes/deletes an existing project in Platform
 - **Input Schema**:
   ```json
   {
@@ -106,7 +106,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `application-one`
 
-- **Description**: Gets a specific application by its ID in Hanzo
+- **Description**: Gets a specific application by its ID in Platform
 - **Input Schema**:
   ```json
   {
@@ -118,7 +118,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `application-create`
 
-- **Description**: Creates a new application in Hanzo
+- **Description**: Creates a new application in Platform
 - **Input Schema**:
   ```json
   {
@@ -135,7 +135,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `application-update`
 
-- **Description**: Updates an existing application in Hanzo
+- **Description**: Updates an existing application in Platform
 - **Input Schema**: Complex schema with 60+ fields including deployment settings, resource limits, networking, and monitoring configurations
 - **Annotations**: Destructive
 - **Required Fields**: `applicationId`
@@ -143,7 +143,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `application-delete`
 
-- **Description**: Deletes an application from Hanzo
+- **Description**: Deletes an application from Platform
 - **Input Schema**:
   ```json
   {
@@ -170,7 +170,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `application-deploy`
 
-- **Description**: Deploys an application in Hanzo
+- **Description**: Deploys an application in Platform
 - **Input Schema**:
   ```json
   {
@@ -182,7 +182,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `application-redeploy`
 
-- **Description**: Redeploys an application in Hanzo
+- **Description**: Redeploys an application in Platform
 - **Input Schema**:
   ```json
   {
@@ -194,7 +194,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `application-start`
 
-- **Description**: Starts an application in Hanzo
+- **Description**: Starts an application in Platform
 - **Input Schema**:
   ```json
   {
@@ -206,7 +206,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `application-stop`
 
-- **Description**: Stops an application in Hanzo
+- **Description**: Stops an application in Platform
 - **Input Schema**:
   ```json
   {
@@ -218,7 +218,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `application-reload`
 
-- **Description**: Reloads an application in Hanzo
+- **Description**: Reloads an application in Platform
 - **Input Schema**:
   ```json
   {
@@ -231,7 +231,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `application-markRunning`
 
-- **Description**: Marks an application as running in Hanzo
+- **Description**: Marks an application as running in Platform
 - **Input Schema**:
   ```json
   {
@@ -463,7 +463,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `postgres-create`
 
-- **Description**: Creates a new PostgreSQL database in Hanzo
+- **Description**: Creates a new PostgreSQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -484,7 +484,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `postgres-one`
 
-- **Description**: Gets a specific PostgreSQL database by its ID in Hanzo
+- **Description**: Gets a specific PostgreSQL database by its ID in Platform
 - **Input Schema**:
   ```json
   {
@@ -496,7 +496,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `postgres-update`
 
-- **Description**: Updates an existing PostgreSQL database in Hanzo
+- **Description**: Updates an existing PostgreSQL database in Platform
 - **Input Schema**: Complex schema with database configuration fields including name, credentials, resource limits, and Docker settings
 - **Annotations**: Destructive
 - **Required Fields**: `postgresId`
@@ -504,7 +504,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `postgres-remove`
 
-- **Description**: Removes/deletes a PostgreSQL database from Hanzo
+- **Description**: Removes/deletes a PostgreSQL database from Platform
 - **Input Schema**:
   ```json
   {
@@ -531,7 +531,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `postgres-deploy`
 
-- **Description**: Deploys a PostgreSQL database in Hanzo
+- **Description**: Deploys a PostgreSQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -543,7 +543,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `postgres-start`
 
-- **Description**: Starts a PostgreSQL database in Hanzo
+- **Description**: Starts a PostgreSQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -555,7 +555,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `postgres-stop`
 
-- **Description**: Stops a PostgreSQL database in Hanzo
+- **Description**: Stops a PostgreSQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -567,7 +567,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `postgres-reload`
 
-- **Description**: Reloads a PostgreSQL database in Hanzo
+- **Description**: Reloads a PostgreSQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -580,7 +580,7 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 #### `postgres-rebuild`
 
-- **Description**: Rebuilds a PostgreSQL database in Hanzo
+- **Description**: Rebuilds a PostgreSQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -634,13 +634,13 @@ All tools include semantic annotations to help MCP clients understand their beha
 
 ## 🐬 MySQL Database Management Tools
 
-Hanzo includes comprehensive MySQL database management capabilities. These tools mirror the PostgreSQL functionality but are tailored for MySQL databases with MySQL-specific features like root password management.
+Platform includes comprehensive MySQL database management capabilities. These tools mirror the PostgreSQL functionality but are tailored for MySQL databases with MySQL-specific features like root password management.
 
 ### Core Database Operations
 
 #### `mysql-create`
 
-- **Description**: Creates a new MySQL database in Hanzo
+- **Description**: Creates a new MySQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -662,7 +662,7 @@ Hanzo includes comprehensive MySQL database management capabilities. These tools
 
 #### `mysql-one`
 
-- **Description**: Gets a specific MySQL database by its ID in Hanzo
+- **Description**: Gets a specific MySQL database by its ID in Platform
 - **Input Schema**:
   ```json
   {
@@ -674,7 +674,7 @@ Hanzo includes comprehensive MySQL database management capabilities. These tools
 
 #### `mysql-update`
 
-- **Description**: Updates an existing MySQL database in Hanzo
+- **Description**: Updates an existing MySQL database in Platform
 - **Input Schema**: Complex schema with database configuration fields including name, credentials, resource limits, and Docker settings
 - **Annotations**: Destructive
 - **Required Fields**: `mysqlId`
@@ -682,7 +682,7 @@ Hanzo includes comprehensive MySQL database management capabilities. These tools
 
 #### `mysql-remove`
 
-- **Description**: Removes/deletes a MySQL database from Hanzo
+- **Description**: Removes/deletes a MySQL database from Platform
 - **Input Schema**:
   ```json
   {
@@ -709,7 +709,7 @@ Hanzo includes comprehensive MySQL database management capabilities. These tools
 
 #### `mysql-deploy`
 
-- **Description**: Deploys a MySQL database in Hanzo
+- **Description**: Deploys a MySQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -721,7 +721,7 @@ Hanzo includes comprehensive MySQL database management capabilities. These tools
 
 #### `mysql-start`
 
-- **Description**: Starts a MySQL database in Hanzo
+- **Description**: Starts a MySQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -733,7 +733,7 @@ Hanzo includes comprehensive MySQL database management capabilities. These tools
 
 #### `mysql-stop`
 
-- **Description**: Stops a MySQL database in Hanzo
+- **Description**: Stops a MySQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -745,7 +745,7 @@ Hanzo includes comprehensive MySQL database management capabilities. These tools
 
 #### `mysql-reload`
 
-- **Description**: Reloads a MySQL database in Hanzo
+- **Description**: Reloads a MySQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -758,7 +758,7 @@ Hanzo includes comprehensive MySQL database management capabilities. These tools
 
 #### `mysql-rebuild`
 
-- **Description**: Rebuilds a MySQL database in Hanzo
+- **Description**: Rebuilds a MySQL database in Platform
 - **Input Schema**:
   ```json
   {
@@ -841,7 +841,7 @@ All tools include semantic annotations to help MCP clients understand their beha
   - All read-only operations
 
 - **External API Tools** (`openWorldHint: true`):
-  - All tools (interact with Hanzo API)
+  - All tools (interact with Platform API)
 
 ## 🔧 Usage Examples
 
