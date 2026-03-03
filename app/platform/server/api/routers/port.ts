@@ -1,5 +1,6 @@
 import {
 	createPort,
+	findApplicationById,
 	finPortById,
 	removePortById,
 	updatePortById,
@@ -15,11 +16,25 @@ import {
 export const portRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(apiCreatePort)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
+				// Verify the application belongs to the caller's org
+				const app = await findApplicationById(input.applicationId);
+				if (
+					app.environment.project.organizationId !==
+					ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to create ports on this application",
+					});
+				}
 				await createPort(input);
 				return true;
 			} catch (error) {
+				if (error instanceof TRPCError) {
+					throw error;
+				}
 				throw new TRPCError({
 					code: "BAD_REQUEST",
 					message: "Error input: Inserting port",
