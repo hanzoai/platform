@@ -42,9 +42,12 @@ const GeneralSettingsPage = () => {
   );
 };
 
-// NO AUTHENTICATION - Direct access for internal use
 export default GeneralSettingsPage;
 
 GeneralSettingsPage.getLayout = (page: ReactElement) => {
   return <DashboardLayout>{page}</DashboardLayout>;
 };
+
+export async function getServerSideProps() {
+  return { props: {} };
+}
