@@ -21,7 +21,7 @@ interface Props {
 }
 
 export const ShowEnvironment = ({ applicationId }: Props) => {
-	const { mutateAsync, isLoading } =
+	const { mutateAsync, isPending: isLoading } =
 		api.application.saveEnvironment.useMutation();
 
 	const { data, refetch } = api.application.one.useQuery(

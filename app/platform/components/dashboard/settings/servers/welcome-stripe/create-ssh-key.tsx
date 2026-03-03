@@ -12,7 +12,7 @@ import { api } from "@/utils/api";
 export const CreateSSHKey = () => {
 	const { data, refetch } = api.sshKey.all.useQuery();
 	const generateMutation = api.sshKey.generate.useMutation();
-	const { mutateAsync, isLoading } = api.sshKey.create.useMutation();
+	const { mutateAsync, isPending: isLoading } = api.sshKey.create.useMutation();
 	const hasCreatedKey = useRef(false);
 	const [selectedOption, setSelectedOption] = useState<"manual" | "provider">(
 		"manual",

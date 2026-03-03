@@ -52,7 +52,7 @@ export const AddCommandCompose = ({ composeId }: Props) => {
 
 	const utils = api.useUtils();
 
-	const { mutateAsync, isLoading } = api.compose.update.useMutation();
+	const { mutateAsync, isPending: isLoading } = api.compose.update.useMutation();
 
 	const form = useForm<AddCommand>({
 		defaultValues: {
