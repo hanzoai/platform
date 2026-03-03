@@ -38,9 +38,9 @@ jobs:
           file: Dockerfile.base
           push: true
           tags: |
-            ghcr.io/hanzoai/platform-base:latest
-            ghcr.io/hanzoai/platform-base:${{ github.sha }}
+            ghcr.io/hanzoai/platform:base
+            ghcr.io/hanzoai/platform:base-${{ github.sha }}
           platforms: linux/amd64
-          cache-from: type=registry,ref=ghcr.io/hanzoai/platform-base-cache:amd64
-          cache-to: type=registry,ref=ghcr.io/hanzoai/platform-base-cache:amd64,mode=max
+          cache-from: type=registry,ref=ghcr.io/hanzoai/platform-cache:base-amd64
+          cache-to: type=registry,ref=ghcr.io/hanzoai/platform-cache:base-amd64,mode=max
           provenance: false
