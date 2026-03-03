@@ -41,11 +41,11 @@ const MyApp = ({
 			<Head>
 				<title>Hanzo</title>
 			</Head>
-			{process.env.NEXT_PUBLIC_UMAMI_HOST &&
-				process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
+			{process.env.NEXT_PUBLIC_ANALYTICS_HOST &&
+				process.env.NEXT_PUBLIC_ANALYTICS_WEBSITE_ID && (
 					<Script
-						src={process.env.NEXT_PUBLIC_UMAMI_HOST}
-						data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+						src={process.env.NEXT_PUBLIC_ANALYTICS_HOST}
+						data-website-id={process.env.NEXT_PUBLIC_ANALYTICS_WEBSITE_ID}
 					/>
 				)}
 
