@@ -324,7 +324,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 		} = data;
 		let promise: Promise<unknown> | null = null;
 		if (data.type === "slack") {
-			promise = slackMutation.mutateAsync({
+			promise = (slackMutation.mutateAsync as any)({
 				appBuildError: appBuildError,
 				appDeploy: appDeploy,
 				platformRestart: platformRestart,
@@ -338,7 +338,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				serverThreshold: serverThreshold,
 			});
 		} else if (data.type === "telegram") {
-			promise = telegramMutation.mutateAsync({
+			promise = (telegramMutation.mutateAsync as any)({
 				appBuildError: appBuildError,
 				appDeploy: appDeploy,
 				platformRestart: platformRestart,
@@ -353,7 +353,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				serverThreshold: serverThreshold,
 			});
 		} else if (data.type === "discord") {
-			promise = discordMutation.mutateAsync({
+			promise = (discordMutation.mutateAsync as any)({
 				appBuildError: appBuildError,
 				appDeploy: appDeploy,
 				platformRestart: platformRestart,
@@ -367,7 +367,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				serverThreshold: serverThreshold,
 			});
 		} else if (data.type === "email") {
-			promise = emailMutation.mutateAsync({
+			promise = (emailMutation.mutateAsync as any)({
 				appBuildError: appBuildError,
 				appDeploy: appDeploy,
 				platformRestart: platformRestart,
@@ -385,7 +385,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				serverThreshold: serverThreshold,
 			});
 		} else if (data.type === "gotify") {
-			promise = gotifyMutation.mutateAsync({
+			promise = (gotifyMutation.mutateAsync as any)({
 				appBuildError: appBuildError,
 				appDeploy: appDeploy,
 				platformRestart: platformRestart,
@@ -400,7 +400,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				gotifyId: notification?.gotifyId || "",
 			});
 		} else if (data.type === "ntfy") {
-			promise = ntfyMutation.mutateAsync({
+			promise = (ntfyMutation.mutateAsync as any)({
 				appBuildError: appBuildError,
 				appDeploy: appDeploy,
 				platformRestart: platformRestart,
