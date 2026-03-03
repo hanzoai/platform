@@ -25,6 +25,7 @@ RUN pnpm --filter=./apps/schedules --prod deploy /prod/schedules
 RUN cp -R /usr/src/app/apps/schedules/dist /prod/schedules/dist
 
 FROM base AS platform
+LABEL org.opencontainers.image.source=https://github.com/hanzoai/platform
 WORKDIR /app
 
 # Set production
