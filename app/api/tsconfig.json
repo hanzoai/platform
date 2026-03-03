@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"target": "ESNext",
 		"module": "ESNext",
-		"moduleResolution": "Node",
+		"moduleResolution": "Bundler",
 		"strict": true,
 		"skipLibCheck": true,
 		"outDir": "dist",
@@ -10,8 +10,7 @@
 		"jsxImportSource": "hono/jsx",
 		"baseUrl": ".",
 		"paths": {
-			"@/*": ["./*"],
-			"@hanzo/platform/*": ["../../packages/server/src/*"]
+			"@/*": ["./*"]
 		}
 	},
 	"exclude": ["node_modules", "dist"]
