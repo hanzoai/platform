@@ -345,7 +345,7 @@ export const redisRouter = createTRPCRouter({
 			const { redisId, ...rest } = input;
 			const redis = await updateRedisById(redisId, {
 				...rest,
-			});
+			} as any);
 
 			if (!redis) {
 				throw new TRPCError({
