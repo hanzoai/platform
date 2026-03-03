@@ -151,32 +151,37 @@ export const ShowBilling = () => {
 	const currentPlan = wallet?.plan || "developer";
 	const planOrder: PlanType[] = ["developer", "pro", "team", "enterprise"];
 
-	// Group models by category from API data
-	const chatModels = pricing.models.filter(
-		(m: any) =>
-			m.name?.startsWith("zen4") &&
-			!m.name?.includes("coder") &&
-			!m.pricingUnit,
+	// Group models by category — derive from API fields, not hardcoded prefixes
+	const classifyModel = (m: any) => {
+		const name = (m.name || "").toLowerCase();
+		const unit = m.pricingUnit || "";
+		if (unit === "minute") return "audio";
+		if (unit === "image" || unit === "step") return "image";
+		if (name.includes("embed") || name.includes("rerank")) return "embedding";
+		if (name.includes("coder")) return "code";
+		if (name.includes("omni") || name.includes("-vl")) return "multimodal";
+		if (name.includes("guard")) return "safety";
+		return "chat";
+	};
+
+	const modelGroups = pricing.models.reduce(
+		(acc: Record<string, any[]>, m: any) => {
+			const cat = classifyModel(m);
+			(acc[cat] = acc[cat] || []).push(m);
+			return acc;
+		},
+		{} as Record<string, any[]>,
 	);
-	const codeModels = pricing.models.filter(
-		(m: any) => m.name?.includes("coder") && !m.pricingUnit,
-	);
-	const multimodalModels = pricing.models.filter(
-		(m: any) =>
-			m.name?.startsWith("zen3") &&
-			!m.name?.includes("embed") &&
-			!m.name?.includes("rerank") &&
-			!m.pricingUnit,
-	);
-	const embeddingModels = pricing.models.filter(
-		(m: any) => m.name?.includes("embed") || m.name?.includes("rerank"),
-	);
-	const audioModels = pricing.models.filter(
-		(m: any) => m.pricingUnit === "minute",
-	);
-	const imageModels = pricing.models.filter(
-		(m: any) => m.pricingUnit === "image" || m.pricingUnit === "step",
-	);
+
+	const chatModels = modelGroups.chat || [];
+	const codeModels = modelGroups.code || [];
+	const multimodalModels = [
+		...(modelGroups.multimodal || []),
+		...(modelGroups.safety || []),
+	];
+	const embeddingModels = modelGroups.embedding || [];
+	const audioModels = modelGroups.audio || [];
+	const imageModels = modelGroups.image || [];
 
 	return (
 		<div className="w-full">
@@ -349,18 +354,28 @@ export const ShowBilling = () => {
 															</>
 														)}
 													</div>
-													<div className="text-sm text-muted-foreground mb-4">
-														{planKey ===
-															"developer" &&
-															"Free tier with $5 credit"}
-														{planKey === "pro" &&
-															"For developers shipping products"}
-														{planKey === "team" &&
-															"SSO, shared billing, custom training"}
-														{planKey ===
-															"enterprise" &&
-															"Custom SLA & dedicated support"}
-													</div>
+													<p className="text-sm text-muted-foreground mb-3">
+														{plan.description || ""}
+													</p>
+													{plan.features &&
+														plan.features.length >
+															0 && (
+														<ul className="text-xs text-muted-foreground space-y-1.5 mb-4">
+															{plan.features.map(
+																(
+																	f: string,
+																) => (
+																	<li
+																		key={f}
+																		className="flex items-start gap-1.5"
+																	>
+																		<CheckIcon className="size-3 text-primary mt-0.5 flex-shrink-0" />
+																		{f}
+																	</li>
+																),
+															)}
+														</ul>
+													)}
 													{isEnterprise ? (
 														<Button
 															variant="outline"
@@ -437,7 +452,9 @@ export const ShowBilling = () => {
 										</div>
 										<div className="flex items-center gap-1.5">
 											<CheckIcon className="size-3.5 text-primary" />{" "}
-											100+ AI models
+											{pricing.models.length > 0
+												? `${pricing.models.length}+ AI models`
+												: "400+ AI models"}
 										</div>
 									</div>
 								</div>
@@ -515,7 +532,7 @@ export const ShowBilling = () => {
 													</div>
 													{plan.freeTier && (
 														<div className="mt-1.5 text-xs text-green-500 font-medium">
-															$5 free credit
+															Free credit included
 														</div>
 													)}
 												</div>
@@ -627,10 +644,10 @@ export const ShowBilling = () => {
 									</div>
 								) : (
 									<>
-										{/* Zen4 Chat Models */}
+										{/* Chat & Reasoning Models */}
 										{chatModels.length > 0 && (
 											<ModelSection
-												title="Zen4 Chat & Reasoning"
+												title="Chat & Reasoning"
 												icon={
 													<Brain className="size-4" />
 												}
@@ -641,7 +658,7 @@ export const ShowBilling = () => {
 										{/* Code Models */}
 										{codeModels.length > 0 && (
 											<ModelSection
-												title="Zen4 Coder"
+												title="Code Generation"
 												icon={
 													<Cpu className="size-4" />
 												}
@@ -652,7 +669,7 @@ export const ShowBilling = () => {
 										{/* Multimodal Models */}
 										{multimodalModels.length > 0 && (
 											<ModelSection
-												title="Zen3 Multimodal"
+												title="Multimodal & Safety"
 												icon={
 													<Image className="size-4" />
 												}
@@ -844,22 +861,8 @@ export const ShowBilling = () => {
 											</div>
 										)}
 
-										{/* Third-party */}
-										<div className="p-4 rounded-lg border bg-muted/20">
-											<h4 className="text-sm font-semibold mb-2">
-												100+ Third-Party Models
-											</h4>
-											<p className="text-xs text-muted-foreground">
-												GPT-5, Claude Opus 4.6, Gemini
-												3.1 Pro, DeepSeek R1, Llama 4,
-												Mistral Large, and more — all at
-												provider pricing with{" "}
-												<span className="font-medium text-foreground">
-													zero markup
-												</span>
-												. Same API key, same endpoint.
-											</p>
-										</div>
+										{/* Third-party — model count from /v1/models API */}
+										<ThirdPartyModelsCard />
 									</>
 								)}
 							</div>
@@ -897,6 +900,34 @@ export const ShowBilling = () => {
 		</div>
 	);
 };
+
+/** Shows the third-party model count, fetched live from the LLM Gateway. */
+function ThirdPartyModelsCard() {
+	const [count, setCount] = useState<number | null>(null);
+	useEffect(() => {
+		fetch("https://api.hanzo.ai/v1/models")
+			.then((r) => r.json())
+			.then((d) => setCount(d?.data?.length ?? null))
+			.catch(() => setCount(null));
+	}, []);
+
+	const label = count ? `${count}+` : "400+";
+	return (
+		<div className="p-4 rounded-lg border bg-muted/20">
+			<h4 className="text-sm font-semibold mb-2">
+				{label} Third-Party Models
+			</h4>
+			<p className="text-xs text-muted-foreground">
+				GPT-5, Claude Opus 4.6, Gemini 3.1 Pro, DeepSeek R1, Llama
+				4, Mistral Large, and more — all at provider pricing with{" "}
+				<span className="font-medium text-foreground">
+					zero markup
+				</span>
+				. Same API key, same endpoint.
+			</p>
+		</div>
+	);
+}
 
 /** Renders a table of models with their specs and pricing tier. */
 function ModelSection({
