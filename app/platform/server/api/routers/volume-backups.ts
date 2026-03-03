@@ -173,6 +173,12 @@ export const volumeBackupsRouter = createTRPCRouter({
 		.input(createVolumeBackupSchema)
 		.mutation(async ({ input, ctx }) => {
 			const newVolumeBackup = await createVolumeBackup(input);
+			if (!newVolumeBackup) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to create volume backup",
+				});
+			}
 
 			// Verify org ownership on the newly created volume backup
 			const orgId = await getVolumeBackupOrgId(newVolumeBackup);
