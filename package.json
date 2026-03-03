@@ -1,7 +1,10 @@
 {
 	"name": "platform",
 	"private": true,
-	"workspaces": ["app/*", "pkg/*"],
+	"workspaces": [
+		"app/*",
+		"pkg/*"
+	],
 	"scripts": {
 		"platform:setup": "pnpm --filter=platform run setup",
 		"platform:dev": "pnpm --filter=platform run dev",
@@ -44,9 +47,18 @@
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [
+			"@biomejs/biome",
+			"bcrypt",
 			"core-js",
 			"core-js-pure",
+			"cpu-features",
+			"esbuild",
+			"lefthook",
+			"msgpackr-extract",
+			"node-pty",
 			"sharp",
+			"sqlite3",
+			"ssh2",
 			"tree-sitter",
 			"tree-sitter-json",
 			"tree-sitter-yaml"
