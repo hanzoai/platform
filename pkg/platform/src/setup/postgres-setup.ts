@@ -2,7 +2,7 @@ import type { CreateServiceOptions } from "dockerode";
 import { docker } from "../constants";
 import { pullImage } from "../utils/docker/utils";
 export const initializePostgres = async () => {
-	const imageName = "postgres:16";
+	const imageName = "ghcr.io/hanzoai/sql:18";
 	const containerName = "platform-postgres";
 	const settings: CreateServiceOptions = {
 		Name: containerName,
