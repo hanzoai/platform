@@ -35,7 +35,7 @@ import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { z } from "zod";
-import { rebuildDatabase } from "@dokploy/server";
+import { rebuildDatabase } from "@hanzo/core";
 export const redisRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(apiCreateRedis)
@@ -276,7 +276,7 @@ export const redisRouter = createTRPCRouter({
 			for (const operation of cleanupOperations) {
 				try {
 					await operation();
-				} catch (_) {}
+				} catch (_) { }
 			}
 
 			return redis;
