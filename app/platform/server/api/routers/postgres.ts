@@ -365,7 +365,7 @@ export const postgresRouter = createTRPCRouter({
 			}
 			const service = await updatePostgresById(postgresId, {
 				...rest,
-			});
+			} as any);
 
 			if (!service) {
 				throw new TRPCError({

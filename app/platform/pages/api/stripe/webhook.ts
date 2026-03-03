@@ -69,7 +69,7 @@ export default async function handler(
 					stripeCustomerId: session.customer as string,
 					stripeSubscriptionId: session.subscription as string,
 					serversQuantity: subscription?.items?.data?.[0]?.quantity ?? 0,
-				})
+				} as any)
 				.where(eq(users_temp.id, adminId))
 				.returning();
 
@@ -89,7 +89,7 @@ export default async function handler(
 				.set({
 					stripeSubscriptionId: newSubscription.id,
 					stripeCustomerId: newSubscription.customer as string,
-				})
+				} as any)
 				.where(
 					eq(users_temp.stripeCustomerId, newSubscription.customer as string),
 				)
@@ -106,7 +106,7 @@ export default async function handler(
 				.set({
 					stripeSubscriptionId: null,
 					serversQuantity: 0,
-				})
+				} as any)
 				.where(
 					eq(users_temp.stripeCustomerId, newSubscription.customer as string),
 				);
@@ -138,7 +138,7 @@ export default async function handler(
 					.update(users_temp)
 					.set({
 						serversQuantity: newSubscription?.items?.data?.[0]?.quantity ?? 0,
-					})
+					} as any)
 					.where(
 						eq(users_temp.stripeCustomerId, newSubscription.customer as string),
 					);
@@ -149,7 +149,7 @@ export default async function handler(
 				await disableServers(admin.id);
 				await db
 					.update(users_temp)
-					.set({ serversQuantity: 0 })
+					.set({ serversQuantity: 0 } as any)
 					.where(
 						eq(users_temp.stripeCustomerId, newSubscription.customer as string),
 					);
@@ -175,7 +175,7 @@ export default async function handler(
 				.update(users_temp)
 				.set({
 					serversQuantity: suscription?.items?.data?.[0]?.quantity ?? 0,
-				})
+				} as any)
 				.where(eq(users_temp.stripeCustomerId, suscription.customer as string));
 
 			const admin = await findUserByStripeCustomerId(
@@ -208,7 +208,7 @@ export default async function handler(
 					.update(users_temp)
 					.set({
 						serversQuantity: 0,
-					})
+					} as any)
 					.where(
 						eq(users_temp.stripeCustomerId, newInvoice.customer as string),
 					);
@@ -234,7 +234,7 @@ export default async function handler(
 					stripeCustomerId: null,
 					stripeSubscriptionId: null,
 					serversQuantity: 0,
-				})
+				} as any)
 				.where(eq(users_temp.stripeCustomerId, customer.id));
 
 			break;
@@ -256,7 +256,7 @@ const disableServers = async (userId: string) => {
 			.update(server)
 			.set({
 				serverStatus: "inactive",
-			})
+			} as any)
 			.where(eq(server.organizationId, org.id));
 	}
 };
@@ -271,14 +271,14 @@ const findUserByStripeCustomerId = async (stripeCustomerId: string) => {
 const activateServer = async (serverId: string) => {
 	await db
 		.update(server)
-		.set({ serverStatus: "active" })
+		.set({ serverStatus: "active" } as any)
 		.where(eq(server.serverId, serverId));
 };
 
 const deactivateServer = async (serverId: string) => {
 	await db
 		.update(server)
-		.set({ serverStatus: "inactive" })
+		.set({ serverStatus: "inactive" } as any)
 		.where(eq(server.serverId, serverId));
 };
 
