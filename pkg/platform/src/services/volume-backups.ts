@@ -38,7 +38,7 @@ export const createVolumeBackup = async (
 ) => {
 	const newVolumeBackup = await db
 		.insert(volumeBackups)
-		.values(volumeBackup)
+		.values(volumeBackup as any)
 		.returning()
 		.then((e) => e[0]);
 

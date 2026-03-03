@@ -22,7 +22,7 @@ export const createGitlab = async (
 				organizationId: organizationId,
 				name: input.name,
 				userId: userId,
-			})
+			} as any)
 			.returning()
 			.then((response) => response[0]);
 
@@ -38,7 +38,7 @@ export const createGitlab = async (
 			.values({
 				...input,
 				gitProviderId: newGitProvider?.gitProviderId,
-			})
+			} as any)
 			.returning()
 			.then((response) => response[0]);
 	});
@@ -70,7 +70,7 @@ export const updateGitlab = async (
 		.update(gitlab)
 		.set({
 			...input,
-		})
+		} as any)
 		.where(eq(gitlab.gitlabId, gitlabId))
 		.returning()
 		.then((response) => response[0]);
