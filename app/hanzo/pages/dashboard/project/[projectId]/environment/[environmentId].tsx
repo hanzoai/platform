@@ -761,7 +761,7 @@ const EnvironmentPage = (
 			/>
 			<Head>
 				<title>
-					Environment: {currentEnvironment.name} | {projectData?.name} | Dokploy
+					Environment: {currentEnvironment.name} | {projectData?.name} | Hanzo Platform
 				</title>
 			</Head>
 			<div className="w-full">
