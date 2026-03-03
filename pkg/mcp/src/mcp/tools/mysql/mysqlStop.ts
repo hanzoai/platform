@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const mysqlStop = createTool({
   name: "mysql-stop",
-  description: "Stops a MySQL database in Hanzo.",
+  description: "Stops a MySQL database in Platform.",
   schema: z.object({
     mysqlId: z.string().describe("The ID of the MySQL database to stop."),
   }),
