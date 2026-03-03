@@ -5,6 +5,7 @@ import { findUserById } from "../services/admin";
 import { getHanzoImageTag } from "../services/settings";
 import { pullImage } from "../utils/docker/utils";
 import { execAsync } from "../utils/process/execAsync";
+import { getRemoteDocker } from "./setup";
 
 /**
  * Stub implementation to maintain compatibility
@@ -119,22 +120,27 @@ export const setupWebMonitoring = async (userId: string) => {
 			[`${user?.metricsConfig?.server?.port}/tcp`]: {},
 		},
 	};
+
 	const docker = await getRemoteDocker();
 	try {
 		await execAsync(
 			"mkdir -p /etc/hanzo/monitoring && touch /etc/hanzo/monitoring/monitoring.db",
 		);
-		await pullImage(imageName);
+		// Use direct method instead of utility to avoid dependency issues
+		await docker.pull(imageName);
 
-		const container = docker.getContainer(containerName);
 		try {
+			// Check if container exists
+			const container = docker.getContainer(containerName);
 			await container.inspect();
 			await container.remove({ force: true });
 			console.log("Removed existing container");
-		} catch (_error) {}
+		} catch (_error) {
+			// Container doesn't exist, continue
+		}
 
-		await docker.createContainer(settings);
-		const newContainer = docker.getContainer(containerName);
+		// Create and start the container
+		const newContainer = await docker.createContainer(settings);
 		await newContainer.start();
 
 		console.log("Monitoring Started ");

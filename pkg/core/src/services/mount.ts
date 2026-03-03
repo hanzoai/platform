@@ -116,6 +116,12 @@ export const findMountById = async (mountId: string) => {
 			message: "Mount not found",
 		});
 	}
+
+	// Add serverId to compose if it's present but doesn't have serverId
+	if (mount.compose && !('serverId' in mount.compose)) {
+		(mount.compose as ComposeWithServerId).serverId = null;
+	}
+
 	return mount;
 };
 
@@ -211,7 +217,7 @@ export const deleteFileMount = async (mountId: string) => {
 		} else {
 			await removeFileOrDirectory(fullPath);
 		}
-	} catch (_error) {}
+	} catch (_error) { }
 };
 
 export const getBaseFilesPath = async (mountId: string) => {
@@ -224,36 +230,42 @@ export const getBaseFilesPath = async (mountId: string) => {
 	if (mount.serviceType === "application" && mount.application) {
 		const { APPLICATIONS_PATH } = paths(!!mount.application.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.application.appName;
+		appName = mount.application.appName || "";
 	} else if (mount.serviceType === "postgres" && mount.postgres) {
 		const { APPLICATIONS_PATH } = paths(!!mount.postgres.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.postgres.appName;
+		appName = mount.postgres.appName || "";
 	} else if (mount.serviceType === "mariadb" && mount.mariadb) {
 		const { APPLICATIONS_PATH } = paths(!!mount.mariadb.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.mariadb.appName;
+		appName = mount.mariadb.appName || "";
 	} else if (mount.serviceType === "mongo" && mount.mongo) {
 		const { APPLICATIONS_PATH } = paths(!!mount.mongo.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.mongo.appName;
+		appName = mount.mongo.appName || "";
 	} else if (mount.serviceType === "mysql" && mount.mysql) {
 		const { APPLICATIONS_PATH } = paths(!!mount.mysql.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.mysql.appName;
+		appName = mount.mysql.appName || "";
 	} else if (mount.serviceType === "redis" && mount.redis) {
 		const { APPLICATIONS_PATH } = paths(!!mount.redis.serverId);
 		absoluteBasePath = path.resolve(APPLICATIONS_PATH);
-		appName = mount.redis.appName;
+		appName = mount.redis.appName || "";
 	} else if (mount.serviceType === "compose" && mount.compose) {
 		const { COMPOSE_PATH } = paths(!!mount.compose.serverId);
-		appName = mount.compose.appName;
+		appName = mount.compose.appName || "";
 		absoluteBasePath = path.resolve(COMPOSE_PATH);
 	}
 	directoryPath = path.join(absoluteBasePath, appName, "files");
 
 	return directoryPath;
 };
+
+export interface ComposeWithServerId {
+	composeId: string | null;
+	appName: string | null;
+	serverId: string | null;
+}
 
 type MountNested = Awaited<ReturnType<typeof findMountById>>;
 export const getServerId = async (mount: MountNested) => {
