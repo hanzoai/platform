@@ -10,8 +10,51 @@ env:
   ORG: hanzoai
 
 jobs:
-  # ── Build platform ─────────────────────────────────────────────────
+  # ── Test gates — broken code does not ship ───────────────────
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: true
+      matrix:
+        check: [build, typecheck, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.4.0
+          cache: 'pnpm'
+
+      - name: Install Nixpacks
+        if: matrix.check == 'test'
+        run: |
+          export NIXPACKS_VERSION=1.41.0
+          curl -sSL https://nixpacks.com/install.sh | bash
+
+      - name: Install Railpack
+        if: matrix.check == 'test'
+        run: |
+          export RAILPACK_VERSION=0.15.4
+          curl -sSL https://railpack.com/install.sh | bash
+
+      - name: Add build tools to PATH
+        if: matrix.check == 'test'
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Initialize Docker Swarm
+        if: matrix.check == 'test'
+        run: |
+          docker swarm init
+          docker network create --driver overlay platform-network || true
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm server:build
+      - run: pnpm ${{ matrix.check }}
+
+  # ── Build platform ──────────────────────────────────────────
   platform:
+    needs: [quality]
     runs-on: hanzo-build
     permissions:
       contents: read
@@ -46,8 +89,9 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache,mode=max
 
-  # ── Build platform-cloud ───────────────────────────────────────────
+  # ── Build platform-cloud ───────────────────────────────────
   platform-cloud:
+    needs: [quality]
     runs-on: hanzo-build
     permissions:
       contents: read
@@ -84,8 +128,9 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache,mode=max
 
-  # ── Build schedule + server ────────────────────────────────────────
+  # ── Build schedule + server ────────────────────────────────
   schedule:
+    needs: [quality]
     runs-on: hanzo-build
     permissions:
       contents: read
@@ -117,6 +162,7 @@ jobs:
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:buildcache,mode=max
 
   server:
+    needs: [quality]
     runs-on: hanzo-build
     permissions:
       contents: read
