@@ -10,9 +10,9 @@ env:
   ORG: hanzoai
 
 jobs:
-  # ── Build platform (self-hosted) ─────────────────────────────────────
-  platform-amd64:
-    runs-on: hanzo-amd64
+  # ── Build platform ─────────────────────────────────────────────────
+  platform:
+    runs-on: hanzo-build
     permissions:
       contents: read
       packages: write
@@ -24,56 +24,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
-      - id: meta
-        run: |
-          VERSION=$(jq -r .version app/platform/package.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.ORG }}/platform:amd64-${{ github.sha }}
-          platforms: linux/amd64
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache-amd64
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache-amd64,mode=max
-
-  platform-arm64:
-    runs-on: hanzo-arm64
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.ORG }}/platform:arm64-${{ github.sha }}
-          platforms: linux/arm64
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache-arm64
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache-arm64,mode=max
-
-  platform-manifest:
-    needs: [platform-amd64, platform-arm64]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
         run: |
           VERSION=$(jq -r .version app/platform/package.json)
@@ -83,59 +33,22 @@ jobs:
           else
             echo "suffix=canary" >> $GITHUB_OUTPUT
           fi
-      - name: Create and push multi-arch manifest
-        run: |
-          IMG=${{ env.REGISTRY }}/${{ env.ORG }}/platform
-          SHA=${{ github.sha }}
-          VERSION=${{ steps.meta.outputs.version }}
-          SUFFIX=${{ steps.meta.outputs.suffix }}
-
-          # Create manifest for :latest or :canary
-          docker manifest create ${IMG}:${SUFFIX} \
-            ${IMG}:amd64-${SHA} \
-            ${IMG}:arm64-${SHA}
-          docker manifest push ${IMG}:${SUFFIX}
-
-          # Also tag with version on main
-          if [ "${SUFFIX}" = "latest" ]; then
-            docker manifest create ${IMG}:${VERSION} \
-              ${IMG}:amd64-${SHA} \
-              ${IMG}:arm64-${SHA}
-            docker manifest push ${IMG}:${VERSION}
-          fi
-
-  # ── Build platform-cloud ─────────────────────────────────────────────
-  cloud-amd64:
-    runs-on: hanzo-amd64
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
-      - id: meta
-        run: |
-          VERSION=$(jq -r .version app/platform/package.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.cloud
+          file: ./Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:amd64-${{ github.sha }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.ORG }}/platform:${{ steps.meta.outputs.suffix }}
+            ${{ env.REGISTRY }}/${{ env.ORG }}/platform:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.ORG }}/platform:${{ github.sha }}
           platforms: linux/amd64
-          build-args: |
-            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache-amd64
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache-amd64,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache,mode=max
 
-  cloud-arm64:
-    runs-on: hanzo-arm64
+  # ── Build platform-cloud ───────────────────────────────────────────
+  platform-cloud:
+    runs-on: hanzo-build
     permissions:
       contents: read
       packages: write
@@ -147,31 +60,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile.cloud
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:arm64-${{ github.sha }}
-          platforms: linux/arm64
-          build-args: |
-            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache-arm64
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache-arm64,mode=max
-
-  cloud-manifest:
-    needs: [cloud-amd64, cloud-arm64]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
         run: |
           VERSION=$(jq -r .version app/platform/package.json)
@@ -181,28 +69,24 @@ jobs:
           else
             echo "suffix=canary" >> $GITHUB_OUTPUT
           fi
-      - name: Create and push multi-arch manifest
-        run: |
-          IMG=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud
-          SHA=${{ github.sha }}
-          VERSION=${{ steps.meta.outputs.version }}
-          SUFFIX=${{ steps.meta.outputs.suffix }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.cloud
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:${{ steps.meta.outputs.suffix }}
+            ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:${{ steps.meta.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:${{ github.sha }}
+          platforms: linux/amd64
+          build-args: |
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache,mode=max
 
-          docker manifest create ${IMG}:${SUFFIX} \
-            ${IMG}:amd64-${SHA} \
-            ${IMG}:arm64-${SHA}
-          docker manifest push ${IMG}:${SUFFIX}
-
-          if [ "${SUFFIX}" = "latest" ]; then
-            docker manifest create ${IMG}:${VERSION} \
-              ${IMG}:amd64-${SHA} \
-              ${IMG}:arm64-${SHA}
-            docker manifest push ${IMG}:${VERSION}
-          fi
-
-  # ── Build schedule + server (amd64-only for now) ─────────────────────
+  # ── Build schedule + server ────────────────────────────────────────
   schedule:
-    runs-on: hanzo-amd64
+    runs-on: hanzo-build
     permissions:
       contents: read
       packages: write
@@ -233,7 +117,7 @@ jobs:
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:buildcache,mode=max
 
   server:
-    runs-on: hanzo-amd64
+    runs-on: hanzo-build
     permissions:
       contents: read
       packages: write
