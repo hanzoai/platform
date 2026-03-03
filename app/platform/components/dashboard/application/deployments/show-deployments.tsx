@@ -64,19 +64,19 @@ export const ShowDeployments = ({
 
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
-	const { mutateAsync: rollback, isLoading: isRollingBack } =
+	const { mutateAsync: rollback, isPending: isRollingBack } =
 		api.rollback.rollback.useMutation();
-	const { mutateAsync: killProcess, isLoading: isKillingProcess } =
+	const { mutateAsync: killProcess, isPending: isKillingProcess } =
 		api.deployment.killProcess.useMutation();
 
 	// Cancel deployment mutations
 	const {
 		mutateAsync: cancelApplicationDeployment,
-		isLoading: isCancellingApp,
+		isPending: isCancellingApp,
 	} = api.application.cancelDeployment.useMutation();
 	const {
 		mutateAsync: cancelComposeDeployment,
-		isLoading: isCancellingCompose,
+		isPending: isCancellingCompose,
 	} = api.compose.cancelDeployment.useMutation();
 
 	const [url, setUrl] = React.useState("");

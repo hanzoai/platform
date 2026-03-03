@@ -210,7 +210,7 @@ export const AddSwarmSettings = ({ id, type }: Props) => {
 		mongo: () => api.mongo.update.useMutation(),
 	};
 
-	const { mutateAsync, isError, error, isLoading } = mutationMap[type]
+	const { mutateAsync, isError, error, isPending: isLoading } = mutationMap[type]
 		? mutationMap[type]()
 		: api.mongo.update.useMutation();
 
