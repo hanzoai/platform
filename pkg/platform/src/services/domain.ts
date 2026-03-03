@@ -10,9 +10,62 @@ import type { z } from "zod";
 import { type apiCreateDomain, domains } from "../db/schema";
 import { findApplicationById } from "./application";
 import { detectCDNProvider } from "./cdn";
+import {
+	createDnsRecordForDefaultZone,
+	deleteDnsRecordForDefaultZone,
+	listDnsRecordsForDefaultZone,
+} from "./cloudflare";
 import { findServerById } from "./server";
 
 export type Domain = typeof domains.$inferSelect;
+
+const isCloudflareConfigured = (): boolean =>
+	Boolean(
+		process.env.CLOUDFLARE_API_TOKEN &&
+			process.env.CLOUDFLARE_ZONE_ID &&
+			process.env.CLOUDFLARE_ACCOUNT_ID,
+	);
+
+const syncDnsRecordCreate = async (
+	host: string,
+	serverIp: string,
+): Promise<void> => {
+	if (!isCloudflareConfigured()) {
+		return;
+	}
+	try {
+		await createDnsRecordForDefaultZone({
+			type: "A",
+			name: host,
+			content: serverIp,
+			ttl: 1,
+			proxied: true,
+			comment: "Created by Hanzo Platform",
+		});
+	} catch (error) {
+		console.error(
+			`[domain] Failed to create CF DNS record for ${host}:`,
+			error instanceof Error ? error.message : error,
+		);
+	}
+};
+
+const syncDnsRecordDelete = async (host: string): Promise<void> => {
+	if (!isCloudflareConfigured()) {
+		return;
+	}
+	try {
+		const records = await listDnsRecordsForDefaultZone({ name: host });
+		for (const record of records) {
+			await deleteDnsRecordForDefaultZone(record.id);
+		}
+	} catch (error) {
+		console.error(
+			`[domain] Failed to delete CF DNS record for ${host}:`,
+			error instanceof Error ? error.message : error,
+		);
+	}
+};
 
 export const createDomain = async (input: z.infer<typeof apiCreateDomain>) => {
 	const result = await db.transaction(async (tx) => {
@@ -35,6 +88,10 @@ export const createDomain = async (input: z.infer<typeof apiCreateDomain>) => {
 		if (domain.applicationId) {
 			const application = await findApplicationById(domain.applicationId);
 			await manageDomain(application, domain);
+
+			if (application.server?.ipAddress) {
+				await syncDnsRecordCreate(domain.host, application.server.ipAddress);
+			}
 		}
 
 		return domain;
@@ -131,7 +188,8 @@ export const updateDomainById = async (
 };
 
 export const removeDomainById = async (domainId: string) => {
-	await findDomainById(domainId);
+	const domain = await findDomainById(domainId);
+	await syncDnsRecordDelete(domain.host);
 	const result = await db
 		.delete(domains)
 		.where(eq(domains.domainId, domainId))
