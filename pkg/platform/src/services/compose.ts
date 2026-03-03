@@ -75,7 +75,7 @@ export const createCompose = async (input: typeof apiCreateCompose._type) => {
 			...input,
 			composeFile: input.composeFile || "",
 			appName,
-		})
+		} as any)
 		.returning()
 		.then((value) => value[0]);
 
@@ -92,7 +92,7 @@ export const createCompose = async (input: typeof apiCreateCompose._type) => {
 export const createComposeByTemplate = async (
 	input: typeof compose.$inferInsert,
 ) => {
-	const appName = cleanAppName(input.appName);
+	const appName = cleanAppName((input as any).appName);
 	if (appName) {
 		const valid = await validUniqueServerAppName(appName);
 
@@ -108,7 +108,7 @@ export const createComposeByTemplate = async (
 		.values({
 			...input,
 			appName,
-		})
+		} as any)
 		.returning()
 		.then((value) => value[0]);
 
@@ -207,7 +207,7 @@ export const updateCompose = async (
 		.update(compose)
 		.set({
 			...rest,
-		})
+		} as any)
 		.where(eq(compose.composeId, composeId))
 		.returning();
 

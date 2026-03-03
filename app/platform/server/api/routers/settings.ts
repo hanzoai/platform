@@ -87,7 +87,7 @@ export const settingsRouter = createTRPCRouter({
 		}
 
 		const { stdout: containerId } = await execAsync(
-			`docker ps --filter "name=platform-redis" --filter "status=running" -q | head -n 1`,
+			`docker ps --filter "name=hanzo-redis" --filter "status=running" -q | head -n 1`,
 		);
 
 		if (!containerId) {
@@ -103,7 +103,7 @@ export const settingsRouter = createTRPCRouter({
 		if (IS_CLOUD) {
 			return true;
 		}
-		await reloadDockerResource("platform-redis");
+		await reloadDockerResource("hanzo-redis");
 
 		return true;
 	}),
