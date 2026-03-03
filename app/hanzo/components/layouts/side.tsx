@@ -372,7 +372,7 @@ const MENU: Menu = {
 		},
 		{
 			name: "Support",
-			url: "https://discord.gg/2tBnJ3jDJc",
+			url: "https://discord.gg/XthHQQj",
 			icon: CircleHelp,
 		},
 		{
