@@ -264,7 +264,7 @@ services:
     networks:
       - platform-network
   db:
-    image: postgres:15
+    image: ghcr.io/hanzoai/sql:18
     networks:
       - platform-network
 ```
