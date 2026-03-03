@@ -3,7 +3,7 @@ import {
 	findCertificateById,
 	IS_CLOUD,
 	removeCertificateById,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { adminProcedure, createTRPCRouter } from "@/server/api/trpc";

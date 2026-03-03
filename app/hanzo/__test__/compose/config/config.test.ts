@@ -1,5 +1,5 @@
-import type { ComposeSpecification } from "@hanzo/core";
-import { addSuffixToAllConfigs, generateRandomHash } from "@hanzo/core";
+import type { ComposeSpecification } from "@hanzo/platform";
+import { addSuffixToAllConfigs, generateRandomHash } from "@hanzo/platform";
 import { load } from "js-yaml";
 import { expect, test } from "vitest";
 

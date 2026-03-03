@@ -1,4 +1,4 @@
-import { execAsync } from "@hanzo/core";
+import { execAsync } from "@hanzo/platform";
 
 /** Returns if the current operating system is Windows Subsystem for Linux (WSL). */
 export const isWSL = async () => {

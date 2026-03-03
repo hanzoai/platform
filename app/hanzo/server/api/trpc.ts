@@ -7,7 +7,7 @@
  * need to use are documented accordingly near the end.
  */
 
-import { validateRequest } from "@hanzo/core/lib/auth";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { OpenApiMeta } from "@hanzo/trpc-openapi";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateNextContextOptions } from "@trpc/server/adapters/next";

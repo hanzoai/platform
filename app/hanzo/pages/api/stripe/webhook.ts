@@ -1,5 +1,5 @@
 import { buffer } from "node:stream/consumers";
-import { findUserById, type Server } from "@hanzo/core";
+import { findUserById, type Server } from "@hanzo/platform";
 import { asc, eq } from "drizzle-orm";
 import type { NextApiRequest, NextApiResponse } from "next";
 import Stripe from "stripe";

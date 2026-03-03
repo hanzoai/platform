@@ -12,7 +12,7 @@ import {
 	updateApplicationStatus,
 	updateCompose,
 	updatePreviewDeployment,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { type Job, Worker } from "bullmq";
 import type { DeploymentJob } from "./queue-types";
 import { redisConfig } from "./redis-connection";

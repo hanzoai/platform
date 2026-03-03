@@ -1,4 +1,4 @@
-import { IS_CLOUD } from "@hanzo/core/index";
+import { IS_CLOUD } from "@hanzo/platform/index";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, exists } from "drizzle-orm";
 import { nanoid } from "nanoid";

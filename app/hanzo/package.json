@@ -49,7 +49,7 @@
 		"@codemirror/legacy-modes": "6.4.0",
 		"@codemirror/view": "6.29.0",
 		"@faker-js/faker": "^8.4.1",
-		"@hanzo/core": "1.0.4",
+		"@hanzo/platform": "workspace:*",
 		"@hanzo/trpc-openapi": "0.0.4",
 		"@hookform/resolvers": "^3.9.0",
 		"@lucia-auth/adapter-drizzle": "1.0.7",
