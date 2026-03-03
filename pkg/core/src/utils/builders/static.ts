@@ -2,27 +2,70 @@ import type { WriteStream } from "node:fs";
 import {
 	buildCustomDocker,
 	getDockerCommand,
-} from "@hanzo/core/utils/builders/docker-file";
-import type { ApplicationNested } from ".";
+} from "@dokploy/server/utils/builders/docker-file";
 import { createFile, getCreateFileCommand } from "../docker/utils";
 import { getBuildAppDirectory } from "../filesystem/directory";
+import type { ApplicationNested } from ".";
+
+const nginxSpaConfig = `
+worker_processes 1;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  include mime.types;
+  default_type  application/octet-stream;
+
+  access_log /dev/stdout;
+  error_log /dev/stderr;
+
+  server {
+    listen 80;
+    location / {
+      root   /usr/share/nginx/html;
+      index  index.html index.htm;
+      try_files $uri $uri/ /index.html;
+    }
+  }
+}
+`;
 
 export const buildStatic = async (
 	application: ApplicationNested,
 	writeStream: WriteStream,
 ) => {
-	const { publishDirectory } = application;
+	const { publishDirectory, isStaticSpa } = application;
 	const buildAppDirectory = getBuildAppDirectory(application);
 
 	try {
+		if (isStaticSpa) {
+			createFile(buildAppDirectory, "nginx.conf", nginxSpaConfig);
+		}
+
+		createFile(
+			buildAppDirectory,
+			".dockerignore",
+			[".git", ".env", "Dockerfile", ".dockerignore"].join("\n"),
+		);
+
 		createFile(
 			buildAppDirectory,
 			"Dockerfile",
 			[
 				"FROM nginx:alpine",
 				"WORKDIR /usr/share/nginx/html/",
+				isStaticSpa ? "COPY nginx.conf /etc/nginx/nginx.conf" : "",
 				`COPY ${publishDirectory || "."} .`,
+				'CMD ["nginx", "-g", "daemon off;"]',
 			].join("\n"),
+		);
+
+		createFile(
+			buildAppDirectory,
+			".dockerignore",
+			[".git", ".env", "Dockerfile", ".dockerignore"].join("\n"),
 		);
 
 		await buildCustomDocker(

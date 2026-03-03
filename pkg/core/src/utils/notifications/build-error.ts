@@ -8,6 +8,7 @@ import {
 	sendDiscordNotification,
 	sendEmailNotification,
 	sendGotifyNotification,
+	sendNtfyNotification,
 	sendSlackNotification,
 	sendTelegramNotification,
 } from "./utils";
@@ -42,11 +43,12 @@ export const sendBuildErrorNotifications = async ({
 			telegram: true,
 			slack: true,
 			gotify: true,
+			ntfy: true,
 		},
 	});
 
 	for (const notification of notificationList) {
-		const { email, discord, telegram, slack, gotify } = notification;
+		const { email, discord, telegram, slack, gotify, ntfy } = notification;
 		if (email) {
 			const template = await renderAsync(
 				BuildFailedEmail({
@@ -65,6 +67,8 @@ export const sendBuildErrorNotifications = async ({
 			const decorate = (decoration: string, text: string) =>
 				`${discord.decoration ? decoration : ""} ${text}`.trim();
 
+			const limitCharacter = 800;
+			const truncatedErrorMessage = errorMessage.substring(0, limitCharacter);
 			await sendDiscordNotification(discord, {
 				title: decorate(">", "`⚠️` Build Failed"),
 				color: 0xed4245,
@@ -101,7 +105,7 @@ export const sendBuildErrorNotifications = async ({
 					},
 					{
 						name: decorate("`⚠️`", "Error Message"),
-						value: `\`\`\`${errorMessage}\`\`\``,
+						value: `\`\`\`${truncatedErrorMessage}\`\`\``,
 					},
 					{
 						name: decorate("`🧷`", "Build Link"),
@@ -127,6 +131,20 @@ export const sendBuildErrorNotifications = async ({
 					`${decorate("🕒", `Date: ${date.toLocaleString()}`)}` +
 					`${decorate("⚠️", `Error:\n${errorMessage}`)}` +
 					`${decorate("🔗", `Build details:\n${buildLink}`)}`,
+			);
+		}
+
+		if (ntfy) {
+			await sendNtfyNotification(
+				ntfy,
+				"Build Failed",
+				"warning",
+				`view, Build details, ${buildLink}, clear=true;`,
+				`🛠️Project: ${projectName}\n` +
+					`⚙️Application: ${applicationName}\n` +
+					`❔Type: ${applicationType}\n` +
+					`🕒Date: ${date.toLocaleString()}\n` +
+					`⚠️Error:\n${errorMessage}`,
 			);
 		}
 

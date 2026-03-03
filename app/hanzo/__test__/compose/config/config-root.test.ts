@@ -1,6 +1,5 @@
-import { generateRandomHash } from "@hanzo/core";
-import { addSuffixToConfigsRoot } from "@hanzo/core";
-import type { ComposeSpecification } from "@hanzo/core";
+import type { ComposeSpecification } from "@dokploy/server";
+import { addSuffixToConfigsRoot, generateRandomHash } from "@dokploy/server";
 import { load } from "js-yaml";
 import { expect, test } from "vitest";
 

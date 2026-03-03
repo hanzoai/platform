@@ -1,3 +1,13 @@
+import { IS_CLOUD, isAdminPresent, validateRequest } from "@dokploy/server";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertTriangle } from "lucide-react";
+import type { GetServerSidePropsContext } from "next";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { type ReactElement, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
@@ -13,16 +23,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { IS_CLOUD, isAdminPresent, validateRequest } from "@hanzo/core";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle } from "lucide-react";
-import type { GetServerSidePropsContext } from "next";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { type ReactElement, useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
 
 const registerSchema = z
 	.object({
@@ -117,7 +117,7 @@ const Register = ({ isCloud }: Props) => {
 				<div className="flex flex-col items-center gap-4 w-full">
 					<CardTitle className="text-2xl font-bold flex  items-center gap-2">
 						<Link
-							href="https://hanzo.ai"
+							href="https://dokploy.com"
 							target="_blank"
 							className="flex flex-row items-center gap-2"
 						>
@@ -131,7 +131,7 @@ const Register = ({ isCloud }: Props) => {
 					</CardDescription>
 					<div className="mx-auto w-full max-w-lg bg-transparent">
 						{isError && (
-							<div className=" my-2 flex flex-row items-center gap-2 rounded-lg bg-red-50 p-2 dark:bg-red-950">
+							<div className="my-2 flex flex-row items-center gap-2 rounded-lg bg-red-50 p-2 dark:bg-red-950">
 								<AlertTriangle className="text-red-600 dark:text-red-400" />
 								<span className="text-sm text-red-600 dark:text-red-400">
 									{error}
@@ -173,7 +173,7 @@ const Register = ({ isCloud }: Props) => {
 												<FormItem>
 													<FormLabel>Email</FormLabel>
 													<FormControl>
-														<Input placeholder="email@hanzo.ai" {...field} />
+														<Input placeholder="email@dokploy.com" {...field} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -239,7 +239,7 @@ const Register = ({ isCloud }: Props) => {
 									Need help?
 									<Link
 										className="underline"
-										href="https://hanzo.ai"
+										href="https://dokploy.com"
 										target="_blank"
 									>
 										Contact us

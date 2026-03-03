@@ -1,3 +1,12 @@
+import { getUserByToken, IS_CLOUD } from "@dokploy/server";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { GetServerSidePropsContext } from "next";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { type ReactElement, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
@@ -14,15 +23,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { api } from "@/utils/api";
-import { IS_CLOUD, getUserByToken } from "@hanzo/core";
-import { zodResolver } from "@hookform/resolvers/zod";
-import type { GetServerSidePropsContext } from "next";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { type ReactElement, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
 
 const registerSchema = z
 	.object({
@@ -117,7 +117,7 @@ const Invitation = ({
 				name: values.name,
 				fetchOptions: {
 					headers: {
-						"x-hanzo-token": token,
+						"x-dokploy-token": token,
 					},
 				},
 			});
@@ -133,7 +133,7 @@ const Invitation = ({
 
 			toast.success("Account created successfully");
 			router.push("/dashboard/projects");
-		} catch (_error) {
+		} catch {
 			toast.error("An error occurred while creating your account");
 		}
 	};
@@ -144,7 +144,7 @@ const Invitation = ({
 				<div className="flex flex-col items-center gap-4 w-full">
 					<CardTitle className="text-2xl font-bold flex items-center gap-2">
 						<Link
-							href="https://hanzo.ai"
+							href="https://dokploy.com"
 							target="_blank"
 							className="flex flex-row items-center gap-2"
 						>

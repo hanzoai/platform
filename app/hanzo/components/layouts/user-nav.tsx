@@ -1,3 +1,5 @@
+import { ChevronsUpDown } from "lucide-react";
+import { useRouter } from "next/router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -17,10 +19,9 @@ import {
 } from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
 import { Languages } from "@/lib/languages";
+import { getFallbackAvatarInitials } from "@/lib/utils";
 import { api } from "@/utils/api";
 import useLocale from "@/utils/hooks/use-locale";
-import { ChevronsUpDown } from "lucide-react";
-import { useRouter } from "next/router";
 import { ModeToggle } from "../ui/modeToggle";
 import { SidebarMenuButton } from "../ui/sidebar";
 
@@ -46,7 +47,9 @@ export const UserNav = () => {
 							src={data?.user?.image || ""}
 							alt={data?.user?.image || ""}
 						/>
-						<AvatarFallback className="rounded-lg">CN</AvatarFallback>
+						<AvatarFallback className="rounded-lg">
+							{getFallbackAvatarInitials(data?.user?.name)}
+						</AvatarFallback>
 					</Avatar>
 					<div className="grid flex-1 text-left text-sm leading-tight">
 						<span className="truncate font-semibold">Account</span>
@@ -72,6 +75,14 @@ export const UserNav = () => {
 				</div>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
+					<DropdownMenuItem
+						className="cursor-pointer"
+						onClick={() => {
+							router.push("/dashboard/settings/profile");
+						}}
+					>
+						Profile
+					</DropdownMenuItem>
 					<DropdownMenuItem
 						className="cursor-pointer"
 						onClick={() => {
@@ -112,50 +123,18 @@ export const UserNav = () => {
 									Docker
 								</DropdownMenuItem>
 							)}
-
-							{data?.role === "owner" && (
-								<DropdownMenuItem
-									className="cursor-pointer"
-									onClick={() => {
-										router.push("/dashboard/settings");
-									}}
-								>
-									Settings
-								</DropdownMenuItem>
-							)}
 						</>
 					) : (
-						<>
+						data?.role === "owner" && (
 							<DropdownMenuItem
 								className="cursor-pointer"
 								onClick={() => {
-									router.push("/dashboard/settings/profile");
+									router.push("/dashboard/settings/servers");
 								}}
 							>
-								Profile
+								Servers
 							</DropdownMenuItem>
-							{data?.role === "owner" && (
-								<DropdownMenuItem
-									className="cursor-pointer"
-									onClick={() => {
-										router.push("/dashboard/settings/servers");
-									}}
-								>
-									Servers
-								</DropdownMenuItem>
-							)}
-
-							{data?.role === "owner" && (
-								<DropdownMenuItem
-									className="cursor-pointer"
-									onClick={() => {
-										router.push("/dashboard/settings");
-									}}
-								>
-									Settings
-								</DropdownMenuItem>
-							)}
-						</>
+						)
 					)}
 				</DropdownMenuGroup>
 				{isCloud && data?.role === "owner" && (

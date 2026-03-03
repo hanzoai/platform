@@ -1,3 +1,19 @@
+import {
+	BookText,
+	CheckIcon,
+	ChevronsUpDown,
+	Globe,
+	HelpCircle,
+	LayoutGrid,
+	List,
+	Loader2,
+	PuzzleIcon,
+	SearchIcon,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { GithubIcon } from "@/components/icons/data-tools-icons";
 import { AlertBlock } from "@/components/shared/alert-block";
 import {
 	AlertDialog,
@@ -53,36 +69,59 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
-import {
-	BookText,
-	CheckIcon,
-	ChevronsUpDown,
-	Github,
-	Globe,
-	HelpCircle,
-	LayoutGrid,
-	List,
-	PuzzleIcon,
-	SearchIcon,
-} from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
-import { toast } from "sonner";
+
+const TEMPLATE_BASE_URL_KEY = "dokploy_template_base_url";
 
 interface Props {
-	projectId: string;
+	environmentId: string;
+	baseUrl?: string;
 }
 
-export const AddTemplate = ({ projectId }: Props) => {
+export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 	const [query, setQuery] = useState("");
 	const [open, setOpen] = useState(false);
 	const [viewMode, setViewMode] = useState<"detailed" | "icon">("detailed");
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
-	const { data } = api.compose.templates.useQuery();
+	const [customBaseUrl, setCustomBaseUrl] = useState<string | undefined>(() => {
+		// Try to get from props first, then localStorage
+		if (baseUrl) return baseUrl;
+		if (typeof window !== "undefined") {
+			return localStorage.getItem(TEMPLATE_BASE_URL_KEY) || undefined;
+		}
+		return undefined;
+	});
+
+	// Get environment data to extract projectId
+	const { data: environment } = api.environment.one.useQuery({ environmentId });
+
+	// Save to localStorage when customBaseUrl changes
+	useEffect(() => {
+		if (customBaseUrl) {
+			localStorage.setItem(TEMPLATE_BASE_URL_KEY, customBaseUrl);
+		} else {
+			localStorage.removeItem(TEMPLATE_BASE_URL_KEY);
+		}
+	}, [customBaseUrl]);
+
+	const {
+		data,
+		isLoading: isLoadingTemplates,
+		error: errorTemplates,
+		isError: isErrorTemplates,
+	} = api.compose.templates.useQuery(
+		{ baseUrl: customBaseUrl },
+		{
+			enabled: open,
+		},
+	);
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 	const { data: servers } = api.server.withSSHKey.useQuery();
-	const { data: tags, isLoading: isLoadingTags } =
-		api.compose.getTags.useQuery();
+	const { data: tags, isLoading: isLoadingTags } = api.compose.getTags.useQuery(
+		{ baseUrl: customBaseUrl },
+		{
+			enabled: open,
+		},
+	);
 	const utils = api.useUtils();
 
 	const [serverId, setServerId] = useState<string | undefined>(undefined);
@@ -101,6 +140,12 @@ export const AddTemplate = ({ projectId }: Props) => {
 			return matchesTags && matchesQuery;
 		}) || [];
 
+	const hasServers = servers && servers.length > 0;
+	// Show dropdown logic based on cloud environment
+	// Cloud: show only if there are remote servers (no Dokploy option)
+	// Self-hosted: show only if there are remote servers (Dokploy is default, hide if no remote servers)
+	const shouldShowServerDropdown = hasServers;
+
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger className="w-full">
@@ -112,7 +157,7 @@ export const AddTemplate = ({ projectId }: Props) => {
 					<span>Template</span>
 				</DropdownMenuItem>
 			</DialogTrigger>
-			<DialogContent className="max-h-screen sm:max-w-[90vw] p-0">
+			<DialogContent className="sm:max-w-[90vw] p-0">
 				<DialogHeader className="sticky top-0 z-10 bg-background p-6 border-b">
 					<div className="flex flex-col space-y-6">
 						<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -128,6 +173,14 @@ export const AddTemplate = ({ projectId }: Props) => {
 									onChange={(e) => setQuery(e.target.value)}
 									className="w-full sm:w-[200px]"
 									value={query}
+								/>
+								<Input
+									placeholder="Base URL (optional)"
+									onChange={(e) =>
+										setCustomBaseUrl(e.target.value || undefined)
+									}
+									className="w-full sm:w-[300px]"
+									value={customBaseUrl || ""}
 								/>
 								<Popover modal={true}>
 									<PopoverTrigger asChild>
@@ -232,7 +285,20 @@ export const AddTemplate = ({ projectId }: Props) => {
 							</AlertBlock>
 						)}
 
-						{templates.length === 0 ? (
+						{isErrorTemplates && (
+							<AlertBlock type="error" className="mb-4">
+								{errorTemplates?.message}
+							</AlertBlock>
+						)}
+
+						{isLoadingTemplates ? (
+							<div className="flex justify-center items-center w-full h-full flex-row gap-4">
+								<Loader2 className="size-8 text-muted-foreground animate-spin min-h-[60vh]" />
+								<div className="text-lg font-medium text-muted-foreground">
+									Loading templates...
+								</div>
+							</div>
+						) : templates.length === 0 ? (
 							<div className="flex justify-center items-center w-full gap-2 min-h-[50vh]">
 								<SearchIcon className="text-muted-foreground size-6" />
 								<div className="text-xl font-medium text-muted-foreground">
@@ -248,9 +314,9 @@ export const AddTemplate = ({ projectId }: Props) => {
 										: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
 								)}
 							>
-								{templates?.map((template, index) => (
+								{templates?.map((template, idx) => (
 									<div
-										key={`template-${index}`}
+										key={`${template.id}-${template.version || "default"}-${idx}`}
 										className={cn(
 											"flex flex-col border rounded-lg overflow-hidden relative",
 											viewMode === "icon" && "h-[200px]",
@@ -258,9 +324,8 @@ export const AddTemplate = ({ projectId }: Props) => {
 										)}
 									>
 										<Badge className="absolute top-2 right-2" variant="blue">
-											{template.version}
+											{template?.version}
 										</Badge>
-										{/* Template Header */}
 										<div
 											className={cn(
 												"flex-none p-6 pb-3 flex flex-col items-center gap-4 bg-muted/30",
@@ -268,21 +333,21 @@ export const AddTemplate = ({ projectId }: Props) => {
 											)}
 										>
 											<img
-												src={`/templates/${template.logo}`}
+												src={`${customBaseUrl || "https://templates.dokploy.com/"}/blueprints/${template?.id}/${template?.logo}`}
 												className={cn(
 													"object-contain",
 													viewMode === "detailed" ? "size-24" : "size-16",
 												)}
-												alt={template.name}
+												alt={template?.name}
 											/>
 											<div className="flex flex-col items-center gap-2">
 												<span className="text-sm font-medium line-clamp-1">
-													{template.name}
+													{template?.name}
 												</span>
 												{viewMode === "detailed" &&
-													template.tags.length > 0 && (
+													template?.tags?.length > 0 && (
 														<div className="flex flex-wrap justify-center gap-1.5">
-															{template.tags.map((tag) => (
+															{template?.tags?.map((tag) => (
 																<Badge
 																	key={tag}
 																	variant="green"
@@ -300,7 +365,7 @@ export const AddTemplate = ({ projectId }: Props) => {
 										{viewMode === "detailed" && (
 											<ScrollArea className="flex-1 p-6">
 												<div className="text-sm text-muted-foreground">
-													{template.description}
+													{template?.description}
 												</div>
 											</ScrollArea>
 										)}
@@ -316,25 +381,27 @@ export const AddTemplate = ({ projectId }: Props) => {
 										>
 											{viewMode === "detailed" && (
 												<div className="flex gap-2">
-													<Link
-														href={template.links.github}
-														target="_blank"
-														className="text-muted-foreground hover:text-foreground transition-colors"
-													>
-														<Github className="size-5" />
-													</Link>
-													{template.links.website && (
+													{template?.links?.github && (
 														<Link
-															href={template.links.website}
+															href={template?.links?.github}
+															target="_blank"
+															className="text-muted-foreground hover:text-foreground transition-colors"
+														>
+															<GithubIcon className="size-5" />
+														</Link>
+													)}
+													{template?.links?.website && (
+														<Link
+															href={template?.links?.website}
 															target="_blank"
 															className="text-muted-foreground hover:text-foreground transition-colors"
 														>
 															<Globe className="size-5" />
 														</Link>
 													)}
-													{template.links.docs && (
+													{template?.links?.docs && (
 														<Link
-															href={template.links.docs}
+															href={template?.links?.docs}
 															target="_blank"
 															className="text-muted-foreground hover:text-foreground transition-colors"
 														>
@@ -363,64 +430,84 @@ export const AddTemplate = ({ projectId }: Props) => {
 														</AlertDialogTitle>
 														<AlertDialogDescription>
 															This will create an application from the{" "}
-															{template.name} template and add it to your
+															{template?.name} template and add it to your
 															project.
 														</AlertDialogDescription>
 
-														<div>
-															<TooltipProvider delayDuration={0}>
-																<Tooltip>
-																	<TooltipTrigger asChild>
-																		<Label className="break-all w-fit flex flex-row gap-1 items-center pb-2 pt-3.5">
-																			Select a Server{" "}
-																			{!isCloud ? "(Optional)" : ""}
-																			<HelpCircle className="size-4 text-muted-foreground" />
-																		</Label>
-																	</TooltipTrigger>
-																	<TooltipContent
-																		className="z-[999] w-[300px]"
-																		align="start"
-																		side="top"
-																	>
-																		<span>
-																			If ot server is selected, the application
-																			will be deployed on the server where the
-																			user is logged in.
-																		</span>
-																	</TooltipContent>
-																</Tooltip>
-															</TooltipProvider>
+														{shouldShowServerDropdown && (
+															<div>
+																<TooltipProvider delayDuration={0}>
+																	<Tooltip>
+																		<TooltipTrigger asChild>
+																			<Label className="break-all w-fit flex flex-row gap-1 items-center pb-2 pt-3.5">
+																				Select a Server{" "}
+																				{!isCloud ? "(Optional)" : ""}
+																				<HelpCircle className="size-4 text-muted-foreground" />
+																			</Label>
+																		</TooltipTrigger>
+																		<TooltipContent
+																			className="z-[999] w-[300px]"
+																			align="start"
+																			side="top"
+																		>
+																			<span>
+																				If no server is selected, the
+																				application will be deployed on the
+																				server where the user is logged in.
+																			</span>
+																		</TooltipContent>
+																	</Tooltip>
+																</TooltipProvider>
 
-															<Select
-																onValueChange={(e) => {
-																	setServerId(e);
-																}}
-															>
-																<SelectTrigger>
-																	<SelectValue placeholder="Select a Server" />
-																</SelectTrigger>
-																<SelectContent>
-																	<SelectGroup>
-																		{servers?.map((server) => (
-																			<SelectItem
-																				key={server.serverId}
-																				value={server.serverId}
-																			>
-																				<span className="flex items-center gap-2 justify-between w-full">
-																					<span>{server.name}</span>
-																					<span className="text-muted-foreground text-xs self-center">
-																						{server.ipAddress}
+																<Select
+																	onValueChange={(e) => {
+																		setServerId(e);
+																	}}
+																	defaultValue={
+																		!isCloud ? "dokploy" : undefined
+																	}
+																>
+																	<SelectTrigger>
+																		<SelectValue
+																			placeholder={
+																				!isCloud ? "Dokploy" : "Select a Server"
+																			}
+																		/>
+																	</SelectTrigger>
+																	<SelectContent>
+																		<SelectGroup>
+																			{!isCloud && (
+																				<SelectItem value="dokploy">
+																					<span className="flex items-center gap-2 justify-between w-full">
+																						<span>Dokploy</span>
+																						<span className="text-muted-foreground text-xs self-center">
+																							Default
+																						</span>
 																					</span>
-																				</span>
-																			</SelectItem>
-																		))}
-																		<SelectLabel>
-																			Servers ({servers?.length})
-																		</SelectLabel>
-																	</SelectGroup>
-																</SelectContent>
-															</Select>
-														</div>
+																				</SelectItem>
+																			)}
+																			{servers?.map((server) => (
+																				<SelectItem
+																					key={server.serverId}
+																					value={server.serverId}
+																				>
+																					<span className="flex items-center gap-2 justify-between w-full">
+																						<span>{server.name}</span>
+																						<span className="text-muted-foreground text-xs self-center">
+																							{server.ipAddress}
+																						</span>
+																					</span>
+																				</SelectItem>
+																			))}
+																			<SelectLabel>
+																				Servers (
+																				{servers?.length + (!isCloud ? 1 : 0)})
+																			</SelectLabel>
+																		</SelectGroup>
+																	</SelectContent>
+																</Select>
+															</div>
+														)}
 													</AlertDialogHeader>
 													<AlertDialogFooter>
 														<AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -428,21 +515,26 @@ export const AddTemplate = ({ projectId }: Props) => {
 															disabled={isLoading}
 															onClick={async () => {
 																const promise = mutateAsync({
-																	projectId,
-																	serverId: serverId || undefined,
+																	serverId:
+																		serverId === "dokploy"
+																			? undefined
+																			: serverId,
+																	environmentId,
 																	id: template.id,
+																	baseUrl: customBaseUrl,
 																});
 																toast.promise(promise, {
 																	loading: "Setting up...",
-																	success: (_data) => {
-																		utils.project.one.invalidate({
-																			projectId,
+																	success: () => {
+																		// Invalidate the project query to refresh the environment data
+																		utils.environment.one.invalidate({
+																			environmentId,
 																		});
 																		setOpen(false);
 																		return `${template.name} template created successfully`;
 																	},
-																	error: (_err) => {
-																		return `An error ocurred deploying ${template.name} template`;
+																	error: () => {
+																		return `An error occurred deploying ${template.name} template`;
 																	},
 																});
 															}}
