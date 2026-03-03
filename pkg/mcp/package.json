@@ -1,0 +1,63 @@
+{
+  "name": "@hanzo/platform-mcp",
+  "version": "1.4.0",
+  "description": "MCP Server for Hanzo API",
+  "main": "build/index.js",
+  "bin": {
+    "hanzo-mcp": "build/index.js"
+  },
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "npm run clean && tsc && chmod 755 build/index.js",
+    "dev": "tsc --watch",
+    "start:stdio": "node build/index.js",
+    "start:http": "node build/index.js --http",
+    "start:sse": "node build/index.js --sse",
+    "dev:http": "npm run build && npm run start:http",
+    "dev:sse": "npm run build && npm run start:sse",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.{ts,js,json}",
+    "format:check": "prettier --check src/**/*.{ts,js,json}",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf build",
+    "precommit": "npm run lint && npm run format:check && npm run type-check",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hanzo/mcp.git"
+  },
+  "keywords": [
+    "modelcontextprotocol",
+    "mcp",
+    "hanzo"
+  ],
+  "author": "Hanzo Industries Inc <dev@hanzo.ai>",
+  "bugs": {
+    "url": "https://github.com/Hanzo/mcp/issues"
+  },
+  "homepage": "https://github.com/Hanzo/mcp#readme",
+  "license": "Apache-2.0",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "axios": "^1.9.0",
+    "express": "^5.1.0",
+    "zod": "^3.25.28"
+  },
+  "devDependencies": {
+    "@types/eslint": "^9.6.1",
+    "@types/express": "^5.0.2",
+    "@types/node": "^22.15.21",
+    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@typescript-eslint/parser": "^8.32.1",
+    "eslint": "^9.27.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.4.1",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
+  }
+}
