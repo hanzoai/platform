@@ -8,7 +8,7 @@ declare global {
 
 const dbUrl =
 	process.env.DATABASE_URL ||
-	"postgres://dokploy:amukds4wi9001583845717ad2@dokploy-postgres:5432/dokploy";
+	"postgres://hanzo:amukds4wi9001583845717ad2@hanzo-postgres:5432/hanzo";
 
 export let db: PostgresJsDatabase<typeof schema>;
 if (process.env.NODE_ENV === "production") {

@@ -21,7 +21,7 @@ export const restoreWebServerBackup = async (
 		const { BASE_PATH } = paths();
 
 		// Create a temporary directory outside of BASE_PATH
-		const tempDir = await mkdtemp(join(tmpdir(), "dokploy-restore-"));
+		const tempDir = await mkdtemp(join(tmpdir(), "hanzo-restore-"));
 
 		try {
 			emit("Starting restore...");
@@ -84,7 +84,7 @@ export const restoreWebServerBackup = async (
 			}
 
 			const { stdout: postgresContainer } = await execAsync(
-				`docker ps --filter "name=dokploy-postgres" --filter "status=running" -q | head -n 1`,
+				`docker ps --filter "name=hanzo-postgres" --filter "status=running" -q | head -n 1`,
 			);
 
 			if (!postgresContainer) {
@@ -96,12 +96,12 @@ export const restoreWebServerBackup = async (
 			// Drop and recreate database
 			emit("Disconnecting all users from database...");
 			await execAsync(
-				`docker exec ${postgresContainerId} psql -U hanzo postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'dokploy' AND pid <> pg_backend_pid();"`,
+				`docker exec ${postgresContainerId} psql -U hanzo postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'hanzo' AND pid <> pg_backend_pid();"`,
 			);
 
 			emit("Dropping existing database...");
 			await execAsync(
-				`docker exec ${postgresContainerId} psql -U hanzo postgres -c "DROP DATABASE IF EXISTS dokploy;"`,
+				`docker exec ${postgresContainerId} psql -U hanzo postgres -c "DROP DATABASE IF EXISTS hanzo;"`,
 			);
 
 			emit("Creating fresh database...");
