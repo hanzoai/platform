@@ -66,6 +66,25 @@ void app.prepare().then(async () => {
 			await sendHanzoPlatformRestartNotifications();
 		}
 
+		if (IS_CLOUD && process.env.NODE_ENV === "production") {
+			await migration();
+
+			// Initialize billing jobs
+			console.log("Starting billing jobs...");
+			const { startUsageCollectionSchedule } = await import("@hanzo/platform/billing/usage-tracker");
+			const { startBillingSchedule } = await import("@hanzo/platform/billing/billing-job");
+			const { startBillingCycleScheduler } = await import("@hanzo/platform/billing/billing-cycle");
+			startUsageCollectionSchedule();
+			startBillingSchedule();
+			startBillingCycleScheduler();
+			console.log("Billing jobs started");
+		}
+
+		// Start ZAP bridge for AI agent/MCP access
+		if (process.env.ZAP_ENABLED !== "false") {
+			createPlatformZapServer();
+		}
+
 		server.listen(PORT, HOST);
 		console.log(`Server Started on: http://${HOST}:${PORT}`);
 		await initEnterpriseBackupCronJobs();
