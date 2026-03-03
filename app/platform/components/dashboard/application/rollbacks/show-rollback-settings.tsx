@@ -46,7 +46,7 @@ export const ShowRollbackSettings = ({ applicationId, children }: Props) => {
 		},
 	);
 
-	const { mutateAsync: updateApplication, isLoading } =
+	const { mutateAsync: updateApplication, isPending: isLoading } =
 		api.application.update.useMutation();
 
 	const form = useForm<FormValues>({

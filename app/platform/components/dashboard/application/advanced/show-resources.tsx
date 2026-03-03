@@ -76,7 +76,7 @@ export const ShowResources = ({ id, type }: Props) => {
 		mongo: () => api.mongo.update.useMutation(),
 	};
 
-	const { mutateAsync, isLoading } = mutationMap[type]
+	const { mutateAsync, isPending: isLoading } = mutationMap[type]
 		? mutationMap[type]()
 		: api.mongo.update.useMutation();
 

@@ -75,7 +75,7 @@ export const ManageTraefikPorts = ({ children, serverId }: Props) => {
 			serverId,
 		});
 
-	const { mutateAsync: updatePorts, isLoading } =
+	const { mutateAsync: updatePorts, isPending: isLoading } =
 		api.settings.updateTraefikPorts.useMutation({
 			onSuccess: () => {
 				refetchPorts();

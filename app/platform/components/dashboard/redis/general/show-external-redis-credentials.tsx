@@ -48,7 +48,7 @@ interface Props {
 export const ShowExternalRedisCredentials = ({ redisId }: Props) => {
 	const { data: ip } = api.settings.getIp.useQuery();
 	const { data, refetch } = api.redis.one.useQuery({ redisId });
-	const { mutateAsync, isLoading } = api.redis.saveExternalPort.useMutation();
+	const { mutateAsync, isPending: isLoading } = api.redis.saveExternalPort.useMutation();
 	const [connectionUrl, setConnectionUrl] = useState("");
 	const getIp = data?.server?.ipAddress || ip;
 
