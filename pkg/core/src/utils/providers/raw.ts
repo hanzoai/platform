@@ -11,7 +11,7 @@ export const createComposeFile = async (compose: Compose, logPath: string) => {
 	const { COMPOSE_PATH } = paths();
 	const { appName, composeFile } = compose;
 	const writeStream = createWriteStream(logPath, { flags: "a" });
-	const outputPath = join(COMPOSE_PATH, appName, "code");
+	const outputPath = join(COMPOSE_PATH, appName || "", "code");
 
 	try {
 		await recreateDirectory(outputPath);
@@ -19,7 +19,7 @@ export const createComposeFile = async (compose: Compose, logPath: string) => {
 			`\nCreating File 'docker-compose.yml' to ${outputPath}: ✅\n`,
 		);
 
-		await writeFile(join(outputPath, "docker-compose.yml"), composeFile);
+		await writeFile(join(outputPath, "docker-compose.yml"), composeFile || "");
 
 		writeStream.write(`\nFile 'docker-compose.yml' created: ✅\n`);
 	} catch (error) {
@@ -36,9 +36,9 @@ export const getCreateComposeFileCommand = (
 ) => {
 	const { COMPOSE_PATH } = paths(true);
 	const { appName, composeFile } = compose;
-	const outputPath = join(COMPOSE_PATH, appName, "code");
+	const outputPath = join(COMPOSE_PATH, appName || "", "code");
 	const filePath = join(outputPath, "docker-compose.yml");
-	const encodedContent = encodeBase64(composeFile);
+	const encodedContent = encodeBase64(composeFile || "");
 	const bashCommand = `
 		rm -rf ${outputPath};
 		mkdir -p ${outputPath};
@@ -51,11 +51,11 @@ export const getCreateComposeFileCommand = (
 export const createComposeFileRaw = async (compose: Compose) => {
 	const { COMPOSE_PATH } = paths();
 	const { appName, composeFile } = compose;
-	const outputPath = join(COMPOSE_PATH, appName, "code");
+	const outputPath = join(COMPOSE_PATH, appName || "", "code");
 	const filePath = join(outputPath, "docker-compose.yml");
 	try {
 		await recreateDirectory(outputPath);
-		await writeFile(filePath, composeFile);
+		await writeFile(filePath, composeFile || "");
 	} catch (error) {
 		throw error;
 	}
@@ -64,11 +64,11 @@ export const createComposeFileRaw = async (compose: Compose) => {
 export const createComposeFileRawRemote = async (compose: Compose) => {
 	const { COMPOSE_PATH } = paths(true);
 	const { appName, composeFile, serverId } = compose;
-	const outputPath = join(COMPOSE_PATH, appName, "code");
+	const outputPath = join(COMPOSE_PATH, appName || "", "code");
 	const filePath = join(outputPath, "docker-compose.yml");
 
 	try {
-		const encodedContent = encodeBase64(composeFile);
+		const encodedContent = encodeBase64(composeFile || "");
 		const command = `
 			rm -rf ${outputPath};
 			mkdir -p ${outputPath};

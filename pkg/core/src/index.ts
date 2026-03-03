@@ -46,6 +46,10 @@ export { normalizeS3Path } from "./utils/backups/utils";
 import { rebuildDatabase as rebuildDatabaseUtil } from "./utils/databases/rebuild";
 export { rebuildDatabaseUtil as rebuildDatabase };
 
+// Templates
+export * from "./templates";
+export * from "./templates/processors";
+
 // Setup
 export * from "./setup/config-paths";
 export * from "./setup/setup";

@@ -14,18 +14,18 @@ RUN apt-get update && apt-get install -y python3 make g++ git python3-pip pkg-co
 # Install dependencies
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
-# Deploy only the dokploy app
+# Deploy only the hanzo app
 
 ENV NODE_ENV=production
-RUN pnpm --filter=@dokploy/server build
-RUN pnpm --filter=./apps/dokploy run build
+RUN pnpm --filter=@hanzo/core build
+RUN pnpm --filter=./app/hanzo run build
 
-RUN pnpm --filter=./apps/dokploy --prod deploy /prod/dokploy
+RUN pnpm --filter=./app/hanzo --prod deploy /prod/hanzo
 
-RUN cp -R /usr/src/app/apps/dokploy/.next /prod/dokploy/.next
-RUN cp -R /usr/src/app/apps/dokploy/dist /prod/dokploy/dist
+RUN cp -R /usr/src/app/app/hanzo/.next /prod/hanzo/.next
+RUN cp -R /usr/src/app/app/hanzo/dist /prod/hanzo/dist
 
-FROM base AS dokploy
+FROM base AS hanzo
 WORKDIR /app
 
 # Set production
@@ -34,15 +34,15 @@ ENV NODE_ENV=production
 RUN apt-get update && apt-get install -y curl unzip zip apache2-utils iproute2 rsync git-lfs && git lfs install && rm -rf /var/lib/apt/lists/*
 
 # Copy only the necessary files
-COPY --from=build /prod/dokploy/.next ./.next
-COPY --from=build /prod/dokploy/dist ./dist
-COPY --from=build /prod/dokploy/next.config.mjs ./next.config.mjs
-COPY --from=build /prod/dokploy/public ./public
-COPY --from=build /prod/dokploy/package.json ./package.json
-COPY --from=build /prod/dokploy/drizzle ./drizzle
+COPY --from=build /prod/hanzo/.next ./.next
+COPY --from=build /prod/hanzo/dist ./dist
+COPY --from=build /prod/hanzo/next.config.mjs ./next.config.mjs
+COPY --from=build /prod/hanzo/public ./public
+COPY --from=build /prod/hanzo/package.json ./package.json
+COPY --from=build /prod/hanzo/drizzle ./drizzle
 COPY .env.production ./.env
-COPY --from=build /prod/dokploy/components.json ./components.json
-COPY --from=build /prod/dokploy/node_modules ./node_modules
+COPY --from=build /prod/hanzo/components.json ./components.json
+COPY --from=build /prod/hanzo/node_modules ./node_modules
 
 
 # Install docker
