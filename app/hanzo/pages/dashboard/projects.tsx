@@ -11,7 +11,7 @@ import { api } from "@/utils/api";
 
 const ShowWelcomeHanzo Platform = dynamic(
 	() =>
-		import("@/components/dashboard/settings/billing/show-welcome-dokploy").then(
+		import("@/components/dashboard/settings/billing/show-welcome-hanzo").then(
 			(mod) => mod.ShowWelcomeHanzo Platform,
 		),
 	{ ssr: false },
