@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { Loader2, Pencil, PlusIcon, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -48,8 +48,8 @@ const rateLimitFormSchema = z.object({
 	name: z.string().min(1, "Name is required"),
 	scope: z.enum(rateLimitScopes),
 	scopeId: z.string().optional(),
-	requestsPerMinute: z.coerce.number().int().positive("Must be a positive integer"),
-	burstSize: z.coerce.number().int().positive("Must be a positive integer"),
+	requestsPerMinute: z.number().int().positive("Must be a positive integer"),
+	burstSize: z.number().int().positive("Must be a positive integer"),
 	enabled: z.boolean(),
 });
 
@@ -227,7 +227,13 @@ const RateLimitDialog = ({
 									<FormItem>
 										<FormLabel>Requests / min</FormLabel>
 										<FormControl>
-											<Input type="number" min={1} {...field} />
+											<Input
+												type="number"
+												min={1}
+												{...field}
+												value={field.value ?? ""}
+												onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -241,7 +247,13 @@ const RateLimitDialog = ({
 									<FormItem>
 										<FormLabel>Burst Size</FormLabel>
 										<FormControl>
-											<Input type="number" min={1} {...field} />
+											<Input
+												type="number"
+												min={1}
+												{...field}
+												value={field.value ?? ""}
+												onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
