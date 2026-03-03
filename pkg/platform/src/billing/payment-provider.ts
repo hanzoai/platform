@@ -1,8 +1,8 @@
 // Payment Provider Abstraction
-// Allows platform to work without any payment provider configured
+// Delegates to Commerce API at billing.hanzo.ai
 
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
+const COMMERCE_API_URL = process.env.COMMERCE_API_URL || "https://billing.hanzo.ai";
+const COMMERCE_SERVICE_TOKEN = process.env.COMMERCE_SERVICE_TOKEN || "";
 
 export interface PaymentProvider {
   name: string;
@@ -35,7 +35,7 @@ export interface CreateTopupParams {
 
 export interface WalletInfo {
   organizationId: string;
-  stripeCustomerId?: string;
+  commerceCustomerId?: string;
   autoTopupAmount?: string;
   balance?: string;
 }
@@ -66,16 +66,49 @@ class NullPaymentProvider implements PaymentProvider {
   }
 }
 
-// Stripe provider - uses Stripe when configured
-class StripePaymentProvider implements PaymentProvider {
-  name = "stripe";
-  isConfigured = true;
-  private stripe: any;
+async function commerceFetch(path: string, body: Record<string, unknown>): Promise<any> {
+  const url = `${COMMERCE_API_URL}/api/v1/billing${path}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(COMMERCE_SERVICE_TOKEN ? { Authorization: `Bearer ${COMMERCE_SERVICE_TOKEN}` } : {}),
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15_000),
+  });
 
-  constructor() {
-    const Stripe = require("stripe").default;
-    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2024-09-30.acacia" });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Commerce API ${path} returned ${res.status}: ${text}`);
   }
+
+  return res.json();
+}
+
+async function commerceGet(path: string): Promise<any> {
+  const url = `${COMMERCE_API_URL}/api/v1/billing${path}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(COMMERCE_SERVICE_TOKEN ? { Authorization: `Bearer ${COMMERCE_SERVICE_TOKEN}` } : {}),
+    },
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Commerce API ${path} returned ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+// Commerce API provider - delegates to billing.hanzo.ai
+class CommercePaymentProvider implements PaymentProvider {
+  name = "commerce";
+  isConfigured = true;
 
   async createSubscription(params: CreateSubscriptionParams): Promise<{ sessionId: string }> {
     let customerId = params.customerId;
@@ -87,72 +120,54 @@ class StripePaymentProvider implements PaymentProvider {
       customerId = customer.id;
     }
 
-    const session = await this.stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: customerId,
-      line_items: [{ price: params.priceId, quantity: 1 }],
-      metadata: { organizationId: params.organizationId, ownerId: params.ownerId, plan: params.plan },
-      subscription_data: { metadata: { organizationId: params.organizationId, plan: params.plan } },
-      payment_method_collection: "always",
-      success_url: params.successUrl,
-      cancel_url: params.cancelUrl,
+    const result = await commerceFetch("/subscriptions", {
+      customerId,
+      organizationId: params.organizationId,
+      ownerId: params.ownerId,
+      plan: params.plan,
+      successUrl: params.successUrl,
+      cancelUrl: params.cancelUrl,
     });
 
-    return { sessionId: session.id };
+    return { sessionId: result.sessionId || result.id };
   }
 
   async createTopup(params: CreateTopupParams): Promise<{ sessionId: string }> {
-    const session = await this.stripe.checkout.sessions.create({
-      mode: "payment",
-      customer: params.customerId,
-      line_items: [{
-        price_data: {
-          currency: "usd",
-          unit_amount: params.amount * 100,
-          product_data: { name: "Hanzo Platform Credits", description: `Add $${params.amount}` },
-        },
-        quantity: 1,
-      }],
-      metadata: { organizationId: params.organizationId, type: "manual_topup" },
-      success_url: params.successUrl,
-      cancel_url: params.cancelUrl,
+    const result = await commerceFetch("/topup", {
+      customerId: params.customerId,
+      organizationId: params.organizationId,
+      amount: params.amount,
+      currency: "usd",
+      successUrl: params.successUrl,
+      cancelUrl: params.cancelUrl,
     });
 
-    return { sessionId: session.id };
+    return { sessionId: result.sessionId || result.id };
   }
 
   async triggerAutoTopup(wallet: WalletInfo): Promise<void> {
-    if (!wallet.stripeCustomerId || !wallet.autoTopupAmount) return;
+    if (!wallet.commerceCustomerId || !wallet.autoTopupAmount) return;
 
-    const amount = Number(wallet.autoTopupAmount);
-    const customer = await this.stripe.customers.retrieve(wallet.stripeCustomerId);
-    if (customer.deleted) return;
-
-    const defaultPaymentMethod = customer.invoice_settings?.default_payment_method;
-    if (!defaultPaymentMethod) return;
-
-    await this.stripe.paymentIntents.create({
-      amount: amount * 100,
+    await commerceFetch("/topup", {
+      customerId: wallet.commerceCustomerId,
+      organizationId: wallet.organizationId,
+      amount: Number(wallet.autoTopupAmount),
       currency: "usd",
-      customer: wallet.stripeCustomerId,
-      payment_method: defaultPaymentMethod as string,
-      off_session: true,
-      confirm: true,
-      metadata: { organizationId: wallet.organizationId, type: "auto_topup" },
+      autoTopup: true,
     });
   }
 
   async createPortalSession(customerId: string, returnUrl: string): Promise<{ url: string }> {
-    const session = await this.stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: returnUrl,
+    const result = await commerceFetch("/portal-session", {
+      customerId,
+      returnUrl,
     });
-    return { url: session.url };
+    return { url: result.url };
   }
 
   async createCustomer(email: string, metadata: Record<string, string>): Promise<{ id: string }> {
-    const customer = await this.stripe.customers.create({ email, metadata });
-    return { id: customer.id };
+    const result = await commerceFetch("/customers", { email, metadata });
+    return { id: result.id || result.customerId };
   }
 }
 
@@ -161,9 +176,10 @@ let _provider: PaymentProvider | null = null;
 
 export function getPaymentProvider(): PaymentProvider {
   if (!_provider) {
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (stripeKey && stripeKey !== "CHANGE_ME") {
-      _provider = new StripePaymentProvider();
+    const token = process.env.COMMERCE_SERVICE_TOKEN;
+    const apiUrl = process.env.COMMERCE_API_URL;
+    if (token || apiUrl) {
+      _provider = new CommercePaymentProvider();
     } else {
       _provider = new NullPaymentProvider();
     }
