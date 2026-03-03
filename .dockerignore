@@ -1,5 +1,50 @@
-node_modules
-.git
+# Dependencies (pnpm installs fresh inside Docker)
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+dist/
+.turbo/
+out/
+
+# Version control
+.git/
 .gitignore
+.gitmodules
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dev tooling
+.devcontainer/
+.do/
+.claude/
+.github/
+
+# Docs (not needed in build)
+docs/
 *.md
-dist
+
+# Test / coverage
+coverage/
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+.vitest/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Misc
+tmp/
+.env.local
+.env.development
+docker-compose*.yml
+compose*.yml
