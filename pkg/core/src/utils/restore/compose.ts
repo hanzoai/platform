@@ -61,13 +61,13 @@ export const restoreComposeBackup = async (
 
 		const restoreCommand = getRestoreCommand({
 			appName: appName,
-			serviceName: backupInput.metadata?.serviceName,
+			serviceName: backupInput.metadata?.serviceName || "",
 			type: backupInput.databaseType,
 			credentials: {
 				database: backupInput.databaseName,
 				...credentials,
 			},
-			restoreType: composeType,
+			restoreType: composeType || "docker-compose",
 			rcloneCommand,
 		});
 
