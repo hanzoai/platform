@@ -5,8 +5,8 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { paths } from "@hanzo/server/constants";
-import type { InferResultType } from "@hanzo/server/types/with";
+import { paths } from "@hanzo/platform/constants";
+import type { InferResultType } from "@hanzo/platform/types/with";
 import boxen from "boxen";
 import {
 	writeDomainsToCompose,

@@ -1,13 +1,13 @@
 import { createWriteStream } from "node:fs";
 import path from "node:path";
-import { paths } from "@hanzo/server/constants";
-import type { Schedule } from "@hanzo/server/db/schema/schedule";
+import { paths } from "@hanzo/platform/constants";
+import type { Schedule } from "@hanzo/platform/db/schema/schedule";
 import {
 	createDeploymentSchedule,
 	updateDeployment,
 	updateDeploymentStatus,
-} from "@hanzo/server/services/deployment";
-import { findScheduleById } from "@hanzo/server/services/schedule";
+} from "@hanzo/platform/services/deployment";
+import { findScheduleById } from "@hanzo/platform/services/schedule";
 import { scheduledJobs, scheduleJob as scheduleJobNode } from "node-schedule";
 import { getComposeContainer, getServiceContainer } from "../docker/utils";
 import { execAsyncRemote } from "../process/execAsync";
