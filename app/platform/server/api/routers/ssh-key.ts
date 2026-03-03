@@ -5,10 +5,10 @@ import {
 	removeSSHKeyById,
 	updateSSHKeyById,
 } from "@hanzo/platform";
+import { db } from "@hanzo/platform/db";
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { db } from "@/server/db";
 import {
 	apiCreateSshKey,
 	apiFindOneSshKey,

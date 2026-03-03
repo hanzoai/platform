@@ -18,11 +18,14 @@ export const createSchedule = async (
 	input: z.infer<typeof createScheduleSchema>,
 ) => {
 	const { scheduleId, ...rest } = input;
-	const [newSchedule] = await db.insert(schedules).values(rest as any).returning();
+	const [newSchedule] = await db
+		.insert(schedules)
+		.values(rest as typeof schedules.$inferInsert)
+		.returning();
 
 	if (
 		newSchedule &&
-		(newSchedule.scheduleType === "platform-server" ||
+		(newSchedule.scheduleType === "dokploy-server" ||
 			newSchedule.scheduleType === "server")
 	) {
 		await handleScript(newSchedule);
@@ -120,7 +123,7 @@ export const updateSchedule = async (
 	const { scheduleId, ...rest } = input;
 	const [updatedSchedule] = await db
 		.update(schedules)
-		.set(rest)
+		.set(rest as Partial<typeof schedules.$inferInsert>)
 		.where(eq(schedules.scheduleId, scheduleId))
 		.returning();
 
@@ -132,7 +135,7 @@ export const updateSchedule = async (
 	}
 
 	if (
-		updatedSchedule?.scheduleType === "platform-server" ||
+		updatedSchedule?.scheduleType === "dokploy-server" ||
 		updatedSchedule?.scheduleType === "server"
 	) {
 		await handleScript(updatedSchedule);
@@ -158,7 +161,7 @@ ${schedule?.script || ""}`;
 		 echo "${encodedContent}" | base64 -d > ${fullPath}/script.sh
 	`;
 
-	if (schedule?.scheduleType === "platform-server") {
+	if (schedule?.scheduleType === "dokploy-server") {
 		await execAsync(script);
 	} else if (schedule?.scheduleType === "server") {
 		await execAsyncRemote(schedule?.serverId || "", script);
