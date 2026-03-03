@@ -50,7 +50,6 @@
 	"pnpm": {
 		"onlyBuiltDependencies": [
 			"@biomejs/biome",
-			"bcrypt",
 			"core-js",
 			"core-js-pure",
 			"cpu-features",
