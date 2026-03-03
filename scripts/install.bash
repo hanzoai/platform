@@ -1,16 +1,16 @@
 #!/bin/bash
+
 install_platform() {
     if [ "$(uname)" != "Linux" ]; then
         echo "This script must be run on Linux" >&2
         exit 1
     fi
-
     if [ -f /.dockerenv ]; then
         echo "This script must be run on a non-containerized Linux host" >&2
         exit 1
     fi
-
-    if command -v ss >/dev/null 2>&1; then
+    # For non-cloud mode, check for port conflicts.
+    if [ "$IS_CLOUD" != "true" ] && command -v ss >/dev/null 2>&1; then
         if ss -tulnp | grep ':80 ' >/dev/null; then
             echo "Error: something is already running on port 80" >&2
             exit 1
@@ -21,16 +21,16 @@ install_platform() {
         fi
     fi
 
-    IS_CLOUD=${IS_CLOUD:-false}
     FORCE=${FORCE:-false}
 
+    # Set mode and network
     if [ "$IS_CLOUD" = "true" ]; then
         SERVICE_NAME="cloud"
         echo "Mode: CLOUD"
         advertise_addr="${ADVERTISE_ADDR:-localhost}"
         NETWORK_NAME="hanzo-network"
         if ! docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
-            echo "Warning: Network $NETWORK_NAME not found. Creating it."
+            echo "Creating network $NETWORK_NAME"
             docker network create --driver overlay --attachable "$NETWORK_NAME"
         fi
     else
@@ -74,6 +74,30 @@ install_platform() {
         echo "Network: $NETWORK_NAME"
     fi
 
+    # Process DEV_MODE: set image tag and mount workspace if applicable.
+    if [ "$DEV_MODE" = "true" ]; then
+        echo "Dev mode enabled"
+        HANZO_IMAGE_TAG="dev"
+        NODE_ENV="${NODE_ENV:-development}"
+        if [ -d "$(pwd)" ]; then
+            echo "Mounting workspace: $(pwd) -> /workspace"
+            MOUNT_FLAGS="--mount type=bind,source=$(pwd),target=/workspace"
+        fi
+    else
+        MOUNT_FLAGS=""
+    fi
+
+    # Build list of allowed env variables to pass through.
+    [ -z "$ADVERTISE_ADDR" ] && ADVERTISE_ADDR="$advertise_addr"
+    allowed_vars="ADVERTISE_ADDR DATABASE_URL NODE_ENV IS_CLOUD NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET SMTP_FROM_ADDRESS SMTP_SERVER SMTP_PORT SMTP_USERNAME SMTP_PASSWORD PORT"
+    extra_env=""
+    for var in $allowed_vars; do
+        value="${!var}"
+        if [ -n "$value" ]; then
+            extra_env="$extra_env -e $var=$value"
+        fi
+    done
+
     if ! docker info >/dev/null 2>&1; then
         echo "Docker daemon not running. Starting docker..."
         if command -v systemctl >/dev/null 2>&1; then
@@ -91,6 +115,7 @@ install_platform() {
         fi
     fi
 
+    # Check if service exists; update if it does.
     if docker service inspect "$SERVICE_NAME" >/dev/null 2>&1; then
         if [ "$FORCE" != "true" ]; then
             echo "Service $SERVICE_NAME exists. Updating..."
@@ -106,28 +131,19 @@ install_platform() {
     HANZO_DIR="${HANZO_DIR:-$HOME/hanzo}"
     mkdir -p "$HANZO_DIR"
     chmod 777 "$HANZO_DIR"
-
     APP_DIR="${APP_DIR:-/etc/$SERVICE_NAME}"
     mkdir -p "$APP_DIR"
     chmod 777 "$APP_DIR"
 
-    if [ "$DEV_MODE" = "true" ]; then
-        echo "Dev mode enabled"
-        HANZO_IMAGE_TAG="dev"
-        NODE_ENV="${NODE_ENV:-development}"
-        if [ -d "$(pwd)" ]; then
-            echo "Mounting workspace: $(pwd) -> /workspace"
-            MOUNT_FLAGS="--mount type=bind,source=$(pwd),target=/workspace"
-        fi
+    if [ "$IS_CLOUD" = "true" ]; then
+        docker pull hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
     else
-        MOUNT_FLAGS=""
+        echo "Pulling images..."
+        docker pull postgres:16
+        docker pull redis:7
+        docker pull traefik:v3.1.2
+        docker pull hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
     fi
-
-    echo "Pulling images..."
-    docker pull postgres:16
-    docker pull redis:7
-    docker pull traefik:v3.1.2
-    docker pull hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
 
     DEFAULT_DB_URL="postgres://hanzo:amukds4wi9001583845717ad2@hanzo-postgres:5432/hanzo"
     DATABASE_URL="${DATABASE_URL:-$DEFAULT_DB_URL}"
@@ -145,23 +161,7 @@ install_platform() {
       --update-parallelism 1 \
       --update-order stop-first \
       --constraint 'node.role == manager' \
-      -e ADVERTISE_ADDR="$advertise_addr" \
-      -e DATABASE_URL="$DATABASE_URL" \
-      -e NODE_ENV="${NODE_ENV:-production}" \
-      -e IS_CLOUD=${IS_CLOUD:-false} \
-      $( [ -n "$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" ] && echo "-e NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" ) \
-      $( [ -n "$STRIPE_SECRET_KEY" ] && echo "-e STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY" ) \
-      $( [ -n "$STRIPE_WEBHOOK_SECRET" ] && echo "-e STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET" ) \
-      $( [ -n "$GITHUB_CLIENT_ID" ] && echo "-e GITHUB_CLIENT_ID=$GITHUB_CLIENT_ID" ) \
-      $( [ -n "$GITHUB_CLIENT_SECRET" ] && echo "-e GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET" ) \
-      $( [ -n "$GOOGLE_CLIENT_ID" ] && echo "-e GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" ) \
-      $( [ -n "$GOOGLE_CLIENT_SECRET" ] && echo "-e GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" ) \
-      $( [ -n "$SMTP_FROM_ADDRESS" ] && echo "-e SMTP_FROM_ADDRESS=$SMTP_FROM_ADDRESS" ) \
-      $( [ -n "$SMTP_SERVER" ] && echo "-e SMTP_SERVER=$SMTP_SERVER" ) \
-      $( [ -n "$SMTP_PORT" ] && echo "-e SMTP_PORT=$SMTP_PORT" ) \
-      $( [ -n "$SMTP_USERNAME" ] && echo "-e SMTP_USERNAME=$SMTP_USERNAME" ) \
-      $( [ -n "$SMTP_PASSWORD" ] && echo "-e SMTP_PASSWORD=$SMTP_PASSWORD" ) \
-      -e PORT=${PORT:-3000} \
+      $extra_env \
       hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
 
     if echo "$advertise_addr" | grep -q ':'; then
@@ -178,7 +178,6 @@ install_platform() {
 }
 
 update_platform() {
-    IS_CLOUD=${IS_CLOUD:-false}
     if [ "$IS_CLOUD" = "true" ]; then
         SERVICE_NAME="cloud"
     else
