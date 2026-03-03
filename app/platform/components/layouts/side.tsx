@@ -18,11 +18,14 @@ import {
 	Forward,
 	GalleryVerticalEnd,
 	GitBranch,
+	Globe,
+	HeartIcon,
 	Key,
 	KeyRound,
 	Loader2,
 	LogIn,
 	type LucideIcon,
+	Network,
 	Package,
 	PieChart,
 	Server,
@@ -369,6 +372,24 @@ const MENU: Menu = {
 			url: "/dashboard/settings/certificates",
 			icon: ShieldCheck,
 			// Only enabled for admins
+			isEnabled: ({ auth }) =>
+				!!(auth?.role === "owner" || auth?.role === "admin"),
+		},
+		{
+			isSingle: true,
+			title: "Gateway",
+			url: "/dashboard/settings/gateway",
+			icon: Network,
+			// Only enabled for admins
+			isEnabled: ({ auth }) =>
+				!!(auth?.role === "owner" || auth?.role === "admin"),
+		},
+		{
+			isSingle: true,
+			title: "DNS & Pages",
+			url: "/dashboard/settings/dns",
+			icon: Globe,
+			// Only enabled for admins/owners
 			isEnabled: ({ auth }) =>
 				!!(auth?.role === "owner" || auth?.role === "admin"),
 		},
