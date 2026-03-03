@@ -10,7 +10,7 @@ import {
 	initializeNetwork,
 	initSchedules,
 	initVolumeBackupsCronJobs,
-	sendHanzo PlatformRestartNotifications,
+	sendHanzoPlatformRestartNotifications,
 	setupDirectories,
 } from "@hanzo/platform";
 import { config } from "dotenv";
@@ -41,7 +41,7 @@ const app = next({ dev, turbopack: process.env.TURBOPACK === "1" });
 const handle = app.getRequestHandler();
 void app.prepare().then(async () => {
 	try {
-		console.log("Running Hanzo PlatformVersion: ", packageInfo.version);
+		console.log("Running Hanzo Platform Version: ", packageInfo.version);
 		const server = http.createServer((req, res) => {
 			handle(req, res);
 		});
@@ -63,7 +63,7 @@ void app.prepare().then(async () => {
 			await initSchedules();
 			await initCancelDeployments();
 			await initVolumeBackupsCronJobs();
-			await sendHanzo PlatformRestartNotifications();
+			await sendHanzoPlatformRestartNotifications();
 		}
 
 		server.listen(PORT, HOST);
