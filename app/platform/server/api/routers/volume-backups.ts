@@ -1,5 +1,12 @@
 import {
 	createVolumeBackup,
+	findApplicationById,
+	findComposeById,
+	findMariadbById,
+	findMongoById,
+	findMySqlById,
+	findPostgresById,
+	findRedisById,
 	findVolumeBackupById,
 	IS_CLOUD,
 	removeVolumeBackup,
@@ -26,6 +33,107 @@ import { z } from "zod";
 import { removeJob, schedule, updateJob } from "@/server/utils/backup";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
+/**
+ * Resolve the organizationId for a volume backup by looking up its parent service.
+ */
+async function getVolumeBackupOrgId(
+	vb: {
+		applicationId?: string | null;
+		postgresId?: string | null;
+		mysqlId?: string | null;
+		mariadbId?: string | null;
+		mongoId?: string | null;
+		redisId?: string | null;
+		composeId?: string | null;
+	},
+): Promise<string> {
+	if (vb.applicationId) {
+		const app = await findApplicationById(vb.applicationId);
+		return app.environment.project.organizationId;
+	}
+	if (vb.postgresId) {
+		const pg = await findPostgresById(vb.postgresId);
+		return pg.environment.project.organizationId;
+	}
+	if (vb.mysqlId) {
+		const my = await findMySqlById(vb.mysqlId);
+		return my.environment.project.organizationId;
+	}
+	if (vb.mariadbId) {
+		const maria = await findMariadbById(vb.mariadbId);
+		return maria.environment.project.organizationId;
+	}
+	if (vb.mongoId) {
+		const mongo = await findMongoById(vb.mongoId);
+		return mongo.environment.project.organizationId;
+	}
+	if (vb.redisId) {
+		const redis = await findRedisById(vb.redisId);
+		return redis.environment.project.organizationId;
+	}
+	if (vb.composeId) {
+		const compose = await findComposeById(vb.composeId);
+		return compose.environment.project.organizationId;
+	}
+	throw new TRPCError({
+		code: "BAD_REQUEST",
+		message: "Cannot determine volume backup ownership",
+	});
+}
+
+function assertVbOrgMatch(orgId: string, activeOrgId: string): void {
+	if (orgId !== activeOrgId) {
+		throw new TRPCError({
+			code: "UNAUTHORIZED",
+			message: "You are not authorized to access this volume backup",
+		});
+	}
+}
+
+/**
+ * Resolve org for a service type + id pair used in the list endpoint.
+ */
+async function getServiceOrgId(
+	serviceType: string,
+	id: string,
+): Promise<string> {
+	switch (serviceType) {
+		case "application": {
+			const app = await findApplicationById(id);
+			return app.environment.project.organizationId;
+		}
+		case "postgres": {
+			const pg = await findPostgresById(id);
+			return pg.environment.project.organizationId;
+		}
+		case "mysql": {
+			const my = await findMySqlById(id);
+			return my.environment.project.organizationId;
+		}
+		case "mariadb": {
+			const maria = await findMariadbById(id);
+			return maria.environment.project.organizationId;
+		}
+		case "mongo": {
+			const mongo = await findMongoById(id);
+			return mongo.environment.project.organizationId;
+		}
+		case "redis": {
+			const redis = await findRedisById(id);
+			return redis.environment.project.organizationId;
+		}
+		case "compose": {
+			const compose = await findComposeById(id);
+			return compose.environment.project.organizationId;
+		}
+		default:
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: "Unknown service type",
+			});
+	}
+}
+
 export const volumeBackupsRouter = createTRPCRouter({
 	list: protectedProcedure
 		.input(
@@ -42,7 +150,11 @@ export const volumeBackupsRouter = createTRPCRouter({
 				]),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
+			// Verify the parent service belongs to the caller's org
+			const orgId = await getServiceOrgId(input.volumeBackupType, input.id);
+			assertVbOrgMatch(orgId, ctx.session.activeOrganizationId);
+
 			return await db.query.volumeBackups.findMany({
 				where: eq(volumeBackups[`${input.volumeBackupType}Id`], input.id),
 				with: {
@@ -58,8 +170,12 @@ export const volumeBackupsRouter = createTRPCRouter({
 		}),
 	create: protectedProcedure
 		.input(createVolumeBackupSchema)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			const newVolumeBackup = await createVolumeBackup(input);
+
+			// Verify org ownership on the newly created volume backup
+			const orgId = await getVolumeBackupOrgId(newVolumeBackup);
+			assertVbOrgMatch(orgId, ctx.session.activeOrganizationId);
 
 			if (newVolumeBackup?.enabled) {
 				if (IS_CLOUD) {
@@ -80,8 +196,11 @@ export const volumeBackupsRouter = createTRPCRouter({
 				volumeBackupId: z.string().min(1),
 			}),
 		)
-		.query(async ({ input }) => {
-			return await findVolumeBackupById(input.volumeBackupId);
+		.query(async ({ input, ctx }) => {
+			const vb = await findVolumeBackupById(input.volumeBackupId);
+			const orgId = await getVolumeBackupOrgId(vb);
+			assertVbOrgMatch(orgId, ctx.session.activeOrganizationId);
+			return vb;
 		}),
 	delete: protectedProcedure
 		.input(
@@ -89,12 +208,20 @@ export const volumeBackupsRouter = createTRPCRouter({
 				volumeBackupId: z.string().min(1),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
+			const vb = await findVolumeBackupById(input.volumeBackupId);
+			const orgId = await getVolumeBackupOrgId(vb);
+			assertVbOrgMatch(orgId, ctx.session.activeOrganizationId);
 			return await removeVolumeBackup(input.volumeBackupId);
 		}),
 	update: protectedProcedure
 		.input(updateVolumeBackupSchema)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
+			// Verify org ownership before update
+			const existingVb = await findVolumeBackupById(input.volumeBackupId);
+			const vbOrgId = await getVolumeBackupOrgId(existingVb);
+			assertVbOrgMatch(vbOrgId, ctx.session.activeOrganizationId);
+
 			const updatedVolumeBackup = await updateVolumeBackup(
 				input.volumeBackupId,
 				input,
@@ -134,7 +261,11 @@ export const volumeBackupsRouter = createTRPCRouter({
 
 	runManually: protectedProcedure
 		.input(z.object({ volumeBackupId: z.string().min(1) }))
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
+			const vb = await findVolumeBackupById(input.volumeBackupId);
+			const orgId = await getVolumeBackupOrgId(vb);
+			assertVbOrgMatch(orgId, ctx.session.activeOrganizationId);
+
 			try {
 				return await runVolumeBackup(input.volumeBackupId);
 			} catch (error) {
@@ -161,7 +292,11 @@ export const volumeBackupsRouter = createTRPCRouter({
 				serverId: z.string().optional(),
 			}),
 		)
-		.subscription(async ({ input }) => {
+		.subscription(async ({ input, ctx }) => {
+			// Verify org ownership for the parent service
+			const orgId = await getServiceOrgId(input.serviceType, input.id);
+			assertVbOrgMatch(orgId, ctx.session.activeOrganizationId);
+
 			return observable<string>((emit) => {
 				const runRestore = async () => {
 					try {
