@@ -1,9 +1,0 @@
-version: "3.8"
-services:
-  base:
-    image: hanzoai/base:0.23.3
-    restart: unless-stopped
-    volumes:
-      - /etc/hanzo/templates/${HASH}/data:/data
-      - /etc/hanzo/templates/${HASH}/public:/public
-      - /etc/hanzo/templates/${HASH}/migrations:/migrations

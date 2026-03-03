@@ -7,7 +7,7 @@ import {
 	updateApplicationStatus,
 	updateCompose,
 	updatePreviewDeployment,
-} from "@hanzo/platform";
+} from "@hanzo/core";
 import type { DeployJob } from "./schema";
 
 export const deploy = async (job: DeployJob) => {
