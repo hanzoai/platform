@@ -42,8 +42,7 @@ export const ShowTraefikSystem = ({ serverId }: Props) => {
 							Traefik File System
 						</CardTitle>
 						<CardDescription>
-							Manage all the files and directories in {"'/etc/hanzo/traefik'"}
-							.
+							Manage all the files and directories in {"'/etc/hanzo/traefik'"}.
 						</CardDescription>
 
 						<AlertBlock type="warning">

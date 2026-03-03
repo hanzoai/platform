@@ -506,9 +506,7 @@ function SidebarLogo() {
 
 			<div className="text-left text-sm leading-tight group-data-[state=open]/collapsible:rotate-90">
 				<p className="truncate font-semibold">Hanzo</p>
-				<p className="truncate text-xs text-muted-foreground">
-					{hanzoVersion}
-				</p>
+				<p className="truncate text-xs text-muted-foreground">{hanzoVersion}</p>
 			</div>
 		</Link>
 	);
