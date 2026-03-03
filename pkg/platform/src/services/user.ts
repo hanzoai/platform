@@ -16,8 +16,8 @@ export const addNewProject = async (
 	await db
 		.update(member)
 		.set({
-			accessedProjects: [...userR.accessedProjects, projectId],
-		})
+			accessedProjects: [...(userR.accessedProjects || []), projectId],
+		} as any)
 		.where(
 			and(eq(member.id, userR.id), eq(member.organizationId, organizationId)),
 		);
@@ -33,8 +33,8 @@ export const addNewEnvironment = async (
 	await db
 		.update(member)
 		.set({
-			accessedEnvironments: [...userR.accessedEnvironments, environmentId],
-		})
+			accessedEnvironments: [...(userR.accessedEnvironments || []), environmentId],
+		} as any)
 		.where(
 			and(eq(member.id, userR.id), eq(member.organizationId, organizationId)),
 		);
@@ -49,8 +49,8 @@ export const addNewService = async (
 	await db
 		.update(member)
 		.set({
-			accessedServices: [...userR.accessedServices, serviceId],
-		})
+			accessedServices: [...(userR.accessedServices || []), serviceId],
+		} as any)
 		.where(
 			and(eq(member.id, userR.id), eq(member.organizationId, organizationId)),
 		);
@@ -313,7 +313,7 @@ export const updateUser = async (userId: string, userData: Partial<User>) => {
 		.update(users_temp)
 		.set({
 			...userData,
-		})
+		} as any)
 		.where(eq(users_temp.id, userId))
 		.returning()
 		.then((res) => res[0]);
@@ -358,7 +358,7 @@ export const createApiKey = async (
 			.update(apikey)
 			.set({
 				metadata: JSON.stringify(input.metadata),
-			})
+			} as any)
 			.where(eq(apikey.id, apiKey.id));
 	}
 	return apiKey;

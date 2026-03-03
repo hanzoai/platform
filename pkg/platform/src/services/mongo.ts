@@ -35,7 +35,7 @@ export const createMongo = async (input: typeof apiCreateMongo._type) => {
 				? input.databasePassword
 				: generatePassword(),
 			appName,
-		})
+		} as any)
 		.returning()
 		.then((value) => value[0]);
 
@@ -86,7 +86,7 @@ export const updateMongoById = async (
 		.update(mongo)
 		.set({
 			...rest,
-		})
+		} as any)
 		.where(eq(mongo.mongoId, mongoId))
 		.returning();
 
@@ -97,7 +97,7 @@ export const findMongoByBackupId = async (backupId: string) => {
 	const result = await db
 		.select({
 			...getTableColumns(mongo),
-		})
+		} as any)
 		.from(mongo)
 		.innerJoin(backups, eq(mongo.mongoId, backups.mongoId))
 		.where(eq(backups.backupId, backupId))
@@ -116,7 +116,7 @@ export const findComposeByBackupId = async (backupId: string) => {
 	const result = await db
 		.select({
 			...getTableColumns(compose),
-		})
+		} as any)
 		.from(compose)
 		.innerJoin(backups, eq(compose.composeId, backups.composeId))
 		.where(eq(backups.backupId, backupId))

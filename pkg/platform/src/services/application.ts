@@ -82,7 +82,7 @@ export const createApplication = async (
 			.values({
 				...input,
 				appName,
-			})
+			} as any)
 			.returning()
 			.then((value) => value[0]);
 
@@ -151,7 +151,7 @@ export const updateApplication = async (
 		.update(applications)
 		.set({
 			...rest,
-		})
+		} as any)
 		.where(eq(applications.applicationId, applicationId))
 		.returning();
 
@@ -166,7 +166,7 @@ export const updateApplicationStatus = async (
 		.update(applications)
 		.set({
 			applicationStatus: applicationStatus,
-		})
+		} as any)
 		.where(eq(applications.applicationId, applicationId))
 		.returning();
 

@@ -177,29 +177,8 @@ export default function Home({ tokenResetPassword }: Props) {
 Home.getLayout = (page: ReactElement) => {
 	return <OnboardingLayout>{page}</OnboardingLayout>;
 };
-export async function getServerSideProps(context: GetServerSidePropsContext) {
-	if (!IS_CLOUD) {
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/",
-			},
-		};
-	}
-	const { token } = context.query;
-
-	if (typeof token !== "string") {
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/",
-			},
-		};
-	}
-
+export async function getServerSideProps() {
 	return {
-		props: {
-			tokenResetPassword: token,
-		},
+		props: {},
 	};
 }
