@@ -367,7 +367,7 @@ export const ImpersonationBar = () => {
 															onClick={() => {
 																copy(data?.user?.stripeCustomerId || "");
 																toast.success(
-																	"Stripe Customer ID copied to clipboard",
+																	"Customer ID copied to clipboard",
 																);
 															}}
 														>
@@ -388,7 +388,7 @@ export const ImpersonationBar = () => {
 															onClick={() => {
 																copy(data.user.stripeSubscriptionId || "");
 																toast.success(
-																	"Stripe Subscription ID copied to clipboard",
+																	"Subscription ID copied to clipboard",
 																);
 															}}
 														>
