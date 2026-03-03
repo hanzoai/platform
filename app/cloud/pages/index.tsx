@@ -101,7 +101,7 @@ export default function Home({ IS_CLOUD }: Props) {
 			<div className="flex flex-col space-y-2 text-center">
 				<h1 className="text-2xl font-semibold tracking-tight">
 					<div className="flex flex-row items-center justify-center gap-2">
-						<Logo className="size-12" />
+						<Logo className="size-9" />
 						Sign in
 					</div>
 				</h1>
