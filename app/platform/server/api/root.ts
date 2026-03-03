@@ -9,7 +9,9 @@ import { clusterRouter } from "./routers/cluster";
 import { composeRouter } from "./routers/compose";
 import { deploymentRouter } from "./routers/deployment";
 import { destinationRouter } from "./routers/destination";
+import { dnsRouter } from "./routers/dns";
 import { digitaloceanRouter } from "./routers/digitalocean";
+import { gatewayRouter } from "./routers/gateway";
 import { dockerRouter } from "./routers/docker";
 import { doksRouter } from "./routers/doks";
 import { domainRouter } from "./routers/domain";
@@ -51,7 +53,9 @@ import { volumeBackupsRouter } from "./routers/volume-backups";
 
 export const appRouter = createTRPCRouter({
 	admin: adminRouter,
+	dns: dnsRouter,
 	digitalocean: digitaloceanRouter,
+	gateway: gatewayRouter,
 	docker: dockerRouter,
 	doks: doksRouter,
 	project: projectRouter,
