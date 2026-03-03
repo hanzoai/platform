@@ -12,21 +12,6 @@
 <br />
 
 
-
-<div align="center" markdown="1">
-   <sup>Special thanks to:</sup>
-   <br>
-   <br>
-   <a href="https://tuple.app/platform">
-     <img src=".github/sponsors/tuple.png" alt="Tuple's sponsorship image" width="400"/>
-   </a>
-
-### [Tuple, the premier screen sharing app for developers](https://tuple.app/platform)
-[Available for MacOS & Windows](https://tuple.app/platform)<br>
-
-</div>
-
-
 Hanzo is a free, self-hostable Platform as a Service (PaaS) that simplifies the deployment and management of applications and databases.
 
 
