@@ -1,0 +1,28 @@
+# Token stored in K8s secret: hanzo-k8s-gha-rs-github-secret
+# Create with: kubectl -n actions-runner-system create secret generic hanzo-k8s-gha-rs-github-secret --from-literal=github_token=<PAT>
+githubConfigSecret: hanzo-k8s-gha-rs-github-secret
+githubConfigUrl: https://github.com/hanzoai
+maxRunners: 20
+minRunners: 1
+runnerScaleSetName: hanzo-k8s
+template:
+  spec:
+    containers:
+    - command:
+      - /home/runner/run.sh
+      image: ghcr.io/actions/actions-runner:latest
+      name: runner
+      resources:
+        limits:
+          cpu: "8"
+          memory: 28Gi
+        requests:
+          cpu: "2"
+          memory: 8Gi
+    nodeSelector:
+      doks.digitalocean.com/node-pool: runner-pool-32g
+    serviceAccountName: hanzo-deploy
+    tolerations:
+    - effect: NoSchedule
+      key: dedicated
+      value: ci-runner
