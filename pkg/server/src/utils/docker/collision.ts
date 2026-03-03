@@ -1,4 +1,4 @@
-import { findComposeById } from "@dokploy/server/services/compose";
+import { findComposeById } from "@hanzo/server/services/compose";
 import { dump } from "js-yaml";
 import { addAppNameToAllServiceNames } from "./collision/root-network";
 import { generateRandomHash } from "./compose";

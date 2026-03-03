@@ -8,7 +8,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
-import { ShowHanzo PlatformActions } from "./servers/actions/show-dokploy-actions";
+import { ShowHanzo PlatformActions } from "./servers/actions/show-hanzo-actions";
 import { ShowStorageActions } from "./servers/actions/show-storage-actions";
 import { ShowTraefikActions } from "./servers/actions/show-traefik-actions";
 import { ToggleDockerCleanup } from "./servers/actions/toggle-docker-cleanup";
@@ -18,7 +18,7 @@ export const WebServer = () => {
 	const { t } = useTranslation("settings");
 	const { data } = api.user.get.useQuery();
 
-	const { data: dokployVersion } = api.settings.getHanzo PlatformVersion.useQuery();
+	const { data: hanzoVersion } = api.settings.getHanzo PlatformVersion.useQuery();
 
 	return (
 		<div className="w-full">
@@ -56,7 +56,7 @@ export const WebServer = () => {
 								Server IP: {data?.user.serverIp}
 							</span>
 							<span className="text-sm text-muted-foreground">
-								Version: {dokployVersion}
+								Version: {hanzoVersion}
 							</span>
 
 							<ToggleDockerCleanup />

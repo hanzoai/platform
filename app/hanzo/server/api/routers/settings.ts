@@ -43,7 +43,7 @@ import {
 	writeTraefikConfigInPath,
 	writeTraefikSetup,
 } from "@hanzo/core";
-import { generateOpenApiDocument } from "@dokploy/trpc-openapi";
+import { generateOpenApiDocument } from "@hanzo/trpc-openapi";
 import { TRPCError } from "@trpc/server";
 import { eq, sql } from "drizzle-orm";
 import { dump, load } from "js-yaml";
@@ -78,7 +78,7 @@ export const settingsRouter = createTRPCRouter({
 		if (IS_CLOUD) {
 			return true;
 		}
-		await reloadDockerResource("dokploy");
+		await reloadDockerResource("hanzo");
 		return true;
 	}),
 	cleanRedis: adminProcedure.mutation(async () => {
@@ -87,7 +87,7 @@ export const settingsRouter = createTRPCRouter({
 		}
 
 		const { stdout: containerId } = await execAsync(
-			`docker ps --filter "name=dokploy-redis" --filter "status=running" -q | head -n 1`,
+			`docker ps --filter "name=hanzo-redis" --filter "status=running" -q | head -n 1`,
 		);
 
 		if (!containerId) {
@@ -103,7 +103,7 @@ export const settingsRouter = createTRPCRouter({
 		if (IS_CLOUD) {
 			return true;
 		}
-		await reloadDockerResource("dokploy-redis");
+		await reloadDockerResource("hanzo-redis");
 
 		return true;
 	}),
@@ -347,7 +347,7 @@ export const settingsRouter = createTRPCRouter({
 		if (IS_CLOUD) {
 			return true;
 		}
-		const traefikConfig = readConfig("dokploy");
+		const traefikConfig = readConfig("hanzo");
 		return traefikConfig;
 	}),
 	updateWebServerTraefikConfig: adminProcedure
@@ -356,7 +356,7 @@ export const settingsRouter = createTRPCRouter({
 			if (IS_CLOUD) {
 				return true;
 			}
-			writeConfig("dokploy", input.traefikConfig);
+			writeConfig("hanzo", input.traefikConfig);
 			return true;
 		}),
 
@@ -391,7 +391,7 @@ export const settingsRouter = createTRPCRouter({
 
 		await pullLatestRelease();
 
-		// This causes restart of dokploy, thus it will not finish executing properly, so don't await it
+		// This causes restart of hanzo, thus it will not finish executing properly, so don't await it
 		// Status after restart is checked via frontend /api/health endpoint
 		void spawnAsync("docker", [
 			"service",
@@ -399,7 +399,7 @@ export const settingsRouter = createTRPCRouter({
 			"--force",
 			"--image",
 			getHanzo PlatformImage(),
-			"dokploy",
+			"hanzo",
 		]);
 
 		return true;
@@ -530,7 +530,7 @@ export const settingsRouter = createTRPCRouter({
 
 			openApiDocument.info = {
 				title: "Hanzo Platform API",
-				description: "Endpoints for dokploy",
+				description: "Endpoints for hanzo",
 				version: "1.0.0",
 			};
 
@@ -859,7 +859,7 @@ export const settingsRouter = createTRPCRouter({
 		if (!IS_CLOUD) {
 			return [];
 		}
-		const ips = process.env.DOKPLOY_CLOUD_IPS?.split(",");
+		const ips = process.env.HANZO_CLOUD_IPS?.split(",");
 		return ips;
 	}),
 });

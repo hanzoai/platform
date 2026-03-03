@@ -450,7 +450,7 @@ export default function Home({ IS_CLOUD }: Props) {
 						) : (
 							<Link
 								className="hover:underline text-muted-foreground"
-								href="https://docs.dokploy.com/docs/core/reset-password"
+								href="https://docs.hanzo.com/docs/core/reset-password"
 								target="_blank"
 							>
 								Lost your password?
