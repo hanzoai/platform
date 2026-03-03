@@ -69,7 +69,7 @@ export const pullRemoteImage = async (
 			remoteDocker.pull(
 				dockerImage,
 				{ authconfig: authConfig },
-				(err, stream) => {
+				(err: Error | null, stream: NodeJS.ReadableStream) => {
 					if (err) {
 						reject(err);
 						return;
@@ -77,7 +77,7 @@ export const pullRemoteImage = async (
 
 					remoteDocker.modem.followProgress(
 						stream as Readable,
-						(err: Error | null, res) => {
+						(err: Error | null, res: unknown[]) => {
 							if (!err) {
 								resolve(res);
 							}
@@ -85,7 +85,7 @@ export const pullRemoteImage = async (
 								reject(err);
 							}
 						},
-						(event) => {
+						(event: Record<string, unknown>) => {
 							onData?.(event);
 						},
 					);
@@ -133,7 +133,7 @@ export const getContainerByName = (name: string): Promise<ContainerInfo> => {
 		},
 	};
 	return new Promise((resolve, reject) => {
-		docker.listContainers(opts, (err, containers) => {
+		docker.listContainers(opts, (err: Error | null, containers: ContainerInfo[] | undefined) => {
 			if (err) {
 				reject(err);
 			} else if (containers?.length === 0) {
