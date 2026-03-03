@@ -799,6 +799,27 @@
       "when": 1758960816504,
       "tag": "0113_complete_rafael_vega",
       "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "7",
+      "when": 1737657600000,
+      "tag": "0114_add_organization_wallet",
+      "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1737744000000,
+      "tag": "0115_compute_pools_and_offers",
+      "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "7",
+      "when": 1738267200000,
+      "tag": "0116_cloud_provider_digitalocean",
+      "breakpoints": true
     }
   ]
 }

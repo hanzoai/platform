@@ -1,8 +1,28 @@
 import path from "node:path";
-import Docker from "dockerode";
 
 export const IS_CLOUD = process.env.IS_CLOUD === "true";
-export const docker = new Docker();
+export const DOCKER_ENABLED = process.env.DOCKER_ENABLED !== "false" && !IS_CLOUD;
+
+// Lazy-loaded Docker instance - only connects when actually needed
+let _docker: any = null;
+
+export const getDocker = () => {
+	if (!DOCKER_ENABLED) {
+		throw new Error("Docker is not enabled in this environment. Set DOCKER_ENABLED=true or run locally.");
+	}
+	if (!_docker) {
+		const Docker = require("dockerode");
+		_docker = new Docker();
+	}
+	return _docker;
+};
+
+// Legacy export for backwards compatibility - throws if Docker not available
+export const docker = new Proxy({} as any, {
+	get(_, prop) {
+		return getDocker()[prop];
+	}
+});
 
 export const paths = (isServer = false) => {
 	const BASE_PATH =
