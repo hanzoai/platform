@@ -1415,74 +1415,12 @@ EnvironmentPage.getLayout = (page: ReactElement) => {
 	return <DashboardLayout>{page}</DashboardLayout>;
 };
 
-export async function getServerSideProps(
-	ctx: GetServerSidePropsContext<{ projectId: string; environmentId: string }>,
-) {
-	const { params } = ctx;
 
-	const { req, res } = ctx;
-	const { user, session } = await validateRequest(req);
-	if (!user) {
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/",
-			},
-		};
-	}
-
-	// Fetch data from external API
-	const helpers = createServerSideHelpers({
-		router: appRouter,
-		ctx: {
-			req: req as any,
-			res: res as any,
-			db: null as any,
-			session: session as any,
-			user: user as any,
-		},
-		transformer: superjson,
-	});
-
-	// Valid project and environment
-	if (
-		typeof params?.projectId === "string" &&
-		typeof params?.environmentId === "string"
-	) {
-		try {
-			await helpers.project.one.fetch({
-				projectId: params.projectId,
-			});
-
-			await helpers.environment.one.fetch({
-				environmentId: params.environmentId,
-			});
-
-			await helpers.environment.byProjectId.fetch({
-				projectId: params.projectId,
-			});
-
-			return {
-				props: {
-					trpcState: helpers.dehydrate(),
-					projectId: params.projectId,
-					environmentId: params.environmentId,
-				},
-			};
-		} catch {
-			return {
-				redirect: {
-					permanent: false,
-					destination: "/",
-				},
-			};
-		}
-	}
-
+export async function getServerSideProps(ctx: any) {
 	return {
-		redirect: {
-			permanent: false,
-			destination: "/",
+		props: {
+			projectId: ctx.params?.projectId || "",
+			environmentId: ctx.params?.environmentId || "",
 		},
 	};
 }
