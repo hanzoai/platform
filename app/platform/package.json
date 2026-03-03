@@ -1,5 +1,5 @@
 {
-	"name": "@hanzo/core",
+	"name": "platform",
 	"version": "v0.18.4",
 	"private": true,
 	"license": "Apache-2.0",
@@ -52,7 +52,7 @@
 		"@codemirror/language": "^6.10.1",
 		"@codemirror/legacy-modes": "6.4.0",
 		"@codemirror/view": "6.29.0",
-		"@hanzo/platform": "workspace:*",
+		"@hanzo/platform": "catalog:*",
 		"@hanzo/trpc-openapi": "0.0.4",
 		"@hookform/resolvers": "^3.3.4",
 		"@octokit/webhooks": "^13.2.7",
@@ -172,8 +172,8 @@
 	},
 	"packageManager": "pnpm@9.5.0",
 	"engines": {
-		"node": "^20.9.0",
-		"pnpm": ">=9.5.0"
+		"node": "^22",
+		"pnpm": ">=10"
 	},
 	"lint-staged": {
 		"*": [
