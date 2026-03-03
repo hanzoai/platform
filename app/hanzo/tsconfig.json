@@ -27,7 +27,7 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./*"],
-			"@hanzo/core/*": ["../../packages/core/src/*"]
+			"@hanzo/core/*": ["../../pkg/core/src/*"]
 		}
 	},
 
