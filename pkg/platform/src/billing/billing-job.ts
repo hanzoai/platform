@@ -4,6 +4,9 @@ import { eq, inArray } from "drizzle-orm";
 import { deductFromWallet, resetMonthlyCredits } from "./wallet-service";
 import { calculateServiceFee } from "./pricing";
 
+// Type helper for update operations
+type MetricsUpdate = Partial<typeof appUsageMetrics.$inferInsert>;
+
 export async function processUnchargedUsage() {
   const uncharged = await db.query.appUsageMetrics.findMany({ where: eq(appUsageMetrics.charged, false) });
   
@@ -20,7 +23,7 @@ export async function processUnchargedUsage() {
       if (total > 0) {
         await deductFromWallet(orgId, total, "usage", `Compute usage: ${records.length} apps`);
         await db.update(appUsageMetrics)
-          .set({ charged: true, chargedAt: new Date() })
+          .set({ charged: true, chargedAt: new Date() } as MetricsUpdate)
           .where(inArray(appUsageMetrics.metricId, records.map(r => r.metricId)));
       }
     } catch (error) {

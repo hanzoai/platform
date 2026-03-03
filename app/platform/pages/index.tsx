@@ -238,6 +238,43 @@ export default function Home() {
 								</Button>
 							</form>
 						</Form>
+
+						{/* SSO Divider */}
+						<div className="relative my-4">
+							<div className="absolute inset-0 flex items-center">
+								<span className="w-full border-t" />
+							</div>
+							<div className="relative flex justify-center text-xs uppercase">
+								<span className="bg-background px-2 text-muted-foreground">
+									Or continue with
+								</span>
+							</div>
+						</div>
+
+						{/* Hanzo IAM Login */}
+						<Button
+							variant="outline"
+							className="w-full"
+							type="button"
+							onClick={async () => {
+								try {
+									await authClient.signIn.social({
+										provider: "hanzo",
+										callbackURL: "/dashboard/projects",
+									});
+								} catch (e) {
+									console.error('Hanzo login error:', e);
+									toast.error("Hanzo login is not configured");
+								}
+							}}
+						>
+							<svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+								<path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+								<path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+							</svg>
+							Sign in with Hanzo
+						</Button>
 					</>
 				) : (
 					<>
