@@ -4,6 +4,7 @@ const require = createRequire(import.meta.url);
 
 export const IS_CLOUD = process.env.IS_CLOUD === "true" || !!process.env.KUBERNETES_SERVICE_HOST;
 export const DOCKER_ENABLED = process.env.DOCKER_ENABLED !== "false" && !IS_CLOUD;
+export const CLEANUP_CRON_JOB = "50 23 * * *";
 
 // Lazy-loaded Docker instance - only connects when actually needed
 let _docker: any = null;
@@ -21,10 +22,17 @@ export const getDocker = () => {
 
 // Legacy export for backwards compatibility - throws if Docker not available
 export const docker = new Proxy({} as any, {
-	get(_, prop) {
-		return getDocker()[prop];
-	}
+	get: (_target, prop) => {
+		const d = getDocker();
+		const val = d[prop];
+		return typeof val === "function" ? val.bind(d) : val;
+	},
 });
+
+// When not set, use the legacy default so 2FA remains working for users who
+// enabled it before BETTER_AUTH_SECRET was introduced .
+export const BETTER_AUTH_SECRET =
+	process.env.BETTER_AUTH_SECRET || "better-auth-secret-123456789";
 
 export const paths = (isServer = false) => {
 	const BASE_PATH =
@@ -47,5 +55,7 @@ export const paths = (isServer = false) => {
 		REGISTRY_PATH: `${BASE_PATH}/registry`,
 		SCHEDULES_PATH: `${BASE_PATH}/schedules`,
 		VOLUME_BACKUPS_PATH: `${BASE_PATH}/volume-backups`,
+		VOLUME_BACKUP_LOCK_PATH: `${BASE_PATH}/volume-backup-lock`,
+		PATCH_REPOS_PATH: `${BASE_PATH}/patch-repos`,
 	};
 };

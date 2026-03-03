@@ -1,5 +1,5 @@
 import { IS_CLOUD } from "@hanzo/platform";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -63,7 +63,7 @@ export default function Home() {
 
 	const onSubmit = async (values: Login) => {
 		setIsLoading(true);
-		const { error } = await authClient.forgetPassword({
+		const { error } = await authClient.requestPasswordReset({
 			email: values.email,
 			redirectTo: "/reset-password",
 		});
@@ -82,7 +82,7 @@ export default function Home() {
 			<div className="flex flex-col items-center gap-4 w-full">
 				<Link href="/" className="flex flex-row items-center gap-2">
 					<Logo />
-					<span className="font-medium text-sm">Hanzo</span>
+					<span className="font-medium text-sm">Hanzo Platform</span>
 				</Link>
 				<CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
 				<CardDescription>
@@ -149,7 +149,16 @@ export default function Home() {
 Home.getLayout = (page: ReactElement) => {
 	return <OnboardingLayout>{page}</OnboardingLayout>;
 };
-export async function getServerSideProps() {
+export async function getServerSideProps(_context: GetServerSidePropsContext) {
+	if (!IS_CLOUD) {
+		return {
+			redirect: {
+				permanent: true,
+				destination: "/",
+			},
+		};
+	}
+
 	return {
 		props: {},
 	};
