@@ -21,7 +21,7 @@ import {
 	updateNtfyNotification,
 	updateSlackNotification,
 	updateTelegramNotification,
-} from "@dokploy/server";
+} from "@hanzo/core";
 import { TRPCError } from "@trpc/server";
 import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";

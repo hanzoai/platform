@@ -1,4 +1,4 @@
-import { findGitProviderById, removeGitProvider } from "@dokploy/server";
+import { findGitProviderById, removeGitProvider } from "@hanzo/core";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";

@@ -1,4 +1,4 @@
-import type { IUpdateData } from "@dokploy/server/index";
+import type { IUpdateData } from "@hanzo/core/index";
 import {
 	Bug,
 	Download,

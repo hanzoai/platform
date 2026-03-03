@@ -1,10 +1,10 @@
 import { createWriteStream } from "node:fs";
 import { join } from "node:path";
-import { paths } from "@dokploy/server/constants";
-import type { apiFindGithubBranches } from "@dokploy/server/db/schema";
-import type { Compose } from "@dokploy/server/services/compose";
-import { findGithubById, type Github } from "@dokploy/server/services/github";
-import type { InferResultType } from "@dokploy/server/types/with";
+import { paths } from "@hanzo/core/constants";
+import type { apiFindGithubBranches } from "@hanzo/core/db/schema";
+import type { Compose } from "@hanzo/core/services/compose";
+import { findGithubById, type Github } from "@hanzo/core/services/github";
+import type { InferResultType } from "@hanzo/core/types/with";
 import { createAppAuth } from "@octokit/auth-app";
 import { TRPCError } from "@trpc/server";
 import { Octokit } from "octokit";

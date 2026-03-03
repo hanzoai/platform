@@ -1,5 +1,5 @@
-import { IS_CLOUD, isAdminPresent } from "@dokploy/server";
-import { validateRequest } from "@dokploy/server/lib/auth";
+import { IS_CLOUD, isAdminPresent } from "@hanzo/core";
+import { validateRequest } from "@hanzo/core/lib/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import type { GetServerSidePropsContext } from "next";

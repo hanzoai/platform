@@ -6,7 +6,7 @@ import {
 	IS_CLOUD,
 	removeRegistry,
 	updateRegistry,
-} from "@dokploy/server";
+} from "@hanzo/core";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/server/db";

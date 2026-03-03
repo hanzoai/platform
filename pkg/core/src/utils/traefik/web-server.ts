@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { paths } from "@dokploy/server/constants";
-import type { User } from "@dokploy/server/services/user";
+import { paths } from "@hanzo/core/constants";
+import type { User } from "@hanzo/core/services/user";
 import { dump, load } from "js-yaml";
 import {
 	loadOrCreateConfig,

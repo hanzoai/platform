@@ -1,5 +1,5 @@
-import { IS_CLOUD } from "@dokploy/server/constants";
-import { validateRequest } from "@dokploy/server/lib/auth";
+import { IS_CLOUD } from "@hanzo/core/constants";
+import { validateRequest } from "@hanzo/core/lib/auth";
 import { Loader2 } from "lucide-react";
 import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";
