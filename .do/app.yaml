@@ -1,0 +1,56 @@
+name: hanzo-platform
+region: nyc
+databases:
+  - engine: PG
+    name: db
+    num_nodes: 1
+    size: db-s-dev-database
+    version: "16"
+services:
+  - name: platform
+    source_dir: /
+    github:
+      repo: hanzoai/platform
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile.cloud
+    instance_count: 1
+    instance_size_slug: professional-xs
+    http_port: 3000
+    routes:
+      - path: /
+    health_check:
+      http_path: /api/health
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+    envs:
+      - key: NODE_ENV
+        value: "production"
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${db.DATABASE_URL}
+      - key: DO_API_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+      - key: NEXTAUTH_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: NEXTAUTH_URL
+        value: "https://platform.hanzo.ai"
+      - key: NEXT_PUBLIC_APP_URL
+        value: "https://platform.hanzo.ai"
+      - key: HANZO_IAM_SERVER_URL
+        value: "https://hanzo.id"
+      - key: HANZO_IAM_CLIENT_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: HANZO_IAM_CLIENT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+
+domains:
+  - domain: platform.hanzo.ai
+    type: PRIMARY
