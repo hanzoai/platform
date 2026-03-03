@@ -1,5 +1,5 @@
 {
-  "name": "@hanzo/platform",
+  "name": "@hanzo/core",
   "version": "1.0.4",
   "type": "module",
   "main": "./dist/index.js",
