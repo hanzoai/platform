@@ -267,7 +267,7 @@ export const StepTwo = ({ templateInfo, setTemplateInfo }: StepProps) => {
 										</AccordionContent>
 									</AccordionItem>
 									<AccordionItem value="docker-compose">
-										<AccordionTrigger>Docker Compose</AccordionTrigger>
+										<AccordionTrigger>Compose</AccordionTrigger>
 										<AccordionContent>
 											<CodeEditor
 												value={selectedVariant?.dockerCompose}
