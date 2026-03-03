@@ -6,7 +6,6 @@ import { backupRouter } from "./routers/backup";
 import { bitbucketRouter } from "./routers/bitbucket";
 import { certificateRouter } from "./routers/certificate";
 import { clusterRouter } from "./routers/cluster";
-import { composeRouter } from "./routers/compose";
 import { deploymentRouter } from "./routers/deployment";
 import { destinationRouter } from "./routers/destination";
 import { dockerRouter } from "./routers/docker";
@@ -22,13 +21,11 @@ import { notificationRouter } from "./routers/notification";
 import { organizationRouter } from "./routers/organization";
 import { portRouter } from "./routers/port";
 import { postgresRouter } from "./routers/postgres";
-import { previewDeploymentRouter } from "./routers/preview-deployment";
 import { projectRouter } from "./routers/project";
 import { redirectsRouter } from "./routers/redirects";
 import { redisRouter } from "./routers/redis";
 import { registryRouter } from "./routers/registry";
 import { securityRouter } from "./routers/security";
-import { serverRouter } from "./routers/server";
 import { settingsRouter } from "./routers/settings";
 import { sshRouter } from "./routers/ssh-key";
 import { stripeRouter } from "./routers/stripe";
@@ -50,13 +47,11 @@ export const appRouter = createTRPCRouter({
 	redis: redisRouter,
 	mongo: mongoRouter,
 	mariadb: mariadbRouter,
-	compose: composeRouter,
 	user: userRouter,
 	domain: domainRouter,
 	destination: destinationRouter,
 	backup: backupRouter,
 	deployment: deploymentRouter,
-	previewDeployment: previewDeploymentRouter,
 	mounts: mountRouter,
 	certificates: certificateRouter,
 	settings: settingsRouter,
@@ -71,7 +66,6 @@ export const appRouter = createTRPCRouter({
 	bitbucket: bitbucketRouter,
 	gitlab: gitlabRouter,
 	github: githubRouter,
-	server: serverRouter,
 	stripe: stripeRouter,
 	swarm: swarmRouter,
 	ai: aiRouter,

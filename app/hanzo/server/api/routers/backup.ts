@@ -34,15 +34,15 @@ import { z } from "zod";
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@dokploy/server/utils/process/execAsync";
-import { getS3Credentials } from "@dokploy/server/utils/backups/utils";
-import { findDestinationById } from "@dokploy/server/services/destination";
+} from "@hanzo/core/utils/process/execAsync";
+import { getS3Credentials } from "@hanzo/core/utils/backups/utils";
+import { findDestinationById } from "@hanzo/core/services/destination";
 import {
 	restoreMariadbBackup,
 	restoreMongoBackup,
 	restoreMySqlBackup,
 	restorePostgresBackup,
-} from "@dokploy/server/utils/restore";
+} from "@hanzo/core/utils/restore";
 import { observable } from "@trpc/server/observable";
 
 export const backupRouter = createTRPCRouter({

@@ -1,5 +1,5 @@
-import type { Postgres } from "@dokploy/server/services/postgres";
-import type { Destination } from "@dokploy/server/services/destination";
+import type { Postgres } from "@hanzo/core/services/postgres";
+import type { Destination } from "@hanzo/core/services/destination";
 import {
 	getRemoteServiceContainer,
 	getServiceContainer,
@@ -49,10 +49,9 @@ rclone cat ${rcloneFlags.join(" ")} "${backupPath}" | gunzip | docker exec -i ${
 		emit("Restore completed successfully!");
 	} catch (error) {
 		emit(
-			`Error: ${
-				error instanceof Error
-					? error.message
-					: "Error restoring postgres backup"
+			`Error: ${error instanceof Error
+				? error.message
+				: "Error restoring postgres backup"
 			}`,
 		);
 		throw error;
