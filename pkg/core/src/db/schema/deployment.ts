@@ -15,7 +15,7 @@ import { compose } from "./compose";
 import { previewDeployments } from "./preview-deployments";
 import { rollbacks } from "./rollbacks";
 import { schedules } from "./schedule";
-import { server } from "./server";
+import { server } from "./hanzo-server";
 import { volumeBackups } from "./volume-backups";
 export const deploymentStatus = pgEnum("deploymentStatus", [
 	"running",

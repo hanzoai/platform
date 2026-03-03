@@ -153,6 +153,16 @@ export const updateSchedule = async (
 	return updatedSchedule;
 };
 
+export const scheduleJob = async (scheduleId: string) => {
+	// TODO: Implement job scheduling
+	console.log(`Scheduling job for schedule ${scheduleId}`);
+};
+
+export const removeScheduleJob = async (scheduleId: string) => {
+	// TODO: Implement job removal
+	console.log(`Removing job for schedule ${scheduleId}`);
+};
+
 const handleScript = async (schedule: Schedule) => {
 	const { SCHEDULES_PATH } = paths(!!schedule?.serverId);
 	const fullPath = path.join(SCHEDULES_PATH, schedule?.appName || "");

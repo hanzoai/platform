@@ -1,21 +1,13 @@
-// Admin schema stub  
-export async function findAdmin() {
-  console.warn("findAdmin called - returning null (stub)");
-  return null;
-}
+// Admin schema stub
+// findAdmin is exported from services/admin.ts instead
 
 export async function updateAdmin(adminId: string, data: any) {
   console.warn(`updateAdmin called with ${adminId} - returning null (stub)`);
   return null;
 }
 
-export async function findUserById(userId: string) {
-  console.warn(`findUserById called with ${userId} - returning null (stub)`);
-  return null;
-}
+// findUserById is exported from services/admin.ts instead
 
 export default {
-  findAdmin,
-  updateAdmin,
-  findUserById
+  updateAdmin
 };
