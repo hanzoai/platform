@@ -2,24 +2,24 @@
 
 ## Overview
 
-Hanzo Platform is a fork/customization of Dokploy (an open-source PaaS alternative to Vercel/Heroku/Netlify) with significant branding changes and some functional modifications. The core functionality remains largely the same, but all references to "Dokploy" have been replaced with "Hanzo".
+Hanzo Platform is a fork/customization of Hanzo (an open-source PaaS alternative to Vercel/Heroku/Netlify) with significant branding changes and some functional modifications. The core functionality remains largely the same, but all references to "Hanzo" have been replaced with "Hanzo".
 
-## Key Differences from Dokploy
+## Key Differences from Hanzo
 
 ### 1. Branding Changes
-- All "Dokploy" references replaced with "Hanzo" throughout the codebase
+- All "Hanzo" references replaced with "Hanzo" throughout the codebase
 - Logo and visual assets updated to Hanzo branding
-- Package names changed from `@dokploy/*` to `@hanzo/*`
-- Docker images use `hanzoai/*` instead of `dokploy/*`
+- Package names changed from `@hanzo/*` to `@hanzo/*`
+- Docker images use `hanzoai/*` instead of `hanzo/*`
 
 ### 2. Structural Differences
-- Main app is in `/app/hanzo` instead of `/apps/dokploy`
+- Main app is in `/app/hanzo` instead of `/apps/hanzo`
 - Core functionality extracted to `/pkg/core` package
 - Additional packages in `/pkg/*` directory structure
 - Different monorepo structure using pnpm workspaces
 
 ### 3. Installation Script
-- Uses `https://hanzo.sh` instead of Dokploy's installation URL
+- Uses `https://hanzo.sh` instead of Hanzo's installation URL
 - Custom setup process via `setup.ts` that initializes:
   - Docker Swarm
   - Traefik (reverse proxy)
@@ -210,7 +210,7 @@ docker compose up -d
 The platform exposes:
 - REST API via tRPC OpenAPI
 - WebSocket connections for real-time updates
-- CLI tool for remote management (similar to Dokploy CLI)
+- CLI tool for remote management (similar to Hanzo CLI)
 
 ## Development Commands
 
