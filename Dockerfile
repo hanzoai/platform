@@ -1,10 +1,17 @@
 # syntax=docker/dockerfile:1
+#
+# Platform — uses pre-built base image for sub-2-minute builds.
+# System tools are in ghcr.io/hanzoai/platform-base:latest (see Dockerfile.base).
+#
+ARG PLATFORM_BASE_IMAGE=ghcr.io/hanzoai/platform-base:latest
+
 FROM node:24.4.0-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 RUN corepack prepare pnpm@10.22.0 --activate
 
+# ── Build stage ───────────────────────────────────────────────
 FROM base AS build
 WORKDIR /usr/src/app
 
@@ -25,8 +32,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --no-frozen-lockf
 # Now copy source code (this layer rebuilds on any source change)
 COPY . .
 
-# Deploy only the platform app
-
+# Build platform
 ENV NODE_ENV=production
 RUN pnpm --filter=@hanzo/platform build
 RUN pnpm --filter=./app/platform run build
@@ -36,13 +42,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=./app/platform -
 RUN cp -R /usr/src/app/app/platform/.next /prod/platform/.next
 RUN cp -R /usr/src/app/app/platform/dist /prod/platform/dist
 
-FROM base AS platform
+# ── Production (pre-built base with all system tools) ─────────
+FROM ${PLATFORM_BASE_IMAGE} AS platform
 WORKDIR /app
-
-# Set production
-ENV NODE_ENV=production
-
-RUN apt-get update && apt-get install -y curl unzip zip apache2-utils iproute2 rsync git-lfs && git lfs install && rm -rf /var/lib/apt/lists/*
 
 # Copy only the necessary files
 COPY --from=build /prod/platform/.next ./.next
@@ -55,34 +57,9 @@ COPY .env.production ./.env
 COPY --from=build /prod/platform/components.json ./components.json
 COPY --from=build /prod/platform/node_modules ./node_modules
 
-
-# Install Docker CLI (static binary — avoids apt GPG issues under QEMU)
-ARG DOCKER_VERSION=28.5.2
-RUN ARCH=$(uname -m) && \
-    case "$ARCH" in x86_64) DARCH=x86_64;; aarch64) DARCH=aarch64;; *) DARCH=x86_64;; esac && \
-    curl -fsSL "https://download.docker.com/linux/static/stable/${DARCH}/docker-${DOCKER_VERSION}.tgz" \
-      | tar xz --strip-components=1 -C /usr/local/bin docker/docker && \
-    curl https://rclone.org/install.sh | bash
-
-# Install Nixpacks and tsx
-# | VERBOSE=1 VERSION=1.21.0 bash
-
-ARG NIXPACKS_VERSION=1.41.0
-RUN curl -sSL https://nixpacks.com/install.sh -o install.sh \
-    && chmod +x install.sh \
-    && ./install.sh \
-    && pnpm install -g tsx
-
-# Install Railpack
-ARG RAILPACK_VERSION=0.15.4
-RUN curl -sSL https://railpack.com/install.sh | bash
-
-# Install buildpacks
-COPY --from=buildpacksio/pack:0.39.1 /usr/local/bin/pack /usr/local/bin/pack
-
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=3s --retries=10 \
   CMD curl -fs http://localhost:3000/api/trpc/settings.health || exit 1
 
-  CMD ["sh", "-c", "pnpm run wait-for-postgres && exec pnpm start"]
+CMD ["sh", "-c", "pnpm run wait-for-postgres && exec pnpm start"]
