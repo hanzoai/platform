@@ -232,14 +232,6 @@ export const createCompose = async (
 /**
  * Update an existing compose configuration
  */
-export const createComposeByTemplate = async (
-	input: any
-) => {
-	// Stub function for creating compose from template
-	// This would typically create a new compose configuration from a predefined template
-	console.log("Creating compose from template:", input);
-	return createCompose(input);
-};
 
 export const updateCompose = async (
   id: string,
@@ -362,4 +354,40 @@ export const stopCompose = async (
     });
     return findComposeById(composeId);
   }
+};
+
+// Add deployRemoteCompose function
+export const deployRemoteCompose = async ({
+  composeId,
+  titleLog = "Manual deployment",
+  descriptionLog = "",
+}: {
+  composeId: string;
+  titleLog: string;
+  descriptionLog: string;
+}) => {
+  // Stub implementation
+  console.log(`Deploying remote compose: ${composeId} - ${titleLog}`);
+  return {
+    success: true,
+    deploymentId: `deployment-${Date.now()}`,
+  };
+};
+
+// Add rebuildCompose function
+export const rebuildCompose = async (composeId: string) => {
+  console.log(`Rebuilding compose: ${composeId}`);
+  return {
+    success: true,
+    composeId,
+  };
+};
+
+// Add rebuildRemoteCompose function
+export const rebuildRemoteCompose = async (composeId: string) => {
+  console.log(`Rebuilding remote compose: ${composeId}`);
+  return {
+    success: true,
+    composeId,
+  };
 };

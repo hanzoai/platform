@@ -1,20 +1,3 @@
-<<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/mysql/[mysqlId].tsx
-import { ShowResources } from "@/components/dashboard/application/advanced/show-resources";
-import { ShowVolumes } from "@/components/dashboard/application/advanced/volumes/show-volumes";
-========
-import { validateRequest } from "@hanzo/platform/lib/auth";
-import { createServerSideHelpers } from "@trpc/react-query/server";
-import { HelpCircle, ServerOff } from "lucide-react";
-import type {
-	GetServerSidePropsContext,
-	InferGetServerSidePropsType,
-} from "next";
-import Head from "next/head";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { type ReactElement, useState } from "react";
-import superjson from "superjson";
->>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/mysql/[mysqlId].tsx
 import { ShowEnvironment } from "@/components/dashboard/application/environment/show-enviroment";
 import { ShowDockerLogs } from "@/components/dashboard/application/logs/show";
 import { DeleteService } from "@/components/dashboard/compose/delete-service";
@@ -50,21 +33,6 @@ import { UseKeyboardNav } from "@/hooks/use-keyboard-nav";
 import { cn } from "@/lib/utils";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
-<<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/mysql/[mysqlId].tsx
-import { validateRequest } from "@hanzo/platform/lib/auth";
-import { createServerSideHelpers } from "@trpc/react-query/server";
-import { HelpCircle, ServerOff } from "lucide-react";
-import type {
-	GetServerSidePropsContext,
-	InferGetServerSidePropsType,
-} from "next";
-import Head from "next/head";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { type ReactElement, useState } from "react";
-import superjson from "superjson";
-========
->>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/mysql/[mysqlId].tsx
 
 type TabState = "projects" | "monitoring" | "settings" | "backups" | "advanced";
 
@@ -102,12 +70,6 @@ const MySql = (
 			<div className="flex flex-col gap-4">
 				<Head>
 					<title>
-<<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/mysql/[mysqlId].tsx
-						Database: {data?.name} - {data?.project.name} | Hanzo
-========
-						Database: {data?.name} - {data?.environment?.project?.name} |
-						Hanzo Platform
->>>>>>>> upstream/main:app/hanzo/pages/dashboard/project/[projectId]/environment/[environmentId]/services/mysql/[mysqlId].tsx
 					</title>
 				</Head>
 				<div className="w-full">
