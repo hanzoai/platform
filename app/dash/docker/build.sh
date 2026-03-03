@@ -12,6 +12,6 @@ fi
 
 BUILDER=$(docker buildx create --use)
 
-docker buildx build --platform linux/amd64,linux/arm64 --pull --rm -t "hanzo/hanzo:${TAG}" -f 'Dockerfile' .
+docker buildx build --platform linux/amd64,linux/arm64 --pull --rm -t "hanzoai/platform:${TAG}" -f 'Dockerfile' .
 
 docker buildx rm $BUILDER
