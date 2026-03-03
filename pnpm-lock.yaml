@@ -89,7 +89,7 @@ importers:
         specifier: ^5.4.2
         version: 5.5.3
 
-  app/dash:
+  app/core:
     dependencies:
       '@codemirror/lang-json':
         specifier: ^6.0.1
