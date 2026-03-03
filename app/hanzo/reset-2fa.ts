@@ -1,6 +1,6 @@
-import { findAdmin } from "@dokploy/server";
-import { db } from "@dokploy/server/db";
-import { users_temp } from "@dokploy/server/db/schema";
+import { findAdmin } from "@hanzo/core";
+import { db } from "@hanzo/core/db";
+import { users_temp } from "@hanzo/core/db/schema";
 import { eq } from "drizzle-orm";
 
 (async () => {

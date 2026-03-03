@@ -9,8 +9,8 @@ import {
 	removeUserById,
 	sendEmailNotification,
 	updateUser,
-} from "@dokploy/server";
-import { db } from "@dokploy/server/db";
+} from "@hanzo/core";
+import { db } from "@hanzo/core/db";
 import {
 	account,
 	apiAssignPermissions,
@@ -19,7 +19,7 @@ import {
 	apiUpdateUser,
 	invitation,
 	member,
-} from "@dokploy/server/db/schema";
+} from "@hanzo/core/db/schema";
 import { TRPCError } from "@trpc/server";
 import * as bcrypt from "bcrypt";
 import { and, asc, eq, gt } from "drizzle-orm";

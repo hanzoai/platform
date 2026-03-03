@@ -8,7 +8,7 @@ import {
 	findEnvironmentsByProjectId,
 	findMemberById,
 	updateEnvironmentById,
-} from "@dokploy/server";
+} from "@hanzo/core";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";

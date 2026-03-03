@@ -4,7 +4,7 @@ import {
 	getNodeApplications,
 	getNodeInfo,
 	getSwarmNodes,
-} from "@dokploy/server";
+} from "@hanzo/core";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
