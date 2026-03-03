@@ -1,21 +1,21 @@
 import path from "node:path";
-import { paths } from "@hanzo/core/constants";
-import { db } from "@hanzo/core/db";
+import { paths } from "@hanzo/platform/constants";
+import { db } from "@hanzo/platform/db";
 import {
 	type apiCreateMount,
 	mounts,
 	type ServiceType,
-} from "@hanzo/core/db/schema";
+} from "@hanzo/platform/db/schema";
 import {
 	createFile,
 	encodeBase64,
 	getCreateFileCommand,
-} from "@hanzo/core/utils/docker/utils";
-import { removeFileOrDirectory } from "@hanzo/core/utils/filesystem/directory";
+} from "@hanzo/platform/utils/docker/utils";
+import { removeFileOrDirectory } from "@hanzo/platform/utils/filesystem/directory";
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@hanzo/core/utils/process/execAsync";
+} from "@hanzo/platform/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq, type SQL, sql } from "drizzle-orm";
 

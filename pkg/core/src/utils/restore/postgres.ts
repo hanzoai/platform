@@ -1,6 +1,6 @@
-import type { apiRestoreBackup } from "@hanzo/core/db/schema";
-import type { Destination } from "@hanzo/core/services/destination";
-import type { Postgres } from "@hanzo/core/services/postgres";
+import type { apiRestoreBackup } from "@hanzo/platform/db/schema";
+import type { Destination } from "@hanzo/platform/services/destination";
+import type { Postgres } from "@hanzo/platform/services/postgres";
 import type { z } from "zod";
 import { getS3Credentials } from "../backups/utils";
 import { execAsync, execAsyncRemote } from "../process/execAsync";

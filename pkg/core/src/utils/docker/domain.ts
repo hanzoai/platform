@@ -1,9 +1,9 @@
 import fs, { existsSync, readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { paths } from "@hanzo/core/constants";
-import type { Compose } from "@hanzo/core/services/compose";
-import type { Domain } from "@hanzo/core/services/domain";
+import { paths } from "@hanzo/platform/constants";
+import type { Compose } from "@hanzo/platform/services/compose";
+import type { Domain } from "@hanzo/platform/services/domain";
 import { dump, load } from "js-yaml";
 import { execAsyncRemote } from "../process/execAsync";
 import {

@@ -1,6 +1,6 @@
-import { IS_CLOUD, paths } from "@hanzo/core/constants";
-import { findAdmin } from "@hanzo/core/services/admin";
-import { updateUser } from "@hanzo/core/services/user";
+import { IS_CLOUD, paths } from "@hanzo/platform/constants";
+import { findAdmin } from "@hanzo/platform/services/admin";
+import { updateUser } from "@hanzo/platform/services/user";
 import { type RotatingFileStream, createStream } from "rotating-file-stream";
 import { execAsync } from "../process/execAsync";
 

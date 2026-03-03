@@ -10,7 +10,7 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./*"],
-			"@hanzo/core/*": ["../../pkg/core/src/*"]
+			"@hanzo/platform/*": ["../../pkg/core/src/*"]
 		}
 	},
 	"include": ["next-env.d.ts", "./server/**/*"]

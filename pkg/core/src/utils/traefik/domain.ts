@@ -1,4 +1,4 @@
-import type { Domain } from "@hanzo/core/services/domain";
+import type { Domain } from "@hanzo/platform/services/domain";
 import type { ApplicationNested } from "../builders";
 import {
 	createServiceConfig,

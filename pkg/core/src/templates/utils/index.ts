@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Domain } from "@hanzo/core/services/domain";
+import type { Domain } from "@hanzo/platform/services/domain";
 
 export interface Schema {
 	serverIp: string;
