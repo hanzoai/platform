@@ -115,3 +115,7 @@ export default NetworkDeployPage;
 NetworkDeployPage.getLayout = (page: ReactElement) => {
   return <DashboardLayout metaName="Network Deploy">{page}</DashboardLayout>;
 };
+
+export async function getServerSideProps() {
+  return { props: {} };
+}
