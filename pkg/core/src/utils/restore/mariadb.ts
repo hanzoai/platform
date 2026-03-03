@@ -1,51 +1,56 @@
-import type { Mariadb } from "@hanzo/core/services/mariadb";
-import type { Destination } from "@hanzo/core/services/destination";
-import {
-	getRemoteServiceContainer,
-	getServiceContainer,
-} from "../docker/utils";
-import { execAsync, execAsyncRemote } from "../process/execAsync";
+import type { apiRestoreBackup } from "@dokploy/server/db/schema";
+import type { Destination } from "@dokploy/server/services/destination";
+import type { Mariadb } from "@dokploy/server/services/mariadb";
+import type { z } from "zod";
 import { getS3Credentials } from "../backups/utils";
+import { execAsync, execAsyncRemote } from "../process/execAsync";
+import { getRestoreCommand } from "./utils";
 
 export const restoreMariadbBackup = async (
 	mariadb: Mariadb,
 	destination: Destination,
-	database: string,
-	backupFile: string,
+	backupInput: z.infer<typeof apiRestoreBackup>,
 	emit: (log: string) => void,
 ) => {
 	try {
-		const { appName, databasePassword, databaseUser, serverId } = mariadb;
+		const { appName, serverId, databaseUser, databasePassword } = mariadb;
 
 		const rcloneFlags = getS3Credentials(destination);
 		const bucketPath = `:s3:${destination.bucket}`;
-		const backupPath = `${bucketPath}/${backupFile}`;
+		const backupPath = `${bucketPath}/${backupInput.backupFile}`;
 
-		const { Id: containerName } = serverId
-			? await getRemoteServiceContainer(serverId, appName)
-			: await getServiceContainer(appName);
+		const rcloneCommand = `rclone cat ${rcloneFlags.join(" ")} "${backupPath}" | gunzip`;
 
-		const restoreCommand = `
-    rclone cat ${rcloneFlags.join(" ")} "${backupPath}" | gunzip | docker exec -i ${containerName} mariadb -u ${databaseUser} -p${databasePassword} ${database}
-  `;
+		const command = getRestoreCommand({
+			appName,
+			credentials: {
+				database: backupInput.databaseName,
+				databaseUser,
+				databasePassword,
+			},
+			type: "mariadb",
+			rcloneCommand,
+			restoreType: "database",
+		});
 
 		emit("Starting restore...");
 
-		emit(`Executing command: ${restoreCommand}`);
+		emit(`Executing command: ${command}`);
 
 		if (serverId) {
-			await execAsyncRemote(serverId, restoreCommand);
+			await execAsyncRemote(serverId, command);
 		} else {
-			await execAsync(restoreCommand);
+			await execAsync(command);
 		}
 
 		emit("Restore completed successfully!");
 	} catch (error) {
 		console.error(error);
 		emit(
-			`Error: ${error instanceof Error
-				? error.message
-				: "Error restoring mariadb backup"
+			`Error: ${
+				error instanceof Error
+					? error.message
+					: "Error restoring mariadb backup"
 			}`,
 		);
 		throw new Error(

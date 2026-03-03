@@ -2,10 +2,6 @@ import type { WriteStream } from "node:fs";
 import type { ApplicationNested } from "../builders";
 import { spawnAsync } from "../process/spawnAsync";
 
-/**
- * Upload an image to a registry
- * Local-only implementation (multi-node functionality has been removed)
- */
 export const uploadImage = async (
 	application: ApplicationNested,
 	writeStream: WriteStream,
@@ -16,21 +12,22 @@ export const uploadImage = async (
 		throw new Error("Registry not found");
 	}
 
-	const { registryUrl, imagePrefix } = registry;
+	const { registryUrl, imagePrefix, username } = registry;
 	const { appName } = application;
 	const imageName = `${appName}:latest`;
 
 	const finalURL = registryUrl;
 
-	// Fix: Don't use path.join for URLs - construct registry tag properly
-	const registryTag = [registryUrl, imagePrefix, imageName]
-		.filter(Boolean)
-		.join('/')
-		.replace(/\/+/g, '/');
+	// Build registry tag in correct format: registry.com/owner/image:tag
+	// For ghcr.io: ghcr.io/username/image:tag
+	// For docker.io: docker.io/username/image:tag
+	const registryTag = imagePrefix
+		? `${registryUrl}/${imagePrefix}/${imageName}`
+		: `${registryUrl}/${username}/${imageName}`;
 
 	try {
 		writeStream.write(
-			`📦 [Enabled Registry] Uploading image to ${registry.registryType} | ${imageName} | ${finalURL}\n`,
+			`📦 [Enabled Registry] Uploading image to ${registry.registryType} | ${imageName} | ${finalURL} | ${registryTag}\n`,
 		);
 		const loginCommand = spawnAsync(
 			"docker",
@@ -62,14 +59,48 @@ export const uploadImage = async (
 	}
 };
 
-/**
- * Stub implementation to maintain compatibility
- * Multi-node functionality has been removed
- */
 export const uploadImageRemoteCommand = (
 	application: ApplicationNested,
 	logPath: string,
 ) => {
-	console.warn("Multi-node functionality has been removed. Use local upload instead.");
-	return "echo 'Multi-node functionality has been removed. Use local upload instead.' >> " + logPath;
+	const registry = application.registry;
+
+	if (!registry) {
+		throw new Error("Registry not found");
+	}
+
+	const { registryUrl, imagePrefix, username } = registry;
+	const { appName } = application;
+	const imageName = `${appName}:latest`;
+
+	const finalURL = registryUrl;
+
+	// Build registry tag in correct format: registry.com/owner/image:tag
+	const registryTag = imagePrefix
+		? `${registryUrl}/${imagePrefix}/${imageName}`
+		: `${registryUrl}/${username}/${imageName}`;
+
+	try {
+		const command = `
+		echo "📦 [Enabled Registry] Uploading image to '${registry.registryType}' | '${registryTag}'" >> ${logPath};
+		echo "${registry.password}" | docker login ${finalURL} -u ${registry.username} --password-stdin >> ${logPath} 2>> ${logPath} || { 
+			echo "❌ DockerHub Failed" >> ${logPath};
+			exit 1;
+		}
+		echo "✅ Registry Login Success" >> ${logPath};
+		docker tag ${imageName} ${registryTag} >> ${logPath} 2>> ${logPath} || { 
+			echo "❌ Error tagging image" >> ${logPath};
+			exit 1;
+		}
+		echo "✅ Image Tagged" >> ${logPath};
+		docker push ${registryTag} 2>> ${logPath} || { 
+			echo "❌ Error pushing image" >> ${logPath};
+			exit 1;
+		}
+			echo "✅ Image Pushed" >> ${logPath};
+		`;
+		return command;
+	} catch (error) {
+		throw error;
+	}
 };

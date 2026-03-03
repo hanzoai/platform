@@ -1,4 +1,15 @@
 import {
+	createDestintation,
+	execAsync,
+	execAsyncRemote,
+	findDestinationById,
+	IS_CLOUD,
+	removeDestinationById,
+	updateDestinationById,
+} from "@dokploy/server";
+import { TRPCError } from "@trpc/server";
+import { desc, eq } from "drizzle-orm";
+import {
 	adminProcedure,
 	createTRPCRouter,
 	protectedProcedure,
@@ -11,17 +22,6 @@ import {
 	apiUpdateDestination,
 	destinations,
 } from "@/server/db/schema";
-import {
-	IS_CLOUD,
-	createDestintation,
-	execAsync,
-	execAsyncRemote,
-	findDestinationById,
-	removeDestinationById,
-	updateDestinationById,
-} from "@hanzo/core";
-import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
 
 export const destinationRouter = createTRPCRouter({
 	create: adminProcedure
@@ -98,6 +98,7 @@ export const destinationRouter = createTRPCRouter({
 	all: protectedProcedure.query(async ({ ctx }) => {
 		return await db.query.destinations.findMany({
 			where: eq(destinations.organizationId, ctx.session.activeOrganizationId),
+			orderBy: [desc(destinations.createdAt)],
 		});
 	}),
 	remove: adminProcedure

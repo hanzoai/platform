@@ -1,5 +1,7 @@
 "use client";
 
+import { BotIcon, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { DialogAction } from "@/components/shared/dialog-action";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +12,6 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
-import { BotIcon, Loader2, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { HandleAi } from "./handle-ai";
 
 export const AiForm = () => {
@@ -55,7 +55,7 @@ export const AiForm = () => {
 												key={config.aiId}
 												className="flex items-center justify-between bg-sidebar p-1 w-full rounded-lg"
 											>
-												<div className="flex items-center justify-between  p-3.5 rounded-lg bg-background border  w-full">
+												<div className="flex items-center justify-between p-3.5 rounded-lg bg-background border  w-full">
 													<div>
 														<span className="text-sm font-medium">
 															{config.name}

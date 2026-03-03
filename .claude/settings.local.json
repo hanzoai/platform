@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git remote add:*)",
+      "Bash(git fetch:*)",
+      "Bash(git describe:*)",
+      "Bash(cat:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git stash:*)",
+      "Bash(git add:*)",
+      "Bash(while read file)",
+      "Bash(do git add \"$file\")",
+      "Bash(done)",
+      "Bash(xargs:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
