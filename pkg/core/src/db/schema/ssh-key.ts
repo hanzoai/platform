@@ -6,7 +6,7 @@ import { sshKeyCreate, sshKeyType } from "../validations";
 import { organization } from "./account";
 import { applications } from "./application";
 import { compose } from "./compose";
-import { server } from "./server";
+import { server } from "./hanzo-server";
 
 export const sshKeys = pgTable("ssh-key", {
 	sshKeyId: text("sshKeyId")
