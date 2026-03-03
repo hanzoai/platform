@@ -1,6 +1,9 @@
 // Payment Provider Abstraction
 // Allows platform to work without any payment provider configured
 
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+
 export interface PaymentProvider {
   name: string;
   isConfigured: boolean;
