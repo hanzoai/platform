@@ -12,7 +12,7 @@ export function generate(schema: Schema): Template {
 		{
 			host: mainDomain,
 			port: 80,
-			serviceName: "pocketbase",
+			serviceName: "base",
 		},
 	];
 
