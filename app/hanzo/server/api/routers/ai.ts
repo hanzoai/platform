@@ -1,32 +1,32 @@
-import { IS_CLOUD } from "@dokploy/server/constants";
+import { IS_CLOUD } from "@hanzo/core/constants";
 import {
 	apiCreateAi,
 	apiUpdateAi,
 	deploySuggestionSchema,
-} from "@dokploy/server/db/schema/ai";
+} from "@hanzo/core/db/schema/ai";
 import {
 	createDomain,
 	createMount,
 	findEnvironmentById,
-} from "@dokploy/server/index";
+} from "@hanzo/core/index";
 import {
 	deleteAiSettings,
 	getAiSettingById,
 	getAiSettingsByOrganizationId,
 	saveAiSettings,
 	suggestVariants,
-} from "@dokploy/server/services/ai";
-import { createComposeByTemplate } from "@dokploy/server/services/compose";
-import { findProjectById } from "@dokploy/server/services/project";
+} from "@hanzo/core/services/ai";
+import { createComposeByTemplate } from "@hanzo/core/services/compose";
+import { findProjectById } from "@hanzo/core/services/project";
 import {
 	addNewService,
 	checkServiceAccess,
-} from "@dokploy/server/services/user";
+} from "@hanzo/core/services/user";
 import {
 	getProviderHeaders,
 	getProviderName,
 	type Model,
-} from "@dokploy/server/utils/ai/select-ai-provider";
+} from "@hanzo/core/utils/ai/select-ai-provider";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { slugify } from "@/lib/slug";

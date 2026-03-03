@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Readable } from "node:stream";
-import { docker, paths } from "@dokploy/server/constants";
-import type { Compose } from "@dokploy/server/services/compose";
+import { docker, paths } from "@hanzo/core/constants";
+import type { Compose } from "@hanzo/core/services/compose";
 import type { ContainerInfo, ResourceRequirements } from "dockerode";
 import { parse } from "dotenv";
 import type { ApplicationNested } from "../builders";
@@ -265,7 +265,11 @@ export const prepareEnvironmentVariables = (
 	const environmentVars = parse(environmentEnv ?? "");
 	const serviceVars = parse(serviceEnv ?? "");
 
-	const resolvedVars = Object.entries(serviceVars).map(([key, value]) => {
+	// Create a map to track resolved values for self-references
+	const resolvedServiceVars: Record<string, string> = {};
+
+	// Helper function to resolve a single value
+	const resolveValue = (value: string, currentKey?: string): string => {
 		let resolvedValue = value;
 
 		// Replace project variables
@@ -297,15 +301,50 @@ export const prepareEnvironmentVariables = (
 		}
 
 		// Replace self-references (service variables)
-		resolvedValue = resolvedValue.replace(/\$\{\{(.*?)\}\}/g, (_, ref) => {
-			if (serviceVars[ref] !== undefined) {
-				return serviceVars[ref];
-			}
-			throw new Error(`Invalid service environment variable: ${ref}`);
-		});
+		// Keep replacing until no more placeholders are found (handles recursive references)
+		let previousValue = "";
+		while (previousValue !== resolvedValue && resolvedValue.includes("${{")) {
+			previousValue = resolvedValue;
+			resolvedValue = resolvedValue.replace(/\$\{\{(.*?)\}\}/g, (match, ref) => {
+				// Check if this references already resolved variables
+				if (resolvedServiceVars[ref] !== undefined) {
+					return resolvedServiceVars[ref];
+				}
+				// Check if this references original service variables
+				if (serviceVars[ref] !== undefined) {
+					// Avoid infinite recursion for self-references
+					if (ref === currentKey) {
+						return match; // Keep the placeholder to avoid infinite recursion
+					}
+					return serviceVars[ref];
+				}
+				return match; // Keep unresolved placeholders
+			});
+		}
 
-		return `${key}=${resolvedValue}`;
-	});
+		// Final check for any remaining unresolved placeholders
+		const unresolvedMatch = resolvedValue.match(/\$\{\{(.*?)\}\}/);
+		if (unresolvedMatch) {
+			throw new Error(`Invalid service environment variable: ${unresolvedMatch[1]}`);
+		}
+
+		return resolvedValue;
+	};
+
+	// First pass: resolve all values and store them
+	for (const [key, value] of Object.entries(serviceVars)) {
+		resolvedServiceVars[key] = resolveValue(value, key);
+	}
+
+	// Second pass: re-resolve with all values available (handles forward references)
+	for (const [key, value] of Object.entries(serviceVars)) {
+		resolvedServiceVars[key] = resolveValue(value, key);
+	}
+
+	// Convert to array format
+	const resolvedVars = Object.entries(resolvedServiceVars).map(
+		([key, value]) => `${key}=${value}`
+	);
 
 	return resolvedVars;
 };

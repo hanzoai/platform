@@ -6,7 +6,7 @@ import {
 	findMountOrganizationId,
 	getServiceContainer,
 	updateMount,
-} from "@dokploy/server";
+} from "@hanzo/core";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
