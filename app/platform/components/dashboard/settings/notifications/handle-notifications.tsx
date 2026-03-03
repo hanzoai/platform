@@ -476,7 +476,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 						? Object.entries(notification.custom.headers).map(
 								([key, value]) => ({
 									key,
-									value,
+									value: String(value),
 								}),
 							)
 						: [],
