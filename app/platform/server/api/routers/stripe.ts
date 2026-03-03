@@ -190,7 +190,7 @@ export const stripeRouter = createTRPCRouter({
 
 				if (customer.deleted) {
 					await updateUser(owner.id, {
-						stripeCustomerId: null,
+						stripeCustomerId: null as any,
 					});
 					stripeCustomerId = null;
 				}
