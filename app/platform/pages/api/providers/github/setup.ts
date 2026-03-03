@@ -1,8 +1,8 @@
 import { createGithub } from "@hanzo/platform";
+import { db } from "@hanzo/platform/db";
 import { eq } from "drizzle-orm";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { Octokit } from "octokit";
-import { db } from "@/server/db";
 import { github } from "@/server/db/schema";
 
 type Query = {
@@ -52,7 +52,7 @@ export default async function handler(
 			.update(github)
 			.set({
 				githubInstallationId: installation_id,
-			} as any)
+			})
 			.where(eq(github.githubId, value as string))
 			.returning();
 	}

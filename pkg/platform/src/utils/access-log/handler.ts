@@ -1,6 +1,10 @@
+import fs from "node:fs";
+import path from "node:path";
 import { paths } from "@hanzo/platform/constants";
-import { findAdmin } from "@hanzo/platform/services/admin";
-import { updateUser } from "@hanzo/platform/services/user";
+import {
+	getWebServerSettings,
+	updateWebServerSettings,
+} from "@hanzo/platform/services/web-server-settings";
 import { scheduledJobs, scheduleJob } from "node-schedule";
 import { execAsync } from "../process/execAsync";
 
@@ -10,8 +14,6 @@ export const startLogCleanup = async (
 	cronExpression = "0 0 * * *",
 ): Promise<boolean> => {
 	try {
-		const { DYNAMIC_TRAEFIK_PATH } = paths();
-
 		const existingJob = scheduledJobs[LOG_CLEANUP_JOB_NAME];
 		if (existingJob) {
 			existingJob.cancel();
@@ -19,22 +21,26 @@ export const startLogCleanup = async (
 
 		scheduleJob(LOG_CLEANUP_JOB_NAME, cronExpression, async () => {
 			try {
-				await execAsync(
-					`tail -n 1000 ${DYNAMIC_TRAEFIK_PATH}/access.log > ${DYNAMIC_TRAEFIK_PATH}/access.log.tmp && mv ${DYNAMIC_TRAEFIK_PATH}/access.log.tmp ${DYNAMIC_TRAEFIK_PATH}/access.log`,
-				);
+				const { DYNAMIC_TRAEFIK_PATH } = paths();
+				const accessLogPath = path.join(DYNAMIC_TRAEFIK_PATH, "access.log");
 
+				if (!fs.existsSync(accessLogPath)) {
+					console.error("Access log file does not exist");
+					return;
+				}
+
+				await execAsync(
+					`tail -n 1000 ${accessLogPath} > ${accessLogPath}.tmp && mv ${accessLogPath}.tmp ${accessLogPath}`,
+				);
 				await execAsync("docker exec platform-traefik kill -USR1 1");
 			} catch (error) {
 				console.error("Error during log cleanup:", error);
 			}
 		});
 
-		const admin = await findAdmin();
-		if (admin) {
-			await updateUser(admin.user.id, {
-				logCleanupCron: cronExpression,
-			});
-		}
+		await updateWebServerSettings({
+			logCleanupCron: cronExpression,
+		});
 
 		return true;
 	} catch (error) {
@@ -51,12 +57,9 @@ export const stopLogCleanup = async (): Promise<boolean> => {
 		}
 
 		// Update database
-		const admin = await findAdmin();
-		if (admin) {
-			await updateUser(admin.user.id, {
-				logCleanupCron: null,
-			});
-		}
+		await updateWebServerSettings({
+			logCleanupCron: null,
+		});
 
 		return true;
 	} catch (error) {
@@ -69,8 +72,8 @@ export const getLogCleanupStatus = async (): Promise<{
 	enabled: boolean;
 	cronExpression: string | null;
 }> => {
-	const admin = await findAdmin();
-	const cronExpression = admin?.user.logCleanupCron ?? null;
+	const settings = await getWebServerSettings();
+	const cronExpression = settings?.logCleanupCron ?? null;
 	return {
 		enabled: cronExpression !== null,
 		cronExpression,
