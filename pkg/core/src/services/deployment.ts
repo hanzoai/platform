@@ -87,7 +87,7 @@ echo "Initializing deployment" >> ${logFilePath};
 			});
 		}
 
-		await updateApplicationStatus(deployment.applicationId, "deploying");
+		await updateApplicationStatus(deployment.applicationId, "running");
 
 		return deploymentCreate[0];
 	} catch (error) {

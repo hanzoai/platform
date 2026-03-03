@@ -32,23 +32,11 @@ const { handler, api } = betterAuth({
 		},
 	},
 	...(!IS_CLOUD && {
-		async trustedOrigins() {
-			const admin = await db.query.member.findFirst({
-				where: eq(schema.member.role, "owner"),
-				with: {
-					user: true,
-				},
-			});
-
-			if (admin) {
-				return [
-					...(admin.user.serverIp
-						? [`http://${admin.user.serverIp}:3000`]
-						: []),
-					...(admin.user.host ? [`https://${admin.user.host}`] : []),
-				];
-			}
-			return [];
+		trustedOrigins: (request: Request) => {
+			return [
+				"http://localhost:3000",
+				"http://127.0.0.1:3000"
+			];
 		},
 	}),
 	emailVerification: {
@@ -219,14 +207,15 @@ const { handler, api } = betterAuth({
 
 export const auth = {
 	handler,
-	createApiKey: api.createApiKey,
+	api,
+	createApiKey: (params: any) => (api as any).apiKey.create(params),
 };
 
 export const validateRequest = async (request: IncomingMessage) => {
 	const apiKey = request.headers["x-api-key"] as string;
 	if (apiKey) {
 		try {
-			const { valid, key, error } = await api.verifyApiKey({
+			const { valid, key, error } = await (api as any).apiKey.verify({
 				body: {
 					key: apiKey,
 				},
@@ -349,8 +338,10 @@ export const validateRequest = async (request: IncomingMessage) => {
 			},
 		});
 
+		// Set defaults for properties that might be missing
+		session.session.activeOrganizationId = session.session.activeOrganizationId || "";
 		session.user.role = member?.role || "member";
-		if (member) {
+		if (member?.organization?.ownerId) {
 			session.user.ownerId = member.organization.ownerId;
 		} else {
 			session.user.ownerId = session.user.id;
