@@ -123,8 +123,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:${{ steps.meta.outputs.version }}
             ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:${{ github.sha }}
           platforms: linux/amd64
-          build-args: |
-            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache,mode=max
 

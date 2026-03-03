@@ -50,7 +50,7 @@ export const billingRouter = createTRPCRouter({
         ownerId: user.id,
         ownerEmail: user.email,
         plan,
-        stripeCustomerId: wallet?.stripeCustomerId ?? undefined,
+        stripeCustomerId: wallet?.stripeCustomerId ?? wallet?.organizationId ?? undefined,
       });
     }),
 
@@ -58,12 +58,13 @@ export const billingRouter = createTRPCRouter({
     .input(z.object({ amount: z.number().min(10) }))
     .mutation(async ({ ctx, input }) => {
       const wallet = await getOrganizationWallet(ctx.session.activeOrganizationId);
-      if (!wallet?.stripeCustomerId) throw new Error("No subscription");
+      const customerId = wallet?.stripeCustomerId || wallet?.organizationId;
+      if (!customerId) throw new Error("No subscription");
 
       return await createManualTopup({
         organizationId: ctx.session.activeOrganizationId,
         amount: input.amount,
-        stripeCustomerId: wallet.stripeCustomerId,
+        stripeCustomerId: customerId,
       });
     }),
 
