@@ -339,16 +339,16 @@ export const RequestsTable = ({ dateRange }: RequestsTableProps) => {
 						<div className="border rounded-md">
 							<Table>
 								<TableBody>
-									{Object.entries(selectedRow || {}).map(([key, value]) => (
+									{Object.entries(selectedRow || {}).map(([key, value]: [string, unknown]) => (
 										<TableRow key={key}>
 											<TableCell className="font-medium">{key}</TableCell>
 											<TableCell className="truncate break-words break-before-all whitespace-pre-wrap">
 												{key === "RequestAddr" ? (
 													<div className="flex items-center gap-2 bg-muted p-1 rounded">
-														<span>{value}</span>
+														<span>{String(value)}</span>
 														<Copy
 															onClick={() => {
-																copy(value);
+																copy(String(value));
 																toast.success("Copied to clipboard");
 															}}
 															className="h-4 w-4 text-muted-foreground cursor-pointer"

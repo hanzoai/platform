@@ -48,8 +48,9 @@ export class HanzoNetwork {
       provider
     );
 
-    const status = await contract.status!();
-    return ["stopped", "running", "failed"][status] as any;
+    const statusFn = contract.getFunction("status");
+    const status = await statusFn();
+    return ["stopped", "running", "failed"][Number(status)] as "running" | "stopped" | "failed";
   }
 
   private specToContract(spec: ComposeSpec) {
