@@ -1,0 +1,64 @@
+# Self-hosted GitHub Actions build runners on hanzo-k8s
+# Purpose: Go cross-compilation, release binary builds
+# Docker image builds use ubuntu-latest (GitHub-hosted) since DinD needs privileged + resources
+# Namespace: actions-runner-system
+#
+# Prerequisites:
+#   Same github-runner-pat secret as the standard runners
+#
+# Deploy:
+#   kubectl apply -f .github/runners/build-runner.yaml
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-runner-build
+  namespace: actions-runner-system
+  labels:
+    app: github-runner-build
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-runner-build
+  template:
+    metadata:
+      labels:
+        app: github-runner-build
+    spec:
+      containers:
+        - name: runner
+          image: myoung34/github-runner:ubuntu-jammy
+          env:
+            - name: RUNNER_SCOPE
+              value: "org"
+            - name: ORG_NAME
+              value: "hanzoai"
+            - name: LABELS
+              value: "self-hosted,linux,x64,hanzo-build"
+            - name: RUNNER_WORKDIR
+              value: "/tmp/runner/work"
+            - name: RUNNER_NAME_PREFIX
+              value: "hanzo-build"
+            - name: EPHEMERAL
+              value: "true"
+            - name: DISABLE_AUTO_UPDATE
+              value: "true"
+            - name: ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: github-runner-pat
+                  key: ACCESS_TOKEN
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "3Gi"
+          volumeMounts:
+            - name: work
+              mountPath: /tmp/runner/work
+      volumes:
+        - name: work
+          emptyDir: {}
