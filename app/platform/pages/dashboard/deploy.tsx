@@ -29,7 +29,7 @@ const DeployPage = () => {
   const { toast } = useToast();
 
   // Load compose files from current repo
-  const repoFiles: string[] | undefined = undefined; // TODO: implement api.repo.listComposeFiles
+  const [repoFiles] = useState<string[] | undefined>(undefined);
 
   // Parse YAML to Compose Spec
   const parseYaml = (content: string) => {
