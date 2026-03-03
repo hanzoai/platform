@@ -25,6 +25,7 @@ RUN pnpm --filter=./apps/api --prod deploy /prod/api
 RUN cp -R /usr/src/app/apps/api/dist /prod/api/dist
 
 FROM base AS platform
+LABEL org.opencontainers.image.source=https://github.com/hanzoai/platform
 WORKDIR /app
 
 # Set production
