@@ -5,8 +5,8 @@ ENV NODE_ENV=production
 
 # Copy only files that affect dependency resolution
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY pkg/platform/package.json pkg/platform/
-COPY app/cloud/package.json app/cloud/
+COPY pkg/core/package.json pkg/core/
+COPY app/hanzo/package.json app/hanzo/
 
 # Install dependencies with caching enabled
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
@@ -22,14 +22,13 @@ COPY . .
 # Run build commands:
 # 1. Build the platform package
 RUN pnpm --filter=@hanzo/core build
-# 2. Build the cloud (Next.js) app
-RUN pnpm --filter=./app/cloud run build
+# 2. Build the Next.js app
+RUN pnpm --filter=./app/hanzo run build
 
-# Deploy production assets for the cloud app:
-# Create a dedicated folder inside the cloud app directory for production assets
-RUN mkdir -p app/cloud/build && rm -rf app/cloud/build/*
-# Deploy production assets into app/cloud/build
-RUN pnpm --filter=./app/cloud --legacy --prod deploy app/cloud/build
+# Deploy production assets for app:
+RUN mkdir -p app/hanzo/build && rm -rf app/hanzo/build/*
+# Deploy production assets into app/hanzo/build
+RUN pnpm --filter=./app/hanzo --legacy --prod deploy app/hanzo/build
 
 # Stage 3: Final Runtime Image
 FROM hanzoai/os:latest AS final
