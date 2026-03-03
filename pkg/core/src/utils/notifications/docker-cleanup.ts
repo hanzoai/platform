@@ -8,6 +8,7 @@ import {
 	sendDiscordNotification,
 	sendEmailNotification,
 	sendGotifyNotification,
+	sendNtfyNotification,
 	sendSlackNotification,
 	sendTelegramNotification,
 } from "./utils";
@@ -29,11 +30,12 @@ export const sendDockerCleanupNotifications = async (
 			telegram: true,
 			slack: true,
 			gotify: true,
+			ntfy: true,
 		},
 	});
 
 	for (const notification of notificationList) {
-		const { email, discord, telegram, slack, gotify } = notification;
+		const { email, discord, telegram, slack, gotify, ntfy } = notification;
 
 		if (email) {
 			const template = await renderAsync(
@@ -86,6 +88,16 @@ export const sendDockerCleanupNotifications = async (
 				decorate("✅", "Docker Cleanup"),
 				`${decorate("🕒", `Date: ${date.toLocaleString()}`)}` +
 					`${decorate("📜", `Message:\n${message}`)}`,
+			);
+		}
+
+		if (ntfy) {
+			await sendNtfyNotification(
+				ntfy,
+				"Docker Cleanup",
+				"white_check_mark",
+				"",
+				`🕒Date: ${date.toLocaleString()}\n` + `📜Message:\n${message}`,
 			);
 		}
 

@@ -1,3 +1,5 @@
+import { Paintbrush } from "lucide-react";
+import { toast } from "sonner";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -11,15 +13,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { api } from "@/utils/api";
-import { Paintbrush } from "lucide-react";
-import { toast } from "sonner";
 
 interface Props {
-	applicationId: string;
+	id: string;
+	type: "application" | "compose";
 }
 
-export const CancelQueues = ({ applicationId }: Props) => {
-	const { mutateAsync, isLoading } = api.application.cleanQueues.useMutation();
+export const CancelQueues = ({ id, type }: Props) => {
+	const { mutateAsync, isLoading } =
+		type === "application"
+			? api.application.cleanQueues.useMutation()
+			: api.compose.cleanQueues.useMutation();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
 	if (isCloud) {
@@ -48,7 +52,8 @@ export const CancelQueues = ({ applicationId }: Props) => {
 					<AlertDialogAction
 						onClick={async () => {
 							await mutateAsync({
-								applicationId,
+								applicationId: id || "",
+								composeId: id || "",
 							})
 								.then(() => {
 									toast.success("Queues are being cleaned");

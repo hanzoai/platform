@@ -1,3 +1,10 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import copy from "copy-to-clipboard";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+import { CodeEditor } from "@/components/shared/code-editor";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -26,11 +33,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
 
 const formSchema = z.object({
 	name: z.string().min(1, "Name is required"),
@@ -140,7 +142,7 @@ export const AddApiKey = () => {
 				<DialogTrigger asChild>
 					<Button>Generate New Key</Button>
 				</DialogTrigger>
-				<DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="sm:max-w-xl max-h-[90vh]">
 					<DialogHeader>
 						<DialogTitle>Generate API Key</DialogTitle>
 						<DialogDescription>
@@ -441,13 +443,16 @@ export const AddApiKey = () => {
 						</DialogDescription>
 					</DialogHeader>
 					<div className="mt-4 space-y-4">
-						<div className="rounded-md bg-muted p-4 font-mono text-sm break-all">
-							{newApiKey}
-						</div>
+						<CodeEditor
+							className="font-mono text-sm break-all"
+							language="properties"
+							value={newApiKey}
+							readOnly
+						/>
 						<div className="flex justify-end gap-3">
 							<Button
 								onClick={() => {
-									navigator.clipboard.writeText(newApiKey);
+									copy(newApiKey);
 									toast.success("API key copied to clipboard");
 								}}
 							>

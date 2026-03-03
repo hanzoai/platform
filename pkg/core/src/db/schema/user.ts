@@ -1,3 +1,4 @@
+import { paths } from "@dokploy/server/constants";
 import { relations } from "drizzle-orm";
 import {
 	boolean,
@@ -11,7 +12,9 @@ import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { account, apikey, organization } from "./account";
+import { backups } from "./backups";
 import { projects } from "./project";
+import { schedules } from "./schedule";
 import { certificateType } from "./shared";
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
@@ -49,17 +52,20 @@ export const users_temp = pgTable("user_temp", {
 	// Admin
 	serverIp: text("serverIp"),
 	certificateType: certificateType("certificateType").notNull().default("none"),
+	https: boolean("https").notNull().default(false),
 	host: text("host"),
 	letsEncryptEmail: text("letsEncryptEmail"),
 	sshPrivateKey: text("sshPrivateKey"),
 	enableDockerCleanup: boolean("enableDockerCleanup").notNull().default(false),
-	enableLogRotation: boolean("enableLogRotation").notNull().default(false),
+	logCleanupCron: text("logCleanupCron").default("0 0 * * *"),
+	role: text("role").notNull().default("user"),
 	// Metrics
 	enablePaidFeatures: boolean("enablePaidFeatures").notNull().default(false),
+	allowImpersonation: boolean("allowImpersonation").notNull().default(false),
 	metricsConfig: jsonb("metricsConfig")
 		.$type<{
 			server: {
-				type: "Hanzo" | "Remote";
+				type: "Dokploy" | "Remote";
 				refreshRate: number;
 				port: number;
 				token: string;
@@ -82,7 +88,7 @@ export const users_temp = pgTable("user_temp", {
 		.notNull()
 		.default({
 			server: {
-				type: "Hanzo",
+				type: "Dokploy",
 				refreshRate: 60,
 				port: 4500,
 				token: "",
@@ -124,11 +130,15 @@ export const usersRelations = relations(users_temp, ({ one, many }) => ({
 	organizations: many(organization),
 	projects: many(projects),
 	apiKeys: many(apikey),
+	backups: many(backups),
+	schedules: many(schedules),
 }));
 
 const createSchema = createInsertSchema(users_temp, {
 	id: z.string().min(1),
 	isRegistered: z.boolean().optional(),
+}).omit({
+	role: true,
 });
 
 export const apiCreateUserInvitation = createSchema.pick({}).extend({
@@ -165,6 +175,7 @@ export const apiAssignPermissions = createSchema
 	})
 	.extend({
 		accessedProjects: z.array(z.string()).optional(),
+		accessedEnvironments: z.array(z.string()).optional(),
 		accessedServices: z.array(z.string()).optional(),
 		canCreateProjects: z.boolean().optional(),
 		canCreateServices: z.boolean().optional(),
@@ -200,10 +211,12 @@ export const apiAssignDomain = createSchema
 		host: true,
 		certificateType: true,
 		letsEncryptEmail: true,
+		https: true,
 	})
 	.required()
 	.partial({
 		letsEncryptEmail: true,
+		https: true,
 	});
 
 export const apiUpdateDockerCleanup = createSchema
@@ -225,7 +238,31 @@ export const apiModifyTraefikConfig = z.object({
 	serverId: z.string().optional(),
 });
 export const apiReadTraefikConfig = z.object({
-	path: z.string().min(1),
+	path: z
+		.string()
+		.min(1)
+		.refine(
+			(path) => {
+				// Prevent directory traversal attacks
+				if (path.includes("../") || path.includes("..\\")) {
+					return false;
+				}
+
+				const { MAIN_TRAEFIK_PATH } = paths();
+				if (path.startsWith("/") && !path.startsWith(MAIN_TRAEFIK_PATH)) {
+					return false;
+				}
+				// Prevent null bytes and other dangerous characters
+				if (path.includes("\0") || path.includes("\x00")) {
+					return false;
+				}
+				return true;
+			},
+			{
+				message:
+					"Invalid path: path traversal or unauthorized directory access detected",
+			},
+		),
 	serverId: z.string().optional(),
 });
 
@@ -250,6 +287,12 @@ export const apiReadStatsLogs = z.object({
 	status: z.string().array().optional(),
 	search: z.string().optional(),
 	sort: z.object({ id: z.string(), desc: z.boolean() }).optional(),
+	dateRange: z
+		.object({
+			start: z.string().optional(),
+			end: z.string().optional(),
+		})
+		.optional(),
 });
 
 export const apiUpdateWebServerMonitoring = z.object({
@@ -281,10 +324,11 @@ export const apiUpdateWebServerMonitoring = z.object({
 export const apiUpdateUser = createSchema.partial().extend({
 	password: z.string().optional(),
 	currentPassword: z.string().optional(),
+	name: z.string().optional(),
 	metricsConfig: z
 		.object({
 			server: z.object({
-				type: z.enum(["Hanzo", "Remote"]),
+				type: z.enum(["Dokploy", "Remote"]),
 				refreshRate: z.number(),
 				port: z.number(),
 				token: z.string(),
@@ -305,4 +349,5 @@ export const apiUpdateUser = createSchema.partial().extend({
 			}),
 		})
 		.optional(),
+	logCleanupCron: z.string().optional().nullable(),
 });
