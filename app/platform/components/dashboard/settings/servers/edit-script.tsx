@@ -81,7 +81,7 @@ export const EditScript = ({ serverId }: Props) => {
 				...server,
 				command: formData.command || "",
 				serverId,
-			})
+			} as any)
 				.then((_data) => {
 					toast.success("Script modified successfully");
 				})
