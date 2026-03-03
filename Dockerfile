@@ -31,7 +31,7 @@ ENV NODE_ENV=production
 RUN pnpm --filter=@hanzo/platform build
 RUN pnpm --filter=./app/platform run build
 
-RUN pnpm --filter=./app/platform --prod deploy --legacy /prod/platform
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=./app/platform --prod deploy --legacy /prod/platform
 
 RUN cp -R /usr/src/app/app/platform/.next /prod/platform/.next
 RUN cp -R /usr/src/app/app/platform/dist /prod/platform/dist
