@@ -11,9 +11,19 @@ import { eq } from "drizzle-orm";
 
 export const createSshKey = async (input: typeof apiCreateSshKey._type) => {
 	await db.transaction(async (tx) => {
+		const insertData: any = {
+			name: input.name,
+			publicKey: input.publicKey,
+			organizationId: input.organizationId,
+		};
+		
+		if (input.description) {
+			insertData.description = input.description;
+		}
+		
 		const sshKey = await tx
 			.insert(sshKeys)
-			.values(input)
+			.values(insertData)
 			.returning()
 			.then((response) => response[0])
 			.catch((e) => console.error(e));
