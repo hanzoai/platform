@@ -1,6 +1,6 @@
 # Platform MCP Server
 
-[![npm version](https://img.shields.io/npm/v/@ahdev/platform-mcp.svg)](https://www.npmjs.com/package/@ahdev/platform-mcp) [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Platform%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22platform-mcp%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40ahdev%2Fplatform-mcp%40latest%22%5D%7D)
+[![npm version](https://img.shields.io/npm/v/@hanzo/platform-mcp.svg)](https://www.npmjs.com/package/@hanzo/platform-mcp) [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Platform%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22platform-mcp%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40ahdev%2Fplatform-mcp%40latest%22%5D%7D)
 
 Platform MCP Server exposes Platform functionalities as tools consumable via the Model Context Protocol (MCP). It allows MCP-compatible clients (e.g., AI models, other applications) to interact with your Platform server programmatically.
 
@@ -25,7 +25,7 @@ Add this to your Cursor `~/.cursor/mcp.json` file. You may also install in a spe
   "mcpServers": {
     "platform-mcp": {
       "command": "npx",
-      "args": ["-y", "@ahdev/platform-mcp"],
+      "args": ["-y", "@hanzo/platform-mcp"],
       "env": {
         "PLATFORM_URL": "https://your-platform-server.com/api",
         "PLATFORM_API_KEY": "your-platform-api-token"
@@ -43,7 +43,7 @@ Add this to your Cursor `~/.cursor/mcp.json` file. You may also install in a spe
   "mcpServers": {
     "platform-mcp": {
       "command": "bunx",
-      "args": ["-y", "@ahdev/platform-mcp"],
+      "args": ["-y", "@hanzo/platform-mcp"],
       "env": {
         "PLATFORM_URL": "https://your-platform-server.com/api",
         "PLATFORM_API_KEY": "your-platform-api-token"
@@ -63,7 +63,7 @@ Add this to your Cursor `~/.cursor/mcp.json` file. You may also install in a spe
   "mcpServers": {
     "platform-mcp": {
       "command": "deno",
-      "args": ["run", "--allow-env", "--allow-net", "npm:@ahdev/platform-mcp"],
+      "args": ["run", "--allow-env", "--allow-net", "npm:@hanzo/platform-mcp"],
       "env": {
         "PLATFORM_URL": "https://your-platform-server.com/api",
         "PLATFORM_API_KEY": "your-platform-api-token"
@@ -84,7 +84,7 @@ Add this to your Windsurf MCP config file. See [Windsurf MCP docs](https://docs.
   "mcpServers": {
     "platform-mcp": {
       "command": "npx",
-      "args": ["-y", "@ahdev/platform-mcp"],
+      "args": ["-y", "@hanzo/platform-mcp"],
       "env": {
         "PLATFORM_URL": "https://your-platform-server.com/api",
         "PLATFORM_API_KEY": "your-platform-api-token"
@@ -107,7 +107,7 @@ Add this to your VS Code MCP config file. See [VS Code MCP docs](https://code.vi
     "platform-mcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@ahdev/platform-mcp"],
+      "args": ["-y", "@hanzo/platform-mcp"],
       "env": {
         "PLATFORM_URL": "https://your-platform-server.com/api",
         "PLATFORM_API_KEY": "your-platform-api-token"
@@ -127,7 +127,7 @@ Add this to your Zed `settings.json`. See [Zed Context Server docs](https://zed.
     "platform-mcp": {
       "command": {
         "path": "npx",
-        "args": ["-y", "@ahdev/platform-mcp"]
+        "args": ["-y", "@hanzo/platform-mcp"]
       },
       "settings": {
         "PLATFORM_URL": "https://your-platform-server.com/api",
@@ -147,7 +147,7 @@ Add this to your Claude Desktop `claude_desktop_config.json` file. See [Claude D
   "mcpServers": {
     "platform-mcp": {
       "command": "npx",
-      "args": ["-y", "@ahdev/platform-mcp"],
+      "args": ["-y", "@hanzo/platform-mcp"],
       "env": {
         "PLATFORM_URL": "https://your-platform-server.com/api",
         "PLATFORM_API_KEY": "your-platform-api-token"
@@ -166,7 +166,7 @@ Open the "Settings" page of the app, navigate to "Plugins," and enter the follow
   "mcpServers": {
     "platform-mcp": {
       "command": "npx",
-      "args": ["-y", "@ahdev/platform-mcp"],
+      "args": ["-y", "@hanzo/platform-mcp"],
       "env": {
         "PLATFORM_URL": "https://your-platform-server.com/api",
         "PLATFORM_API_KEY": "your-platform-api-token"
@@ -259,7 +259,7 @@ The configuration on Windows is slightly different compared to Linux or macOS. U
   "mcpServers": {
     "platform-mcp": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "@ahdev/platform-mcp"],
+      "args": ["/c", "npx", "-y", "@hanzo/platform-mcp"],
       "env": {
         "PLATFORM_URL": "https://your-platform-server.com/api",
         "PLATFORM_API_KEY": "your-platform-api-token"
@@ -284,7 +284,7 @@ The default mode uses stdio for direct process communication, ideal for desktop 
 
 ```bash
 # Run with stdio (default)
-npx -y @ahdev/platform-mcp
+npx -y @hanzo/platform-mcp
 # or
 npm run start:stdio
 ```
@@ -300,9 +300,9 @@ Modern HTTP mode exposes the server via HTTP/HTTPS supporting **both modern and 
 # Run with HTTP mode
 npm run start:http
 # or
-npx -y @ahdev/platform-mcp --http
+npx -y @hanzo/platform-mcp --http
 # or via environment variable
-MCP_TRANSPORT=http npx -y @ahdev/platform-mcp
+MCP_TRANSPORT=http npx -y @hanzo/platform-mcp
 ```
 
 **Modern Streamable HTTP Endpoints:**
@@ -503,7 +503,7 @@ npm run build
 ### Testing with MCP Inspector
 
 ```bash
-npx -y @modelcontextprotocol/inspector npx @ahdev/platform-mcp
+npx -y @modelcontextprotocol/inspector npx @hanzo/platform-mcp
 ```
 
 ### Documentation
