@@ -1,5 +1,5 @@
 {
-  "name": "@hanzo/platform",
+  "name": "@hanzo/platform-lib",
   "version": "1.0.0",
   "type": "module",
   "main": "./src/index.ts",
@@ -8,6 +8,6 @@
     "./*": "./src/*.ts"
   },
   "dependencies": {
-    "@hanzo/core": "workspace:*"
+    "@hanzo/platform": "workspace:*"
   }
 }

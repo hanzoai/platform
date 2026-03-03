@@ -119,3 +119,21 @@ class LogRotationManager {
 	}
 }
 export const logRotationManager = LogRotationManager.getInstance();
+
+export const startLogCleanup = async (intervalInDays = 7) => {
+	// Start periodic cleanup of old log files
+	const cleanup = async () => {
+		try {
+			const { LOGS_PATH } = paths();
+			// Clean logs older than intervalInDays
+			await execAsync(`find ${LOGS_PATH} -type f -name "*.log" -mtime +${intervalInDays} -delete`);
+			console.log(`Cleaned log files older than ${intervalInDays} days`);
+		} catch (error) {
+			console.error("Error cleaning up log files:", error);
+		}
+	};
+
+	// Run cleanup immediately and then periodically
+	await cleanup();
+	setInterval(cleanup, 24 * 60 * 60 * 1000); // Run daily
+};

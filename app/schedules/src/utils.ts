@@ -14,14 +14,14 @@ import {
 	runMySqlBackup,
 	runPostgresBackup,
 	runVolumeBackup,
-} from "@hanzo/server";
-import { db } from "@hanzo/server/dist/db";
+} from "@hanzo/platform";
+import { db } from "@hanzo/platform/dist/db";
 import {
 	backups,
 	schedules,
 	server,
 	volumeBackups,
-} from "@hanzo/server/dist/db/schema";
+} from "@hanzo/platform/dist/db/schema";
 import { and, eq } from "drizzle-orm";
 import { logger } from "./logger.js";
 import { scheduleJob } from "./queue.js";

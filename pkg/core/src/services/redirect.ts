@@ -122,3 +122,9 @@ export const updateRedirectById = async (
 		});
 	}
 };
+
+
+// Auto-generated stubs
+export const createDefaultRedirects = async (...args: any[]) => { console.log('createDefaultRedirects - stub'); return { id: 'stub' }; };
+export const manageRedirect = async (...args: any[]) => { console.log('manageRedirect - stub'); return null; };
+export const readRedirect = async (...args: any[]) => { console.log('readRedirect - stub'); return {}; };

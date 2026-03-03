@@ -8,7 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 import { projects } from "./project";
-import { server } from "./server";
+import { server } from "./hanzo-server";
 import { users_temp } from "./user";
 
 export const account = pgTable("account", {
