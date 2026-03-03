@@ -151,9 +151,9 @@ export const Verify = () => {
 										/>
 										<StatusRow
 											label="Hanzo Network Created"
-											isEnabled={data?.isHanzoNetworkInstalled}
+											isEnabled={data?.isHanzoPlatformNetworkInstalled}
 											description={
-												data?.isHanzoNetworkInstalled
+												data?.isHanzoPlatformNetworkInstalled
 													? "Created"
 													: "Not Created"
 											}
