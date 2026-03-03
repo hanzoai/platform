@@ -44,11 +44,7 @@ export const sendDiscordNotificationWelcome = async (email: string) => {
 			],
 			timestamp: new Date(),
 			footer: {
-<<<<<<< HEAD:pkg/platform/src/verification/send-verification-email.tsx
-				text: "Dokploy User Registration Notification",
-=======
 				text: "Hanzo User Registration Notification",
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):pkg/core/src/verification/send-verification-email.tsx
 			},
 		},
 	);

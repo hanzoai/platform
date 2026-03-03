@@ -1,15 +1,18 @@
-import { findServerById } from "@hanzo/core/services/server";
+// import { findServerById } from "@hanzo/core/services/server";
 import type { ContainerCreateOptions } from "dockerode";
-import { IS_CLOUD } from "../constants";
+import { IS_CLOUD, docker } from "../constants";
 import { findUserById } from "../services/admin";
 import { getHanzoImageTag } from "../services/settings";
-import { pullImage, pullRemoteImage } from "../utils/docker/utils";
-import { execAsync, execAsyncRemote } from "../utils/process/execAsync";
-import { getRemoteDocker } from "../utils/servers/remote-docker";
+import { pullImage } from "../utils/docker/utils";
+import { execAsync } from "../utils/process/execAsync";
 
-export const setupMonitoring = async (serverId: string) => {
-	const server = await findServerById(serverId);
-
+/**
+ * Stub implementation to maintain compatibility
+ * Multi-server functionality has been removed
+ */
+export const setupMonitoring = async (_serverId: string) => {
+	console.warn("Multi-server functionality has been removed. Use setupWebMonitoring instead.");
+	// Forward to web monitoring setup with default settings
 	const containerName = "hanzo-monitoring";
 	let imageName = "hanzo/monitoring:latest";
 
@@ -23,17 +26,13 @@ export const setupMonitoring = async (serverId: string) => {
 
 	const settings: ContainerCreateOptions = {
 		name: containerName,
-		Env: [`METRICS_CONFIG=${JSON.stringify(server?.metricsConfig)}`],
+		Env: [`METRICS_CONFIG=${JSON.stringify({})}`],
 		Image: imageName,
 		HostConfig: {
-			// Memory: 100 * 1024 * 1024, // 100MB en bytes
-			// PidMode: "host",
-			// CapAdd: ["NET_ADMIN", "SYS_ADMIN"],
-			// Privileged: true,
 			PortBindings: {
-				[`${server.metricsConfig.server.port}/tcp`]: [
+				[`4500/tcp`]: [
 					{
-						HostPort: server.metricsConfig.server.port.toString(),
+						HostPort: "4500",
 					},
 				],
 			},
@@ -47,18 +46,15 @@ export const setupMonitoring = async (serverId: string) => {
 			NetworkMode: "host",
 		},
 		ExposedPorts: {
-			[`${server.metricsConfig.server.port}/tcp`]: {},
+			[`4500/tcp`]: {},
 		},
 	};
-	const docker = await getRemoteDocker(serverId);
+
 	try {
-		await execAsyncRemote(
-			serverId,
+		await execAsync(
 			"mkdir -p /etc/hanzo/monitoring && touch /etc/hanzo/monitoring/monitoring.db",
 		);
-		if (serverId) {
-			await pullRemoteImage(imageName, serverId);
-		}
+		await pullImage(imageName);
 
 		// Check if container exists
 		const container = docker.getContainer(containerName);

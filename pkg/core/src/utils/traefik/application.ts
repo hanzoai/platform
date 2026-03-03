@@ -17,25 +17,25 @@ export const createTraefikConfig = (appName: string) => {
 				...(process.env.NODE_ENV === "production"
 					? {}
 					: {
-							[`${appName}-router-1`]: {
-								rule: domainDefault,
-								service: `${appName}-service-1`,
-								entryPoints: ["web"],
-							},
-						}),
+						[`${appName}-router-1`]: {
+							rule: domainDefault,
+							service: `${appName}-service-1`,
+							entryPoints: ["web"],
+						},
+					}),
 			},
 
 			services: {
 				...(process.env.NODE_ENV === "production"
 					? {}
 					: {
-							[`${appName}-service-1`]: {
-								loadBalancer: {
-									servers: [{ url: serviceURLDefault }],
-									passHostHeader: true,
-								},
+						[`${appName}-service-1`]: {
+							loadBalancer: {
+								servers: [{ url: serviceURLDefault }],
+								passHostHeader: true,
 							},
-						}),
+						},
+					}),
 			},
 		},
 	};
@@ -67,7 +67,7 @@ export const removeTraefikConfig = async (
 		if (fs.existsSync(configPath)) {
 			await fs.promises.unlink(configPath);
 		}
-	} catch (_error) {}
+	} catch (_error) { }
 };
 
 export const removeTraefikConfigRemote = async (
@@ -78,7 +78,7 @@ export const removeTraefikConfigRemote = async (
 		const { DYNAMIC_TRAEFIK_PATH } = paths(true);
 		const configPath = path.join(DYNAMIC_TRAEFIK_PATH, `${appName}.yml`);
 		await execAsyncRemote(serverId, `rm ${configPath}`);
-	} catch (_error) {}
+	} catch (_error) { }
 };
 
 export const loadOrCreateConfig = (appName: string): FileConfig => {
@@ -158,7 +158,7 @@ export const readMonitoringConfig = (readAll = false) => {
 							trimmed.endsWith("}")
 						) {
 							const log = JSON.parse(trimmed);
-							if (log.ServiceName !== "dokploy-service-app@file") {
+							if (log.ServiceName !== "hanzoai-service-app@file") {
 								content += chunk;
 								validCount++;
 								if (validCount >= 500) {
