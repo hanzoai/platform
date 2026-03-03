@@ -1,15 +1,12 @@
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
+import type { GetServerSidePropsContext } from "next";
 
 export const AcceptInvitation = () => {
 	const { query } = useRouter();
 
 	const invitationId = query["accept-invitation"];
-
-	// const { data: organization } = api.organization.getById.useQuery({
-	//     id: id as string
-	// })
 
 	return (
 		<div>
@@ -26,5 +23,10 @@ export const AcceptInvitation = () => {
 		</div>
 	);
 };
+
+// Force server-side rendering to avoid static generation
+export async function getServerSideProps(ctx: GetServerSidePropsContext) {
+	return { props: {} };
+}
 
 export default AcceptInvitation;
