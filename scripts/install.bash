@@ -4,6 +4,8 @@ set -a
 [ -f .env ] && source .env
 set +a
 
+set -x
+
 # Determine the user to run the container as.
 if [ -n "$SUDO_UID" ] && [ -n "$SUDO_GID" ]; then
   USER_ARG="$SUDO_UID:$SUDO_GID"
@@ -58,23 +60,20 @@ install_platform() {
         fi
     fi
 
-    FORCE=${FORCE:-false}
-
     # In both modes, determine the advertise address using ADVERTISE_ADDR if set,
     # otherwise use the local network IP.
     advertise_addr="${ADVERTISE_ADDR:-$(get_ip)}"
 
+    NETWORK_NAME="hanzo-network"
+
     if [ "$IS_CLOUD" = "true" ]; then
         SERVICE_NAME="cloud"
         echo "Mode: CLOUD"
-        NETWORK_NAME="hanzo-network"
-        if ! docker network inspect "$NETWORK_NAME" >/dev/null 2>&1; then
-            echo "Creating network $NETWORK_NAME"
-            docker network create --driver overlay --attachable "$NETWORK_NAME"
-        fi
     else
         SERVICE_NAME="hanzo"
         echo "Mode: HANZO"
+
+        # Re-initialze the swarm
         docker swarm leave --force 2>/dev/null
         echo "IP: $advertise_addr"
         docker swarm init --advertise-addr "$advertise_addr"
@@ -82,7 +81,8 @@ install_platform() {
             echo "Error: Swarm init failed" >&2
             exit 1
         fi
-        NETWORK_NAME="$SERVICE_NAME-network"
+
+        # Re-create network
         docker network rm -f "$NETWORK_NAME" 2>/dev/null
         docker network create --driver overlay --attachable "$NETWORK_NAME"
         echo "Network: $NETWORK_NAME"
@@ -91,7 +91,7 @@ install_platform() {
     # Process DEV_MODE: choose image tag and mount workspace if in development.
     if [ "$DEV_MODE" = "true" ]; then
         echo "Dev mode enabled"
-        HANZO_IMAGE_TAG="dev"
+        HANZO_TAG="dev"
         NODE_ENV="${NODE_ENV:-development}"
         if [ -d "$(pwd)" ]; then
             echo "Mounting workspace: $(pwd) -> /workspace"
@@ -127,28 +127,24 @@ install_platform() {
         fi
     fi
 
-    # Set defaults for APP_DIR and DOCKER_CONFIG_VOLUME.
-    APP_DIR="${APP_DIR:-/etc/$SERVICE_NAME}"
-    DOCKER_CONFIG_VOLUME="${DOCKER_CONFIG_VOLUME:-hanzo-docker-config}"
-
-    echo "Creating service: $SERVICE_NAME"
+    echo "Creating service: hanzo"
     docker service create \
-      --name "$SERVICE_NAME" \
-      --user "$USER_ARG" \
+      --name $SERVICE_NAME \
       --replicas 1 \
-      --network "$NETWORK_NAME" \
+      --network $NETWORK_NAME \
       --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
-      --mount type=bind,source="$APP_DIR",target=/etc/$SERVICE_NAME \
-      --mount type=volume,source="$DOCKER_CONFIG_VOLUME",target=/root/.docker \
+      --mount type=bind,source=/etc/hanzo,target=/etc/hanzo \
+      --mount type=volume,source=hanzo-docker-config,target=/root/.docker \
       $MOUNT_FLAGS \
       --publish published=${PORT:-3000},target=3000,mode=host \
       --update-parallelism 1 \
       --update-order stop-first \
       --constraint 'node.role == manager' \
-      $( [ -n "$ADVERTISE_ADDR" ] && echo "-e ADVERTISE_ADDR=$advertise_addr" ) \
-      $( [ -n "$DATABASE_URL" ] && echo "-e DATABASE_URL=$DATABASE_URL" ) \
-      $( [ -n "$NODE_ENV" ] && echo "-e NODE_ENV=$NODE_ENV" ) \
+      -e ADVERTISE_ADDR="$advertise_addr" \
+      -e DATABASE_URL="${DATABASE_URL:-postgres://hanzo:amukds4wi9001583845717ad2@hanzo-postgres:5432/hanzo}" \
+      -e NODE_ENV=production \
       -e IS_CLOUD=${IS_CLOUD:-false} \
+      $( [ -n "$PORT" ] && echo "-e PORT=$PORT" ) \
       $( [ -n "$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" ] && echo "-e NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" ) \
       $( [ -n "$STRIPE_SECRET_KEY" ] && echo "-e STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY" ) \
       $( [ -n "$STRIPE_WEBHOOK_SECRET" ] && echo "-e STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET" ) \
@@ -161,19 +157,12 @@ install_platform() {
       $( [ -n "$SMTP_PORT" ] && echo "-e SMTP_PORT=$SMTP_PORT" ) \
       $( [ -n "$SMTP_USERNAME" ] && echo "-e SMTP_USERNAME=$SMTP_USERNAME" ) \
       $( [ -n "$SMTP_PASSWORD" ] && echo "-e SMTP_PASSWORD=$SMTP_PASSWORD" ) \
-      -e PORT=${PORT:-3000} \
-      hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
-
-    if echo "$advertise_addr" | grep -q ':'; then
-        formatted_addr="[$advertise_addr]"
-    else
-        formatted_addr="$advertise_addr"
-    fi
+      hanzoai/platform:${HANZO_TAG:-latest}
 
     echo ""
     echo -e "\033[0;32mSuccess! $([ "$IS_CLOUD" = "true" ] && echo "Hanzo Cloud" || echo "Hanzo Platform") installed.\033[0m"
     echo -e "\033[0;34mWait 15 seconds for startup...\033[0m"
-    echo -e "\033[1;33mAccess at: http://${formatted_addr}:${PORT:-3000}\033[0m"
+    echo -e "\033[1;33mAccess at: http://${advertise_addr}:${PORT:-3000}\033[0m"
     echo ""
 }
 
@@ -207,6 +196,6 @@ if [ "$1" = "help" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  ADVERTISE_ADDR  Server IP (if not set, determined automatically)"
     echo "  PORT            Service port (default: 3000)"
     echo "  DATABASE_URL    Database connection"
-    echo "  HANZO_IMAGE_TAG Docker tag (default: latest)"
+    echo "  HANZO_TAG       Docker tag (default: latest)"
     exit 0
 fi
