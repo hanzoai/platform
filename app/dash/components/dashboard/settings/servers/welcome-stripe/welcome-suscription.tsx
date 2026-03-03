@@ -335,7 +335,7 @@ export const WelcomeSuscription = () => {
 												</Button>
 												<Button className="rounded-full  w-fit">
 													<Link
-														href="https://github.com/Hanzo/hanzo"
+														href="https://github.com/hanzoai/platform"
 														aria-label="Hanzo on GitHub"
 														target="_blank"
 														className="flex flex-row items-center gap-2 "
