@@ -1,13 +1,13 @@
 import { createWriteStream } from "node:fs";
 import { join } from "node:path";
-import { paths } from "@hanzo/core/constants";
-import type { Compose } from "@hanzo/core/services/compose";
+import { paths } from "@hanzo/platform/constants";
+import type { Compose } from "@hanzo/platform/services/compose";
 import {
 	findGiteaById,
 	type Gitea,
 	updateGitea,
-} from "@hanzo/core/services/gitea";
-import type { InferResultType } from "@hanzo/core/types/with";
+} from "@hanzo/platform/services/gitea";
+import type { InferResultType } from "@hanzo/platform/types/with";
 import { TRPCError } from "@trpc/server";
 import { recreateDirectory } from "../filesystem/directory";
 import { execAsyncRemote } from "../process/execAsync";

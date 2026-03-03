@@ -3,7 +3,7 @@ import path from "node:path";
 import {
 	buildStatic,
 	getStaticCommand,
-} from "@hanzo/core/utils/builders/static";
+} from "@hanzo/platform/utils/builders/static";
 import { nanoid } from "nanoid";
 import { prepareEnvironmentVariables } from "../docker/utils";
 import { getBuildAppDirectory } from "../filesystem/directory";

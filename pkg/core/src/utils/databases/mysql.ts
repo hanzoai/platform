@@ -1,4 +1,4 @@
-import type { InferResultType } from "@hanzo/core/types/with";
+import type { InferResultType } from "@hanzo/platform/types/with";
 import type { CreateServiceOptions } from "dockerode";
 import {
 	calculateResources,

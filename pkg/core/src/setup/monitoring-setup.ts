@@ -1,4 +1,4 @@
-import { findServerById } from "@hanzo/core/services/server";
+import { findServerById } from "@hanzo/platform/services/server";
 import type { ContainerCreateOptions } from "dockerode";
 import { IS_CLOUD } from "../constants";
 import { findUserById } from "../services/admin";

@@ -1,10 +1,10 @@
-import { db } from "@hanzo/core/db";
-import { type apiCreateRedirect, redirects } from "@hanzo/core/db/schema";
+import { db } from "@hanzo/platform/db";
+import { type apiCreateRedirect, redirects } from "@hanzo/platform/db/schema";
 import {
 	createRedirectMiddleware,
 	removeRedirectMiddleware,
 	updateRedirectMiddleware,
-} from "@hanzo/core/utils/traefik/redirect";
+} from "@hanzo/platform/utils/traefik/redirect";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";

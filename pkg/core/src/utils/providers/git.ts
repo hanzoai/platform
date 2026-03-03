@@ -1,8 +1,8 @@
 import { createWriteStream } from "node:fs";
 import path, { join } from "node:path";
-import { paths } from "@hanzo/core/constants";
-import type { Compose } from "@hanzo/core/services/compose";
-import { findSSHKeyById, updateSSHKeyById } from "@hanzo/core/services/ssh-key";
+import { paths } from "@hanzo/platform/constants";
+import type { Compose } from "@hanzo/platform/services/compose";
+import { findSSHKeyById, updateSSHKeyById } from "@hanzo/platform/services/ssh-key";
 import { TRPCError } from "@trpc/server";
 import { recreateDirectory } from "../filesystem/directory";
 import { execAsync, execAsyncRemote } from "../process/execAsync";

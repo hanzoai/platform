@@ -2,7 +2,7 @@ import { createHmac, randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Domain } from "@hanzo/core/services/domain";
+import type { Domain } from "@hanzo/platform/services/domain";
 import { TRPCError } from "@trpc/server";
 import { fetchTemplateFiles } from "./github";
 
