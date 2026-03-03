@@ -403,6 +403,13 @@ export async function configureDigitalOceanProvider(
 		} as any)
 		.returning();
 
+	if (!provider) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to create cloud provider record",
+		});
+	}
+
 	return provider;
 }
 
@@ -487,6 +494,13 @@ export async function createDroplet(
 			memoryMb: specs.memoryMb,
 			storageGb: specs.storageGb,
 		} as any).returning();
+
+		if (!node) {
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to create compute node record",
+			});
+		}
 
 		return { nodeId: node.nodeId };
 	});
@@ -733,6 +747,13 @@ export async function scaleUpPool(
 		startedAt: new Date(),
 	} as any).returning();
 
+	if (!job) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to create scaling job record",
+		});
+	}
+
 	const jobId = job.jobId;
 
 	// Create droplets (batch to avoid rate limits)
@@ -835,7 +856,7 @@ export async function scaleDownPool(
 	}
 
 	// Create scaling job - let Drizzle generate jobId
-	const [job] = await db.insert(scalingJob).values({
+	const [scaleDownJob] = await db.insert(scalingJob).values({
 		poolId: config.poolId,
 		cloudProviderId: nodesToRemove[0]?.cloudProviderId || "",
 		jobType: "scale_down",
@@ -848,7 +869,14 @@ export async function scaleDownPool(
 		startedAt: new Date(),
 	} as any).returning();
 
-	const jobId = job.jobId;
+	if (!scaleDownJob) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to create scale-down job record",
+		});
+	}
+
+	const jobId = scaleDownJob.jobId;
 
 	// Remove nodes
 	for (const droplet of nodesToRemove) {
