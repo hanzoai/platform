@@ -52,7 +52,7 @@ export default async function handler(
 			.update(github)
 			.set({
 				githubInstallationId: installation_id,
-			})
+			} as any)
 			.where(eq(github.githubId, value as string))
 			.returning();
 	}
