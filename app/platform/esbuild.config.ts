@@ -19,6 +19,11 @@ function prepareDefine(config: DotenvParseOutput | undefined) {
 
 const define = prepareDefine(result.parsed);
 
+// Banner to create `require` in ESM context for CJS dependencies
+const banner = {
+	js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
+};
+
 try {
 	esbuild
 		.build({
@@ -38,6 +43,7 @@ try {
 			tsconfig: "tsconfig.server.json",
 			define,
 			packages: "external",
+			banner,
 		})
 		.catch(() => {
 			return process.exit(1);
