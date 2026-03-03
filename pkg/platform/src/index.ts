@@ -126,6 +126,7 @@ export * from "./utils/traefik/redirect";
 export * from "./utils/traefik/security";
 export * from "./utils/traefik/types";
 export * from "./utils/traefik/web-server";
+export * from "./utils/crons/enterprise";
 export * from "./utils/volume-backups/index";
 export * from "./utils/watch-paths/should-deploy";
 export * from "./wss/utils";
