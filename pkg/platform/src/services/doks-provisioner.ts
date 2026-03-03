@@ -58,6 +58,13 @@ async function doFetch<T>(
 export const provisionDoksCluster = async (
 	input: z.infer<typeof apiProvisionDoksCluster>,
 ) => {
+	if (!input.organizationId) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Organization ID is required",
+		});
+	}
+
 	const org = await db.query.organization.findFirst({
 		where: eq(organization.id, input.organizationId),
 	});

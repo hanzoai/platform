@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import {
 	Check,
 	Edit2,
@@ -68,7 +68,7 @@ const createRecordSchema = z.object({
 	name: z.string().min(1, "Name is required"),
 	content: z.string().min(1, "Content is required"),
 	proxied: z.boolean(),
-	ttl: z.coerce.number().int().positive().optional(),
+	ttl: z.number().int().positive().optional(),
 });
 
 type CreateRecordForm = z.infer<typeof createRecordSchema>;
@@ -78,7 +78,7 @@ const editRecordSchema = z.object({
 	name: z.string().min(1, "Name is required").optional(),
 	content: z.string().min(1, "Content is required").optional(),
 	proxied: z.boolean().optional(),
-	ttl: z.coerce.number().int().positive().optional(),
+	ttl: z.number().int().positive().optional(),
 });
 
 type EditRecordForm = z.infer<typeof editRecordSchema>;
@@ -226,7 +226,13 @@ function AddRecordDialog({
 								<FormItem>
 									<FormLabel>TTL (1 = auto)</FormLabel>
 									<FormControl>
-										<Input type="number" min={1} {...field} />
+										<Input
+										type="number"
+										min={1}
+										{...field}
+										value={field.value ?? ""}
+										onChange={(e) => field.onChange(e.target.value === "" ? 1 : Number(e.target.value))}
+									/>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -391,7 +397,13 @@ function EditRecordDialog({
 								<FormItem>
 									<FormLabel>TTL (1 = auto)</FormLabel>
 									<FormControl>
-										<Input type="number" min={1} {...field} />
+										<Input
+										type="number"
+										min={1}
+										{...field}
+										value={field.value ?? ""}
+										onChange={(e) => field.onChange(e.target.value === "" ? 1 : Number(e.target.value))}
+									/>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
