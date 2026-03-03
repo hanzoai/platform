@@ -1,4 +1,4 @@
-import { updateGitea } from "@hanzo/core";
+import { updateGitea } from "@hanzo/platform";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { findGitea, type Gitea, redirectWithError } from "./helper";
 

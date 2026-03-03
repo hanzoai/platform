@@ -1,4 +1,4 @@
-import { findGitlabById, updateGitlab } from "@hanzo/core";
+import { findGitlabById, updateGitlab } from "@hanzo/platform";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(

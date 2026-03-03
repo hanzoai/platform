@@ -9,7 +9,7 @@ import {
 	findDeploymentById,
 	findServerById,
 	updateDeploymentStatus,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";

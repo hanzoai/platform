@@ -1,4 +1,4 @@
-import { findServerById } from "@hanzo/core";
+import { findServerById } from "@hanzo/platform";
 import type { DeploymentJob } from "../queues/queue-types";
 
 export const deploy = async (jobData: DeploymentJob) => {

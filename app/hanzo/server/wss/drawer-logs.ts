@@ -1,5 +1,5 @@
 import type http from "node:http";
-import { validateRequest } from "@hanzo/core/lib/auth";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import { applyWSSHandler } from "@trpc/server/adapters/ws";
 import { WebSocketServer } from "ws";
 import { appRouter } from "../api/root";
