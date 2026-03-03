@@ -2,7 +2,7 @@ import {
 	type BackupScheduleList,
 	IS_CLOUD,
 	removeScheduleBackup,
-} from "@hanzo/core/index";
+} from "@hanzo/platform/index";
 
 type QueueJob =
 	| {

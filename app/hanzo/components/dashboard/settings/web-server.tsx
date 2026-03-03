@@ -18,7 +18,7 @@ export const WebServer = () => {
 	const { t } = useTranslation("settings");
 	const { data } = api.user.get.useQuery();
 
-	const { data: hanzoVersion } = api.settings.getHanzo PlatformVersion.useQuery();
+	const { data: hanzoVersion } = api.settings.getHanzoPlatformVersion.useQuery();
 
 	return (
 		<div className="w-full">

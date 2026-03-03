@@ -1,4 +1,4 @@
-import { validateRequest } from "@hanzo/core";
+import { validateRequest } from "@hanzo/platform";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";

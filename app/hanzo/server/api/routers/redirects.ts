@@ -4,7 +4,7 @@ import {
 	findRedirectById,
 	removeRedirectById,
 	updateRedirectById,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import {
 	apiCreateRedirect,

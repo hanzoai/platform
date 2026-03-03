@@ -1,4 +1,4 @@
-import { prepareEnvironmentVariables } from "@hanzo/core/index";
+import { prepareEnvironmentVariables } from "@hanzo/platform/index";
 import { describe, expect, it } from "vitest";
 
 const projectEnv = `
