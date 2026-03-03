@@ -173,7 +173,7 @@ fn default_retry_delay() -> u64 {
 }
 
 fn default_auth_type() -> String {
-    "bearer".to_string()
+    "none".to_string()
 }
 
 fn default_token_expiry() -> u64 {

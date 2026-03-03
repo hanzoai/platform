@@ -93,13 +93,13 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 		enabled: addPoolOpen || editPoolOpen,
 	});
 
-	const { mutateAsync: deleteCluster, isLoading: deleting } =
+	const { mutateAsync: deleteCluster, isPending: deleting } =
 		api.doks.delete.useMutation();
-	const { mutateAsync: upgradeToHA, isLoading: upgrading } =
+	const { mutateAsync: upgradeToHA, isPending: upgrading } =
 		api.doks.upgradeToHA.useMutation();
-	const { mutateAsync: addNodePool, isLoading: addingPool } =
+	const { mutateAsync: addNodePool, isPending: addingPool } =
 		api.doks.addNodePool.useMutation();
-	const { mutateAsync: updateNodePool, isLoading: updatingPool } =
+	const { mutateAsync: updateNodePool, isPending: updatingPool } =
 		api.doks.updateNodePool.useMutation();
 	const { mutateAsync: deleteNodePool } =
 		api.doks.deleteNodePool.useMutation();
