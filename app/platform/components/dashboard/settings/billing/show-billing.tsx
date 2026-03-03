@@ -7,9 +7,15 @@ import {
 	Zap,
 	Building2,
 	Crown,
+	Server,
+	Cpu,
+	Mic,
+	Image,
+	Star,
+	Brain,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const stripePromise = loadStripe(
 	process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
@@ -28,6 +34,9 @@ import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 import type { PlanType } from "@hanzo/platform/billing/pricing";
 
+const PRICING_API =
+	process.env.NEXT_PUBLIC_PRICING_API_URL || "https://pricing.hanzo.ai";
+
 const planIcons: Record<string, typeof Sparkles> = {
 	developer: Sparkles,
 	pro: Zap,
@@ -35,40 +44,58 @@ const planIcons: Record<string, typeof Sparkles> = {
 	enterprise: Crown,
 };
 
-const planFeatures: Record<string, string[]> = {
-	developer: [
-		"Up to 4 GB RAM per service",
-		"Up to 4 vCPU per service",
-		"50 GB storage",
-		"$5/mo in compute credits",
-		"1 organization",
-		"Community support",
-	],
-	pro: [
-		"Up to 16 GB RAM per service",
-		"Up to 16 vCPU per service",
-		"250 GB storage",
-		"$49/mo in compute credits",
-		"Up to 3 organizations",
-		"Priority support",
-	],
-	team: [
-		"Up to 32 GB RAM per service",
-		"Up to 32 vCPU per service",
-		"500 GB storage",
-		"$199/mo in compute credits",
-		"Unlimited organizations",
-		"Dedicated support",
-	],
-	enterprise: [
-		"Unlimited RAM per service",
-		"Unlimited vCPU per service",
-		"Unlimited storage",
-		"Custom compute credits",
-		"Unlimited organizations",
-		"Custom SLA & support",
-	],
-};
+interface CloudPlan {
+	id: string;
+	name: string;
+	description: string;
+	vcpus: number;
+	memoryGB: number;
+	diskGB: number;
+	cpuType: string;
+	maxVMs: number;
+	priceMonthly: number;
+	priceHourly: number;
+	freeTier?: boolean;
+	popular?: boolean;
+	features: string[];
+}
+
+interface PricingData {
+	cloudPlans: CloudPlan[];
+	models: any[];
+	tools: Record<string, any>;
+	gpu: any[];
+	loading: boolean;
+}
+
+function usePricingData(): PricingData {
+	const [data, setData] = useState<PricingData>({
+		cloudPlans: [],
+		models: [],
+		tools: {},
+		gpu: [],
+		loading: true,
+	});
+
+	useEffect(() => {
+		Promise.all([
+			fetch(`${PRICING_API}/v1/pricing/cloud/plans`).then((r) => r.json()).catch(() => null),
+			fetch(`${PRICING_API}/v1/pricing`).then((r) => r.json()).catch(() => null),
+		]).then(([cloudData, fullData]) => {
+			setData({
+				cloudPlans: cloudData?.plans ?? [],
+				models: fullData?.hanzoModels ?? [],
+				tools: fullData?.tools ?? {},
+				gpu: fullData?.cloud?.gpu ?? [],
+				loading: false,
+			});
+		}).catch(() => {
+			setData((prev) => ({ ...prev, loading: false }));
+		});
+	}, []);
+
+	return data;
+}
 
 export const ShowBilling = () => {
 	const { data: wallet } = api.billing.getWallet.useQuery();
@@ -80,6 +107,8 @@ export const ShowBilling = () => {
 		api.billing.createPortalSession.useMutation();
 
 	const [isAnnual, setIsAnnual] = useState(false);
+	const [activeTab, setActiveTab] = useState<"subscription" | "cloud" | "ai">("subscription");
+	const pricing = usePricingData();
 
 	const handleSubscribe = async (plan: PlanType) => {
 		const stripe = await stripePromise;
@@ -99,17 +128,31 @@ export const ShowBilling = () => {
 	const currentPlan = wallet?.plan || "developer";
 	const planOrder: PlanType[] = ["developer", "pro", "team", "enterprise"];
 
+	// Group models by category
+	const chatModels = pricing.models.filter(
+		(m: any) => m.name?.startsWith("zen4") && !m.name?.includes("coder"),
+	);
+	const codeModels = pricing.models.filter(
+		(m: any) => m.name?.includes("coder"),
+	);
+	const multimodalModels = pricing.models.filter(
+		(m: any) => m.name?.startsWith("zen3") && !m.name?.includes("embed") && !m.name?.includes("rerank"),
+	);
+	const embeddingModels = pricing.models.filter(
+		(m: any) => m.name?.includes("embed") || m.name?.includes("rerank"),
+	);
+
 	return (
 		<div className="w-full">
-			<Card className="h-full bg-sidebar p-2.5 rounded-xl max-w-5xl mx-auto">
+			<Card className="h-full bg-sidebar p-2.5 rounded-xl max-w-6xl mx-auto">
 				<div className="rounded-xl bg-background shadow-md">
 					<CardHeader>
 						<CardTitle className="text-xl flex flex-row gap-2">
 							<CreditCard className="size-6 text-muted-foreground self-center" />
-							Billing
+							Billing & Pricing
 						</CardTitle>
 						<CardDescription>
-							Manage your subscription and compute credits
+							Platform subscriptions, cloud compute, and AI model pricing
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-6 py-8 border-t">
@@ -139,177 +182,413 @@ export const ShowBilling = () => {
 							</div>
 						)}
 
-						{/* Billing Period Toggle */}
+						{/* Section Tabs */}
 						<Tabs
-							defaultValue="monthly"
-							value={isAnnual ? "annual" : "monthly"}
+							value={activeTab}
+							onValueChange={(v) => setActiveTab(v as typeof activeTab)}
 							className="w-full"
-							onValueChange={(e) => setIsAnnual(e === "annual")}
 						>
-							<TabsList>
-								<TabsTrigger value="monthly">Monthly</TabsTrigger>
-								<TabsTrigger value="annual">
-									Annual{" "}
-									<Badge variant="outline" className="ml-1.5 text-xs">
-										Save 20%
-									</Badge>
+							<TabsList className="w-full grid grid-cols-3">
+								<TabsTrigger value="subscription" className="gap-1.5">
+									<Sparkles className="size-3.5" /> Plans
+								</TabsTrigger>
+								<TabsTrigger value="cloud" className="gap-1.5">
+									<Server className="size-3.5" /> Cloud
+								</TabsTrigger>
+								<TabsTrigger value="ai" className="gap-1.5">
+									<Brain className="size-3.5" /> AI Models
 								</TabsTrigger>
 							</TabsList>
 						</Tabs>
 
-						{/* Plans */}
-						{isLoading ? (
-							<span className="text-base text-muted-foreground flex flex-row gap-3 items-center justify-center min-h-[10vh]">
-								Loading plans...
-								<Loader2 className="animate-spin" />
-							</span>
-						) : (
-							<div className="grid gap-4 md:grid-cols-2">
-								{planOrder.map((planKey) => {
-									const plan = plans?.[planKey];
-									if (!plan) return null;
-									const Icon = planIcons[planKey] || Sparkles;
-									const features = planFeatures[planKey] || [];
-									const isCurrent = currentPlan === planKey;
-									const isEnterprise = planKey === "enterprise";
-									const isPro = planKey === "pro";
-									const monthlyPrice = isAnnual && plan.annualFee != null
-										? plan.annualFee / 12
-										: plan.monthlyFee;
-									const totalPrice = isAnnual && plan.annualFee != null
-										? plan.annualFee
-										: plan.monthlyFee;
+						{/* ═══════════════ Subscription Plans ═══════════════ */}
+						{activeTab === "subscription" && (
+							<div className="space-y-6">
+								<Tabs
+									value={isAnnual ? "annual" : "monthly"}
+									onValueChange={(e) => setIsAnnual(e === "annual")}
+								>
+									<TabsList>
+										<TabsTrigger value="monthly">Monthly</TabsTrigger>
+										<TabsTrigger value="annual">
+											Annual{" "}
+											<Badge variant="outline" className="ml-1.5 text-xs">
+												Save 20%
+											</Badge>
+										</TabsTrigger>
+									</TabsList>
+								</Tabs>
 
-									return (
-										<div
-											key={planKey}
-											className={cn(
-												"flex flex-col rounded-xl border p-5 transition-all",
-												isPro
-													? "border-primary shadow-md ring-1 ring-primary/20"
-													: "border-border",
-												isCurrent && "bg-muted/20",
-											)}
-										>
-											<div className="flex items-center gap-2 mb-3">
-												<Icon className="size-5 text-primary" />
-												<h3 className="font-semibold text-lg">
-													{plan.name}
-												</h3>
-												{isPro && (
-													<Badge className="ml-auto">Popular</Badge>
-												)}
-												{isCurrent && (
-													<Badge variant="outline" className="ml-auto">
-														Current
-													</Badge>
-												)}
-											</div>
+								{isLoading ? (
+									<div className="flex items-center justify-center min-h-[10vh]">
+										<Loader2 className="animate-spin" />
+									</div>
+								) : (
+									<div className="grid gap-4 md:grid-cols-2">
+										{planOrder.map((planKey) => {
+											const plan = plans?.[planKey];
+											if (!plan) return null;
+											const Icon = planIcons[planKey] || Sparkles;
+											const isCurrent = currentPlan === planKey;
+											const isEnterprise = planKey === "enterprise";
+											const isPro = planKey === "pro";
+											const monthlyPrice =
+												isAnnual && plan.annualFee != null
+													? plan.annualFee / 12
+													: plan.monthlyFee;
 
-											<div className="mb-4">
-												{isEnterprise ? (
-													<p className="text-2xl font-bold">Custom</p>
-												) : (
-													<>
-														<span className="text-3xl font-bold">
-															${monthlyPrice.toFixed(0)}
-														</span>
-														<span className="text-sm text-muted-foreground">
-															/mo
-														</span>
-														{isAnnual && plan.annualFee != null && (
-															<p className="text-xs text-muted-foreground mt-1">
-																${totalPrice.toFixed(0)}/yr billed annually
-															</p>
-														)}
-													</>
-												)}
-											</div>
-
-											<ul className="flex flex-col gap-2 mb-6 flex-1">
-												{features.map((feature) => (
-													<li
-														key={feature}
-														className="flex items-start gap-2 text-sm text-muted-foreground"
-													>
-														<CheckIcon className="size-4 text-primary shrink-0 mt-0.5" />
-														{feature}
-													</li>
-												))}
-											</ul>
-
-											{isEnterprise ? (
-												<Button variant="outline" className="w-full" asChild>
-													<Link href="mailto:sales@hanzo.ai">
-														Contact Sales
-													</Link>
-												</Button>
-											) : isCurrent ? (
-												<Button
-													variant="outline"
-													className="w-full"
-													onClick={handleManageSubscription}
-												>
-													Manage Plan
-												</Button>
-											) : (
-												<Button
+											return (
+												<div
+													key={planKey}
 													className={cn(
-														"w-full",
-														isPro && "bg-primary text-primary-foreground",
+														"flex flex-col rounded-xl border p-5 transition-all",
+														isPro
+															? "border-primary shadow-md ring-1 ring-primary/20"
+															: "border-border",
+														isCurrent && "bg-muted/20",
 													)}
-													variant={isPro ? "default" : "outline"}
-													disabled={isSubscribing}
-													onClick={() => handleSubscribe(planKey)}
 												>
-													{isSubscribing ? (
-														<Loader2 className="animate-spin mr-2 size-4" />
-													) : null}
-													{plan.monthlyFee === 0
-														? "Get Started Free"
-														: `Upgrade to ${plan.name}`}
-												</Button>
-											)}
+													<div className="flex items-center gap-2 mb-3">
+														<Icon className="size-5 text-primary" />
+														<h3 className="font-semibold text-lg">
+															{plan.name}
+														</h3>
+														{isPro && (
+															<Badge className="ml-auto">Popular</Badge>
+														)}
+														{isCurrent && (
+															<Badge variant="outline" className="ml-auto">
+																Current
+															</Badge>
+														)}
+													</div>
+													<div className="mb-4">
+														{isEnterprise ? (
+															<p className="text-2xl font-bold">Custom</p>
+														) : (
+															<>
+																<span className="text-3xl font-bold">
+																	${monthlyPrice.toFixed(0)}
+																</span>
+																<span className="text-sm text-muted-foreground">
+																	/mo
+																</span>
+															</>
+														)}
+													</div>
+													<div className="text-sm text-muted-foreground mb-4">
+														{planKey === "developer" && "Free tier with $5 credit"}
+														{planKey === "pro" && "For developers shipping products"}
+														{planKey === "team" && "SSO, shared billing, custom training"}
+														{planKey === "enterprise" && "Custom SLA & dedicated support"}
+													</div>
+													{isEnterprise ? (
+														<Button variant="outline" className="w-full mt-auto" asChild>
+															<Link href="mailto:sales@hanzo.ai">
+																Contact Sales
+															</Link>
+														</Button>
+													) : isCurrent ? (
+														<Button
+															variant="outline"
+															className="w-full mt-auto"
+															onClick={handleManageSubscription}
+														>
+															Manage Plan
+														</Button>
+													) : (
+														<Button
+															className={cn("w-full mt-auto", isPro && "bg-primary")}
+															variant={isPro ? "default" : "outline"}
+															disabled={isSubscribing}
+															onClick={() => handleSubscribe(planKey)}
+														>
+															{isSubscribing && (
+																<Loader2 className="animate-spin mr-2 size-4" />
+															)}
+															{plan.monthlyFee === 0
+																? "Get Started Free"
+																: `Upgrade to ${plan.name}`}
+														</Button>
+													)}
+												</div>
+											);
+										})}
+									</div>
+								)}
+
+								{/* Included with all plans */}
+								<div className="p-4 rounded-lg border bg-muted/20">
+									<h4 className="text-sm font-semibold mb-3">
+										Included with All Plans
+									</h4>
+									<div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-muted-foreground">
+										<div className="flex items-center gap-1.5">
+											<CheckIcon className="size-3.5 text-primary" /> Zero egress fees
 										</div>
-									);
-								})}
+										<div className="flex items-center gap-1.5">
+											<CheckIcon className="size-3.5 text-primary" /> DDoS protection
+										</div>
+										<div className="flex items-center gap-1.5">
+											<CheckIcon className="size-3.5 text-primary" /> Automated backups
+										</div>
+										<div className="flex items-center gap-1.5">
+											<CheckIcon className="size-3.5 text-primary" /> 100+ AI models
+										</div>
+									</div>
+								</div>
 							</div>
 						)}
 
-						{/* Usage Rates */}
-						<div className="mt-6 p-4 rounded-lg border bg-muted/20">
-							<h4 className="text-sm font-semibold mb-3">
-								Usage-Based Compute Pricing
-							</h4>
-							<p className="text-xs text-muted-foreground mb-3">
-								Credits are consumed based on actual resource usage. All plans
-								include monthly credits applied automatically.
-							</p>
-							<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-								<div className="text-center p-2 rounded bg-background border">
-									<div className="text-sm font-bold">$10</div>
-									<div className="text-xs text-muted-foreground">
-										/GB RAM/mo
+						{/* ═══════════════ Cloud VM Plans ═══════════════ */}
+						{activeTab === "cloud" && (
+							<div className="space-y-6">
+								<p className="text-sm text-muted-foreground">
+									Cloud VM plans for deploying services. Same pricing across all regions.
+								</p>
+
+								{pricing.loading ? (
+									<div className="flex items-center justify-center min-h-[10vh]">
+										<Loader2 className="animate-spin" />
 									</div>
-								</div>
-								<div className="text-center p-2 rounded bg-background border">
-									<div className="text-sm font-bold">$20</div>
-									<div className="text-xs text-muted-foreground">
-										/vCPU/mo
+								) : pricing.cloudPlans.length === 0 ? (
+									<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+										Unable to load cloud plans. Please try again later.
 									</div>
-								</div>
-								<div className="text-center p-2 rounded bg-background border">
-									<div className="text-sm font-bold">$0.15</div>
-									<div className="text-xs text-muted-foreground">
-										/GB storage/mo
-									</div>
-								</div>
-								<div className="text-center p-2 rounded bg-background border">
-									<div className="text-sm font-bold">$0.05</div>
-									<div className="text-xs text-muted-foreground">/GB egress</div>
-								</div>
+								) : (
+									<>
+										<div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+											{pricing.cloudPlans.map((plan) => (
+												<div
+													key={plan.id}
+													className={cn(
+														"rounded-xl border p-4 bg-card transition-colors relative",
+														plan.popular
+															? "border-primary ring-1 ring-primary/20"
+															: "hover:border-primary/30",
+													)}
+												>
+													{plan.popular && (
+														<div className="absolute -top-2.5 left-3 px-2 py-0.5 bg-primary text-primary-foreground text-xs font-medium rounded-full flex items-center gap-1">
+															<Star className="size-3" /> Most Popular
+														</div>
+													)}
+													<div className="flex items-baseline justify-between mb-2">
+														<h3 className="font-semibold">{plan.name}</h3>
+														<div>
+															<span className="text-xl font-bold">
+																${plan.priceMonthly}
+															</span>
+															<span className="text-xs text-muted-foreground">
+																/mo
+															</span>
+														</div>
+													</div>
+													<div className="space-y-1 text-xs text-muted-foreground">
+														<div>
+															{plan.vcpus} vCPU ({plan.cpuType}) &middot;{" "}
+															{plan.memoryGB} GB RAM
+														</div>
+														<div>
+															{plan.diskGB} GB SSD &middot; Up to{" "}
+															{plan.maxVMs} VM
+															{plan.maxVMs > 1 ? "s" : ""}
+														</div>
+													</div>
+													{plan.freeTier && (
+														<div className="mt-1.5 text-xs text-green-500 font-medium">
+															$5 free credit
+														</div>
+													)}
+												</div>
+											))}
+										</div>
+
+										{/* GPU Tiers */}
+										<div className="space-y-3">
+											<h4 className="text-sm font-semibold flex items-center gap-1.5">
+												<Cpu className="size-4" /> GPU Compute
+											</h4>
+											<div className="grid gap-3 md:grid-cols-3">
+												{[
+													{ name: "GPU Standard", gpu: "1x NVIDIA H100", vram: "80 GB", price: "$3.48/hr" },
+													{ name: "GPU Pro", gpu: "2x NVIDIA H100", vram: "160 GB", price: "$6.96/hr" },
+													{ name: "GPU Ultra", gpu: "4x NVIDIA H100", vram: "320 GB", price: "$13.92/hr" },
+												].map((tier) => (
+													<div key={tier.name} className="rounded-lg border p-3 bg-card">
+														<div className="font-medium text-sm">{tier.name}</div>
+														<div className="text-xs text-muted-foreground mt-1">
+															{tier.gpu} &middot; {tier.vram}
+														</div>
+														<div className="text-sm font-bold mt-1.5">{tier.price}</div>
+													</div>
+												))}
+											</div>
+											<p className="text-xs text-muted-foreground">
+												72% cheaper than AWS. No commitment required.
+											</p>
+										</div>
+
+										{/* Storage & Extras */}
+										<div className="p-4 rounded-lg border bg-muted/20">
+											<h4 className="text-sm font-semibold mb-3">
+												Additional Services
+											</h4>
+											<div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+												<div className="text-center p-2 rounded bg-background border">
+													<div className="font-bold">$0.08</div>
+													<div className="text-xs text-muted-foreground">/GB storage/mo</div>
+												</div>
+												<div className="text-center p-2 rounded bg-background border">
+													<div className="font-bold">$0</div>
+													<div className="text-xs text-muted-foreground">egress fees</div>
+												</div>
+												<div className="text-center p-2 rounded bg-background border">
+													<div className="font-bold">Included</div>
+													<div className="text-xs text-muted-foreground">DDoS protection</div>
+												</div>
+												<div className="text-center p-2 rounded bg-background border">
+													<div className="font-bold">Included</div>
+													<div className="text-xs text-muted-foreground">automated backups</div>
+												</div>
+											</div>
+										</div>
+									</>
+								)}
 							</div>
-						</div>
+						)}
+
+						{/* ═══════════════ AI Model Pricing ═══════════════ */}
+						{activeTab === "ai" && (
+							<div className="space-y-6">
+								<p className="text-sm text-muted-foreground">
+									All models available through the Hanzo AI Gateway. Zero markup on third-party models.
+								</p>
+
+								{pricing.loading ? (
+									<div className="flex items-center justify-center min-h-[10vh]">
+										<Loader2 className="animate-spin" />
+									</div>
+								) : pricing.models.length === 0 ? (
+									<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+										Unable to load model pricing. Please try again later.
+									</div>
+								) : (
+									<>
+										{/* Zen4 Chat Models */}
+										{chatModels.length > 0 && (
+											<ModelSection
+												title="Zen4 Chat & Reasoning"
+												icon={<Brain className="size-4" />}
+												models={chatModels}
+											/>
+										)}
+
+										{/* Code Models */}
+										{codeModels.length > 0 && (
+											<ModelSection
+												title="Zen4 Coder"
+												icon={<Cpu className="size-4" />}
+												models={codeModels}
+											/>
+										)}
+
+										{/* Multimodal Models */}
+										{multimodalModels.length > 0 && (
+											<ModelSection
+												title="Zen3 Multimodal"
+												icon={<Image className="size-4" />}
+												models={multimodalModels}
+											/>
+										)}
+
+										{/* Embeddings */}
+										{embeddingModels.length > 0 && (
+											<ModelSection
+												title="Embeddings & Reranking"
+												icon={<Sparkles className="size-4" />}
+												models={embeddingModels}
+											/>
+										)}
+
+										{/* Audio Pricing */}
+										<div className="space-y-3">
+											<h4 className="text-sm font-semibold flex items-center gap-1.5">
+												<Mic className="size-4" /> Audio & Speech
+											</h4>
+											<div className="rounded-lg border overflow-hidden">
+												<table className="w-full text-sm">
+													<thead>
+														<tr className="border-b bg-muted/30">
+															<th className="px-3 py-2 text-left font-medium">Model</th>
+															<th className="px-3 py-2 text-right font-medium">Price/min</th>
+															<th className="px-3 py-2 text-right font-medium">vs OpenAI</th>
+														</tr>
+													</thead>
+													<tbody>
+														<tr className="border-b">
+															<td className="px-3 py-2">Zen3 Audio Fast</td>
+															<td className="px-3 py-2 text-right font-mono">$0.0009</td>
+															<td className="px-3 py-2 text-right text-green-500 font-medium">85% cheaper</td>
+														</tr>
+														<tr className="border-b">
+															<td className="px-3 py-2">Zen3 Audio</td>
+															<td className="px-3 py-2 text-right font-mono">$0.0015</td>
+															<td className="px-3 py-2 text-right text-green-500 font-medium">75% cheaper</td>
+														</tr>
+														<tr className="border-b">
+															<td className="px-3 py-2">Zen3 ASR (streaming)</td>
+															<td className="px-3 py-2 text-right font-mono">$0.0035</td>
+															<td className="px-3 py-2 text-right text-muted-foreground">real-time</td>
+														</tr>
+													</tbody>
+												</table>
+											</div>
+										</div>
+
+										{/* Tool Pricing */}
+										<div className="space-y-3">
+											<h4 className="text-sm font-semibold">Tool Pricing</h4>
+											<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+												{[
+													{ name: "Web Search", price: "$0.005/query" },
+													{ name: "Code Interpreter", price: "$0.03/min" },
+													{ name: "File Storage", price: "$0.20/GB/mo" },
+													{ name: "Image Generation", price: "$0.04/image" },
+													{ name: "Speech-to-Text", price: "$0.0009/min" },
+													{ name: "Text-to-Speech", price: "$15/1M chars" },
+												].map((tool) => (
+													<div
+														key={tool.name}
+														className="rounded-lg border p-3 bg-card"
+													>
+														<div className="text-xs text-muted-foreground">
+															{tool.name}
+														</div>
+														<div className="text-sm font-bold mt-0.5">
+															{tool.price}
+														</div>
+													</div>
+												))}
+											</div>
+										</div>
+
+										{/* Third-party */}
+										<div className="p-4 rounded-lg border bg-muted/20">
+											<h4 className="text-sm font-semibold mb-2">
+												100+ Third-Party Models
+											</h4>
+											<p className="text-xs text-muted-foreground">
+												GPT-5, Claude Opus 4.6, Gemini 3.1 Pro, DeepSeek R1, Llama 4,
+												Mistral Large, and more — all at provider pricing with{" "}
+												<span className="font-medium text-foreground">zero markup</span>.
+												Same API key, same endpoint.
+											</p>
+										</div>
+									</>
+								)}
+							</div>
+						)}
 
 						{/* Help */}
 						<div className="flex flex-col gap-1.5 mt-4">
@@ -343,3 +622,68 @@ export const ShowBilling = () => {
 		</div>
 	);
 };
+
+/** Renders a table of models with their specs and pricing tier. */
+function ModelSection({
+	title,
+	icon,
+	models,
+}: {
+	title: string;
+	icon: React.ReactNode;
+	models: any[];
+}) {
+	return (
+		<div className="space-y-3">
+			<h4 className="text-sm font-semibold flex items-center gap-1.5">
+				{icon} {title}
+			</h4>
+			<div className="rounded-lg border overflow-hidden">
+				<table className="w-full text-sm">
+					<thead>
+						<tr className="border-b bg-muted/30">
+							<th className="px-3 py-2 text-left font-medium">Model</th>
+							<th className="px-3 py-2 text-left font-medium hidden md:table-cell">
+								Architecture
+							</th>
+							<th className="px-3 py-2 text-right font-medium hidden md:table-cell">
+								Context
+							</th>
+							<th className="px-3 py-2 text-right font-medium">Tier</th>
+						</tr>
+					</thead>
+					<tbody>
+						{models.map((m: any) => (
+							<tr key={m.name} className="border-b last:border-0">
+								<td className="px-3 py-2">
+									<div className="font-medium">{m.fullName || m.name}</div>
+									{m.description && (
+										<div className="text-xs text-muted-foreground line-clamp-1">
+											{m.description}
+										</div>
+									)}
+								</td>
+								<td className="px-3 py-2 text-xs text-muted-foreground hidden md:table-cell">
+									{m.specs?.arch || "—"}
+									{m.specs?.params && (
+										<div className="text-xs">{m.specs.params}</div>
+									)}
+								</td>
+								<td className="px-3 py-2 text-right text-xs text-muted-foreground hidden md:table-cell">
+									{m.context
+										? `${(m.context / 1000).toFixed(0)}K`
+										: "—"}
+								</td>
+								<td className="px-3 py-2 text-right">
+									<Badge variant="outline" className="text-xs capitalize">
+										{m.tier || "—"}
+									</Badge>
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	);
+}
