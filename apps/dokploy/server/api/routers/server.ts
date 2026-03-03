@@ -210,7 +210,7 @@ export const serverRouter = createTRPCRouter({
 						enabled: boolean;
 						version: string;
 					};
-					isDokployNetworkInstalled: boolean;
+					isHanzo PlatformNetworkInstalled: boolean;
 					isSwarmInstalled: boolean;
 					isMainDirectoryInstalled: boolean;
 				};

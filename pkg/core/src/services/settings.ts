@@ -21,17 +21,17 @@ export const DEFAULT_UPDATE_DATA: IUpdateData = {
 	updateAvailable: false,
 };
 
-/** Returns current Dokploy docker image tag or `latest` by default. */
-export const getDokployImageTag = () => {
+/** Returns current Hanzo Platform docker image tag or `latest` by default. */
+export const getHanzoPlatformImageTag = () => {
 	return process.env.RELEASE_TAG || "latest";
 };
 
-export const getDokployImage = () => {
-	return `dokploy/dokploy:${getDokployImageTag()}`;
+export const getHanzoPlatformImage = () => {
+	return `dokploy/dokploy:${getHanzoPlatformImageTag()}`;
 };
 
 export const pullLatestRelease = async () => {
-	const stream = await docker.pull(getDokployImage());
+	const stream = await docker.pull(getHanzoPlatformImage());
 	await new Promise((resolve, reject) => {
 		docker.modem.followProgress(stream, (err, res) =>
 			err ? reject(err) : resolve(res),
@@ -39,7 +39,7 @@ export const pullLatestRelease = async () => {
 	});
 };
 
-/** Returns Dokploy docker service image digest */
+/** Returns Hanzo Platform docker service image digest */
 export const getServiceImageDigest = async () => {
 	const { stdout } = await execAsync(
 		"docker service inspect dokploy --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'",
@@ -84,7 +84,7 @@ export const getUpdateData = async (): Promise<IUpdateData> => {
 		url = data?.next;
 	}
 
-	const imageTag = getDokployImageTag();
+	const imageTag = getHanzoPlatformImageTag();
 	const searchedDigest = allResults.find((t) => t.name === imageTag)?.digest;
 
 	if (!searchedDigest) {
@@ -396,7 +396,7 @@ export const readPorts = async (
 
 export const writeTraefikSetup = async (input: TraefikOptions) => {
 	const resourceType = await getDockerResourceType(
-		"dokploy-traefik",
+		"hanzo-traefik",
 		input.serverId,
 	);
 

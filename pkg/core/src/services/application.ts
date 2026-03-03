@@ -42,7 +42,7 @@ import { createTraefikConfig } from "@hanzo/core/utils/traefik/application";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { encodeBase64 } from "../utils/docker/utils";
-import { getDokployUrl } from "./admin";
+import { getHanzoPlatformUrl } from "./admin";
 import {
 	createDeployment,
 	createDeploymentPreview,
@@ -184,7 +184,7 @@ export const deployApplication = async ({
 }) => {
 	const application = await findApplicationById(applicationId);
 
-	const buildLink = `${await getDokployUrl()}/dashboard/project/${application.environment.projectId}/environment/${application.environmentId}/services/application/${application.applicationId}?tab=deployments`;
+	const buildLink = `${await getHanzoPlatformUrl()}/dashboard/project/${application.environment.projectId}/environment/${application.environmentId}/services/application/${application.applicationId}?tab=deployments`;
 	const deployment = await createDeployment({
 		applicationId: applicationId,
 		title: titleLog,
@@ -311,7 +311,7 @@ export const deployRemoteApplication = async ({
 }) => {
 	const application = await findApplicationById(applicationId);
 
-	const buildLink = `${await getDokployUrl()}/dashboard/project/${application.environment.projectId}/environment/${application.environmentId}/services/application/${application.applicationId}?tab=deployments`;
+	const buildLink = `${await getHanzoPlatformUrl()}/dashboard/project/${application.environment.projectId}/environment/${application.environmentId}/services/application/${application.applicationId}?tab=deployments`;
 	const deployment = await createDeployment({
 		applicationId: applicationId,
 		title: titleLog,
@@ -468,7 +468,7 @@ export const deployPreviewApplication = async ({
 		);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Dokploy Preview Deployment\n\n${buildingComment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${buildingComment}`,
 		});
 		application.appName = previewDeployment.appName;
 		application.env = `${application.previewEnv}\nDOKPLOY_DEPLOY_URL=${previewDeployment?.domain?.host}`;
@@ -490,7 +490,7 @@ export const deployPreviewApplication = async ({
 		);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Dokploy Preview Deployment\n\n${successComment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${successComment}`,
 		});
 		await updateDeploymentStatus(deployment.deploymentId, "done");
 		await updatePreviewDeployment(previewDeploymentId, {
@@ -500,7 +500,7 @@ export const deployPreviewApplication = async ({
 		const comment = getIssueComment(application.name, "error", previewDomain);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Dokploy Preview Deployment\n\n${comment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${comment}`,
 		});
 		await updateDeploymentStatus(deployment.deploymentId, "error");
 		await updatePreviewDeployment(previewDeploymentId, {
@@ -575,7 +575,7 @@ export const deployRemotePreviewApplication = async ({
 		);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Dokploy Preview Deployment\n\n${buildingComment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${buildingComment}`,
 		});
 		application.appName = previewDeployment.appName;
 		application.env = `${application.previewEnv}\nDOKPLOY_DEPLOY_URL=${previewDeployment?.domain?.host}`;
@@ -605,7 +605,7 @@ export const deployRemotePreviewApplication = async ({
 		);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Dokploy Preview Deployment\n\n${successComment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${successComment}`,
 		});
 		await updateDeploymentStatus(deployment.deploymentId, "done");
 		await updatePreviewDeployment(previewDeploymentId, {
@@ -615,7 +615,7 @@ export const deployRemotePreviewApplication = async ({
 		const comment = getIssueComment(application.name, "error", previewDomain);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Dokploy Preview Deployment\n\n${comment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${comment}`,
 		});
 		await updateDeploymentStatus(deployment.deploymentId, "error");
 		await updatePreviewDeployment(previewDeploymentId, {
