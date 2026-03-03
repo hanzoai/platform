@@ -2,7 +2,7 @@
 import { ShowResources } from "@/components/dashboard/application/advanced/show-resources";
 import { ShowVolumes } from "@/components/dashboard/application/advanced/volumes/show-volumes";
 ========
-import { validateRequest } from "@hanzo/core/lib/auth";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import { HelpCircle, ServerOff } from "lucide-react";
 import type {
@@ -51,7 +51,7 @@ import { cn } from "@/lib/utils";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
 <<<<<<<< HEAD:app/hanzo/pages/dashboard/project/[projectId]/services/mongo/[mongoId].tsx
-import { validateRequest } from "@hanzo/core/lib/auth";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import { HelpCircle, ServerOff } from "lucide-react";
 import type {

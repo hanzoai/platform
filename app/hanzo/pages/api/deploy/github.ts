@@ -7,7 +7,7 @@ import {
 	findPreviewDeploymentsByPullRequestId,
 	IS_CLOUD,
 	removePreviewDeployment,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { Webhooks } from "@octokit/webhooks";
 import { and, eq } from "drizzle-orm";
 import type { NextApiRequest, NextApiResponse } from "next";

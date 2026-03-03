@@ -28,7 +28,7 @@ import {
 	writeConfig,
 	writeConfigRemote,
 	// uploadFileSchema
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";

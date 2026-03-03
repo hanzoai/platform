@@ -10,8 +10,8 @@ import {
 	execAsync,
 	findServerById,
 	findUserById,
-	getHanzo PlatformImage,
-	getHanzo PlatformImageTag,
+	getHanzoPlatformImage,
+	getHanzoPlatformImageTag,
 	getLogCleanupStatus,
 	getUpdateData,
 	IS_CLOUD,
@@ -42,7 +42,7 @@ import {
 	writeMainConfig,
 	writeTraefikConfigInPath,
 	writeTraefikSetup,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { generateOpenApiDocument } from "@hanzo/trpc-openapi";
 import { TRPCError } from "@trpc/server";
 import { eq, sql } from "drizzle-orm";
@@ -398,18 +398,18 @@ export const settingsRouter = createTRPCRouter({
 			"update",
 			"--force",
 			"--image",
-			getHanzo PlatformImage(),
+			getHanzoPlatformImage(),
 			"hanzo",
 		]);
 
 		return true;
 	}),
 
-	getHanzo PlatformVersion: protectedProcedure.query(() => {
+	getHanzoPlatformVersion: protectedProcedure.query(() => {
 		return packageInfo.version;
 	}),
 	getReleaseTag: protectedProcedure.query(() => {
-		return getHanzo PlatformImageTag();
+		return getHanzoPlatformImageTag();
 	}),
 	readDirectories: protectedProcedure
 		.input(apiServerSchema)
@@ -855,7 +855,7 @@ export const settingsRouter = createTRPCRouter({
 		return getLogCleanupStatus();
 	}),
 
-	getHanzo PlatformCloudIps: adminProcedure.query(async () => {
+	getHanzoPlatformCloudIps: adminProcedure.query(async () => {
 		if (!IS_CLOUD) {
 			return [];
 		}

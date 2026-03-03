@@ -5,12 +5,12 @@ vi.mock("node:fs", () => ({
 	default: fs,
 }));
 
-import type { FileConfig, User } from "@hanzo/core";
+import type { FileConfig, User } from "@hanzo/platform";
 import {
 	createDefaultServerTraefikConfig,
 	loadOrCreateConfig,
 	updateServerTraefik,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { beforeEach, expect, test, vi } from "vitest";
 
 const baseAdmin: User = {

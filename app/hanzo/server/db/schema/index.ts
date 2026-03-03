@@ -1,1 +1,1 @@
-export * from "@hanzo/core/db/schema";
+export * from "@hanzo/platform/db/schema";
