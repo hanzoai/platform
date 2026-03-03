@@ -2,7 +2,28 @@ import Stripe from "stripe";
 import { addCreditsToWallet, getOrganizationWallet } from "./wallet-service";
 import { PLANS, type PlanType } from "./pricing";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2024-09-30.acacia" });
+// Lazy initialization to handle missing API keys gracefully
+let _stripe: Stripe | null = null;
+
+function getStripe(): Stripe {
+  if (!_stripe) {
+    const apiKey = process.env.STRIPE_SECRET_KEY;
+    if (!apiKey || apiKey === "CHANGE_ME") {
+      throw new Error("Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.");
+    }
+    _stripe = new Stripe(apiKey, { apiVersion: "2024-09-30.acacia" });
+  }
+  return _stripe;
+}
+
+// For backward compatibility, export as stripe (getter)
+const stripe = new Proxy({} as Stripe, {
+  get: (_, prop) => {
+    const instance = getStripe();
+    const value = (instance as any)[prop];
+    return typeof value === "function" ? value.bind(instance) : value;
+  },
+});
 
 const WEBSITE_URL = process.env.NODE_ENV === "development" ? "http://localhost:3000" : process.env.SITE_URL;
 
