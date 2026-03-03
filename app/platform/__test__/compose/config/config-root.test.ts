@@ -123,7 +123,7 @@ services:
     image: node:latest
 
   db:
-    image: postgres:latest
+    image: ghcr.io/hanzoai/sql:18
 
 configs:
   web_config:
@@ -148,7 +148,7 @@ services:
     image: node:latest
 
   db:
-    image: postgres:latest
+    image: ghcr.io/hanzoai/sql:18
 
 configs:
   web_config-testhash:
