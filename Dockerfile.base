@@ -4,7 +4,7 @@
 # buildpacks, rclone) that never change between code pushes.
 # Rebuild weekly or when this file changes.
 #
-# Image: ghcr.io/hanzoai/platform-base:latest
+# Image: ghcr.io/hanzoai/platform:base
 #
 FROM node:24.4.0-slim
 
