@@ -2,7 +2,7 @@
 import { ShowResources } from "@/components/dashboard/application/advanced/show-resources";
 import { ShowVolumes } from "@/components/dashboard/application/advanced/volumes/show-volumes";
 ========
-import { validateRequest } from "@dokploy/server/lib/auth";
+import { validateRequest } from "@hanzo/core/lib/auth";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import { HelpCircle, ServerOff } from "lucide-react";
 import type {
