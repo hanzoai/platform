@@ -340,10 +340,11 @@ if ! [ -x "$(command -v docker)" ]; then
             ;;
         "amzn")
             dnf install docker -y >/dev/null 2>&1
-            DOCKER_CONFIG=/usr/local/lib/docker
-            mkdir -p $DOCKER_CONFIG/cli-plugins >/dev/null 2>&1
-            curl -sL https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o $DOCKER_CONFIG/cli-plugins/docker-compose >/dev/null 2>&1
-            chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose >/dev/null 2>&1
+            # Fix: DOCKER_CONFIG should be a directory, not a file
+            DOCKER_CONFIG_DIR=/usr/local/lib/docker
+            mkdir -p $DOCKER_CONFIG_DIR/cli-plugins >/dev/null 2>&1
+            curl -sL https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o $DOCKER_CONFIG_DIR/cli-plugins/docker-compose >/dev/null 2>&1
+            chmod +x $DOCKER_CONFIG_DIR/cli-plugins/docker-compose >/dev/null 2>&1
             systemctl start docker >/dev/null 2>&1
             systemctl enable docker >/dev/null 2>&1
             if ! [ -x "$(command -v docker)" ]; then

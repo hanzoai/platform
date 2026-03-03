@@ -23,3 +23,36 @@ export const execAsyncRemote = async (
 export const sleep = (ms: number) => {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 };
+
+/**
+ * Kill a process and all its children
+ * @param pid Process ID to kill
+ * @param signal Signal to send (default: SIGTERM)
+ */
+export const killProcess = async (pid: number, signal: NodeJS.Signals = 'SIGTERM'): Promise<void> => {
+	try {
+		// Kill the process group (negative PID kills all processes in the group)
+		process.kill(-pid, signal);
+		console.log(`Killed process group ${pid} with signal ${signal}`);
+	} catch (error: any) {
+		if (error.code === 'ESRCH') {
+			// Process doesn't exist, which is fine
+			console.log(`Process ${pid} does not exist`);
+		} else {
+			throw error;
+		}
+	}
+};
+
+/**
+ * Kill a remote process (stub implementation)
+ * Multi-server functionality has been removed
+ */
+export const killRemoteProcess = async (
+	_serverId: string | null,
+	pid: number,
+	signal: NodeJS.Signals = 'SIGTERM'
+): Promise<void> => {
+	console.warn("Multi-server functionality has been removed. Killing process locally.");
+	await killProcess(pid, signal);
+};
