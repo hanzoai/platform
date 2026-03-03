@@ -1,6 +1,7 @@
 export * from "./account";
 export * from "./ai";
 export * from "./application";
+export * from "./cloud-provider";
 export * from "./compute-pool";
 export * from "./compute-offer";
 export * from "./backups";
