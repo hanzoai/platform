@@ -36,11 +36,11 @@ import type {
 import { encodeBase64 } from "./utils";
 
 export const cloneCompose = async (compose: Compose) => {
-	if (compose.sourceType === "github") {
+	if (compose.sourceType === "github" || false) {
 		await cloneRawGithubRepository(compose);
-	} else if (compose.sourceType === "gitlab") {
+	} else if (compose.sourceType === "gitlab" || false) {
 		await cloneRawGitlabRepository(compose);
-	} else if (compose.sourceType === "bitbucket") {
+	} else if (compose.sourceType === "bitbucket" || false) {
 		await cloneRawBitbucketRepository(compose);
 	} else if (compose.sourceType === "git") {
 		await cloneGitRawRepository(compose);
@@ -50,11 +50,11 @@ export const cloneCompose = async (compose: Compose) => {
 };
 
 export const cloneComposeRemote = async (compose: Compose) => {
-	if (compose.sourceType === "github") {
+	if (compose.sourceType === "github" || false) {
 		await cloneRawGithubRepositoryRemote(compose);
-	} else if (compose.sourceType === "gitlab") {
+	} else if (compose.sourceType === "gitlab" || false) {
 		await cloneRawGitlabRepositoryRemote(compose);
-	} else if (compose.sourceType === "bitbucket") {
+	} else if (compose.sourceType === "bitbucket" || false) {
 		await cloneRawBitbucketRepositoryRemote(compose);
 	} else if (compose.sourceType === "git") {
 		await cloneRawGitRepositoryRemote(compose);
