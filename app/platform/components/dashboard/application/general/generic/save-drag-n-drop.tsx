@@ -24,7 +24,7 @@ interface Props {
 export const SaveDragNDrop = ({ applicationId }: Props) => {
 	const { data, refetch } = api.application.one.useQuery({ applicationId });
 
-	const { mutateAsync, isLoading } =
+	const { mutateAsync, isPending: isLoading } =
 		api.application.dropDeployment.useMutation();
 
 	const form = useForm<UploadFile>({

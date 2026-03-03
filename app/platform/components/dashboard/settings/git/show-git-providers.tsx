@@ -37,7 +37,7 @@ import { EditGitlabProvider } from "./gitlab/edit-gitlab-provider";
 
 export const ShowGitProviders = () => {
 	const { data, isLoading, refetch } = api.gitProvider.getAll.useQuery();
-	const { mutateAsync, isLoading: isRemoving } =
+	const { mutateAsync, isPending: isRemoving } =
 		api.gitProvider.remove.useMutation();
 	const url = useUrl();
 

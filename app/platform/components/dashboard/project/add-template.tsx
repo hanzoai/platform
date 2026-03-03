@@ -125,7 +125,7 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 	const utils = api.useUtils();
 
 	const [serverId, setServerId] = useState<string | undefined>(undefined);
-	const { mutateAsync, isLoading, error, isError } =
+	const { mutateAsync, isPending: isLoading, error, isError } =
 		api.compose.deployTemplate.useMutation();
 
 	const templates =
