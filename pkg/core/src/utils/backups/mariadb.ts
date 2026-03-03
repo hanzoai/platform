@@ -50,6 +50,7 @@ export const runMariadbBackup = async (
 			databaseType: "mariadb",
 			type: "success",
 			organizationId: project.organizationId,
+			databaseName: database,
 		});
 	} catch (error) {
 		console.log(error);
@@ -61,6 +62,7 @@ export const runMariadbBackup = async (
 			// @ts-ignore
 			errorMessage: error?.message || "Error message not provided",
 			organizationId: project.organizationId,
+			databaseName: database,
 		});
 		throw error;
 	}
