@@ -1,36 +1,57 @@
-import type { Domain } from "@hanzo/core";
-import type { Redirect } from "@hanzo/core";
-import type { ApplicationNested } from "@hanzo/core";
-import { createRouterConfig } from "@hanzo/core";
+import type { ApplicationNested, Domain, Redirect } from "@dokploy/server";
+import { createRouterConfig } from "@dokploy/server";
 import { expect, test } from "vitest";
 
 const baseApp: ApplicationNested = {
+	railpackVersion: "0.2.2",
+	rollbackActive: false,
 	applicationId: "",
+	previewLabels: [],
 	herokuVersion: "",
+	giteaRepository: "",
+	giteaOwner: "",
+	giteaBranch: "",
+	giteaBuildPath: "",
+	giteaId: "",
+	cleanCache: false,
 	applicationStatus: "done",
 	appName: "",
 	autoDeploy: true,
+	enableSubmodules: false,
+	previewRequireCollaboratorPermissions: false,
 	serverId: "",
 	branch: null,
 	dockerBuildStage: "",
 	registryUrl: "",
+	watchPaths: [],
 	buildArgs: null,
 	isPreviewDeploymentsActive: false,
 	previewBuildArgs: null,
+	triggerType: "push",
 	previewCertificateType: "none",
 	previewEnv: null,
 	previewHttps: false,
 	previewPath: "/",
 	previewPort: 3000,
 	previewLimit: 0,
+	previewCustomCertResolver: null,
 	previewWildcard: "",
-	project: {
+	environmentId: "",
+	environment: {
 		env: "",
-		organizationId: "",
+		environmentId: "",
 		name: "",
-		description: "",
 		createdAt: "",
+		description: "",
 		projectId: "",
+		project: {
+			env: "",
+			organizationId: "",
+			name: "",
+			description: "",
+			createdAt: "",
+			projectId: "",
+		},
 	},
 	buildPath: "/",
 	gitlabPathNamespace: "",
@@ -73,8 +94,8 @@ const baseApp: ApplicationNested = {
 	password: null,
 	placementSwarm: null,
 	ports: [],
-	projectId: "",
 	publishDirectory: null,
+	isStaticSpa: null,
 	redirects: [],
 	refreshToken: "",
 	registry: null,
@@ -103,9 +124,12 @@ const baseDomain: Domain = {
 	port: null,
 	serviceName: "",
 	composeId: "",
+	customCertResolver: null,
 	domainType: "application",
 	uniqueConfigKey: 1,
 	previewDeploymentId: "",
+	internalPath: "/",
+	stripPath: false,
 };
 
 const baseRedirect: Redirect = {

@@ -1,28 +1,14 @@
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
-	apiChangeRedisStatus,
-	apiCreateRedis,
-	apiDeployRedis,
-	apiFindOneRedis,
-	apiResetRedis,
-	apiSaveEnvironmentVariablesRedis,
-	apiSaveExternalPortRedis,
-	apiUpdateRedis,
-	redis as redisTable,
-	apiRebuildRedis,
-} from "@/server/db/schema";
-
-import { TRPCError } from "@trpc/server";
-
-import {
-	IS_CLOUD,
 	addNewService,
 	checkServiceAccess,
 	createMount,
 	createRedis,
 	deployRedis,
+	findEnvironmentById,
 	findProjectById,
 	findRedisById,
+	IS_CLOUD,
+	rebuildDatabase,
 	removeRedisById,
 	removeService,
 	startService,
@@ -30,21 +16,39 @@ import {
 	stopService,
 	stopServiceRemote,
 	updateRedisById,
-} from "@hanzo/core";
+} from "@dokploy/server";
+
+import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";
-import { db } from "@/server/db";
 import { z } from "zod";
-import { rebuildDatabase } from "@hanzo/core";
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { db } from "@/server/db";
+import {
+	apiChangeRedisStatus,
+	apiCreateRedis,
+	apiDeployRedis,
+	apiFindOneRedis,
+	apiRebuildRedis,
+	apiResetRedis,
+	apiSaveEnvironmentVariablesRedis,
+	apiSaveExternalPortRedis,
+	apiUpdateRedis,
+	redis as redisTable,
+} from "@/server/db/schema";
 export const redisRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(apiCreateRedis)
 		.mutation(async ({ input, ctx }) => {
 			try {
-				if (ctx.user.rol === "member") {
+				// Get project from environment
+				const environment = await findEnvironmentById(input.environmentId);
+				const project = await findProjectById(environment.projectId);
+
+				if (ctx.user.role === "member") {
 					await checkServiceAccess(
 						ctx.user.id,
-						input.projectId,
+						project.projectId,
 						ctx.session.activeOrganizationId,
 						"create",
 					);
@@ -57,15 +61,16 @@ export const redisRouter = createTRPCRouter({
 					});
 				}
 
-				const project = await findProjectById(input.projectId);
 				if (project.organizationId !== ctx.session.activeOrganizationId) {
 					throw new TRPCError({
 						code: "UNAUTHORIZED",
 						message: "You are not authorized to access this project",
 					});
 				}
-				const newRedis = await createRedis(input);
-				if (ctx.user.rol === "member") {
+				const newRedis = await createRedis({
+					...input,
+				});
+				if (ctx.user.role === "member") {
 					await addNewService(
 						ctx.user.id,
 						newRedis.redisId,
@@ -81,7 +86,7 @@ export const redisRouter = createTRPCRouter({
 					type: "volume",
 				});
 
-				return true;
+				return newRedis;
 			} catch (error) {
 				throw error;
 			}
@@ -89,7 +94,7 @@ export const redisRouter = createTRPCRouter({
 	one: protectedProcedure
 		.input(apiFindOneRedis)
 		.query(async ({ input, ctx }) => {
-			if (ctx.user.rol === "member") {
+			if (ctx.user.role === "member") {
 				await checkServiceAccess(
 					ctx.user.id,
 					input.redisId,
@@ -99,7 +104,10 @@ export const redisRouter = createTRPCRouter({
 			}
 
 			const redis = await findRedisById(input.redisId);
-			if (redis.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				redis.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to access this Redis",
@@ -112,7 +120,10 @@ export const redisRouter = createTRPCRouter({
 		.input(apiFindOneRedis)
 		.mutation(async ({ input, ctx }) => {
 			const redis = await findRedisById(input.redisId);
-			if (redis.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				redis.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to start this Redis",
@@ -134,7 +145,10 @@ export const redisRouter = createTRPCRouter({
 		.input(apiResetRedis)
 		.mutation(async ({ input, ctx }) => {
 			const redis = await findRedisById(input.redisId);
-			if (redis.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				redis.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to reload this Redis",
@@ -164,7 +178,10 @@ export const redisRouter = createTRPCRouter({
 		.input(apiFindOneRedis)
 		.mutation(async ({ input, ctx }) => {
 			const redis = await findRedisById(input.redisId);
-			if (redis.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				redis.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to stop this Redis",
@@ -185,7 +202,10 @@ export const redisRouter = createTRPCRouter({
 		.input(apiSaveExternalPortRedis)
 		.mutation(async ({ input, ctx }) => {
 			const mongo = await findRedisById(input.redisId);
-			if (mongo.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				mongo.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to save this external port",
@@ -201,7 +221,10 @@ export const redisRouter = createTRPCRouter({
 		.input(apiDeployRedis)
 		.mutation(async ({ input, ctx }) => {
 			const redis = await findRedisById(input.redisId);
-			if (redis.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				redis.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to deploy this Redis",
@@ -221,7 +244,10 @@ export const redisRouter = createTRPCRouter({
 		.input(apiDeployRedis)
 		.subscription(async ({ input, ctx }) => {
 			const redis = await findRedisById(input.redisId);
-			if (redis.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				redis.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to deploy this Redis",
@@ -237,7 +263,10 @@ export const redisRouter = createTRPCRouter({
 		.input(apiChangeRedisStatus)
 		.mutation(async ({ input, ctx }) => {
 			const mongo = await findRedisById(input.redisId);
-			if (mongo.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				mongo.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to change this Redis status",
@@ -251,7 +280,7 @@ export const redisRouter = createTRPCRouter({
 	remove: protectedProcedure
 		.input(apiFindOneRedis)
 		.mutation(async ({ input, ctx }) => {
-			if (ctx.user.rol === "member") {
+			if (ctx.user.role === "member") {
 				await checkServiceAccess(
 					ctx.user.id,
 					input.redisId,
@@ -262,7 +291,10 @@ export const redisRouter = createTRPCRouter({
 
 			const redis = await findRedisById(input.redisId);
 
-			if (redis.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				redis.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to delete this Redis",
@@ -276,7 +308,7 @@ export const redisRouter = createTRPCRouter({
 			for (const operation of cleanupOperations) {
 				try {
 					await operation();
-				} catch (_) { }
+				} catch (_) {}
 			}
 
 			return redis;
@@ -285,7 +317,10 @@ export const redisRouter = createTRPCRouter({
 		.input(apiSaveEnvironmentVariablesRedis)
 		.mutation(async ({ input, ctx }) => {
 			const redis = await findRedisById(input.redisId);
-			if (redis.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				redis.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to save this environment",
@@ -325,23 +360,31 @@ export const redisRouter = createTRPCRouter({
 		.input(
 			z.object({
 				redisId: z.string(),
-				targetProjectId: z.string(),
+				targetEnvironmentId: z.string(),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
 			const redis = await findRedisById(input.redisId);
-			if (redis.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				redis.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to move this redis",
 				});
 			}
 
-			const targetProject = await findProjectById(input.targetProjectId);
-			if (targetProject.organizationId !== ctx.session.activeOrganizationId) {
+			const targetEnvironment = await findEnvironmentById(
+				input.targetEnvironmentId,
+			);
+			if (
+				targetEnvironment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
-					message: "You are not authorized to move to this project",
+					message: "You are not authorized to move to this environment",
 				});
 			}
 
@@ -349,7 +392,7 @@ export const redisRouter = createTRPCRouter({
 			const updatedRedis = await db
 				.update(redisTable)
 				.set({
-					projectId: input.targetProjectId,
+					environmentId: input.targetEnvironmentId,
 				})
 				.where(eq(redisTable.redisId, input.redisId))
 				.returning()
@@ -368,7 +411,10 @@ export const redisRouter = createTRPCRouter({
 		.input(apiRebuildRedis)
 		.mutation(async ({ input, ctx }) => {
 			const redis = await findRedisById(input.redisId);
-			if (redis.project.organizationId !== ctx.session.activeOrganizationId) {
+			if (
+				redis.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to rebuild this Redis database",

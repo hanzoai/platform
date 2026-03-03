@@ -1,3 +1,10 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { PlusIcon, SquarePen } from "lucide-react";
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,22 +25,30 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/utils/api";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { PlusIcon, SquarePen } from "lucide-react";
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
 
 const AddProjectSchema = z.object({
-	name: z.string().min(1, {
-		message: "Name is required",
-	}),
+	name: z
+		.string()
+		.min(1, "Project name is required")
+		.refine(
+			(name) => {
+				const trimmedName = name.trim();
+				const validNameRegex =
+					/^[\p{L}\p{N}_-][\p{L}\p{N}\s_.-]*[\p{L}\p{N}_-]$/u;
+				return validNameRegex.test(trimmedName);
+			},
+			{
+				message:
+					"Project name must start and end with a letter, number, hyphen or underscore. Spaces are allowed in between.",
+			},
+		)
+		.refine((name) => !/^\d/.test(name.trim()), {
+			message: "Project name cannot start with a number",
+		})
+		.transform((name) => name.trim()),
 	description: z.string().optional(),
 });
 
@@ -86,7 +101,18 @@ export const HandleProject = ({ projectId }: Props) => {
 				toast.success(projectId ? "Project Updated" : "Project Created");
 				setIsOpen(false);
 				if (!projectId) {
-					router.push(`/dashboard/project/${data?.projectId}`);
+					const projectIdToUse =
+						data && "project" in data ? data.project.projectId : undefined;
+					const environmentIdToUse =
+						data && "environment" in data
+							? data.environment.environmentId
+							: undefined;
+
+					if (environmentIdToUse && projectIdToUse) {
+						router.push(
+							`/dashboard/project/${projectIdToUse}/environment/${environmentIdToUse}`,
+						);
+					}
 				} else {
 					refetch();
 				}
@@ -97,18 +123,6 @@ export const HandleProject = ({ projectId }: Props) => {
 				);
 			});
 	};
-	// useEffect(() => {
-	// 	const getUsers = async () => {
-	// 		const users = await authClient.admin.listUsers({
-	// 			query: {
-	// 				limit: 100,
-	// 			},
-	// 		});
-	// 		console.log(users);
-	// 	};
-
-	// 	getUsers();
-	// });
 
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>

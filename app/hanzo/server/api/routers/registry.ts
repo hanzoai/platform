@@ -1,3 +1,14 @@
+import {
+	createRegistry,
+	execAsyncRemote,
+	execFileAsync,
+	findRegistryById,
+	IS_CLOUD,
+	removeRegistry,
+	updateRegistry,
+} from "@dokploy/server";
+import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import {
 	apiCreateRegistry,
@@ -7,17 +18,6 @@ import {
 	apiUpdateRegistry,
 	registry,
 } from "@/server/db/schema";
-import {
-	IS_CLOUD,
-	createRegistry,
-	execAsync,
-	execAsyncRemote,
-	findRegistryById,
-	removeRegistry,
-	updateRegistry,
-} from "@hanzo/core";
-import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 export const registryRouter = createTRPCRouter({
 	create: adminProcedure
@@ -83,7 +83,13 @@ export const registryRouter = createTRPCRouter({
 		.input(apiTestRegistry)
 		.mutation(async ({ input }) => {
 			try {
-				const loginCommand = `echo ${input.password} | docker login ${input.registryUrl} --username ${input.username} --password-stdin`;
+				const args = [
+					"login",
+					input.registryUrl,
+					"--username",
+					input.username,
+					"--password-stdin",
+				];
 
 				if (IS_CLOUD && !input.serverId) {
 					throw new TRPCError({
@@ -93,9 +99,14 @@ export const registryRouter = createTRPCRouter({
 				}
 
 				if (input.serverId && input.serverId !== "none") {
-					await execAsyncRemote(input.serverId, loginCommand);
+					await execAsyncRemote(
+						input.serverId,
+						`echo ${input.password} | docker ${args.join(" ")}`,
+					);
 				} else {
-					await execAsync(loginCommand);
+					await execFileAsync("docker", args, {
+						input: Buffer.from(input.password).toString(),
+					});
 				}
 
 				return true;

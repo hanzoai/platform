@@ -1,17 +1,16 @@
 import { createWriteStream } from "node:fs";
 import { join } from "node:path";
-import { paths } from "@hanzo/core/constants";
-import type { InferResultType } from "@hanzo/core/types/with";
+import { paths } from "@dokploy/server/constants";
+import type { apiFindGithubBranches } from "@dokploy/server/db/schema";
+import type { Compose } from "@dokploy/server/services/compose";
+import { findGithubById, type Github } from "@dokploy/server/services/github";
+import type { InferResultType } from "@dokploy/server/types/with";
 import { createAppAuth } from "@octokit/auth-app";
 import { TRPCError } from "@trpc/server";
 import { Octokit } from "octokit";
 import { recreateDirectory } from "../filesystem/directory";
-import { spawnAsync } from "../process/spawnAsync";
-
-import type { apiFindGithubBranches } from "@hanzo/core/db/schema";
-import type { Compose } from "@hanzo/core/services/compose";
-import { type Github, findGithubById } from "@hanzo/core/services/github";
 import { execAsyncRemote } from "../process/execAsync";
+import { spawnAsync } from "../process/spawnAsync";
 
 export const authGithub = (githubProvider: Github): Octokit => {
 	if (!haveGithubRequirements(githubProvider)) {
@@ -43,6 +42,49 @@ export const getGithubToken = async (
 	};
 
 	return installation.token;
+};
+
+/**
+ * Check if a GitHub user has write/admin permissions on a repository
+ * This is used to validate PR authors before allowing preview deployments
+ */
+export const checkUserRepositoryPermissions = async (
+	githubProvider: Github,
+	owner: string,
+	repo: string,
+	username: string,
+): Promise<{ hasWriteAccess: boolean; permission: string | null }> => {
+	try {
+		const octokit = authGithub(githubProvider);
+
+		// Check if user is a collaborator with write permissions
+		const { data: permission } =
+			await octokit.rest.repos.getCollaboratorPermissionLevel({
+				owner,
+				repo,
+				username,
+			});
+
+		// Allow only users with 'write', 'admin', or 'maintain' permissions
+		// Currently exists Read, Triage, Write, Maintain, Admin
+		const allowedPermissions = ["write", "admin", "maintain"];
+		const hasWriteAccess = allowedPermissions.includes(permission.permission);
+
+		return {
+			hasWriteAccess,
+			permission: permission.permission,
+		};
+	} catch (error) {
+		// If user is not a collaborator, GitHub API returns 404
+		console.warn(
+			`User ${username} is not a collaborator of ${owner}/${repo}:`,
+			error,
+		);
+		return {
+			hasWriteAccess: false,
+			permission: null,
+		};
+	}
 };
 
 export const haveGithubRequirements = (githubProvider: Github) => {
@@ -83,6 +125,7 @@ interface CloneGithubRepository {
 	repository: string | null;
 	logPath: string;
 	type?: "application" | "compose";
+	enableSubmodules: boolean;
 }
 export const cloneGithubRepository = async ({
 	logPath,
@@ -92,7 +135,8 @@ export const cloneGithubRepository = async ({
 	const isCompose = type === "compose";
 	const { APPLICATIONS_PATH, COMPOSE_PATH } = paths();
 	const writeStream = createWriteStream(logPath, { flags: "a" });
-	const { appName, repository, owner, branch, githubId } = entity;
+	const { appName, repository, owner, branch, githubId, enableSubmodules } =
+		entity;
 
 	if (!githubId) {
 		throw new TRPCError({
@@ -128,28 +172,26 @@ export const cloneGithubRepository = async ({
 
 	try {
 		writeStream.write(`\nClonning Repo ${repoclone} to ${outputPath}: ✅\n`);
-		await spawnAsync(
-			"git",
-			[
-				"clone",
-				"--branch",
-				branch!,
-				"--depth",
-				"1",
-				"--recurse-submodules",
-				cloneUrl,
-				outputPath,
-				"--progress",
-			],
-			(data) => {
-				if (writeStream.writable) {
-					writeStream.write(data);
-				}
-			},
-		);
+		const cloneArgs = [
+			"clone",
+			"--branch",
+			branch!,
+			"--depth",
+			"1",
+			...(enableSubmodules ? ["--recurse-submodules"] : []),
+			cloneUrl,
+			outputPath,
+			"--progress",
+		];
+
+		await spawnAsync("git", cloneArgs, (data) => {
+			if (writeStream.writable) {
+				writeStream.write(data);
+			}
+		});
 		writeStream.write(`\nCloned ${repoclone}: ✅\n`);
 	} catch (error) {
-		writeStream.write(`ERROR Clonning: ${error}: ❌`);
+		writeStream.write(`ERROR Cloning: ${error}: ❌`);
 		throw error;
 	} finally {
 		writeStream.end();
@@ -161,7 +203,15 @@ export const getGithubCloneCommand = async ({
 	type = "application",
 	...entity
 }: CloneGithubRepository & { serverId: string }) => {
-	const { appName, repository, owner, branch, githubId, serverId } = entity;
+	const {
+		appName,
+		repository,
+		owner,
+		branch,
+		githubId,
+		serverId,
+		enableSubmodules,
+	} = entity;
 	const isCompose = type === "compose";
 	if (!serverId) {
 		throw new TRPCError({
@@ -216,7 +266,7 @@ export const getGithubCloneCommand = async ({
 	const cloneCommand = `
 rm -rf ${outputPath};
 mkdir -p ${outputPath};
-if ! git clone --branch ${branch} --depth 1 --recurse-submodules --progress ${cloneUrl} ${outputPath} >> ${logPath} 2>&1; then
+if ! git clone --branch ${branch} --depth 1 ${enableSubmodules ? "--recurse-submodules" : ""} --progress ${cloneUrl} ${outputPath} >> ${logPath} 2>&1; then
 	echo "❌ [ERROR] Fail to clone repository ${repoclone}" >> ${logPath};
 	exit 1;
 fi
@@ -227,7 +277,8 @@ echo "Cloned ${repoclone} to ${outputPath}: ✅" >> ${logPath};
 };
 
 export const cloneRawGithubRepository = async (entity: Compose) => {
-	const { appName, repository, owner, branch, githubId } = entity;
+	const { appName, repository, owner, branch, githubId, enableSubmodules } =
+		entity;
 
 	if (!githubId) {
 		throw new TRPCError({
@@ -245,24 +296,33 @@ export const cloneRawGithubRepository = async (entity: Compose) => {
 	await recreateDirectory(outputPath);
 	const cloneUrl = `https://oauth2:${token}@${repoclone}`;
 	try {
-		await spawnAsync("git", [
+		const cloneArgs = [
 			"clone",
 			"--branch",
 			branch!,
 			"--depth",
 			"1",
-			"--recurse-submodules",
+			...(enableSubmodules ? ["--recurse-submodules"] : []),
 			cloneUrl,
 			outputPath,
 			"--progress",
-		]);
+		];
+		await spawnAsync("git", cloneArgs);
 	} catch (error) {
 		throw error;
 	}
 };
 
 export const cloneRawGithubRepositoryRemote = async (compose: Compose) => {
-	const { appName, repository, owner, branch, githubId, serverId } = compose;
+	const {
+		appName,
+		repository,
+		owner,
+		branch,
+		githubId,
+		serverId,
+		enableSubmodules,
+	} = compose;
 
 	if (!serverId) {
 		throw new TRPCError({
@@ -288,7 +348,7 @@ export const cloneRawGithubRepositoryRemote = async (compose: Compose) => {
 	try {
 		const command = `
 			rm -rf ${outputPath};
-			git clone --branch ${branch} --depth 1 ${cloneUrl} ${outputPath}
+			git clone --branch ${branch} --depth 1 ${enableSubmodules ? "--recurse-submodules" : ""} ${cloneUrl} ${outputPath}
 		`;
 		await execAsyncRemote(serverId, command);
 	} catch (error) {
