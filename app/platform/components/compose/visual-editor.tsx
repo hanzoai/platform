@@ -5,7 +5,7 @@
  * No deployment logic, only editing
  */
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import ReactFlow, {
   Node,
   Edge,
