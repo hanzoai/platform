@@ -40,7 +40,7 @@ export const stripeRouter = createTRPCRouter({
 		return {
 			products: products.data,
 			subscriptions: subscriptions.data,
-			test: 'test'
+			test: "test",
 		};
 	}),
 	getPrices: adminProcedure.query(async ({ ctx }) => {
@@ -70,12 +70,16 @@ export const stripeRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			console.log("input=", input)
+			console.log("input=", input);
 			const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 				apiVersion: "2024-09-30.acacia",
 			});
 
-			const items = getStripeItems(input.serverQuantity, input.isAnnual, input.priceId);
+			const items = getStripeItems(
+				input.serverQuantity,
+				input.isAnnual,
+				input.priceId,
+			);
 			const user = await findUserById(ctx.user.id);
 
 			let stripeCustomerId = user.stripeCustomerId;
