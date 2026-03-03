@@ -685,8 +685,8 @@ importers:
         specifier: ^8.4.1
         version: 8.4.1
       '@hanzo/iam':
-        specifier: ^0.4.0
-        version: 0.4.0(react@18.2.0)
+        specifier: ^0.4.1
+        version: 0.4.1(react@18.2.0)
       '@kubernetes/client-node':
         specifier: ^1.4.0
         version: 1.4.0
@@ -1616,15 +1616,6 @@ packages:
     resolution: {integrity: sha512-tMXdRCfYVixjuFK+Hk0Q1s38gV9zDiDJfWL3h1rv4Qc39oILCu1TRTDt7+fGUI8K4G1Fj125Hx/ru3azECWTyQ==}
     engines: {node: '>=6'}
     hasBin: true
-
-  '@hanzo/iam@0.4.0':
-    resolution: {integrity: sha512-jxQlQ6jIMlV09aMmA/sjHCu1aCgeaihNh39P2t47sLD8/y7z0BKB5VXuqpNGlUfHghcY1JID1xD+cowASXSzlg==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      react: '>=17'
-    peerDependenciesMeta:
-      react:
-        optional: true
 
   '@hanzo/iam@0.4.1':
     resolution: {integrity: sha512-askNiSg/RZc6WpQFIz7EOFT4OT8hFyOlDwyihp36sIv3uquKKrMwRDKA3RxDrSF80SyXvQCbQxxllgrxFmh0IA==}
@@ -10562,12 +10553,6 @@ snapshots:
       long: 5.3.2
       protobufjs: 7.5.4
       yargs: 17.7.2
-
-  '@hanzo/iam@0.4.0(react@18.2.0)':
-    dependencies:
-      jose: 6.1.3
-    optionalDependencies:
-      react: 18.2.0
 
   '@hanzo/iam@0.4.1(react@18.2.0)':
     dependencies:
