@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const postgresMove = createTool({
   name: "postgres-move",
-  description: "Moves a PostgreSQL database to a different project in Hanzo.",
+  description: "Moves a PostgreSQL database to a different project in Platform.",
   schema: z.object({
     postgresId: z
       .string()

@@ -6,7 +6,7 @@ import { createTool } from "../toolFactory.js";
 export const postgresSaveEnvironment = createTool({
   name: "postgres-saveEnvironment",
   description:
-    "Saves environment variables for a PostgreSQL database in Hanzo.",
+    "Saves environment variables for a PostgreSQL database in Platform.",
   schema: z.object({
     postgresId: z
       .string()

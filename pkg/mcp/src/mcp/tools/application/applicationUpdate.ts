@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationUpdate = createTool({
   name: "application-update",
-  description: "Updates an existing application in Hanzo.",
+  description: "Updates an existing application in Platform.",
   schema: z.object({
     applicationId: z.string().describe("The ID of the application to update."),
     name: z

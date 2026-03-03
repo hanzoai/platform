@@ -6,7 +6,7 @@ At Hanzo, security is a top priority. We appreciate the help of security researc
 
 If you have discovered a security vulnerability in Hanzo, we ask that you report it responsibly by following these guidelines:
 
-1.  **Contact us:** Send an email to [security@hanzo.ai](mailto:security@hanzo.ai).
+1.  **Contact us:** Send an email to [contact@hanzo.ai](mailto:contact@hanzo.ai).
 2.  **Provide clear details:** Include as much information as possible to help us understand and reproduce the vulnerability. This should include:
     *   A clear description of the vulnerability.
     *   Steps to reproduce the vulnerability.

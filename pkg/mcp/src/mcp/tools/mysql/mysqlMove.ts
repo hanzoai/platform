@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const mysqlMove = createTool({
   name: "mysql-move",
-  description: "Moves a MySQL database to a different project in Hanzo.",
+  description: "Moves a MySQL database to a different project in Platform.",
   schema: z.object({
     mysqlId: z.string().describe("The ID of the MySQL database to move."),
     targetProjectId: z
