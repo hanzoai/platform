@@ -52,7 +52,7 @@ jobs:
 
       - name: Run tests
         run: |
-          cd app/hanzo
+          cd app/platform
           pnpm vitest run
 
       - name: Run linter
