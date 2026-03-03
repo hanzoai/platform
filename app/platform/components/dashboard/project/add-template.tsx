@@ -70,7 +70,7 @@ import {
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 
-const TEMPLATE_BASE_URL_KEY = "dokploy_template_base_url";
+const TEMPLATE_BASE_URL_KEY = "hanzo_template_base_url";
 
 interface Props {
 	environmentId: string;
@@ -464,7 +464,7 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 																		setServerId(e);
 																	}}
 																	defaultValue={
-																		!isCloud ? "dokploy" : undefined
+																		!isCloud ? "hanzo" : undefined
 																	}
 																>
 																	<SelectTrigger>
@@ -477,7 +477,7 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 																	<SelectContent>
 																		<SelectGroup>
 																			{!isCloud && (
-																				<SelectItem value="dokploy">
+																				<SelectItem value="hanzo">
 																					<span className="flex items-center gap-2 justify-between w-full">
 																						<span>Hanzo Platform</span>
 																						<span className="text-muted-foreground text-xs self-center">
@@ -516,7 +516,7 @@ export const AddTemplate = ({ environmentId, baseUrl }: Props) => {
 															onClick={async () => {
 																const promise = mutateAsync({
 																	serverId:
-																		serverId === "dokploy"
+																		serverId === "hanzo"
 																			? undefined
 																			: serverId,
 																	environmentId,
