@@ -36,7 +36,10 @@
 		"docker:push:canary": "./docker/push.sh canary",
 		"version": "echo $(node -p \"require('./package.json').version\")",
 		"test": "vitest --config __test__/vitest.config.ts",
-		"generate:openapi": "tsx -r dotenv/config scripts/generate-openapi.ts"
+		"generate:openapi": "tsx -r dotenv/config scripts/generate-openapi.ts",
+		"test:e2e": "playwright test",
+		"test:e2e:ui": "playwright test --ui",
+		"test:e2e:headed": "playwright test --headed"
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "^3.0.44",
@@ -186,6 +189,7 @@
 		"tsx": "^4.16.2",
 		"typescript": "^5.8.3",
 		"vite-tsconfig-paths": "4.3.2",
+		"@playwright/test": "^1.52.0",
 		"vitest": "^4.0.18"
 	},
 	"ct3aMetadata": {
