@@ -54,14 +54,16 @@ export const recordAdvancedStats = async (
 	}
 };
 
+export const getLastAdvancedStatsFile = async (appName: string) => {
+	const { MONITORING_PATH } = paths();
+	const files = await globby([`${MONITORING_PATH}/${appName}/*.json`]);
+	return files[files.length - 1];
+};
+
 export const getAdvancedStats = async (appName: string) => {
-	return {
-		cpu: await readStatsFile(appName, "cpu"),
-		memory: await readStatsFile(appName, "memory"),
-		disk: await readStatsFile(appName, "disk"),
-		network: await readStatsFile(appName, "network"),
-		block: await readStatsFile(appName, "block"),
-	};
+	const { MONITORING_PATH } = paths();
+	const files = await globby([`${MONITORING_PATH}/${appName}/*.json`]);
+	return files;
 };
 
 export const readStatsFile = async (
@@ -111,14 +113,4 @@ export const readLastValueStatsFile = async (
 	} catch {
 		return null;
 	}
-};
-
-export const getLastAdvancedStatsFile = async (appName: string) => {
-	return {
-		cpu: await readLastValueStatsFile(appName, "cpu"),
-		memory: await readLastValueStatsFile(appName, "memory"),
-		disk: await readLastValueStatsFile(appName, "disk"),
-		network: await readLastValueStatsFile(appName, "network"),
-		block: await readLastValueStatsFile(appName, "block"),
-	};
 };
