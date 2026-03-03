@@ -174,7 +174,7 @@ export const ShowBilling = () => {
 						</nav>
 
 						<div className="flex flex-col gap-4 w-full mt-6">
-							{admin?.user.serversQuantity > 0 && (
+							{(admin?.user.serversQuantity ?? 0) > 0 && (
 								<div className="space-y-2 flex flex-col">
 									<h3 className="text-lg font-medium">Servers Plan</h3>
 									<p className="text-sm text-muted-foreground">
