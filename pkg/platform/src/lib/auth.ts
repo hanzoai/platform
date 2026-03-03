@@ -1,10 +1,12 @@
 import type { IncomingMessage } from "node:http";
+import { hanzoIamProvider } from "@hanzo/iam/betterauth";
 import { sso } from "@better-auth/sso";
 import * as bcrypt from "bcrypt";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { admin, apiKey, organization, twoFactor } from "better-auth/plugins";
+import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { and, desc, eq } from "drizzle-orm";
 import { BETTER_AUTH_SECRET, IS_CLOUD } from "../constants";
 import { db } from "../db";
@@ -21,6 +23,32 @@ import {
 import { getHubSpotUTK, submitToHubSpot } from "../utils/tracking/hubspot";
 import { sendEmail } from "../verification/send-verification-email";
 import { getPublicIpWithFallback } from "../wss/utils";
+
+// Hanzo IAM OIDC provider via @hanzo/iam
+const IAM_SERVER_URL =
+	process.env.HANZO_IAM_URL ||
+	process.env.HANZO_IAM_ENDPOINT ||
+	process.env.HANZO_IAM_SERVER_URL ||
+	process.env.IAM_ENDPOINT ||
+	"https://hanzo.id";
+
+const IAM_CLIENT_ID =
+	process.env.HANZO_IAM_CLIENT_ID ||
+	process.env.HANZO_CLIENT_ID ||
+	process.env.IAM_CLIENT_ID ||
+	"";
+
+const IAM_CLIENT_SECRET =
+	process.env.HANZO_IAM_CLIENT_SECRET ||
+	process.env.HANZO_CLIENT_SECRET ||
+	process.env.IAM_CLIENT_SECRET ||
+	"";
+
+const hanzoIam = hanzoIamProvider({
+	serverUrl: IAM_SERVER_URL,
+	clientId: IAM_CLIENT_ID,
+	clientSecret: IAM_CLIENT_SECRET,
+});
 
 const { handler, api } = betterAuth({
 	database: drizzleAdapter(db, {
@@ -53,7 +81,7 @@ const { handler, api } = betterAuth({
 			enabled: true,
 			async trustedProviders() {
 				const fromDb = await getTrustedProviders();
-				return ["github", "google", ...fromDb] as string[];
+				return ["github", "google", "hanzo-iam", ...fromDb] as string[];
 			},
 			allowDifferentEmails: true,
 		},
@@ -311,6 +339,33 @@ const { handler, api } = betterAuth({
 		}),
 		sso(),
 		twoFactor(),
+		...(IAM_CLIENT_ID
+			? [
+					genericOAuth({
+						config: [
+							{
+								providerId: hanzoIam.id,
+								discoveryUrl: `${IAM_SERVER_URL}/.well-known/openid-configuration`,
+								authorizationUrl: hanzoIam.authorization.url,
+								tokenUrl: hanzoIam.token.url,
+								userInfoUrl: hanzoIam.userinfo.url,
+								clientId: hanzoIam.clientId,
+								clientSecret: hanzoIam.clientSecret,
+								scopes: hanzoIam.authorization.params.scope.split(" "),
+								mapProfileToUser: (profile) => {
+									const mapped = hanzoIam.profile(profile);
+									return {
+										id: mapped.id,
+										name: mapped.name,
+										email: mapped.email,
+										image: mapped.image,
+									};
+								},
+							},
+						],
+					}),
+				]
+			: []),
 		organization({
 			async sendInvitationEmail(data, _request) {
 				if (IS_CLOUD) {
