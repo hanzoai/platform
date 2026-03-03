@@ -48,7 +48,7 @@ export class HanzoNetwork {
       provider
     );
 
-    const status = await contract.status();
+    const status = await contract.status!();
     return ["stopped", "running", "failed"][status] as any;
   }
 
