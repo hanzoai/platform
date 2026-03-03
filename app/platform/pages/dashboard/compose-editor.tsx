@@ -58,3 +58,7 @@ export default ComposePage;
 ComposePage.getLayout = (page: ReactElement) => {
   return <DashboardLayout metaName="Compose Editor">{page}</DashboardLayout>;
 };
+
+export async function getServerSideProps() {
+  return { props: {} };
+}
