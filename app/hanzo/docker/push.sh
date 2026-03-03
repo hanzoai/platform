@@ -8,11 +8,11 @@ BUILDER=$(docker buildx create --use)
 if [ "$BUILD_TYPE" == "canary" ]; then
     TAG="canary"
     echo PUSHING CANARY
-        docker buildx build --platform linux/amd64,linux/arm64 --pull --rm -t "hanzo/hanzo:${TAG}" -f 'Dockerfile' --push .
+        docker buildx build --platform linux/amd64,linux/arm64 --pull --rm -t "hanzoai/platform:${TAG}" -f 'Dockerfile' --push .
 else
     echo  "PUSHING PRODUCTION"
     VERSION=$(node -p "require('./package.json').version")
-    docker buildx build --platform linux/amd64,linux/arm64 --pull --rm -t "hanzo/hanzo:latest" -t "hanzo/hanzo:${VERSION}" -f 'Dockerfile' --push .
+    docker buildx build --platform linux/amd64,linux/arm64 --pull --rm -t "hanzoai/platform:latest" -t "hanzoai/platform:${VERSION}" -f 'Dockerfile' --push .
 fi
 
 docker buildx rm $BUILDER
