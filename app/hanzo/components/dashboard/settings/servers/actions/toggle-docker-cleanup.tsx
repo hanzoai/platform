@@ -1,50 +1,46 @@
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
+import { useEffect, useState } from "react";
+import { useTranslation } from "next-i18next";
 import { toast } from "sonner";
 
-interface Props {
-	serverId?: string;
-}
-export const ToggleDockerCleanup = ({ serverId }: Props) => {
-	const { data, refetch } = api.user.get.useQuery(undefined, {
-		enabled: !serverId,
-	});
+export const ToggleDockerCleanup = () => {
+    const { t } = useTranslation("settings");
+    const [enabled, setEnabled] = useState(false);
+    const { data: user } = api.user.get.useQuery();
+    const { mutate: toggleCleanup, isLoading } = api.user.toggleDockerCleanup.useMutation({
+        onSuccess: () => {
+            toast.success(t("settings.server.dockerCleanup.success"));
+        },
+        onError: (error) => {
+            toast.error(
+                t("settings.server.dockerCleanup.error", { error: error.message })
+            );
+            setEnabled(!enabled); // Revert on error
+        }
+    });
 
-	const { data: server, refetch: refetchServer } = api.server.one.useQuery(
-		{
-			serverId: serverId || "",
-		},
-		{
-			enabled: !!serverId,
-		},
-	);
+    useEffect(() => {
+        if (user) {
+            setEnabled(user.user.enableDockerCleanup);
+        }
+    }, [user]);
 
-	const enabled = data?.user.enableDockerCleanup || server?.enableDockerCleanup;
+    const handleToggle = (value: boolean) => {
+        setEnabled(value);
+        toggleCleanup({ enable: value });
+    };
 
-	const { mutateAsync } = api.settings.updateDockerCleanup.useMutation();
-
-	const handleToggle = async (checked: boolean) => {
-		try {
-			await mutateAsync({
-				enableDockerCleanup: checked,
-				serverId: serverId,
-			});
-			if (serverId) {
-				await refetchServer();
-			} else {
-				await refetch();
-			}
-			toast.success("Docker Cleanup updated");
-		} catch (_error) {
-			toast.error("Docker Cleanup Error");
-		}
-	};
-
-	return (
-		<div className="flex items-center gap-4">
-			<Switch checked={!!enabled} onCheckedChange={handleToggle} />
-			<Label className="text-primary">Daily Docker Cleanup</Label>
-		</div>
-	);
-};
+    return (
+        <div className="flex items-center gap-2">
+            <Switch
+                checked={enabled}
+                onCheckedChange={handleToggle}
+                disabled={isLoading}
+            />
+            <span className="text-sm">
+                {t("settings.server.dockerCleanup.label")}
+            </span>
+        </div>
+    );
+}; 

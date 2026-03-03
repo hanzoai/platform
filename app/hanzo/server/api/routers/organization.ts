@@ -1,10 +1,6 @@
 import { db } from "@/server/db";
 import { invitation, member, organization } from "@/server/db/schema";
-<<<<<<< HEAD:app/cloud/server/api/routers/organization.ts
-import { IS_CLOUD } from "@dokploy/server/index";
-=======
 import { IS_CLOUD } from "@hanzo/core/index";
->>>>>>> 923b06f1 (Add AI, organizations and other updates.):app/hanzo/server/api/routers/organization.ts
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, exists } from "drizzle-orm";
 import { nanoid } from "nanoid";

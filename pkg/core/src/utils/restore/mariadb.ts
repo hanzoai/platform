@@ -1,5 +1,5 @@
-import type { Mariadb } from "@dokploy/server/services/mariadb";
-import type { Destination } from "@dokploy/server/services/destination";
+import type { Mariadb } from "@hanzo/core/services/mariadb";
+import type { Destination } from "@hanzo/core/services/destination";
 import {
 	getRemoteServiceContainer,
 	getServiceContainer,
@@ -43,10 +43,9 @@ export const restoreMariadbBackup = async (
 	} catch (error) {
 		console.error(error);
 		emit(
-			`Error: ${
-				error instanceof Error
-					? error.message
-					: "Error restoring mariadb backup"
+			`Error: ${error instanceof Error
+				? error.message
+				: "Error restoring mariadb backup"
 			}`,
 		);
 		throw new Error(

@@ -6,7 +6,6 @@ import {
 	apiRemoveProject,
 	apiUpdateProject,
 	applications,
-	compose,
 	mariadb,
 	mongo,
 	mysql,
@@ -95,9 +94,6 @@ export const projectRouter = createTRPCRouter({
 						eq(projects.organizationId, ctx.session.activeOrganizationId),
 					),
 					with: {
-						compose: {
-							where: buildServiceFilter(compose.composeId, accessedServices),
-						},
 						applications: {
 							where: buildServiceFilter(
 								applications.applicationId,
@@ -183,10 +179,6 @@ export const projectRouter = createTRPCRouter({
 					redis: {
 						where: buildServiceFilter(redis.redisId, accessedServices),
 					},
-					compose: {
-						where: buildServiceFilter(compose.composeId, accessedServices),
-						with: { domains: true },
-					},
 				},
 				orderBy: desc(projects.createdAt),
 			});
@@ -206,11 +198,6 @@ export const projectRouter = createTRPCRouter({
 				mysql: true,
 				postgres: true,
 				redis: true,
-				compose: {
-					with: {
-						domains: true,
-					},
-				},
 			},
 			where: eq(projects.organizationId, ctx.session.activeOrganizationId),
 			orderBy: desc(projects.createdAt),
@@ -273,8 +260,8 @@ function buildServiceFilter(
 ) {
 	return accessedServices.length > 0
 		? sql`${fieldName} IN (${sql.join(
-				accessedServices.map((serviceId) => sql`${serviceId}`),
-				sql`, `,
-			)})`
+			accessedServices.map((serviceId) => sql`${serviceId}`),
+			sql`, `,
+		)})`
 		: sql`1 = 0`;
 }

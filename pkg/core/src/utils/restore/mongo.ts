@@ -1,5 +1,5 @@
-import type { Mongo } from "@dokploy/server/services/mongo";
-import type { Destination } from "@dokploy/server/services/destination";
+import type { Mongo } from "@hanzo/core/services/mongo";
+import type { Destination } from "@hanzo/core/services/destination";
 import {
 	getRemoteServiceContainer,
 	getServiceContainer,
@@ -26,7 +26,7 @@ export const restoreMongoBackup = async (
 			: await getServiceContainer(appName);
 
 		// For MongoDB, we need to first download the backup file since mongorestore expects a directory
-		const tempDir = "/tmp/dokploy-restore";
+		const tempDir = "/tmp/hanzo-restore";
 		const fileName = backupFile.split("/").pop() || "backup.dump.gz";
 		const decompressedName = fileName.replace(".gz", "");
 
@@ -53,8 +53,7 @@ rm -rf ${tempDir}`;
 	} catch (error) {
 		console.error(error);
 		emit(
-			`Error: ${
-				error instanceof Error ? error.message : "Error restoring mongo backup"
+			`Error: ${error instanceof Error ? error.message : "Error restoring mongo backup"
 			}`,
 		);
 		throw new Error(
