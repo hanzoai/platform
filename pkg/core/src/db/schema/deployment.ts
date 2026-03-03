@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
 	type AnyPgColumn,
 	boolean,
+	integer,
 	pgEnum,
 	pgTable,
 	text,
@@ -48,6 +49,7 @@ export const deployments = pgTable("deployment", {
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
 	errorMessage: text("errorMessage"),
+	pid: integer("pid"),
 });
 
 export const deploymentsRelations = relations(deployments, ({ one }) => ({
@@ -77,6 +79,7 @@ const schema = createInsertSchema(deployments, {
 	composeId: z.string(),
 	description: z.string().optional(),
 	previewDeploymentId: z.string(),
+	pid: z.number().optional(),
 });
 
 export const apiCreateDeployment = schema
