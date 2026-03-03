@@ -353,7 +353,7 @@ export const apiScaleUp = z.object({
 	size: z.string().default("s-2vcpu-4gb"),
 	region: z.string().default("nyc1"),
 	nodeType: z.enum(["worker", "gpu", "storage", "inference"]).default("worker"),
-	labels: z.record(z.string()).optional(),
+	labels: z.record(z.string(), z.string()).optional(),
 });
 
 export const apiScaleDown = z.object({
@@ -383,8 +383,8 @@ export const apiRemoveDroplet = z.object({
 export const apiRegisterNode = z.object({
 	nodeId: z.string().min(1),
 	registrationToken: z.string().min(1),
-	publicIp: z.string().ip(),
-	privateIp: z.string().ip().optional(),
+	publicIp: z.string().min(1),
+	privateIp: z.string().optional(),
 	hostname: z.string().optional(),
 	dockerNodeId: z.string().optional(),
 });
