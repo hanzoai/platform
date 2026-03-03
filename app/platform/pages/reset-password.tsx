@@ -1,5 +1,5 @@
 import { IS_CLOUD } from "@hanzo/platform";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -177,8 +177,29 @@ export default function Home({ tokenResetPassword }: Props) {
 Home.getLayout = (page: ReactElement) => {
 	return <OnboardingLayout>{page}</OnboardingLayout>;
 };
-export async function getServerSideProps() {
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+	if (!IS_CLOUD) {
+		return {
+			redirect: {
+				permanent: true,
+				destination: "/",
+			},
+		};
+	}
+	const { token } = context.query;
+
+	if (typeof token !== "string") {
+		return {
+			redirect: {
+				permanent: true,
+				destination: "/",
+			},
+		};
+	}
+
 	return {
-		props: {},
+		props: {
+			tokenResetPassword: token,
+		},
 	};
 }
