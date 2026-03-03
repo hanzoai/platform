@@ -12,6 +12,9 @@ importers:
 
   .:
     dependencies:
+      pino:
+        specifier: 9.4.0
+        version: 9.4.0
       toml:
         specifier: ^3.0.0
         version: 3.0.0
@@ -48,7 +51,7 @@ importers:
     dependencies:
       '@hanzo/platform':
         specifier: workspace:*
-        version: link:../../pkg/server
+        version: link:../../pkg/core
       '@hono/node-server':
         specifier: ^1.14.3
         version: 1.19.4(hono@4.9.8)
@@ -145,7 +148,7 @@ importers:
         version: 8.4.1
       '@hanzo/platform':
         specifier: workspace:*
-        version: link:../../pkg/platform
+        version: link:../../pkg/core
       '@hanzo/trpc-openapi':
         specifier: 0.0.4
         version: 0.0.4(@trpc/server@10.45.2)(@types/express@5.0.3)(@types/node@18.19.104)(zod@3.25.76)
@@ -536,7 +539,7 @@ importers:
     dependencies:
       '@hanzo/platform':
         specifier: workspace:*
-        version: link:../../pkg/server
+        version: link:../../pkg/core
       '@hono/node-server':
         specifier: ^1.14.3
         version: 1.19.4(hono@4.9.8)
@@ -1089,7 +1092,7 @@ importers:
     dependencies:
       '@hanzo/platform':
         specifier: workspace:*
-        version: link:../platform
+        version: link:../core
 
   pkg/ui:
     dependencies:
