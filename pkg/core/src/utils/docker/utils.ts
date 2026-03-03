@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Readable } from "node:stream";
-import { docker, paths } from "@hanzo/core/constants";
-import type { Compose } from "@hanzo/core/services/compose";
+import { docker, paths } from "@hanzo/platform/constants";
+import type { Compose } from "@hanzo/platform/services/compose";
 import type { ContainerInfo, ResourceRequirements } from "dockerode";
 import { parse } from "dotenv";
 import type { ApplicationNested } from "../builders";

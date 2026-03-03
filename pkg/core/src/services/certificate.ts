@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { paths } from "@hanzo/core/constants";
-import { db } from "@hanzo/core/db";
-import { type apiCreateCertificate, certificates } from "@hanzo/core/db/schema";
-import { removeDirectoryIfExistsContent } from "@hanzo/core/utils/filesystem/directory";
+import { paths } from "@hanzo/platform/constants";
+import { db } from "@hanzo/platform/db";
+import { type apiCreateCertificate, certificates } from "@hanzo/platform/db/schema";
+import { removeDirectoryIfExistsContent } from "@hanzo/platform/utils/filesystem/directory";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { dump } from "js-yaml";

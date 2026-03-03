@@ -5,7 +5,7 @@ import type {
 	ntfy,
 	slack,
 	telegram,
-} from "@hanzo/core/db/schema";
+} from "@hanzo/platform/db/schema";
 import nodemailer from "nodemailer";
 
 export const sendEmailNotification = async (

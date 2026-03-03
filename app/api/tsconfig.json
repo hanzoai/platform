@@ -11,7 +11,7 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"],
-			"@hanzo/core": ["../../pkg/core/src/*"]
+			"@hanzo/platform": ["../../pkg/core/src/*"]
 		}
 	},
 	"exclude": ["node_modules", "dist"]

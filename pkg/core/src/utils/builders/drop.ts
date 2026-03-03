@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path, { join } from "node:path";
-import { paths } from "@hanzo/core/constants";
-import type { Application } from "@hanzo/core/services/application";
-import { findServerById } from "@hanzo/core/services/server";
+import { paths } from "@hanzo/platform/constants";
+import type { Application } from "@hanzo/platform/services/application";
+import { findServerById } from "@hanzo/platform/services/server";
 import AdmZip from "adm-zip";
 import { Client, type SFTPWrapper } from "ssh2";
 import {

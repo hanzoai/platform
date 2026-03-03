@@ -1,8 +1,8 @@
 import dns from "node:dns";
 import { promisify } from "node:util";
-import { db } from "@hanzo/core/db";
-import { generateRandomDomain } from "@hanzo/core/templates";
-import { manageDomain } from "@hanzo/core/utils/traefik/domain";
+import { db } from "@hanzo/platform/db";
+import { generateRandomDomain } from "@hanzo/platform/templates";
+import { manageDomain } from "@hanzo/platform/utils/traefik/domain";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { type apiCreateDomain, domains } from "../db/schema";
