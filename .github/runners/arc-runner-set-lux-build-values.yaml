@@ -1,0 +1,75 @@
+githubConfigSecret: lux-build-gha-rs-github-secret
+githubConfigUrl: https://github.com/luxfi
+maxRunners: 20
+minRunners: 0
+runnerScaleSetName: lux-build
+template:
+  spec:
+    containers:
+    - command:
+      - /bin/sh
+      - -c
+      - |
+        for i in $(seq 1 60); do
+          docker info >/dev/null 2>&1 && break
+          echo "Waiting for Docker ($i)..."
+          sleep 2
+        done
+        /home/runner/run.sh
+      env:
+      - name: DOCKER_HOST
+        value: tcp://localhost:2375
+      image: ghcr.io/actions/actions-runner:latest
+      name: runner
+      resources:
+        limits:
+          cpu: "8"
+          memory: 28Gi
+        requests:
+          cpu: "2"
+          memory: 4Gi
+      volumeMounts:
+      - mountPath: /home/runner/externals
+        name: dind-externals
+    - args:
+      - --host=tcp://0.0.0.0:2375
+      env:
+      - name: DOCKER_TLS_CERTDIR
+        value: ""
+      image: docker:dind
+      name: dind
+      resources:
+        limits:
+          cpu: "8"
+          memory: 28Gi
+        requests:
+          cpu: "1"
+          memory: 2Gi
+      securityContext:
+        privileged: true
+      volumeMounts:
+      - mountPath: /home/runner/externals
+        name: dind-externals
+    initContainers:
+    - command:
+      - cp
+      - -r
+      - -v
+      - /home/runner/externals/.
+      - /home/runner/tmpDir/
+      image: ghcr.io/actions/actions-runner:latest
+      name: init-dind-externals
+      volumeMounts:
+      - mountPath: /home/runner/tmpDir
+        name: dind-externals
+    nodeSelector:
+      doks.digitalocean.com/node-pool: runner-pool-32g
+    serviceAccountName: hanzo-deploy
+    tolerations:
+    - effect: NoSchedule
+      key: dedicated
+      operator: Equal
+      value: ci-runner
+    volumes:
+    - emptyDir: {}
+      name: dind-externals
