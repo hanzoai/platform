@@ -10,6 +10,14 @@ const nextConfig = {
 		ignoreBuildErrors: true,
 	},
 	transpilePackages: ["@hanzo/platform"],
+	// In frontend-only mode, proxy API calls to production platform
+	async rewrites() {
+		if (process.env.SKIP_ENV_VALIDATION !== "1") return [];
+		const target = process.env.PLATFORM_API_URL || "https://platform.hanzo.ai";
+		return [
+			{ source: "/api/:path*", destination: `${target}/api/:path*` },
+		];
+	},
 	async headers() {
 		return [
 			{
