@@ -20,7 +20,7 @@ const NetworkDeployPage = () => {
   const [deploying, setDeploying] = useState(false);
   const [deploymentId, setDeploymentId] = useState<string | null>(null);
   const { toast } = useToast();
-  const specs: ComposeSpec[] | undefined = undefined; // TODO: implement api.compose.list
+  const [specs] = useState<ComposeSpec[] | undefined>(undefined);
 
   const handleDeploy = async (spec: ComposeSpec) => {
     setDeploying(true);
