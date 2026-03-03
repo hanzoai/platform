@@ -138,7 +138,7 @@ const { handler, api } = betterAuth({
 				before: async (_user, context) => {
 					if (!IS_CLOUD) {
 						const xHanzo PlatformToken =
-							context?.request?.headers?.get("x-dokploy-token");
+							context?.request?.headers?.get("x-hanzo-token");
 						if (xHanzo PlatformToken) {
 							const user = await getUserByToken(xHanzo PlatformToken);
 							if (!user) {
@@ -303,17 +303,7 @@ const { handler, api } = betterAuth({
 				input: true,
 				defaultValue: "",
 			},
-			enableEnterpriseFeatures: {
-				type: "boolean",
-				required: false,
-				input: false,
 			},
-			isValidEnterpriseLicense: {
-				type: "boolean",
-				required: false,
-				input: false,
-			},
-		},
 	},
 	plugins: [
 		apiKey({
@@ -437,8 +427,6 @@ export const validateRequest = async (request: IncomingMessage) => {
 					twoFactorEnabled: userFromDb.twoFactorEnabled,
 					role: member?.role || "member",
 					ownerId: member?.organization.ownerId || apiKeyRecord.user.id,
-					enableEnterpriseFeatures: userFromDb.enableEnterpriseFeatures,
-					isValidEnterpriseLicense: userFromDb.isValidEnterpriseLicense,
 				},
 			};
 
@@ -487,10 +475,6 @@ export const validateRequest = async (request: IncomingMessage) => {
 		});
 
 		session.user.role = member?.role || "member";
-		session.user.enableEnterpriseFeatures =
-			member?.user.enableEnterpriseFeatures || false;
-		session.user.isValidEnterpriseLicense =
-			member?.user.isValidEnterpriseLicense || false;
 		session.session.activeOrganizationId = member?.organization.id || "";
 		if (member) {
 			session.user.ownerId = member.organization.ownerId;

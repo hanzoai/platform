@@ -66,7 +66,7 @@ services:
       - api_key
 
   cache:
-    image: redis:latest
+    image: ghcr.io/hanzoai/kv:8
     secrets:
       - cache_secret
 
@@ -87,7 +87,7 @@ services:
       - api_key-testhash
 
   cache:
-    image: redis:latest
+    image: ghcr.io/hanzoai/kv:8
     secrets:
       - cache_secret-testhash
 
@@ -119,7 +119,7 @@ services:
       - web_secret
 
   db:
-    image: postgres:latest
+    image: ghcr.io/hanzoai/sql:18
     secrets:
       - db_password
 
@@ -140,7 +140,7 @@ services:
       - web_secret-testhash
 
   db:
-    image: postgres:latest
+    image: ghcr.io/hanzoai/sql:18
     secrets:
       - db_password-testhash
 

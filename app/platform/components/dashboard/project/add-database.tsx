@@ -55,11 +55,11 @@ import { api } from "@/utils/api";
 type DbType = z.infer<typeof mySchema>["type"];
 
 const dockerImageDefaultPlaceholder: Record<DbType, string> = {
-	mongo: "mongo:7",
-	mariadb: "mariadb:11",
-	mysql: "mysql:8",
-	postgres: "postgres:18",
-	redis: "redis:7",
+	mongo: "ghcr.io/hanzoai/docdb:latest",
+	mariadb: "ghcr.io/hanzoai/sql-maria:11",
+	mysql: "ghcr.io/hanzoai/sql-mysql:8",
+	postgres: "ghcr.io/hanzoai/sql:18",
+	redis: "ghcr.io/hanzoai/kv:8",
 };
 
 const databasesUserDefaultPlaceholder: Record<
@@ -131,7 +131,7 @@ const mySchema = z.discriminatedUnion("type", [
 	z
 		.object({
 			type: z.literal("mariadb"),
-			dockerImage: z.string().default("mariadb:4"),
+			dockerImage: z.string().default("ghcr.io/hanzoai/sql-maria:11"),
 			databaseRootPassword: z
 				.string()
 				.regex(/^[a-zA-Z0-9@#%^&*()_+\-=[\]{}|;:,.<>?~`]*$/, {
