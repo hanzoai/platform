@@ -22,6 +22,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -o main main.go
 
 # Etapa final
 FROM alpine:3.19
+LABEL org.opencontainers.image.source=https://github.com/hanzoai/platform
 
 # Instalar SQLite y otras dependencias necesarias
 RUN apk add --no-cache sqlite-libs docker-cli
