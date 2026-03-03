@@ -66,5 +66,8 @@
 			"@prisma/engines",
 			"prisma"
 		]
+	},
+	"dependencies": {
+		"@hanzo/ui": "link:../ui/pkg/ui"
 	}
 }
