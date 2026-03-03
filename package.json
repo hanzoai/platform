@@ -2,10 +2,7 @@
 	"name": "hanzo-platform",
 	"version": "4.0.3",
 	"private": true,
-	"workspaces": [
-		"app/*",
-		"pkg/*"
-	],
+	"workspaces": ["app/*", "pkg/*"],
 	"scripts": {
 		"cloud:setup": "pnpm --filter=cloud run setup",
 		"cloud:dev": "pnpm --filter=cloud run dev",
