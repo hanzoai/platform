@@ -14,7 +14,7 @@ import { HandleDestinations } from "./handle-destinations";
 
 export const ShowDestinations = () => {
 	const { data, isLoading, refetch } = api.destination.all.useQuery();
-	const { mutateAsync, isLoading: isRemoving } =
+	const { mutateAsync, isPending: isRemoving } =
 		api.destination.remove.useMutation();
 	return (
 		<div className="w-full">

@@ -19,7 +19,7 @@ import { HandleNotifications } from "./handle-notifications";
 
 export const ShowNotifications = () => {
 	const { data, isLoading, refetch } = api.notification.all.useQuery();
-	const { mutateAsync, isLoading: isRemoving } =
+	const { mutateAsync, isPending: isRemoving } =
 		api.notification.remove.useMutation();
 
 	return (

@@ -26,12 +26,17 @@ ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 ENV NODE_ENV=production
+# Limit Node.js heap to prevent OOM in constrained builders
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-# Build and deploy in a single layer to avoid cache issues
-# Cache bust: 2026-01-30-v2
-RUN pnpm --filter=@hanzo/platform build && \
-    pnpm --filter=./app/platform run build && \
-    pnpm --filter=./app/platform --prod deploy /prod/platform && \
+# Build platform package first
+RUN pnpm --filter=@hanzo/platform build
+
+# Build Next.js app (memory-intensive step)
+RUN pnpm --filter=./app/platform run build
+
+# Deploy production deps and copy build artifacts
+RUN pnpm --filter=./app/platform --prod deploy /prod/platform && \
     cp -R /usr/src/app/app/platform/.next /prod/platform/.next && \
     cp -R /usr/src/app/app/platform/dist /prod/platform/dist
 
