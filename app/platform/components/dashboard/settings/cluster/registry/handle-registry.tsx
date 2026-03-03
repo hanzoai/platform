@@ -77,7 +77,7 @@ export const HandleRegistry = ({ registryId }: Props) => {
 	const { data: servers } = api.server.withSSHKey.useQuery();
 	const {
 		mutateAsync: testRegistry,
-		isLoading,
+		isPending: isLoading,
 		error: testRegistryError,
 		isError: testRegistryIsError,
 	} = api.registry.testRegistry.useMutation();

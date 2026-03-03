@@ -202,7 +202,7 @@ export const HandleBackup = ({
 		},
 	);
 	const [cacheType, setCacheType] = useState<CacheType>("cache");
-	const { mutateAsync: createBackup, isLoading: isCreatingPostgresBackup } =
+	const { mutateAsync: createBackup, isPending: isCreatingPostgresBackup } =
 		backupId
 			? api.backup.update.useMutation()
 			: api.backup.create.useMutation();
