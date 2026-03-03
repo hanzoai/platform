@@ -1,32 +1,28 @@
-name: Build and Deploy Platform
+name: Build Docker images
 
 on:
   push:
-    branches: [main]
+    branches: [main, canary]
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
-
 jobs:
-  build:
+  build-and-push-cloud-image:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      matrix:
-        include:
-          - dockerfile: Dockerfile.cloud
-            image: platform
-            deploy: platform
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set tag and version
+        id: meta-cloud
+        run: |
+          VERSION=$(jq -r .version app/platform/package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "tags=ghcr.io/hanzoai/platform:latest,ghcr.io/hanzoai/platform:${VERSION}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=ghcr.io/hanzoai/platform:canary" >> $GITHUB_OUTPUT
+          fi
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -35,64 +31,79 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push ${{ matrix.image }}
-        uses: docker/build-push-action@v6
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./${{ matrix.dockerfile }}
+          file: ./Dockerfile.cloud
           push: true
+          tags: ${{ steps.meta-cloud.outputs.tags }}
           platforms: linux/amd64
-          tags: |
-            ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}:latest
-            ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           build-args: |
-            NODE_ENV=production
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
 
-  deploy:
-    needs: build
+  build-and-push-schedule-image:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+
     steps:
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DO_API_TOKEN }}
-
-      - name: Configure kubectl
-        run: doctl kubernetes cluster kubeconfig save hanzo-k8s
-
-      - name: Update deployments
-        run: |
-          kubectl -n hanzo set image deployment/platform \
-            platform=${{ env.IMAGE_PREFIX }}/platform:${{ github.sha }}
-
-  release:
-    needs: [build, deploy]
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Get version
-        id: version
+      - name: Set tag and version
+        id: meta-schedule
         run: |
-          VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          VERSION=$(jq -r .version app/platform/package.json)
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "tags=ghcr.io/hanzoai/platform-schedule:latest,ghcr.io/hanzoai/platform-schedule:${VERSION}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=ghcr.io/hanzoai/platform-schedule:canary" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: v${{ steps.version.outputs.version }}
-          generate_release_notes: true
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.schedule
+          push: true
+          tags: ${{ steps.meta-schedule.outputs.tags }}
+          platforms: linux/amd64
+
+  build-and-push-server-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set tag and version
+        id: meta-server
+        run: |
+          VERSION=$(jq -r .version app/platform/package.json)
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "tags=ghcr.io/hanzoai/platform-server:latest,ghcr.io/hanzoai/platform-server:${VERSION}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=ghcr.io/hanzoai/platform-server:canary" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.server
+          push: true
+          tags: ${{ steps.meta-server.outputs.tags }}
+          platforms: linux/amd64

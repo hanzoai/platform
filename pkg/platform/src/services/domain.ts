@@ -1,25 +1,27 @@
 import dns from "node:dns";
 import { promisify } from "node:util";
 import { db } from "@hanzo/platform/db";
+import { getWebServerSettings } from "@hanzo/platform/services/web-server-settings";
 import { generateRandomDomain } from "@hanzo/platform/templates";
 import { manageDomain } from "@hanzo/platform/utils/traefik/domain";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
+import type { z } from "zod";
 import { type apiCreateDomain, domains } from "../db/schema";
-import { findUserById } from "./admin";
 import { findApplicationById } from "./application";
 import { detectCDNProvider } from "./cdn";
 import { findServerById } from "./server";
 
 export type Domain = typeof domains.$inferSelect;
 
-export const createDomain = async (input: typeof apiCreateDomain._type) => {
+export const createDomain = async (input: z.infer<typeof apiCreateDomain>) => {
 	const result = await db.transaction(async (tx) => {
 		const domain = await tx
 			.insert(domains)
 			.values({
 				...input,
-			} as any)
+				host: input.host?.trim(),
+			} as typeof domains.$inferInsert)
 			.returning()
 			.then((response) => response[0]);
 
@@ -60,9 +62,9 @@ export const generateTraefikMeDomain = async (
 			projectName: appName,
 		});
 	}
-	const admin = await findUserById(userId);
+	const settings = await getWebServerSettings();
 	return generateRandomDomain({
-		serverIp: admin?.serverIp || "",
+		serverIp: settings?.serverIp || "",
 		projectName: appName,
 	});
 };
@@ -120,7 +122,8 @@ export const updateDomainById = async (
 		.update(domains)
 		.set({
 			...domainData,
-		} as any)
+			...(domainData.host && { host: domainData.host.trim() }),
+		})
 		.where(eq(domains.domainId, domainId))
 		.returning();
 
