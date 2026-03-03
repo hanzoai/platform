@@ -2,13 +2,13 @@ import { createWriteStream } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { IS_CLOUD, paths } from "@hanzo/core/constants";
-import type { BackupSchedule } from "@hanzo/core/services/backup";
+import { IS_CLOUD, paths } from "../../constants/index";
+import type { BackupSchedule } from "../../services/backup";
 import {
 	createDeploymentBackup,
 	updateDeploymentStatus,
-} from "@hanzo/core/services/deployment";
-import { findDestinationById } from "@hanzo/core/services/destination";
+} from "../../services/deployment";
+import { findDestinationById } from "../../services/destination";
 import { execAsync } from "../process/execAsync";
 import { getS3Credentials, normalizeS3Path } from "./utils";
 
