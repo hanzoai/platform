@@ -17,7 +17,7 @@ export const ShowTraefikFileSystemModal = ({ serverId }: Props) => {
 					className="w-full cursor-pointer "
 					onSelect={(e) => e.preventDefault()}
 				>
-					Show Traefik File System
+					Show Traefik
 				</DropdownMenuItem>
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-7xl  overflow-y-auto max-h-screen ">
