@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 #
 # Platform — uses pre-built base image for sub-2-minute builds.
-# System tools are in ghcr.io/hanzoai/platform-base:latest (see Dockerfile.base).
+# System tools are in ghcr.io/hanzoai/platform:base (see Dockerfile.base).
 #
-ARG PLATFORM_BASE_IMAGE=ghcr.io/hanzoai/platform-base:latest
+ARG PLATFORM_BASE_IMAGE=ghcr.io/hanzoai/platform:base
 
 FROM node:24.4.0-slim AS base
 ENV PNPM_HOME="/pnpm"
