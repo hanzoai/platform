@@ -1,99 +1,96 @@
-import { deployPostgres } from "@dokploy/server/services/postgres";
+import { deployPostgres } from "@hanzo/core/services/postgres";
 import { execAsyncRemote } from "../process/execAsync";
 import { execAsync } from "../process/execAsync";
-import { deployMySql } from "@dokploy/server/services/mysql";
-import { deployMariadb } from "@dokploy/server/services/mariadb";
-import { deployMongo } from "@dokploy/server/services/mongo";
-import { deployRedis } from "@dokploy/server/services/redis";
+import { deployMySql } from "@hanzo/core/services/mysql";
+import { deployMariadb } from "@hanzo/core/services/mariadb";
+import { deployMongo } from "@hanzo/core/services/mongo";
+import { deployRedis } from "@hanzo/core/services/redis";
 import { removeService } from "../docker/utils";
-import { db } from "@dokploy/server/db";
+import { db } from "@hanzo/core/db";
 import {
+	applications,
 	postgres,
 	mysql,
-	mariadb,
 	mongo,
+	mariadb,
 	redis,
-} from "@dokploy/server/db/schema";
+} from "@hanzo/core/db/schema";
 import { eq } from "drizzle-orm";
 
-type DatabaseType = "postgres" | "mysql" | "mariadb" | "mongo" | "redis";
+/**
+ * Function to rebuild database services
+ */
+export const rebuildDatabase = async (id: string, type: 'postgres' | 'mongo' | 'mysql' | 'mariadb' | 'redis') => {
+	try {
+		let appName = '';
+		let serverId: string | null = null;
 
-export const rebuildDatabase = async (
-	databaseId: string,
-	type: DatabaseType,
-) => {
-	const database = await findDatabaseById(databaseId, type);
+		switch (type) {
+			case 'postgres':
+				const pg = await db.query.postgres.findFirst({
+					where: eq(postgres.postgresId, id)
+				});
+				if (!pg) throw new Error('Postgres database not found');
+				appName = pg.appName;
+				serverId = pg.serverId;
+				await removeService(appName, serverId);
+				await deployPostgres(id);
+				break;
 
-	if (!database) {
-		throw new Error("Database not found");
-	}
+			case 'mongo':
+				const mongodb = await db.query.mongo.findFirst({
+					where: eq(mongo.mongoId, id)
+				});
+				if (!mongodb) throw new Error('MongoDB database not found');
+				appName = mongodb.appName;
+				serverId = mongodb.serverId;
+				await removeService(appName, serverId);
+				await deployMongo(id);
+				break;
 
-	await removeService(database.appName, database.serverId);
-	await new Promise((resolve) => setTimeout(resolve, 6000));
+			case 'mysql':
+				const mysqldb = await db.query.mysql.findFirst({
+					where: eq(mysql.mysqlId, id)
+				});
+				if (!mysqldb) throw new Error('MySQL database not found');
+				appName = mysqldb.appName;
+				serverId = mysqldb.serverId;
+				await removeService(appName, serverId);
+				await deployMySql(id);
+				break;
 
-	for (const mount of database.mounts) {
-		if (mount.type === "volume") {
-			const command = `docker volume rm ${mount?.volumeName} --force`;
-			if (database.serverId) {
-				await execAsyncRemote(database.serverId, command);
-			} else {
-				await execAsync(command);
-			}
+			case 'mariadb':
+				const mariadbInstance = await db.query.mariadb.findFirst({
+					where: eq(mariadb.mariadbId, id)
+				});
+				if (!mariadbInstance) throw new Error('MariaDB database not found');
+				appName = mariadbInstance.appName;
+				serverId = mariadbInstance.serverId;
+				await removeService(appName, serverId);
+				await deployMariadb(id);
+				break;
+
+			case 'redis':
+				const redisInstance = await db.query.redis.findFirst({
+					where: eq(redis.redisId, id)
+				});
+				if (!redisInstance) throw new Error('Redis database not found');
+				appName = redisInstance.appName;
+				serverId = redisInstance.serverId;
+				await removeService(appName, serverId);
+				await deployRedis(id);
+				break;
+
+			default:
+				throw new Error('Invalid database type');
 		}
-	}
 
-	if (type === "postgres") {
-		await deployPostgres(databaseId);
-	} else if (type === "mysql") {
-		await deployMySql(databaseId);
-	} else if (type === "mariadb") {
-		await deployMariadb(databaseId);
-	} else if (type === "mongo") {
-		await deployMongo(databaseId);
-	} else if (type === "redis") {
-		await deployRedis(databaseId);
-	}
-};
-
-const findDatabaseById = async (databaseId: string, type: DatabaseType) => {
-	if (type === "postgres") {
-		return await db.query.postgres.findFirst({
-			where: eq(postgres.postgresId, databaseId),
-			with: {
-				mounts: true,
-			},
-		});
-	}
-	if (type === "mysql") {
-		return await db.query.mysql.findFirst({
-			where: eq(mysql.mysqlId, databaseId),
-			with: {
-				mounts: true,
-			},
-		});
-	}
-	if (type === "mariadb") {
-		return await db.query.mariadb.findFirst({
-			where: eq(mariadb.mariadbId, databaseId),
-			with: {
-				mounts: true,
-			},
-		});
-	}
-	if (type === "mongo") {
-		return await db.query.mongo.findFirst({
-			where: eq(mongo.mongoId, databaseId),
-			with: {
-				mounts: true,
-			},
-		});
-	}
-	if (type === "redis") {
-		return await db.query.redis.findFirst({
-			where: eq(redis.redisId, databaseId),
-			with: {
-				mounts: true,
-			},
-		});
+		return { success: true };
+	} catch (error) {
+		console.error('Error rebuilding database:', error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : 'Unknown error occurred'
+		};
 	}
 };

@@ -1,5 +1,5 @@
-import type { MySql } from "@dokploy/server/services/mysql";
-import type { Destination } from "@dokploy/server/services/destination";
+import type { MySql } from "@hanzo/core/services/mysql";
+import type { Destination } from "@hanzo/core/services/destination";
 import {
 	getRemoteServiceContainer,
 	getServiceContainer,
@@ -43,8 +43,7 @@ export const restoreMySqlBackup = async (
 	} catch (error) {
 		console.error(error);
 		emit(
-			`Error: ${
-				error instanceof Error ? error.message : "Error restoring mysql backup"
+			`Error: ${error instanceof Error ? error.message : "Error restoring mysql backup"
 			}`,
 		);
 		throw new Error(
