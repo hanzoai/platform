@@ -459,7 +459,7 @@ export function PagesProjects() {
 				</div>
 			) : (
 				<div className="grid gap-4 md:grid-cols-2">
-					{(projects as PagesProject[]).map((project) => (
+					{(projects as unknown as PagesProject[]).map((project) => (
 						<ProjectCard
 							key={project.name}
 							project={project}
