@@ -100,7 +100,7 @@ export const HandleRedirect = ({
 
 	const utils = api.useUtils();
 
-	const { mutateAsync, isLoading, error, isError } = redirectId
+	const { mutateAsync, isPending: isLoading, error, isError } = redirectId
 		? api.redirects.update.useMutation()
 		: api.redirects.create.useMutation();
 

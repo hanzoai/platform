@@ -158,17 +158,17 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 			enabled: !!notificationId,
 		},
 	);
-	const { mutateAsync: testSlackConnection, isLoading: isLoadingSlack } =
+	const { mutateAsync: testSlackConnection, isPending: isLoadingSlack } =
 		api.notification.testSlackConnection.useMutation();
-	const { mutateAsync: testTelegramConnection, isLoading: isLoadingTelegram } =
+	const { mutateAsync: testTelegramConnection, isPending: isLoadingTelegram } =
 		api.notification.testTelegramConnection.useMutation();
-	const { mutateAsync: testDiscordConnection, isLoading: isLoadingDiscord } =
+	const { mutateAsync: testDiscordConnection, isPending: isLoadingDiscord } =
 		api.notification.testDiscordConnection.useMutation();
-	const { mutateAsync: testEmailConnection, isLoading: isLoadingEmail } =
+	const { mutateAsync: testEmailConnection, isPending: isLoadingEmail } =
 		api.notification.testEmailConnection.useMutation();
-	const { mutateAsync: testGotifyConnection, isLoading: isLoadingGotify } =
+	const { mutateAsync: testGotifyConnection, isPending: isLoadingGotify } =
 		api.notification.testGotifyConnection.useMutation();
-	const { mutateAsync: testNtfyConnection, isLoading: isLoadingNtfy } =
+	const { mutateAsync: testNtfyConnection, isPending: isLoadingNtfy } =
 		api.notification.testNtfyConnection.useMutation();
 	const slackMutation = notificationId
 		? api.notification.updateSlack.useMutation()

@@ -20,10 +20,10 @@ interface Props {
 }
 export const ShowTraefikActions = ({ serverId }: Props) => {
 	const { t } = useTranslation("settings");
-	const { mutateAsync: reloadTraefik, isLoading: reloadTraefikIsLoading } =
+	const { mutateAsync: reloadTraefik, isPending: reloadTraefikIsLoading } =
 		api.settings.reloadTraefik.useMutation();
 
-	const { mutateAsync: toggleDashboard, isLoading: toggleDashboardIsLoading } =
+	const { mutateAsync: toggleDashboard, isPending: toggleDashboardIsLoading } =
 		api.settings.toggleDashboard.useMutation();
 
 	const { data: haveTraefikDashboardPortEnabled, refetch: refetchDashboard } =

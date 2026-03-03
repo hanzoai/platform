@@ -48,7 +48,7 @@ interface Props {
 export const ShowExternalPostgresCredentials = ({ postgresId }: Props) => {
 	const { data: ip } = api.settings.getIp.useQuery();
 	const { data, refetch } = api.postgres.one.useQuery({ postgresId });
-	const { mutateAsync, isLoading } =
+	const { mutateAsync, isPending: isLoading } =
 		api.postgres.saveExternalPort.useMutation();
 	const getIp = data?.server?.ipAddress || ip;
 	const [connectionUrl, setConnectionUrl] = useState("");

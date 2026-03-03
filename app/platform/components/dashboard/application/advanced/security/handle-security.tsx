@@ -55,7 +55,7 @@ export const HandleSecurity = ({
 		},
 	);
 
-	const { mutateAsync, isLoading, error, isError } = securityId
+	const { mutateAsync, isPending: isLoading, error, isError } = securityId
 		? api.security.update.useMutation()
 		: api.security.create.useMutation();
 

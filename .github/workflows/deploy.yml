@@ -18,27 +18,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - dockerfile: Dockerfile
+          - dockerfile: Dockerfile.cloud
             image: platform
             deploy: platform
-          - dockerfile: Dockerfile.cloud
-            image: platform-cloud
-            deploy: cloud
-          - dockerfile: Dockerfile.schedule
-            image: platform-schedule
-            deploy: schedule
-          - dockerfile: Dockerfile.server
-            image: platform-server
-            deploy: server
-          - dockerfile: Dockerfile.monitoring
-            image: platform-monitoring
-            deploy: monitoring
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -56,7 +41,7 @@ jobs:
           context: .
           file: ./${{ matrix.dockerfile }}
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: |
             ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}:latest
             ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}:${{ github.sha }}
@@ -76,23 +61,12 @@ jobs:
           token: ${{ secrets.DO_API_TOKEN }}
 
       - name: Configure kubectl
-        run: doctl kubernetes cluster kubeconfig save 1a153000-90a6-48ad-9375-7ef901a9bf7f
+        run: doctl kubernetes cluster kubeconfig save hanzo-k8s
 
       - name: Update deployments
         run: |
-          declare -A IMAGES=(
-            [platform]=platform
-            [cloud]=platform-cloud
-            [schedule]=platform-schedule
-            [server]=platform-server
-            [monitoring]=platform-monitoring
-          )
-          for deploy in "${!IMAGES[@]}"; do
-            image="${{ env.IMAGE_PREFIX }}/${IMAGES[$deploy]}"
-            kubectl -n hanzo set image "deployment/${deploy}" \
-              "${deploy}=${image}:${{ github.sha }}" \
-              2>/dev/null || echo "deployment ${deploy} not found, skipping"
-          done
+          kubectl -n hanzo set image deployment/platform \
+            platform=${{ env.IMAGE_PREFIX }}/platform:${{ github.sha }}
 
   release:
     needs: [build, deploy]

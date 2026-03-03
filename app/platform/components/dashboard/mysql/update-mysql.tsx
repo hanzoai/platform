@@ -42,7 +42,7 @@ interface Props {
 
 export const UpdateMysql = ({ mysqlId }: Props) => {
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending: isLoading } =
 		api.mysql.update.useMutation();
 	const { data } = api.mysql.one.useQuery(
 		{

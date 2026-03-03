@@ -41,7 +41,7 @@ interface Props {
 export const ProjectEnvironment = ({ projectId, children }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending: isLoading } =
 		api.project.update.useMutation();
 	const { data } = api.project.one.useQuery(
 		{
