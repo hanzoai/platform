@@ -315,8 +315,7 @@ export const SaveGitlabProviderCompose = ({ composeId }: Props) => {
 																	<CheckIcon
 																		className={cn(
 																			"ml-auto h-4 w-4",
-																			repo.url ===
-																				field.value.gitlabPathNamespace
+																			repo.id === field.value.id
 																				? "opacity-100"
 																				: "opacity-0",
 																		)}
