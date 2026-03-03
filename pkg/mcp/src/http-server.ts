@@ -62,9 +62,8 @@ export async function main() {
         // Create and connect server first
         const server = createServer();
         // The transport will have sessionId after initialization
-        await server.connect(
-          transport as StreamableHTTPServerTransport & { sessionId: string }
-        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await server.connect(transport as any);
 
         // Log after successful connection
         logger.info("New MCP session server connected", {
