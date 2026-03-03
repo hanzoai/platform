@@ -68,7 +68,7 @@ export const HandlePorts = ({
 			enabled: !!portId,
 		},
 	);
-	const { mutateAsync, isLoading, error, isError } = portId
+	const { mutateAsync, isPending: isLoading, error, isError } = portId
 		? api.port.update.useMutation()
 		: api.port.create.useMutation();
 

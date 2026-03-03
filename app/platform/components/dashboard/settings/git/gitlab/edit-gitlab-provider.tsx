@@ -54,7 +54,7 @@ export const EditGitlabProvider = ({ gitlabId }: Props) => {
 	const utils = api.useUtils();
 	const [isOpen, setIsOpen] = useState(false);
 	const { mutateAsync, error, isError } = api.gitlab.update.useMutation();
-	const { mutateAsync: testConnection, isLoading } =
+	const { mutateAsync: testConnection, isPending: isLoading } =
 		api.gitlab.testConnection.useMutation();
 	const form = useForm<Schema>({
 		defaultValues: {

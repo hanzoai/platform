@@ -18,7 +18,7 @@ import { GPUSupportModal } from "../gpu-support-modal";
 
 export const ShowHanzoActions = () => {
 	const { t } = useTranslation("settings");
-	const { mutateAsync: reloadServer, isLoading } =
+	const { mutateAsync: reloadServer, isPending: isLoading } =
 		api.settings.reloadServer.useMutation();
 
 	const { mutateAsync: cleanRedis } = api.settings.cleanRedis.useMutation();

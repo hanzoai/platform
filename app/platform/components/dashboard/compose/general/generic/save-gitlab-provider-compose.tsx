@@ -74,7 +74,7 @@ export const SaveGitlabProviderCompose = ({ composeId }: Props) => {
 	const { data: gitlabProviders } = api.gitlab.gitlabProviders.useQuery();
 	const { data, refetch } = api.compose.one.useQuery({ composeId });
 
-	const { mutateAsync, isLoading: isSavingGitlabProvider } =
+	const { mutateAsync, isPending: isSavingGitlabProvider } =
 		api.compose.update.useMutation();
 
 	const form = useForm<GitlabProvider>({
@@ -339,7 +339,7 @@ export const SaveGitlabProviderCompose = ({ composeId }: Props) => {
 														!field.value && "text-muted-foreground",
 													)}
 												>
-													{status === "loading" && fetchStatus === "fetching"
+													{status === "pending" && fetchStatus === "fetching"
 														? "Loading...."
 														: field.value
 															? branches?.find(
@@ -356,7 +356,7 @@ export const SaveGitlabProviderCompose = ({ composeId }: Props) => {
 													placeholder="Search branch..."
 													className="h-9"
 												/>
-												{status === "loading" && fetchStatus === "fetching" && (
+												{status === "pending" && fetchStatus === "fetching" && (
 													<span className="py-6 text-center text-sm text-muted-foreground">
 														Loading Branches....
 													</span>

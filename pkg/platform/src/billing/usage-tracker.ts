@@ -3,11 +3,19 @@ import { db } from "../db";
 import { appUsageMetrics, applications, environments, projects, organization } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { calculateTotalUsageCost } from "./pricing";
+import { IS_CLOUD } from "../constants";
 
 // Type helper for insert operations
 type MetricsInsert = typeof appUsageMetrics.$inferInsert;
 
-const docker = new Dockerode();
+// Lazy Docker instance — only connect when not running on K8s
+let _docker: Dockerode | null = null;
+function getDocker(): Dockerode {
+	if (!_docker) {
+		_docker = new Dockerode();
+	}
+	return _docker;
+}
 
 function calculateCPUSeconds(stats: any, intervalSeconds: number): number {
   const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
@@ -32,7 +40,7 @@ function calculateEgressGB(stats: any): number {
 
 async function getStorageUsageGB(containerId: string): Promise<number> {
   try {
-    const container = docker.getContainer(containerId);
+    const container = getDocker().getContainer(containerId);
     const inspect = await container.inspect();
     let totalGB = 0;
     
@@ -63,12 +71,12 @@ export async function collectApplicationMetrics(applicationId: string, intervalS
     const app = await db.query.applications.findFirst({ where: eq(applications.applicationId, applicationId) });
     if (!app?.appName) return;
 
-    const containers = await docker.listContainers({
+    const containers = await getDocker().listContainers({
       filters: { label: [`com.docker.compose.service=${app.appName}`] },
     });
     if (containers.length === 0) return;
 
-    const container = docker.getContainer(containers[0]!.Id);
+    const container = getDocker().getContainer(containers[0]!.Id);
     const stats = await container.stats({ stream: false });
 
     const cpuSeconds = calculateCPUSeconds(stats, intervalSeconds);

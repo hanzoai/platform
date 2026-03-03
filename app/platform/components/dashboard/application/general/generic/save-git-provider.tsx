@@ -58,7 +58,7 @@ export const SaveGitProvider = ({ applicationId }: Props) => {
 	const { data: sshKeys } = api.sshKey.all.useQuery();
 	const router = useRouter();
 
-	const { mutateAsync, isLoading } =
+	const { mutateAsync, isPending: isLoading } =
 		api.application.saveGitProdiver.useMutation();
 
 	const form = useForm<GitProvider>({

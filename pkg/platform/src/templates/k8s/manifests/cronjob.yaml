@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dummy-cron-job
+  namespace: dummy-namespace
+spec:
+  schedule: "*/5 * * * *"
+  timezone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  suspend: false
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: dummy
+            image: docker.io/alpine
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "100m"
+              limits:
+                memory: "1Gi"
+                cpu: "1"
+              env:
+              - name: DUMMY_KEY_1
+                value: "dummy_value_1"
+              - name: DUMMY_KEY_2
+                value: "dummy_value_2"
+              - name: DUMMY_KEY_3
+                value: "dummy_value_3"
+            volumeMounts:
+            - name: dummy-volume
+              mountPath: /dummy
+          volumes:
+          - name: data-volume
+            persistentVolumeClaim:
+              claimName: data-pvc
