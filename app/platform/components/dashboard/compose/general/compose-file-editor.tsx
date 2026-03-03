@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -34,7 +34,7 @@ export const ComposeFileEditor = ({ composeId }: Props) => {
 		{ enabled: !!composeId },
 	);
 
-	const { mutateAsync, isPending: isLoading } = api.compose.update.useMutation();
+	const { mutateAsync, isPending } = api.compose.update.useMutation();
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
 	const form = useForm<AddComposeFile>({
@@ -74,6 +74,7 @@ export const ComposeFileEditor = ({ composeId }: Props) => {
 		await mutateAsync({
 			composeId,
 			composeFile: data.composeFile,
+			composePath: "./docker-compose.yml",
 			sourceType: "raw",
 		})
 			.then(async () => {
@@ -92,7 +93,7 @@ export const ComposeFileEditor = ({ composeId }: Props) => {
 	// Add keyboard shortcut for Ctrl+S/Cmd+S
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if ((e.ctrlKey || e.metaKey) && e.key === "s" && !isLoading) {
+			if ((e.ctrlKey || e.metaKey) && e.key === "s" && !isPending) {
 				e.preventDefault();
 				form.handleSubmit(onSubmit)();
 			}
@@ -102,7 +103,7 @@ export const ComposeFileEditor = ({ composeId }: Props) => {
 		return () => {
 			document.removeEventListener("keydown", handleKeyDown);
 		};
-	}, [form, onSubmit, isLoading]);
+	}, [form, onSubmit, isPending]);
 
 	return (
 		<>
@@ -166,7 +167,7 @@ services:
 					<Button
 						type="submit"
 						form="hook-form-save-compose-file"
-						isLoading={isLoading}
+						isLoading={isPending}
 						className="lg:w-fit w-full"
 					>
 						Save
