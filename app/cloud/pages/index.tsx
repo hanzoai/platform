@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
-import { IS_CLOUD, isAdminPresent, validateRequest } from "@hanzo/core";
+import { IS_CLOUD, isAdminPresent, validateRequest } from "@hanzo/platform";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
