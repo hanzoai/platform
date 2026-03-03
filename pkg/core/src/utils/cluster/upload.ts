@@ -1,5 +1,4 @@
 import type { WriteStream } from "node:fs";
-import path, { join } from "node:path";
 import type { ApplicationNested } from "../builders";
 import { spawnAsync } from "../process/spawnAsync";
 
@@ -23,9 +22,11 @@ export const uploadImage = async (
 
 	const finalURL = registryUrl;
 
-	const registryTag = path
-		.join(registryUrl, join(imagePrefix || "", imageName))
-		.replace(/\/+/g, "/");
+	// Fix: Don't use path.join for URLs - construct registry tag properly
+	const registryTag = [registryUrl, imagePrefix, imageName]
+		.filter(Boolean)
+		.join('/')
+		.replace(/\/+/g, '/');
 
 	try {
 		writeStream.write(
