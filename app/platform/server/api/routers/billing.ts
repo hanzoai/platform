@@ -50,7 +50,7 @@ export const billingRouter = createTRPCRouter({
         ownerId: user.id,
         ownerEmail: user.email,
         plan,
-        stripeCustomerId: wallet?.stripeCustomerId,
+        stripeCustomerId: wallet?.stripeCustomerId ?? undefined,
       });
     }),
 

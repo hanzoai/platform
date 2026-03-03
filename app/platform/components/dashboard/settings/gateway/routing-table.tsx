@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { Loader2, Pencil, PlusIcon, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -41,7 +41,7 @@ const routingFormSchema = z.object({
 	host: z.string().min(1, "Host is required"),
 	pathPrefix: z.string().optional(),
 	backend: z.string().min(1, "Backend is required"),
-	priority: z.coerce.number().int().min(0, "Priority must be >= 0"),
+	priority: z.number().int().min(0, "Priority must be >= 0"),
 	middlewares: z.string(),
 	enabled: z.boolean(),
 });
@@ -229,7 +229,13 @@ const RoutingDialog = ({
 									<FormItem>
 										<FormLabel>Priority</FormLabel>
 										<FormControl>
-											<Input type="number" min={0} {...field} />
+											<Input
+											type="number"
+											min={0}
+											{...field}
+											value={field.value ?? ""}
+											onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+										/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
