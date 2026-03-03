@@ -416,7 +416,7 @@ function UtilizationBar({ icon, label, value }: UtilizationBarProps) {
 
 interface NodeStatusBadgeProps {
 	status: PoolDroplet["status"];
-	nodeStatus?: PoolDroplet["computeNode"] extends { status: infer S } ? S : never;
+	nodeStatus?: NonNullable<PoolDroplet["computeNode"]>["status"];
 }
 
 function NodeStatusBadge({ status, nodeStatus }: NodeStatusBadgeProps) {
