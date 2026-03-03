@@ -158,7 +158,7 @@ export const suggestVariants = async ({
               Act as advanced DevOps engineer and generate docker compose with environment variables and domain configurations needed to install the following project.
               Return the docker compose as a YAML string and environment variables configuration. Follow these rules:
 
-              Docker Compose Rules:
+              Compose Rules:
               1. Use placeholder like \${VARIABLE_NAME-default} for generated variables in the docker-compose.yml
               2. Use complex values for passwords/secrets variables
               3. Don't set container_name field in services
