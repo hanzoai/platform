@@ -1,6 +1,6 @@
 {
 	"name": "cloud",
-	"version": "v0.18.4",
+	"version": "v0.18.5",
 	"private": true,
 	"license": "Apache-2.0",
 	"type": "module",
@@ -170,7 +170,7 @@
 	"ct3aMetadata": {
 		"initVersion": "7.25.2"
 	},
-	"packageManager": "pnpm@9.5.0",
+	"packageManager": "pnpm@10.5.2",
 	"engines": {
 		"node": ">=22",
 		"pnpm": ">=10"
