@@ -342,26 +342,26 @@ export const validateRequest = async (request: IncomingMessage) => {
 		};
 	}
 
-	if (session?.user) {
-		const member = await db.query.member.findFirst({
-			where: and(
-				eq(schema.member.userId, session.user.id),
-				eq(
-					schema.member.organizationId,
-					session.session.activeOrganizationId || "",
-				),
+	// TypeScript now knows session and session.user are not null
+	// But we need to help it understand with non-null assertions
+	const member = await db.query.member.findFirst({
+		where: and(
+			eq(schema.member.userId, session.user!.id),
+			eq(
+				schema.member.organizationId,
+				session.session!.activeOrganizationId || "",
 			),
-			with: {
-				organization: true,
-			},
-		});
+		),
+		with: {
+			organization: true,
+		},
+	});
 
-		session.user.role = member?.role || "member";
-		if (member) {
-			session.user.ownerId = member.organization.ownerId;
-		} else {
-			session.user.ownerId = session.user.id;
-		}
+	session.user!.role = member?.role || "member";
+	if (member) {
+		session.user!.ownerId = member.organization.ownerId;
+	} else {
+		session.user!.ownerId = session.user!.id;
 	}
 
 	return session;
