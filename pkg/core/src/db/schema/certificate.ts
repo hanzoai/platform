@@ -4,7 +4,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { organization } from "./account";
-import { server } from "./server";
+import { server } from "./hanzo-server";
 import { generateAppName } from "./utils";
 
 export const certificates = pgTable("certificate", {

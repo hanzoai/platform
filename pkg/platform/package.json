@@ -8,6 +8,6 @@
     "./*": "./src/*.ts"
   },
   "dependencies": {
-    "@hanzo/core": "workspace:*"
+    "@hanzo/platform": "workspace:*"
   }
 }

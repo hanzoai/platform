@@ -24,7 +24,7 @@ import { projects } from "./project";
 import { redirects } from "./redirects";
 import { registry } from "./registry";
 import { security } from "./security";
-import { server } from "./server";
+import { server } from "./hanzo-server";
 import {
 	applicationStatus,
 	certificateType,
