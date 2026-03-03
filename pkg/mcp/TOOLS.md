@@ -658,7 +658,7 @@ Platform includes comprehensive MySQL database management capabilities. These to
   ```
 - **Annotations**: Creation tool (non-destructive)
 - **Required Fields**: `name`, `appName`, `databaseName`, `databaseUser`, `databasePassword`, `databaseRootPassword`, `projectId`
-- **Optional Fields**: `dockerImage` (defaults to "mysql:8"), `description`, `serverId`
+- **Optional Fields**: `dockerImage` (defaults to "ghcr.io/hanzoai/sql-mysql:8"), `description`, `serverId`
 
 #### `mysql-one`
 
@@ -976,4 +976,4 @@ All tools include semantic annotations to help MCP clients understand their beha
 - All tools include comprehensive error handling and validation
 - MySQL tools require both database user password and root password for security
 - PostgreSQL and MySQL tools follow identical patterns but use database-specific field names (`postgresId` vs `mysqlId`)
-- Default Docker images: PostgreSQL uses `postgres:latest`, MySQL uses `mysql:8`
+- Default Docker images: PostgreSQL uses `ghcr.io/hanzoai/sql:18`, MySQL uses `ghcr.io/hanzoai/sql-mysql:8`
