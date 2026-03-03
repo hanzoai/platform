@@ -57,8 +57,8 @@ export const setupDockerStatsMonitoringSocketServer = (
 		}
 		const intervalId = setInterval(async () => {
 			try {
-				// Special case: when monitoring "dokploy", get host system stats instead of container stats
-				if (appName === "dokploy") {
+				// Special case: when monitoring "hanzo", get host system stats instead of container stats
+				if (appName === "hanzo") {
 					const stat = await getHostSystemStats();
 
 					await recordAdvancedStats(stat, appName);
