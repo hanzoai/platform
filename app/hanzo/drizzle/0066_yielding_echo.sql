@@ -21,7 +21,7 @@ CREATE TABLE "user_temp" (
 	"enableLogRotation" boolean DEFAULT false NOT NULL,
 	"enablePaidFeatures" boolean DEFAULT false NOT NULL,
 <<<<<<< HEAD:app/cloud/drizzle/0066_yielding_echo.sql
-	"metricsConfig" jsonb DEFAULT '{"server":{"type":"Dokploy","refreshRate":60,"port":4500,"token":"","retentionDays":2,"cronJob":"","urlCallback":"","thresholds":{"cpu":0,"memory":0}},"containers":{"refreshRate":60,"services":{"include":[],"exclude":[]}}}'::jsonb NOT NULL,
+	"metricsConfig" jsonb DEFAULT '{"server":{"type":"Hanzo","refreshRate":60,"port":4500,"token":"","retentionDays":2,"cronJob":"","urlCallback":"","thresholds":{"cpu":0,"memory":0}},"containers":{"refreshRate":60,"services":{"include":[],"exclude":[]}}}'::jsonb NOT NULL,
 =======
 	"metricsConfig" jsonb DEFAULT '{"server":{"type":"Hanzo","refreshRate":60,"port":4500,"token":"","retentionDays":2,"cronJob":"","urlCallback":"","thresholds":{"cpu":0,"memory":0}},"containers":{"refreshRate":60,"services":{"include":[],"exclude":[]}}}'::jsonb NOT NULL,
 >>>>>>> 923b06f1 (Add AI, organizations and other updates.):app/hanzo/drizzle/0066_yielding_echo.sql

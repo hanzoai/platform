@@ -499,7 +499,7 @@ export const notificationRouter = createTRPCRouter({
 					input,
 					"Test Notification",
 					"",
-					"view, visit Hanzo Platform on Github, https://github.com/dokploy/dokploy, clear=true;",
+					"view, visit Hanzo Platform on Github, https://github.com/hanzo/hanzo, clear=true;",
 					"Hi, From Hanzo Platform 👋",
 				);
 				return true;

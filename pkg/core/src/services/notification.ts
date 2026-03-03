@@ -516,7 +516,7 @@ export const createNtfyNotification = async (
 				appDeploy: input.appDeploy,
 				appBuildError: input.appBuildError,
 				databaseBackup: input.databaseBackup,
-				dokployRestart: input.dokployRestart,
+				hanzoRestart: input.hanzoRestart,
 				dockerCleanup: input.dockerCleanup,
 				notificationType: "ntfy",
 				organizationId: organizationId,
@@ -546,7 +546,7 @@ export const updateNtfyNotification = async (
 				appDeploy: input.appDeploy,
 				appBuildError: input.appBuildError,
 				databaseBackup: input.databaseBackup,
-				dokployRestart: input.dokployRestart,
+				hanzoRestart: input.hanzoRestart,
 				dockerCleanup: input.dockerCleanup,
 				organizationId: input.organizationId,
 			})

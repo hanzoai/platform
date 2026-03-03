@@ -1,6 +1,6 @@
-import { paths } from "@dokploy/server/constants";
-import { findAdmin } from "@dokploy/server/services/admin";
-import { updateUser } from "@dokploy/server/services/user";
+import { paths } from "@hanzo/server/constants";
+import { findAdmin } from "@hanzo/server/services/admin";
+import { updateUser } from "@hanzo/server/services/user";
 import { scheduledJobs, scheduleJob } from "node-schedule";
 import { execAsync } from "../process/execAsync";
 

@@ -307,7 +307,7 @@ export const apiCreateNtfy = notificationsSchema
 	.pick({
 		appBuildError: true,
 		databaseBackup: true,
-		dokployRestart: true,
+		hanzoRestart: true,
 		name: true,
 		appDeploy: true,
 		dockerCleanup: true,
