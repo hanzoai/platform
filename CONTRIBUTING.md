@@ -56,9 +56,9 @@ We use Node v20.16.0 and recommend this specific version. If you have nvm instal
 
 ```bash
 git clone https://github.com/hanzoai/platform.git
-cd hanzo
+cd platform
 pnpm install
-cp app/hanzo/.env.example app/hanzo/.env
+cp apps/platform/.env.example apps/platform/.env
 ```
 
 ## Requirements
@@ -70,7 +70,7 @@ cp app/hanzo/.env.example app/hanzo/.env
 Run the command that will spin up all the required services and files.
 
 ```bash
-pnpm run hanzo:setup
+pnpm run platform:setup
 ```
 
 Run this script
@@ -82,7 +82,7 @@ pnpm run server:script
 Now run the development server.
 
 ```bash
-pnpm run hanzo:dev
+pnpm run platform:dev
 ```
 
 Go to http://localhost:3000 to see the development server
@@ -93,7 +93,7 @@ Go to http://localhost:3000 to see the development server
 ## Build
 
 ```bash
-pnpm run hanzo:build
+pnpm run platform:build
 ```
 
 ## Docker
@@ -127,7 +127,7 @@ pnpm dlx localtunnel --port 3000
 If you run into permission issues of docker run the following command
 
 ```bash
-sudo chown -R USERNAME hanzo or sudo chown -R $(whoami) ~/.docker
+sudo chown -R USERNAME platform or sudo chown -R $(whoami) ~/.docker
 ```
 
 ## Application deploy
@@ -172,7 +172,7 @@ Thank you for your contribution!
 
 ## Templates
 
-To add a new template, go to `https://github.com/Hanzo/templates` repository and read the README.md file.
+To add a new template, go to `https://github.com/hanzoai/templates` repository and read the README.md file.
 
 ### Recommendations
 
@@ -183,4 +183,4 @@ To add a new template, go to `https://github.com/Hanzo/templates` repository and
 
 ## Docs & Website
 
-To contribute to the Hanzo docs or website, please go to this [repository](https://github.com/hanzoai/web).
+To contribute to the Hanzo docs or website, please go to this [repository](https://github.com/hanzoai/website).

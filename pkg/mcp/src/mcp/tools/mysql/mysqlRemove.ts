@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const mysqlRemove = createTool({
   name: "mysql-remove",
-  description: "Removes a MySQL database from Hanzo.",
+  description: "Removes a MySQL database from Platform.",
   schema: z.object({
     mysqlId: z.string().describe("The ID of the MySQL database to remove."),
   }),

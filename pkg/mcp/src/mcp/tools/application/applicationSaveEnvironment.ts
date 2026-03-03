@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationSaveEnvironment = createTool({
   name: "application-saveEnvironment",
-  description: "Saves environment variables for an application in Hanzo.",
+  description: "Saves environment variables for an application in Platform.",
   schema: z.object({
     applicationId: z
       .string()

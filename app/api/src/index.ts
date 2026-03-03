@@ -16,8 +16,8 @@ const app = new Hono();
 
 // Initialize Inngest client
 export const inngest = new Inngest({
-	id: "hanzo-deployments",
-	name: "Hanzo Platform Deployment Service",
+	id: "platform-deployments",
+	name: "Hanzo Deployment Service",
 });
 
 export const deploymentFunction = inngest.createFunction(

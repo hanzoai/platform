@@ -4,7 +4,7 @@
   "description": "MCP Server for Hanzo API",
   "main": "build/index.js",
   "bin": {
-    "hanzo-mcp": "build/index.js"
+    "platform-mcp": "build/index.js"
   },
   "files": [
     "build"
@@ -28,18 +28,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Hanzo/mcp.git"
+    "url": "git+https://github.com/hanzoai/platform.git"
   },
   "keywords": [
     "modelcontextprotocol",
     "mcp",
-    "hanzo"
+    "platform"
   ],
-  "author": "Hanzo Industries Inc <dev@hanzo.ai>",
+  "author": "Henrique Andrade <developer@henriqueandrade.dev>",
   "bugs": {
-    "url": "https://github.com/Hanzo/mcp/issues"
+    "url": "https://github.com/hanzoai/mcp/issues"
   },
-  "homepage": "https://github.com/Hanzo/mcp#readme",
+  "homepage": "https://github.com/hanzoai/mcp#readme",
   "license": "Apache-2.0",
   "type": "module",
   "dependencies": {

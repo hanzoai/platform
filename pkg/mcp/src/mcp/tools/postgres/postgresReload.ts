@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const postgresReload = createTool({
   name: "postgres-reload",
-  description: "Reloads a PostgreSQL database in Hanzo.",
+  description: "Reloads a PostgreSQL database in Platform.",
   schema: z.object({
     postgresId: z
       .string()

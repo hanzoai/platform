@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const postgresChangeStatus = createTool({
   name: "postgres-changeStatus",
-  description: "Changes the status of a PostgreSQL database in Hanzo.",
+  description: "Changes the status of a PostgreSQL database in Platform.",
   schema: z.object({
     postgresId: z
       .string()

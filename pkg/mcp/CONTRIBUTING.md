@@ -1,6 +1,6 @@
-# Contributing to Hanzo MCP
+# Contributing to Platform MCP
 
-First off, thank you for considering contributing to Hanzo MCP! Your help is greatly appreciated.
+First off, thank you for considering contributing to Platform MCP! Your help is greatly appreciated.
 
 ## How Can I Contribute?
 
@@ -14,15 +14,15 @@ There are many ways you can contribute to the project:
 
 ## Getting Started
 
-1.  **Fork the Repository**: Click the "Fork" button at the top right of the [Hanzo MCP GitHub page](https://github.com/Hanzo/mcp).
+1.  **Fork the Repository**: Click the "Fork" button at the top right of the [Platform MCP GitHub page](https://github.com/hanzoai/mcp).
 2.  **Clone Your Fork**:
     ```sh
-    git clone https://github.com/Hanzo/mcp.git
-    cd hanzo-mcp
+    git clone https://github.com/hanzoai/platform.git
+    cd platform-mcp
     ```
 3.  **Set Upstream Remote**:
     ```sh
-    git remote add upstream https://github.com/Hanzo/mcp.git
+    git remote add upstream https://github.com/hanzoai/platform.git
     ```
 4.  **Create a New Branch**:
     ```sh
@@ -41,7 +41,7 @@ There are many ways you can contribute to the project:
     ```sh
     git push origin feature/your-feature-name
     ```
-8.  **Open a Pull Request (PR)**: Go to the original Hanzo MCP repository and open a pull request from your forked branch. Provide a clear description of your changes.
+8.  **Open a Pull Request (PR)**: Go to the original Platform MCP repository and open a pull request from your forked branch. Provide a clear description of your changes.
 
 ## Coding Guidelines
 

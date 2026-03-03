@@ -6,7 +6,7 @@ import { createTool } from "../toolFactory.js";
 export const postgresSaveExternalPort = createTool({
   name: "postgres-saveExternalPort",
   description:
-    "Saves external port configuration for a PostgreSQL database in Hanzo.",
+    "Saves external port configuration for a PostgreSQL database in Platform.",
   schema: z.object({
     postgresId: z
       .string()

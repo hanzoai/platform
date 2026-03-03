@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationStart = createTool({
   name: "application-start",
-  description: "Starts an application in Hanzo.",
+  description: "Starts an application in Platform.",
   schema: z.object({
     applicationId: z.string().describe("The ID of the application to start."),
   }),

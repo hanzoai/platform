@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const mysqlRebuild = createTool({
   name: "mysql-rebuild",
-  description: "Rebuilds a MySQL database in Hanzo.",
+  description: "Rebuilds a MySQL database in Platform.",
   schema: z.object({
     mysqlId: z.string().describe("The ID of the MySQL database to rebuild."),
   }),

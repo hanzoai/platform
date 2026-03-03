@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const mysqlCreate = createTool({
   name: "mysql-create",
-  description: "Creates a new MySQL database in Hanzo.",
+  description: "Creates a new MySQL database in Platform.",
   schema: z.object({
     name: z.string().min(1).describe("The name of the MySQL database."),
     appName: z.string().min(1).describe("The app name for the MySQL database."),

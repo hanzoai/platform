@@ -1,10 +1,10 @@
-# Hanzo MCP Server
+# Platform MCP Server
 
-[![npm version](https://img.shields.io/npm/v/@hanzo/hanzo-mcp.svg)](https://www.npmjs.com/package/@hanzo/hanzo-mcp) [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Hanzo%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22hanzo-mcp%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40hanzo%2Fhanzo-mcp%40latest%22%5D%7D)
+[![npm version](https://img.shields.io/npm/v/@ahdev/platform-mcp.svg)](https://www.npmjs.com/package/@ahdev/platform-mcp) [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Platform%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22platform-mcp%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40ahdev%2Fplatform-mcp%40latest%22%5D%7D)
 
-Hanzo MCP Server exposes Hanzo functionalities as tools consumable via the Model Context Protocol (MCP). It allows MCP-compatible clients (e.g., AI models, other applications) to interact with your Hanzo server programmatically.
+Platform MCP Server exposes Platform functionalities as tools consumable via the Model Context Protocol (MCP). It allows MCP-compatible clients (e.g., AI models, other applications) to interact with your Platform server programmatically.
 
-This server focuses exclusively on **tools** for direct Hanzo API operations, providing a clean and efficient interface for project and application management.
+This server focuses exclusively on **tools** for direct Platform API operations, providing a clean and efficient interface for project and application management.
 
 ## 🛠️ Getting Started
 
@@ -12,7 +12,7 @@ This server focuses exclusively on **tools** for direct Hanzo API operations, pr
 
 - Node.js >= v18.0.0 (or Docker)
 - Cursor, VS Code, Claude Desktop, or another MCP Client
-- A running Hanzo server instance
+- A running Platform server instance
 
 ### Install in Cursor
 
@@ -23,12 +23,12 @@ Add this to your Cursor `~/.cursor/mcp.json` file. You may also install in a spe
 ```json
 {
   "mcpServers": {
-    "hanzo-mcp": {
+    "platform-mcp": {
       "command": "npx",
-      "args": ["-y", "@hanzo/hanzo-mcp"],
+      "args": ["-y", "@ahdev/platform-mcp"],
       "env": {
-        "HANZO_URL": "https://your-hanzo-server.com/api",
-        "HANZO_API_KEY": "your-hanzo-api-token"
+        "PLATFORM_URL": "https://your-platform-server.com/api",
+        "PLATFORM_API_KEY": "your-platform-api-token"
       }
     }
   }
@@ -41,12 +41,12 @@ Add this to your Cursor `~/.cursor/mcp.json` file. You may also install in a spe
 ```json
 {
   "mcpServers": {
-    "hanzo-mcp": {
+    "platform-mcp": {
       "command": "bunx",
-      "args": ["-y", "@hanzo/hanzo-mcp"],
+      "args": ["-y", "@ahdev/platform-mcp"],
       "env": {
-        "HANZO_URL": "https://your-hanzo-server.com/api",
-        "HANZO_API_KEY": "your-hanzo-api-token"
+        "PLATFORM_URL": "https://your-platform-server.com/api",
+        "PLATFORM_API_KEY": "your-platform-api-token"
       }
     }
   }
@@ -61,12 +61,12 @@ Add this to your Cursor `~/.cursor/mcp.json` file. You may also install in a spe
 ```json
 {
   "mcpServers": {
-    "hanzo-mcp": {
+    "platform-mcp": {
       "command": "deno",
-      "args": ["run", "--allow-env", "--allow-net", "npm:@hanzo/hanzo-mcp"],
+      "args": ["run", "--allow-env", "--allow-net", "npm:@ahdev/platform-mcp"],
       "env": {
-        "HANZO_URL": "https://your-hanzo-server.com/api",
-        "HANZO_API_KEY": "your-hanzo-api-token"
+        "PLATFORM_URL": "https://your-platform-server.com/api",
+        "PLATFORM_API_KEY": "your-platform-api-token"
       }
     }
   }
@@ -82,12 +82,12 @@ Add this to your Windsurf MCP config file. See [Windsurf MCP docs](https://docs.
 ```json
 {
   "mcpServers": {
-    "hanzo-mcp": {
+    "platform-mcp": {
       "command": "npx",
-      "args": ["-y", "@hanzo/hanzo-mcp"],
+      "args": ["-y", "@ahdev/platform-mcp"],
       "env": {
-        "HANZO_URL": "https://your-hanzo-server.com/api",
-        "HANZO_API_KEY": "your-hanzo-api-token"
+        "PLATFORM_URL": "https://your-platform-server.com/api",
+        "PLATFORM_API_KEY": "your-platform-api-token"
       }
     }
   }
@@ -96,21 +96,21 @@ Add this to your Windsurf MCP config file. See [Windsurf MCP docs](https://docs.
 
 ### Install in VS Code
 
-[<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Hanzo%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22hanzo-mcp%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40hanzo%2Fhanzo-mcp%40latest%22%5D%7D)
-[<img alt="Install in VS Code Insiders (npx)" src="https://img.shields.io/badge/VS_Code_Insiders-VS_Code_Insiders?style=flat-square&label=Install%20Hanzo%20MCP&color=24bfa5">](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%7B%22name%22%3A%22hanzo-mcp%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40hanzo%2Fhanzo-mcp%40latest%22%5D%7D)
+[<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Platform%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22platform-mcp%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40ahdev%2Fplatform-mcp%40latest%22%5D%7D)
+[<img alt="Install in VS Code Insiders (npx)" src="https://img.shields.io/badge/VS_Code_Insiders-VS_Code_Insiders?style=flat-square&label=Install%20Platform%20MCP&color=24bfa5">](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%7B%22name%22%3A%22platform-mcp%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40ahdev%2Fplatform-mcp%40latest%22%5D%7D)
 
 Add this to your VS Code MCP config file. See [VS Code MCP docs](https://code.visualstudio.com/docs/copilot/chat/mcp-servers) for more info.
 
 ```json
 {
   "servers": {
-    "hanzo-mcp": {
+    "platform-mcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@hanzo/hanzo-mcp"],
+      "args": ["-y", "@ahdev/platform-mcp"],
       "env": {
-        "HANZO_URL": "https://your-hanzo-server.com/api",
-        "HANZO_API_KEY": "your-hanzo-api-token"
+        "PLATFORM_URL": "https://your-platform-server.com/api",
+        "PLATFORM_API_KEY": "your-platform-api-token"
       }
     }
   }
@@ -124,14 +124,14 @@ Add this to your Zed `settings.json`. See [Zed Context Server docs](https://zed.
 ```json
 {
   "context_servers": {
-    "hanzo-mcp": {
+    "platform-mcp": {
       "command": {
         "path": "npx",
-        "args": ["-y", "@hanzo/hanzo-mcp"]
+        "args": ["-y", "@ahdev/platform-mcp"]
       },
       "settings": {
-        "HANZO_URL": "https://your-hanzo-server.com/api",
-        "HANZO_API_KEY": "your-hanzo-api-token"
+        "PLATFORM_URL": "https://your-platform-server.com/api",
+        "PLATFORM_API_KEY": "your-platform-api-token"
       }
     }
   }
@@ -145,12 +145,12 @@ Add this to your Claude Desktop `claude_desktop_config.json` file. See [Claude D
 ```json
 {
   "mcpServers": {
-    "hanzo-mcp": {
+    "platform-mcp": {
       "command": "npx",
-      "args": ["-y", "@hanzo/hanzo-mcp"],
+      "args": ["-y", "@ahdev/platform-mcp"],
       "env": {
-        "HANZO_URL": "https://your-hanzo-server.com/api",
-        "HANZO_API_KEY": "your-hanzo-api-token"
+        "PLATFORM_URL": "https://your-platform-server.com/api",
+        "PLATFORM_API_KEY": "your-platform-api-token"
       }
     }
   }
@@ -164,12 +164,12 @@ Open the "Settings" page of the app, navigate to "Plugins," and enter the follow
 ```json
 {
   "mcpServers": {
-    "hanzo-mcp": {
+    "platform-mcp": {
       "command": "npx",
-      "args": ["-y", "@hanzo/hanzo-mcp"],
+      "args": ["-y", "@ahdev/platform-mcp"],
       "env": {
-        "HANZO_URL": "https://your-hanzo-server.com/api",
-        "HANZO_API_KEY": "your-hanzo-api-token"
+        "PLATFORM_URL": "https://your-platform-server.com/api",
+        "PLATFORM_API_KEY": "your-platform-api-token"
       }
     }
   }
@@ -183,9 +183,9 @@ The Docker container supports both **stdio** and **HTTP** transport modes, makin
 1.  **Build the Docker Image:**
 
     ```bash
-    git clone https://github.com/Hanzo/mcp.git
-    cd hanzo-mcp
-    docker build -t hanzo-mcp .
+    git clone https://github.com/hanzoai/platform.git
+    cd platform-mcp
+    docker build -t platform-mcp .
     ```
 
 2.  **Manual Docker Commands:**
@@ -194,9 +194,9 @@ The Docker container supports both **stdio** and **HTTP** transport modes, makin
 
     ```bash
     docker run -it --rm \
-      -e HANZO_URL=https://your-hanzo-server.com/api \
-      -e HANZO_API_KEY=your_token_here \
-      hanzo-mcp
+      -e PLATFORM_URL=https://your-platform-server.com/api \
+      -e PLATFORM_API_KEY=your_token_here \
+      platform-mcp
     ```
 
     **HTTP Mode (for web applications):**
@@ -205,9 +205,9 @@ The Docker container supports both **stdio** and **HTTP** transport modes, makin
     docker run -it --rm \
       -p 8080:3000 \
       -e MCP_TRANSPORT=http \
-      -e HANZO_URL=https://your-hanzo-server.com/api \
-      -e HANZO_API_KEY=your_token_here \
-      hanzo-mcp
+      -e PLATFORM_URL=https://your-platform-server.com/api \
+      -e PLATFORM_API_KEY=your_token_here \
+      platform-mcp
     ```
 
 3.  **Docker Compose:**
@@ -216,10 +216,10 @@ The Docker container supports both **stdio** and **HTTP** transport modes, makin
 
     ```bash
     # Start HTTP service
-    docker-compose up -d hanzo-mcp-http
+    docker-compose up -d platform-mcp-http
 
     # View logs
-    docker-compose logs -f hanzo-mcp-http
+    docker-compose logs -f platform-mcp-http
     ```
 
 4.  **MCP Client Configuration:**
@@ -229,17 +229,17 @@ The Docker container supports both **stdio** and **HTTP** transport modes, makin
     ```json
     {
       "mcpServers": {
-        "hanzo-mcp": {
+        "platform-mcp": {
           "command": "docker",
           "args": [
             "run",
             "-i",
             "--rm",
             "-e",
-            "HANZO_URL=https://your-hanzo-server.com/api",
+            "PLATFORM_URL=https://your-platform-server.com/api",
             "-e",
-            "HANZO_API_KEY=your_token_here",
-            "hanzo-mcp"
+            "PLATFORM_API_KEY=your_token_here",
+            "platform-mcp"
           ]
         }
       }
@@ -257,12 +257,12 @@ The configuration on Windows is slightly different compared to Linux or macOS. U
 ```json
 {
   "mcpServers": {
-    "hanzo-mcp": {
+    "platform-mcp": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "@hanzo/hanzo-mcp"],
+      "args": ["/c", "npx", "-y", "@ahdev/platform-mcp"],
       "env": {
-        "HANZO_URL": "https://your-hanzo-server.com/api",
-        "HANZO_API_KEY": "your-hanzo-api-token"
+        "PLATFORM_URL": "https://your-platform-server.com/api",
+        "PLATFORM_API_KEY": "your-platform-api-token"
       }
     }
   }
@@ -271,8 +271,8 @@ The configuration on Windows is slightly different compared to Linux or macOS. U
 
 ### Environment Variables
 
-- `HANZO_URL`: Your Hanzo server API URL (required)
-- `HANZO_API_KEY`: Your Hanzo API authentication token (required)
+- `PLATFORM_URL`: Your Platform server API URL (required)
+- `PLATFORM_API_KEY`: Your Platform API authentication token (required)
 
 ## 🚀 Transport Modes
 
@@ -284,7 +284,7 @@ The default mode uses stdio for direct process communication, ideal for desktop 
 
 ```bash
 # Run with stdio (default)
-npx -y @hanzo/hanzo-mcp
+npx -y @ahdev/platform-mcp
 # or
 npm run start:stdio
 ```
@@ -300,9 +300,9 @@ Modern HTTP mode exposes the server via HTTP/HTTPS supporting **both modern and 
 # Run with HTTP mode
 npm run start:http
 # or
-npx -y @hanzo/hanzo-mcp --http
+npx -y @ahdev/platform-mcp --http
 # or via environment variable
-MCP_TRANSPORT=http npx -y @hanzo/hanzo-mcp
+MCP_TRANSPORT=http npx -y @ahdev/platform-mcp
 ```
 
 **Modern Streamable HTTP Endpoints:**
@@ -336,7 +336,7 @@ For detailed transport mode documentation and client examples, refer to the conf
 
 ## 📚 Available Tools
 
-This MCP server provides comprehensive tools for Hanzo project, application, and database management through **56 tools** organized into four main categories:
+This MCP server provides comprehensive tools for Platform project, application, and database management through **56 tools** organized into four main categories:
 
 ### 🗂️ Project Management (6 tools)
 
@@ -442,17 +442,17 @@ All tools include semantic annotations to help MCP clients understand their beha
 - **Destructive Tools** (`destructiveHint: true`): Operations that modify or delete resources
 - **Creation Tools** (`destructiveHint: false`): Operations that create new resources
 - **Idempotent Tools** (`idempotentHint: true`): Operations safe to repeat
-- **External API Tools** (`openWorldHint: true`): All tools interact with Hanzo API
+- **External API Tools** (`openWorldHint: true`): All tools interact with Platform API
 
 ## 🏗️ Architecture
 
-The Hanzo MCP Server is built using:
+The Platform MCP Server is built using:
 
 - **`@modelcontextprotocol/sdk`**: For creating the MCP server and defining tools
 - **Node.js & TypeScript**: As the underlying runtime and language
 - **Stdio Transport**: Communicates with MCP clients over standard input/output (stdio)
-- **Hanzo API Integration**: Direct interaction with Hanzo server's REST API
-- **Comprehensive Tool Coverage**: Complete implementation of all Hanzo application and project endpoints
+- **Platform API Integration**: Direct interaction with Platform server's REST API
+- **Comprehensive Tool Coverage**: Complete implementation of all Platform application and project endpoints
 - **Robust Error Handling**: Centralized HTTP client with retry logic and structured error responses
 - **Schema Validation**: Full Zod-based input validation matching OpenAPI specifications
 - **Tool Annotations**: Semantic annotations (readOnlyHint, destructiveHint, etc.) for enhanced MCP client understanding
@@ -472,8 +472,8 @@ Each tool includes input validation, API integration, and structured response fo
 Clone the project and install dependencies:
 
 ```bash
-git clone https://github.com/Hanzo/mcp.git
-cd hanzo-mcp
+git clone https://github.com/hanzoai/platform.git
+cd platform-mcp
 npm install
 ```
 
@@ -488,12 +488,12 @@ npm run build
 ```json
 {
   "mcpServers": {
-    "hanzo-mcp": {
+    "platform-mcp": {
       "command": "npx",
-      "args": ["tsx", "/path/to/hanzo-mcp/src/index.ts"],
+      "args": ["tsx", "/path/to/platform-mcp/src/index.ts"],
       "env": {
-        "HANZO_URL": "https://your-hanzo-server.com/api",
-        "HANZO_API_KEY": "your-hanzo-api-token"
+        "PLATFORM_URL": "https://your-platform-server.com/api",
+        "PLATFORM_API_KEY": "your-platform-api-token"
       }
     }
   }
@@ -503,7 +503,7 @@ npm run build
 ### Testing with MCP Inspector
 
 ```bash
-npx -y @modelcontextprotocol/inspector npx @hanzo/hanzo-mcp
+npx -y @modelcontextprotocol/inspector npx @ahdev/platform-mcp
 ```
 
 ### Documentation
@@ -519,15 +519,15 @@ npx -y @modelcontextprotocol/inspector npx @hanzo/hanzo-mcp
 
 2. Make sure you are using Node v18 or higher to have native fetch support with `npx`.
 
-3. Verify your `HANZO_URL` and `HANZO_API_KEY` environment variables are correctly set.
+3. Verify your `PLATFORM_URL` and `PLATFORM_API_KEY` environment variables are correctly set.
 
 ## 🤝 Contributing
 
-We welcome contributions! If you'd like to contribute to the Hanzo MCP Server, please check out our [Contributing Guide](CONTRIBUTING.md).
+We welcome contributions! If you'd like to contribute to the Platform MCP Server, please check out our [Contributing Guide](CONTRIBUTING.md).
 
 ## 🆘 Support
 
-If you encounter any issues, have questions, or want to suggest a feature, please [open an issue](https://github.com/Hanzo/mcp/issues) in our GitHub repository.
+If you encounter any issues, have questions, or want to suggest a feature, please [open an issue](https://github.com/hanzoai/mcp/issues) in our GitHub repository.
 
 ## 📄 License
 
