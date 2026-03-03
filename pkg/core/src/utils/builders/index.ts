@@ -1,5 +1,5 @@
 import { createWriteStream } from "node:fs";
-import type { InferResultType } from "@dokploy/server/types/with";
+import type { InferResultType } from "@hanzo/core/types/with";
 import type { CreateServiceOptions } from "dockerode";
 import { uploadImage, uploadImageRemoteCommand } from "../cluster/upload";
 import {

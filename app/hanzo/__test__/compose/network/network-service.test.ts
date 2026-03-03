@@ -1,8 +1,8 @@
-import type { ComposeSpecification } from "@dokploy/server";
+import type { ComposeSpecification } from "@hanzo/core";
 import {
 	addSuffixToServiceNetworks,
 	generateRandomHash,
-} from "@dokploy/server";
+} from "@hanzo/core";
 import { load } from "js-yaml";
 import { expect, test } from "vitest";
 
@@ -192,10 +192,10 @@ services:
   web:
     image: nginx:latest
     networks:
-      - dokploy-network
+      - hanzo-network
 `;
 
-test("It shoudn't add suffix to dokploy-network in services", () => {
+test("It shoudn't add suffix to hanzo-network in services", () => {
 	const composeData = load(composeFile7) as ComposeSpecification;
 
 	const suffix = generateRandomHash();
@@ -207,7 +207,7 @@ test("It shoudn't add suffix to dokploy-network in services", () => {
 	const service = networks.web;
 
 	expect(service).toBeDefined();
-	expect(service?.networks).toContain("dokploy-network");
+	expect(service?.networks).toContain("hanzo-network");
 });
 
 const composeFile8 = `
@@ -219,7 +219,7 @@ services:
     networks:
       - frontend
       - backend
-      - dokploy-network
+      - hanzo-network
 
 
   api:
@@ -228,23 +228,23 @@ services:
       frontend:
         aliases:
           - api
-      dokploy-network:
+      hanzo-network:
         aliases:
           - api
   redis:
     image: redis:alpine
     networks:
-      dokploy-network:
+      hanzo-network:
   db:
     image: myapi:latest
     networks:
-      dokploy-network:
+      hanzo-network:
         aliases:
           - apid
 	
 `;
 
-test("It shoudn't add suffix to dokploy-network in services multiples cases", () => {
+test("It shoudn't add suffix to hanzo-network in services multiples cases", () => {
 	const composeData = load(composeFile8) as ComposeSpecification;
 
 	const suffix = generateRandomHash();
@@ -267,9 +267,9 @@ test("It shoudn't add suffix to dokploy-network in services multiples cases", ()
 	};
 
 	expect(service).toBeDefined();
-	expect(service?.networks).toContain("dokploy-network");
+	expect(service?.networks).toContain("hanzo-network");
 
-	expect(redis?.networks).toHaveProperty("dokploy-network");
-	expect(dbNetworks["dokploy-network"]).toBeDefined();
-	expect(apiNetworks["dokploy-network"]).toBeDefined();
+	expect(redis?.networks).toHaveProperty("hanzo-network");
+	expect(dbNetworks["hanzo-network"]).toBeDefined();
+	expect(apiNetworks["hanzo-network"]).toBeDefined();
 });

@@ -1,4 +1,4 @@
-import { validateRequest } from "@dokploy/server";
+import { validateRequest } from "@hanzo/core";
 import { createOpenApiNextHandler } from "@dokploy/trpc-openapi";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { appRouter } from "@/server/api/root";
