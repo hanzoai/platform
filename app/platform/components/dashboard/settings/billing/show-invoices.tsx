@@ -79,7 +79,7 @@ export const ShowInvoices = () => {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{invoices.map((invoice) => (
+							{invoices.map((invoice: any) => (
 								<TableRow key={invoice.id}>
 									<TableCell className="font-medium">
 										{invoice.number || invoice.id.slice(0, 12)}
