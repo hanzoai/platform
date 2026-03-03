@@ -9,6 +9,12 @@ import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { IS_CLOUD } from "../constants";
 
+export const getHanzoPlatformUrl = async () => {
+	// Return the platform URL, defaulting to localhost for development
+	const url = process.env.HANZO_URL || process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
+	return url;
+};
+
 export const findUserById = async (userId: string) => {
 	const user = await db.query.users_temp.findFirst({
 		where: eq(users_temp.id, userId),
