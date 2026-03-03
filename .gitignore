@@ -45,3 +45,4 @@ yarn-error.log*
 .dev*
 .pnpm-store/
 .env.backup
+.claude/settings.local.json
