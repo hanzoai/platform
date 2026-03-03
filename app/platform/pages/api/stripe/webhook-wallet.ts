@@ -45,9 +45,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
         const { organizationId, plan } = subscription.metadata;
-        if (!organizationId) break;
+        if (!organizationId || !plan) break;
 
-        const normalizedPlan = normalizePlanType(plan || "");
+        const normalizedPlan = normalizePlanType(plan);
         const planConfig = PLANS[normalizedPlan];
         await addCreditsToWallet(organizationId, planConfig.monthlyCredits, "monthly_credit", `Monthly ${normalizedPlan} credits`);
         break;
