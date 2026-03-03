@@ -61,11 +61,11 @@ spec:
               value: "unix:///var/run/docker.sock"
           resources:
             requests:
-              cpu: "500m"
-              memory: "1Gi"
-            limits:
               cpu: "2"
               memory: "4Gi"
+            limits:
+              cpu: "4"
+              memory: "12Gi"
           volumeMounts:
             - name: work
               mountPath: /tmp/runner/work
@@ -80,11 +80,11 @@ spec:
               value: ""
           resources:
             requests:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "1"
+              memory: "2Gi"
             limits:
-              cpu: "2"
-              memory: "4Gi"
+              cpu: "4"
+              memory: "8Gi"
           volumeMounts:
             - name: docker-sock
               mountPath: /var/run/docker.sock
