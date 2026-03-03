@@ -3,7 +3,7 @@ import * as bcrypt from "bcrypt";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { admin, apiKey, organization, twoFactor, genericOAuth } from "better-auth/plugins";
+import { admin, apiKey, organization, genericOAuth } from "better-auth/plugins";
 import { and, desc, eq } from "drizzle-orm";
 import { IS_CLOUD } from "../constants";
 import { db } from "../db";
@@ -201,7 +201,7 @@ const { handler, api } = betterAuth({
 		apiKey({
 			enableMetadata: true,
 		}),
-		twoFactor(),
+		// twoFactor(), // Disabled due to better-auth bug: "Body is not allowed with GET or HEAD methods"
 		organization({
 			async sendInvitationEmail(data, _request) {
 				if (IS_CLOUD) {
