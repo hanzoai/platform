@@ -5,7 +5,7 @@ import { ResponseFormatter } from "../../../utils/responseFormatter.js";
 
 export const projectOne = createTool({
   name: "project-one",
-  description: "Gets a specific project by its ID in Hanzo.",
+  description: "Gets a specific project by its ID in Platform.",
   schema: z.object({
     projectId: z.string().describe("The ID of the project to retrieve."),
   }),

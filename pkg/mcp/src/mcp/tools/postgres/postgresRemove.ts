@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const postgresRemove = createTool({
   name: "postgres-remove",
-  description: "Removes/deletes a PostgreSQL database from Hanzo.",
+  description: "Removes/deletes a PostgreSQL database from Platform.",
   schema: z.object({
     postgresId: z
       .string()

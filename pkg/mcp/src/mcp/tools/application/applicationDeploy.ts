@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const applicationDeploy = createTool({
   name: "application-deploy",
-  description: "Deploys an application in Hanzo.",
+  description: "Deploys an application in Platform.",
   schema: z.object({
     applicationId: z.string().describe("The ID of the application to deploy."),
   }),

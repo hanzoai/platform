@@ -6,7 +6,7 @@ import { createTool } from "../toolFactory.js";
 export const mysqlSaveExternalPort = createTool({
   name: "mysql-saveExternalPort",
   description:
-    "Saves external port configuration for a MySQL database in Hanzo.",
+    "Saves external port configuration for a MySQL database in Platform.",
   schema: z.object({
     mysqlId: z.string().describe("The ID of the MySQL database to configure."),
     externalPort: z

@@ -1,23 +1,23 @@
 services:
-  hanzo-mcp-http:
+  platform-mcp-http:
     build: .
-    container_name: hanzo-mcp-http
+    container_name: platform-mcp-http
     ports:
       - "${EXTERNAL_PORT:-3000}:3000"
     environment:
       - MCP_TRANSPORT=${MCP_TRANSPORT:-http}
-      - HANZO_URL=${HANZO_URL:-https://your-hanzo-server.com/api}
-      - HANZO_AUTH_TOKEN=${HANZO_AUTH_TOKEN:-your_token_here}
+      - PLATFORM_URL=${PLATFORM_URL:-https://your-platform-server.com/api}
+      - PLATFORM_AUTH_TOKEN=${PLATFORM_AUTH_TOKEN:-your_token_here}
     restart: unless-stopped
     networks:
       - mcp-network
 
-  hanzo-mcp-stdio:
+  platform-mcp-stdio:
     build: .
-    container_name: hanzo-mcp-stdio
+    container_name: platform-mcp-stdio
     environment:
-      - HANZO_URL=${HANZO_URL:-https://your-hanzo-server.com/api}
-      - HANZO_AUTH_TOKEN=${HANZO_AUTH_TOKEN:-your_token_here}
+      - PLATFORM_URL=${PLATFORM_URL:-https://your-platform-server.com/api}
+      - PLATFORM_AUTH_TOKEN=${PLATFORM_AUTH_TOKEN:-your_token_here}
     restart: "no"
     stdin_open: true
     tty: true

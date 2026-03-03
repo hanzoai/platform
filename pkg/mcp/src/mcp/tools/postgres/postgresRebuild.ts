@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const postgresRebuild = createTool({
   name: "postgres-rebuild",
-  description: "Rebuilds a PostgreSQL database in Hanzo.",
+  description: "Rebuilds a PostgreSQL database in Platform.",
   schema: z.object({
     postgresId: z
       .string()

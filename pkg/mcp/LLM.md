@@ -1,6 +1,6 @@
 # Hanzo MCP Server - Copilot Instructions
 
-You are an expert in TypeScript, Node.js, Model Context Protocol (MCP), and the @modelcontextprotocol/sdk. You are developing a comprehensive MCP Server that exposes Hanzo API functionalities as tools for AI interactions.
+You are an expert in TypeScript, Node.js, Model Context Protocol (MCP), and the @modelcontextprotocol/sdk. You are developing a comprehensive MCP Server that exposes Platform API functionalities as tools for AI interactions.
 
 ## Project Overview
 
@@ -10,7 +10,7 @@ This is a Model Context Protocol (MCP) Server built with:
 - **Axios**: HTTP client for API communications
 - **Express**: HTTP server for MCP transport modes
 
-The server provides tools for managing Hanzo applications, PostgreSQL databases, and projects through standardized MCP interfaces.
+The server provides tools for managing Platform applications, PostgreSQL databases, and projects through standardized MCP interfaces.
 
 ## Architecture and Core Concepts
 
@@ -21,7 +21,7 @@ The server provides tools for managing Hanzo applications, PostgreSQL databases,
 - **Tool Factory**: `src/mcp/tools/toolFactory.ts` - Provides standardized tool creation
 
 ### Tool Organization
-- **Application Tools**: `src/mcp/tools/application/` - Hanzo application management
+- **Application Tools**: `src/mcp/tools/application/` - Platform application management
 - **PostgreSQL Tools**: `src/mcp/tools/postgres/` - PostgreSQL database management
 - **MySQL Tools**: `src/mcp/tools/mysql/` - MySQL database management
 - **Project Tools**: `src/mcp/tools/project/` - Project lifecycle management
@@ -123,7 +123,7 @@ try {
 } catch (error) {
   logger.error("Operation failed", { error: error.message, data });
   return ResponseFormatter.error(
-    "Failed to complete operation", 
+    "Failed to complete operation",
     error.response?.data?.message || error.message
   );
 }
@@ -143,8 +143,8 @@ try {
 - Handle authentication consistently
 - Parse and format API responses appropriately
 
-### Hanzo API Patterns
-- Follow Hanzo's REST conventions
+### Platform API Patterns
+- Follow Platform's REST conventions
 - Use proper HTTP methods (POST for creation, GET for retrieval)
 - Handle pagination for list operations
 - Respect rate limiting and API quotas
@@ -161,7 +161,7 @@ try {
 - Test MCP protocol compliance
 - Verify transport layer functionality
 - Test end-to-end tool execution
-- Validate against real Hanzo instances when possible
+- Validate against real Platform instances when possible
 
 ## Performance and Optimization
 
@@ -260,12 +260,12 @@ try {
 ## Environment Configuration
 
 ### Required Environment Variables
-- `HANZO_URL`: Base URL for Hanzo API
-- `HANZO_API_KEY`: Authentication token for API access
+- `PLATFORM_URL`: Base URL for Platform API
+- `PLATFORM_API_KEY`: Authentication token for API access
 
 ### Optional Configuration
 - `MCP_TRANSPORT`: Transport mode (stdio/http/sse)
 - `PORT`: HTTP server port (default: 3000)
 - `LOG_LEVEL`: Logging verbosity level
 
-This MCP server should be a robust, type-safe, and user-friendly interface to Hanzo's capabilities, enabling AI assistants and other MCP clients to manage infrastructure seamlessly while maintaining security and reliability standards.
+This MCP server should be a robust, type-safe, and user-friendly interface to Platform's capabilities, enabling AI assistants and other MCP clients to manage infrastructure seamlessly while maintaining security and reliability standards.

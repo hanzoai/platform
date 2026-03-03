@@ -5,7 +5,7 @@ import { createTool } from "../toolFactory.js";
 
 export const mysqlDeploy = createTool({
   name: "mysql-deploy",
-  description: "Deploys a MySQL database in Hanzo.",
+  description: "Deploys a MySQL database in Platform.",
   schema: z.object({
     mysqlId: z.string().describe("The ID of the MySQL database to deploy."),
   }),

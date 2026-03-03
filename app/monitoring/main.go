@@ -9,11 +9,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
-	"github.com/hanzoai/hanzo/app/monitoring/config"
-	"github.com/hanzoai/hanzo/app/monitoring/containers"
-	"github.com/hanzoai/hanzo/app/monitoring/database"
-	"github.com/hanzoai/hanzo/app/monitoring/middleware"
-	"github.com/hanzoai/hanzo/app/monitoring/monitoring"
+	"github.com/hanzoai/platform/apps/monitoring/config"
+	"github.com/hanzoai/platform/apps/monitoring/containers"
+	"github.com/hanzoai/platform/apps/monitoring/database"
+	"github.com/hanzoai/platform/apps/monitoring/middleware"
+	"github.com/hanzoai/platform/apps/monitoring/monitoring"
 )
 
 func main() {
