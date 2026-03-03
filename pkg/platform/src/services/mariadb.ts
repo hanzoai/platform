@@ -37,7 +37,7 @@ export const createMariadb = async (input: typeof apiCreateMariaDB._type) => {
 				? input.databaseRootPassword
 				: generatePassword(),
 			appName,
-		})
+		} as any)
 		.returning()
 		.then((value) => value[0]);
 
@@ -89,7 +89,7 @@ export const updateMariadbById = async (
 		.update(mariadb)
 		.set({
 			...rest,
-		})
+		} as any)
 		.where(eq(mariadb.mariadbId, mariadbId))
 		.returning();
 
@@ -109,7 +109,7 @@ export const findMariadbByBackupId = async (backupId: string) => {
 	const result = await db
 		.select({
 			...getTableColumns(mariadb),
-		})
+		} as any)
 		.from(mariadb)
 		.innerJoin(backups, eq(mariadb.mariadbId, backups.mariadbId))
 		.where(eq(backups.backupId, backupId))
