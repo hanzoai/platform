@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  hanzo-platform-proxy:
+    image: nginx:alpine
+    container_name: hanzo-platform-proxy
+    restart: always
+    networks:
+      - hanzo-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hanzo-platform.rule=Host(`platform.hanzo.ai`)"
+      - "traefik.http.routers.hanzo-platform.entrypoints=websecure"
+      - "traefik.http.routers.hanzo-platform.tls=true"
+      - "traefik.http.routers.hanzo-platform.tls.certresolver=letsencrypt"
+      - "traefik.http.services.hanzo-platform.loadbalancer.server.port=80"
+      - "traefik.docker.network=hanzo-network"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+
+networks:
+  hanzo-network:
+    external: true
