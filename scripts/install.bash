@@ -1,4 +1,5 @@
 #!/bin/bash
+
 install_platform() {
     if [ "$(id -u)" != "0" ]; then
         echo "This script must be run as root" >&2
@@ -15,16 +16,6 @@ install_platform() {
         exit 1
     fi
 
-    if ss -tulnp | grep ':80 ' >/dev/null; then
-        echo "Error: something is already running on port 80" >&2
-        exit 1
-    fi
-
-    if ss -tulnp | grep ':443 ' >/dev/null; then
-        echo "Error: something is already running on port 443" >&2
-        exit 1
-    fi
-
     command_exists() {
       command -v "$@" > /dev/null 2>&1
     }
@@ -35,92 +26,42 @@ install_platform() {
       curl -sSL https://get.docker.com | sh
     fi
 
-    docker swarm leave --force 2>/dev/null
-
-    get_ip() {
-        local ip=""
-        # Try external services first
-        ip=$(curl -4s --connect-timeout 5 https://ifconfig.io 2>/dev/null)
-        if [ -z "$ip" ]; then
-            ip=$(curl -4s --connect-timeout 5 https://icanhazip.com 2>/dev/null)
-        fi
-        if [ -z "$ip" ]; then
-            ip=$(curl -4s --connect-timeout 5 https://ipecho.net/plain 2>/dev/null)
-        fi
-        # Check if the external IP is in a private range (10.x.x.x, 172.16.x.x-172.31.x.x, 192.168.x.x)
-        if [ -n "$ip" ]; then
-            if [[ $ip =~ ^192\.168\. || $ip =~ ^10\. || $ip =~ ^172\.(1[6-9]|2[0-9]|3[0-1])\. ]]; then
-                echo "$ip"
-                return 0
-            fi
-        fi
-
-        # Fallback: get local IP addresses from hostname -I, excluding 127.0.0.1
-        local ips
-        ips=$(hostname -I | tr ' ' '\n' | grep -Ev '^127\.')
-        if [ -n "$ips" ]; then
-            # Prioritize addresses starting with 192.
-            local local_ip
-            local_ip=$(echo "$ips" | grep '^192\.' | head -n 1)
-            if [ -n "$local_ip" ]; then
-                echo "$local_ip"
-                return 0
-            fi
-            # Otherwise return the first available IP.
-            local_ip=$(echo "$ips" | head -n 1)
-            if [ -n "$local_ip" ]; then
-                echo "$local_ip"
-                return 0
-            fi
-        fi
-
-        echo "Error: Could not determine server IP address automatically." >&2
-        echo "Please set the ADVERTISE_ADDR environment variable manually." >&2
-        exit 1
-    }
-
-    advertise_addr="${ADVERTISE_ADDR:-$(get_ip)}"
-    echo "Using advertise address: $advertise_addr"
-
-    docker swarm init --advertise-addr $advertise_addr
-
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to initialize Docker Swarm" >&2
-        exit 1
+    if [ "${IS_CLOUD:-false}" = "true" ]; then
+        SERVICE_NAME="cloud"
+    else
+        SERVICE_NAME="hanzo"
     fi
 
-    echo "Swarm initialized"
-
-    docker network rm -f hanzo-network 2>/dev/null
-    docker network create --driver overlay --attachable hanzo-network
-
-    echo "Network created"
-
-    mkdir -p /etc/hanzo
-    chmod 777 /etc/hanzo
-
-    docker pull postgres:16
-    docker pull redis:7
-    docker pull traefik:v3.1.2
-    docker pull hanzoai/platform:latest
-
+    docker service rm "$SERVICE_NAME"
     docker service create \
-      --name hanzo \
+      --name "$SERVICE_NAME" \
       --replicas 1 \
-      --network hanzo-network \
-      --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
-      --mount type=bind,source=/etc/hanzo,target=/etc/hanzo \
-      --mount type=volume,source=hanzo-docker-config,target=/root/.docker \
-      --publish published=3000,target=3000,mode=host \
+      --network ${NETWORK_NAME:-hanzo-network} \
+      --mount type=bind,source=${DOCKER_SOCK_PATH:-/var/run/docker.sock},target=/var/run/docker.sock \
+      --mount type=bind,source=${HANZO_CONFIG_DIR:-/etc/hanzo},target=/etc/hanzo \
+      --mount type=volume,source=${HANZO_DOCKER_VOLUME:-hanzo-docker-config},target=/root/.docker \
+      --publish published=${PORT:-3000},target=${PORT:-3000},mode=host \
       --update-parallelism 1 \
       --update-order stop-first \
       --constraint 'node.role == manager' \
-      -e ADVERTISE_ADDR=$advertise_addr \
-      -e DATABASE_URL="postgres://hanzo:amukds4wi9001583845717ad2@hanzo-postgres:5432/hanzo" \
-      -e NODE_ENV=production \
-      -e IS_CLOUD=false \
-      -e PORT=3000 \
-      hanzoai/platform:latest
+      $( [ -n "$ADVERTISE_ADDR" ] && echo "-e ADVERTISE_ADDR=$ADVERTISE_ADDR" ) \
+      $( [ -n "$DATABASE_URL" ] && echo "-e DATABASE_URL=$DATABASE_URL" ) \
+      $( [ -n "$NODE_ENV" ] && echo "-e NODE_ENV=$NODE_ENV" ) \
+      -e IS_CLOUD=${IS_CLOUD:-false} \
+      $( [ -n "$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" ] && echo "-e NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" ) \
+      $( [ -n "$STRIPE_SECRET_KEY" ] && echo "-e STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY" ) \
+      $( [ -n "$STRIPE_WEBHOOK_SECRET" ] && echo "-e STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET" ) \
+      $( [ -n "$GITHUB_CLIENT_ID" ] && echo "-e GITHUB_CLIENT_ID=$GITHUB_CLIENT_ID" ) \
+      $( [ -n "$GITHUB_CLIENT_SECRET" ] && echo "-e GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET" ) \
+      $( [ -n "$GOOGLE_CLIENT_ID" ] && echo "-e GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" ) \
+      $( [ -n "$GOOGLE_CLIENT_SECRET" ] && echo "-e GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" ) \
+      $( [ -n "$SMTP_FROM_ADDRESS" ] && echo "-e SMTP_FROM_ADDRESS=$SMTP_FROM_ADDRESS" ) \
+      $( [ -n "$SMTP_SERVER" ] && echo "-e SMTP_SERVER=$SMTP_SERVER" ) \
+      $( [ -n "$SMTP_PORT" ] && echo "-e SMTP_PORT=$SMTP_PORT" ) \
+      $( [ -n "$SMTP_USERNAME" ] && echo "-e SMTP_USERNAME=$SMTP_USERNAME" ) \
+      $( [ -n "$SMTP_PASSWORD" ] && echo "-e SMTP_PASSWORD=$SMTP_PASSWORD" ) \
+      -e PORT=${PORT:-3000} \
+      hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
 
     GREEN="\033[0;32m"
     YELLOW="\033[1;33m"
@@ -136,17 +77,17 @@ install_platform() {
         fi
     }
 
-    formatted_addr=$(format_ip_for_url "$advertise_addr")
+    formatted_addr=$(format_ip_for_url "${ADVERTISE_ADDR:-localhost}")
     echo ""
     printf "${GREEN}Congratulations, Hanzo Platform is installed!${NC}\n"
     printf "${BLUE}Wait 15 seconds for the server to start${NC}\n"
-    printf "${YELLOW}Please go to http://${formatted_addr}:3000${NC}\n\n"
+    printf "${YELLOW}Please go to http://${formatted_addr}:${PORT:-3000}${NC}\n\n"
 }
 
 update_platform() {
     echo "Updating platform..."
-    docker pull hanzoai/platform:latest
-    docker service update --image hanzoai/platform:latest hanzo
+    docker pull hanzoai/platform:${HANZO_IMAGE_TAG:-latest}
+    docker service update --image hanzoai/platform:${HANZO_IMAGE_TAG:-latest} ${SERVICE_NAME:-hanzo}
     echo "Hanzo has been updated to the latest version."
 }
 
