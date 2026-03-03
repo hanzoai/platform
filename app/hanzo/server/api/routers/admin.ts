@@ -3,7 +3,7 @@ import {
 	IS_CLOUD,
 	setupWebMonitoring,
 	updateUser,
-} from "@hanzo/core";
+} from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { apiUpdateWebServerMonitoring } from "@/server/db/schema";
 import { adminProcedure, createTRPCRouter } from "../trpc";

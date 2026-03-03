@@ -1,5 +1,5 @@
 import { getPublicIpWithFallback } from "@/server/wss/terminal";
-import { type DockerNode, IS_CLOUD, docker, execAsync } from "@hanzo/core";
+import { type DockerNode, IS_CLOUD, docker, execAsync } from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";

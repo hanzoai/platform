@@ -1,6 +1,6 @@
-import type { Schema } from "@hanzo/core/templates";
-import type { CompleteTemplate } from "@hanzo/core/templates/processors";
-import { processTemplate } from "@hanzo/core/templates/processors";
+import type { Schema } from "@hanzo/platform/templates";
+import type { CompleteTemplate } from "@hanzo/platform/templates/processors";
+import { processTemplate } from "@hanzo/platform/templates/processors";
 import { describe, expect, it } from "vitest";
 
 describe("processTemplate", () => {

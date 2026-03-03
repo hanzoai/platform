@@ -34,6 +34,8 @@ export * from "./services/github";
 export * from "./services/bitbucket";
 export * from "./services/admin";
 export * from "./services/server";
+export * from "./services/environment";
+export * from "./services/schedule";
 
 // Export Compose Spec related functionality
 export * from "./services/compose";
@@ -49,6 +51,9 @@ export { rebuildDatabaseUtil as rebuildDatabase };
 // Templates
 export * from "./templates";
 export * from "./templates/processors";
+
+// Process utilities
+export { execAsync, execAsyncStream, execAsyncRemote } from "./utils/process/execAsync";
 
 // Setup
 export * from "./setup/config-paths";
