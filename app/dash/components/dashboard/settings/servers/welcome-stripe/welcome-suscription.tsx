@@ -286,8 +286,7 @@ export const WelcomeSuscription = () => {
 												that your server can handle?
 											</p>
 											<p className="text-muted-foreground">
-												Here are some of the things you can do with Hanzo
-												Cloud:
+												Here are some of the things you can do with Hanzo Cloud:
 											</p>
 										</div>
 
