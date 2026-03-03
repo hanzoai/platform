@@ -115,7 +115,7 @@ export const mountRouter = createTRPCRouter({
 			const app = await findApplicationById(input.applicationId);
 			const container = await getServiceContainer(app.appName, app.serverId);
 			const mounts = container?.Mounts.filter(
-				(mount) => mount.Type === "volume" && mount.Source !== "",
+				(mount: any) => mount.Type === "volume" && mount.Source !== "",
 			);
 			return mounts;
 		}),
