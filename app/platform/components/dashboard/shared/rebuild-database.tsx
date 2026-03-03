@@ -31,7 +31,7 @@ export const RebuildDatabase = ({ id, type }: Props) => {
 		redis: () => api.redis.rebuild.useMutation(),
 	};
 
-	const { mutateAsync, isLoading } = mutationMap[type]();
+	const { mutateAsync, isPending: isLoading } = mutationMap[type]();
 
 	const handleRebuild = async () => {
 		try {

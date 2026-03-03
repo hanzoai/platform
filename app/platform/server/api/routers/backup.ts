@@ -519,6 +519,9 @@ export const backupRouter = createTRPCRouter({
 					});
 				});
 			}
-			return true;
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: `Unsupported backup type: ${input.backupType}`,
+			});
 		}),
 });

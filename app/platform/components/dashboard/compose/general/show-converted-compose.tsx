@@ -32,7 +32,7 @@ export const ShowConvertedCompose = ({ composeId }: Props) => {
 		},
 	);
 
-	const { mutateAsync, isLoading } = api.compose.fetchSourceType.useMutation();
+	const { mutateAsync, isPending: isLoading } = api.compose.fetchSourceType.useMutation();
 
 	useEffect(() => {
 		if (isOpen) {

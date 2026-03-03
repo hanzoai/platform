@@ -1,0 +1,223 @@
+/**
+ * Kubernetes StatefulSet management.
+ *
+ * Ported from: paas/platform/handlers/statefulset.js
+ * Uses @kubernetes/client-node v1.x request-object API.
+ */
+
+import { TRPCError } from "@trpc/server";
+import { loadManifestParsed } from "../../templates/k8s/index";
+import type { K8sClients } from "./k8s-client";
+
+export interface StatefulSetSpec {
+	name: string;
+	image: string;
+	replicas?: number;
+	containerPort: number;
+	serviceName?: string;
+	podManagementPolicy?: string;
+	resources?: {
+		cpuRequest?: string;
+		cpuLimit?: string;
+		memoryRequest?: string;
+		memoryLimit?: string;
+	};
+	env?: Array<{ name: string; value: string }>;
+	restartPolicy?: string;
+	labels?: Record<string, string>;
+	storage?: {
+		mountPath: string;
+		size: string;
+		accessModes?: string[];
+	};
+	pvcRetentionPolicy?: {
+		whenDeleted: string;
+		whenScaled: string;
+	};
+}
+
+function k8sError(err: unknown): string {
+	const e = err as { response?: { body?: { message?: string } }; message?: string };
+	return e.response?.body?.message ?? e.message ?? String(err);
+}
+
+async function getExisting(clients: K8sClients, namespace: string, name: string): Promise<any | null> {
+	try {
+		return await clients.apps.readNamespacedStatefulSet({ name, namespace });
+	} catch {
+		return null;
+	}
+}
+
+export async function createStatefulSet(
+	clients: K8sClients,
+	namespace: string,
+	spec: StatefulSetSpec,
+): Promise<void> {
+	const [resource] = loadManifestParsed("statefulset") as [any];
+	const { metadata } = resource;
+	const sSpec = resource.spec;
+
+	metadata.name = spec.name;
+	metadata.namespace = namespace;
+	sSpec.replicas = spec.replicas ?? 1;
+	sSpec.serviceName = spec.serviceName ?? spec.name;
+	if (spec.podManagementPolicy) sSpec.podManagementPolicy = spec.podManagementPolicy;
+	sSpec.selector.matchLabels.app = spec.name;
+	sSpec.template.metadata.labels = { app: spec.name, ...spec.labels };
+	if (spec.restartPolicy) sSpec.template.spec.restartPolicy = spec.restartPolicy;
+
+	const container = sSpec.template.spec.containers[0];
+	container.name = spec.name;
+	container.image = spec.image;
+	container.ports[0].containerPort = spec.containerPort;
+
+	if (spec.resources) {
+		container.resources.requests.cpu = spec.resources.cpuRequest ?? "100m";
+		container.resources.requests.memory = spec.resources.memoryRequest ?? "256Mi";
+		container.resources.limits.cpu = spec.resources.cpuLimit ?? "1";
+		container.resources.limits.memory = spec.resources.memoryLimit ?? "1Gi";
+	}
+
+	container.env = [
+		{ name: "HANZO_NAMESPACE", value: namespace },
+		{ name: "HANZO_CONTAINER_IID", value: spec.name },
+		...(spec.env ?? []),
+	];
+
+	delete container.startupProbe;
+	delete container.readinessProbe;
+	delete container.livenessProbe;
+
+	if (spec.storage) {
+		container.volumeMounts = [{ name: "storage", mountPath: spec.storage.mountPath }];
+		sSpec.volumeClaimTemplates = [{
+			metadata: { name: "storage" },
+			spec: {
+				accessModes: spec.storage.accessModes ?? ["ReadWriteOnce"],
+				resources: { requests: { storage: spec.storage.size } },
+			},
+		}];
+		if (spec.pvcRetentionPolicy) {
+			sSpec.persistentVolumeClaimRetentionPolicy = spec.pvcRetentionPolicy;
+		}
+	} else {
+		delete container.volumeMounts;
+		delete sSpec.volumeClaimTemplates;
+		delete sSpec.persistentVolumeClaimRetentionPolicy;
+	}
+
+	try {
+		await clients.apps.createNamespacedStatefulSet({ namespace, body: resource });
+	} catch (err) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Cannot create StatefulSet '${spec.name}' in '${namespace}': ${k8sError(err)}`,
+		});
+	}
+}
+
+export async function updateStatefulSet(
+	clients: K8sClients,
+	namespace: string,
+	name: string,
+	spec: Partial<StatefulSetSpec>,
+): Promise<void> {
+	const existing = await getExisting(clients, namespace, name);
+	if (!existing) {
+		throw new TRPCError({ code: "NOT_FOUND", message: `StatefulSet '${name}' not found in '${namespace}'` });
+	}
+
+	const sSpec = existing.spec;
+	const container = sSpec.template.spec.containers[0];
+
+	if (spec.replicas !== undefined) sSpec.replicas = spec.replicas;
+	if (spec.image) container.image = spec.image;
+	if (spec.containerPort !== undefined) container.ports[0].containerPort = spec.containerPort;
+	if (spec.podManagementPolicy) sSpec.podManagementPolicy = spec.podManagementPolicy;
+	if (spec.env) {
+		container.env = [
+			{ name: "HANZO_NAMESPACE", value: namespace },
+			{ name: "HANZO_CONTAINER_IID", value: name },
+			...spec.env,
+		];
+	}
+	if (spec.resources) {
+		if (spec.resources.cpuRequest) container.resources.requests.cpu = spec.resources.cpuRequest;
+		if (spec.resources.memoryRequest) container.resources.requests.memory = spec.resources.memoryRequest;
+		if (spec.resources.cpuLimit) container.resources.limits.cpu = spec.resources.cpuLimit;
+		if (spec.resources.memoryLimit) container.resources.limits.memory = spec.resources.memoryLimit;
+	}
+	if (spec.pvcRetentionPolicy) {
+		sSpec.persistentVolumeClaimRetentionPolicy = spec.pvcRetentionPolicy;
+	}
+
+	try {
+		await clients.apps.replaceNamespacedStatefulSet({ name, namespace, body: existing });
+	} catch (err) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Cannot update StatefulSet '${name}' in '${namespace}': ${k8sError(err)}`,
+		});
+	}
+}
+
+export async function deleteStatefulSet(
+	clients: K8sClients,
+	namespace: string,
+	name: string,
+): Promise<void> {
+	if (!(await getExisting(clients, namespace, name))) return;
+	try {
+		await clients.apps.deleteNamespacedStatefulSet({ name, namespace });
+	} catch (err) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Cannot delete StatefulSet '${name}' in '${namespace}': ${k8sError(err)}`,
+		});
+	}
+}
+
+export async function getStatefulSet(
+	clients: K8sClients,
+	namespace: string,
+	name: string,
+): Promise<any> {
+	const result = await getExisting(clients, namespace, name);
+	if (!result) {
+		throw new TRPCError({ code: "NOT_FOUND", message: `StatefulSet '${name}' not found in '${namespace}'` });
+	}
+	return result;
+}
+
+export async function listStatefulSets(
+	clients: K8sClients,
+	namespace: string,
+	labelSelector?: string,
+): Promise<any[]> {
+	try {
+		const list = await clients.apps.listNamespacedStatefulSet({ namespace, labelSelector });
+		return list.items;
+	} catch (err) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Cannot list StatefulSets in '${namespace}': ${k8sError(err)}`,
+		});
+	}
+}
+
+export async function scaleStatefulSet(
+	clients: K8sClients,
+	namespace: string,
+	name: string,
+	replicas: number,
+): Promise<void> {
+	try {
+		await clients.apps.patchNamespacedStatefulSet({ name, namespace, body: { spec: { replicas } } });
+	} catch (err) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Cannot scale StatefulSet '${name}' in '${namespace}': ${k8sError(err)}`,
+		});
+	}
+}
