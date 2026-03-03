@@ -43,7 +43,7 @@ interface Props {
 export const UpdateMongo = ({ mongoId }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending: isLoading } =
 		api.mongo.update.useMutation();
 	const { data } = api.mongo.one.useQuery(
 		{

@@ -56,7 +56,7 @@ export const ComposePaidMonitoring = ({
 
 	const [containerId, setContainerId] = useState<string | undefined>();
 
-	const { mutateAsync: restart, isLoading: isRestarting } =
+	const { mutateAsync: restart, isPending: isRestarting } =
 		api.docker.restartContainer.useMutation();
 
 	useEffect(() => {

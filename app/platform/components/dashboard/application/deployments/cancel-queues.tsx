@@ -20,7 +20,7 @@ interface Props {
 }
 
 export const CancelQueues = ({ id, type }: Props) => {
-	const { mutateAsync, isLoading } =
+	const { mutateAsync, isPending: isLoading } =
 		type === "application"
 			? api.application.cleanQueues.useMutation()
 			: api.compose.cleanQueues.useMutation();

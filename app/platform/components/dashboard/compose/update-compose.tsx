@@ -43,7 +43,7 @@ interface Props {
 export const UpdateCompose = ({ composeId }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const utils = api.useUtils();
-	const { mutateAsync, error, isError, isLoading } =
+	const { mutateAsync, error, isError, isPending: isLoading } =
 		api.compose.update.useMutation();
 	const { data } = api.compose.one.useQuery(
 		{
