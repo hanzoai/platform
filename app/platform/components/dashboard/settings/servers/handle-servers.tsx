@@ -119,7 +119,7 @@ export const HandleServers = ({ serverId, asButton = false }: Props) => {
 			sshKeyId: data.sshKeyId || "",
 			serverType: data.serverType || "deploy",
 			serverId: serverId || "",
-		})
+		} as any)
 			.then(async (_data) => {
 				await utils.server.all.invalidate();
 				refetchServer();
