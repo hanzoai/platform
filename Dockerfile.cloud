@@ -26,9 +26,6 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=@hanzo/platform 
 
 COPY . .
 
-ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-
 ENV NODE_ENV=production
 RUN pnpm --filter=@hanzo/platform build
 RUN pnpm --filter=./app/platform run build
