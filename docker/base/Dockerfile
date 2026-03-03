@@ -3,6 +3,9 @@ FROM node:22-slim
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
+# Install latest pnpm globally
+RUN npm uninstall -g pnpm || true && npm install -g pnpm@10.5.2
+
 # Enable Corepack and prepare the desired pnpm version
 RUN corepack enable && \
     corepack prepare pnpm@10.5.2 --activate
