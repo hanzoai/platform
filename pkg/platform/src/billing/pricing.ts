@@ -20,7 +20,7 @@ export type LegacyPlanType = "hobby";
 export type AnyPlanType = PlanType | LegacyPlanType;
 
 /**
- * Normalize a plan identifier read from the database or Stripe metadata.
+ * Normalize a plan identifier read from the database or subscription metadata.
  * Maps legacy names to their canonical equivalents.
  */
 export function normalizePlanType(plan: string): PlanType {
