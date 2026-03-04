@@ -1,21 +1,21 @@
 {
 	"openapi": "3.0.3",
 	"info": {
-		"title": "Dokploy API",
-		"description": "Complete API documentation for Dokploy - Deploy applications, manage databases, and orchestrate your infrastructure. This API allows you to programmatically manage all aspects of your Dokploy instance.",
+		"title": "Hanzo Platform API",
+		"description": "Complete API documentation for Hanzo Platform - Deploy applications, manage databases, and orchestrate your infrastructure. This API allows you to programmatically manage all aspects of your platform instance.",
 		"version": "1.0.0",
 		"contact": {
-			"name": "Dokploy Team",
-			"url": "https://dokploy.com"
+			"name": "Hanzo AI",
+			"url": "https://hanzo.ai"
 		},
 		"license": {
 			"name": "Apache 2.0",
-			"url": "https://github.com/dokploy/dokploy/blob/canary/LICENSE"
+			"url": "https://github.com/hanzoai/platform/blob/main/LICENSE.MD"
 		}
 	},
 	"servers": [
 		{
-			"url": "https://your-dokploy-instance.com/api"
+			"url": "https://platform.hanzo.ai/api"
 		}
 	],
 	"paths": {
@@ -12157,9 +12157,9 @@
 				}
 			}
 		},
-		"/settings.getDokployVersion": {
+		"/settings.getVersion": {
 			"get": {
-				"operationId": "settings-getDokployVersion",
+				"operationId": "settings-getVersion",
 				"tags": ["settings"],
 				"security": [
 					{
@@ -12876,9 +12876,9 @@
 				}
 			}
 		},
-		"/settings.getDokployCloudIps": {
+		"/settings.getHanzoCloudIps": {
 			"get": {
-				"operationId": "settings-getDokployCloudIps",
+				"operationId": "settings-getHanzoCloudIps",
 				"tags": ["settings"],
 				"security": [
 					{
@@ -13955,7 +13955,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -13982,7 +13982,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"dokployRestart",
+									"hanzoRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -14034,7 +14034,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14156,7 +14156,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14187,7 +14187,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"dokployRestart",
+									"hanzoRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -14240,7 +14240,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14371,7 +14371,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14398,7 +14398,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"dokployRestart",
+									"hanzoRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -14450,7 +14450,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14573,7 +14573,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14620,7 +14620,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"dokployRestart",
+									"hanzoRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -14676,7 +14676,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14934,8 +14934,8 @@
 								"properties": {
 									"ServerType": {
 										"type": "string",
-										"enum": ["Dokploy", "Remote"],
-										"default": "Dokploy"
+										"enum": ["Hanzo Platform", "Remote"],
+										"default": "Hanzo Platform"
 									},
 									"Type": {
 										"type": "string",
@@ -15009,7 +15009,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15041,7 +15041,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"dokployRestart",
+									"hanzoRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -15094,7 +15094,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15230,7 +15230,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15262,7 +15262,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"dokployRestart",
+									"hanzoRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -15315,7 +15315,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15451,7 +15451,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15522,7 +15522,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15651,7 +15651,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15675,7 +15675,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"dokployRestart",
+									"hanzoRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -15726,7 +15726,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15843,7 +15843,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15964,7 +15964,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"dokployRestart": {
+									"hanzoRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -19436,7 +19436,7 @@
 											"application",
 											"compose",
 											"server",
-											"dokploy-server"
+											"hanzo-platform"
 										]
 									},
 									"command": {
@@ -19536,7 +19536,7 @@
 											"application",
 											"compose",
 											"server",
-											"dokploy-server"
+											"hanzo-platform"
 										]
 									},
 									"command": {
@@ -19657,7 +19657,7 @@
 						"required": true,
 						"schema": {
 							"type": "string",
-							"enum": ["application", "compose", "server", "dokploy-server"]
+							"enum": ["application", "compose", "server", "hanzo-platform"]
 						}
 					}
 				],
@@ -21039,7 +21039,7 @@
 				"type": "apiKey",
 				"in": "header",
 				"name": "x-api-key",
-				"description": "API key authentication. Generate an API key from your Dokploy dashboard under Settings > API Keys."
+				"description": "API key authentication. Generate an API key from your Platform dashboard under Settings > API Keys."
 			}
 		},
 		"responses": {
@@ -21193,7 +21193,7 @@
 	],
 	"externalDocs": {
 		"description": "Full documentation",
-		"url": "https://docs.dokploy.com"
+		"url": "https://docs.hanzo.ai/platform"
 	},
 	"security": [
 		{
