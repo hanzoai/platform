@@ -1,9 +1,9 @@
-import { db } from "@dokploy/server/db";
-import { type apiCreateSecurity, security } from "@dokploy/server/db/schema";
+import { db } from "@hanzo/platform-server/db";
+import { type apiCreateSecurity, security } from "@hanzo/platform-server/db/schema";
 import {
 	createSecurityMiddleware,
 	removeSecurityMiddleware,
-} from "@dokploy/server/utils/traefik/security";
+} from "@hanzo/platform-server/utils/traefik/security";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
