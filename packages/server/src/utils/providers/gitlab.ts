@@ -22,7 +22,7 @@ export const refreshGitlabToken = async (gitlabProviderId: string) => {
 		return;
 	}
 
-	// Use internal URL for token refresh when GitLab is on same instance as Dokploy
+	// Use internal URL for token refresh when GitLab is on same instance as Hanzo
 	const baseUrl = gitlabProvider.gitlabInternalUrl || gitlabProvider.gitlabUrl;
 	const response = await fetch(`${baseUrl}/oauth/token`, {
 		method: "POST",
