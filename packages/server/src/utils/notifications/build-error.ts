@@ -87,7 +87,7 @@ export const sendBuildErrorNotifications = async ({
 				if (email) {
 					await sendEmailNotification(
 						email,
-						"Build failed for dokploy",
+						"Build failed for hanzo",
 						template,
 					);
 				}
@@ -95,7 +95,7 @@ export const sendBuildErrorNotifications = async ({
 				if (resend) {
 					await sendResendNotification(
 						resend,
-						"Build failed for dokploy",
+						"Build failed for hanzo",
 						template,
 					);
 				}
@@ -152,7 +152,7 @@ export const sendBuildErrorNotifications = async ({
 					],
 					timestamp: date.toISOString(),
 					footer: {
-						text: "Dokploy Build Notification",
+						text: "Hanzo Platform Build Notification",
 					},
 				});
 			}
