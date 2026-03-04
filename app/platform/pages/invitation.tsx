@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { api } from "@/utils/api";
+import { useWhitelabelingPublic } from "@/utils/hooks/use-whitelabeling";
 
 const registerSchema = z
 	.object({
@@ -82,6 +83,7 @@ const Invitation = ({
 	userAlreadyExists,
 }: Props) => {
 	const router = useRouter();
+	const { config: whitelabeling } = useWhitelabelingPublic();
 	const { data } = api.user.getUserByToken.useQuery(
 		{
 			token,

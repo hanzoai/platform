@@ -823,6 +823,227 @@ export const notificationRouter = createTRPCRouter({
 				});
 			}
 		}),
+	createCustom: adminProcedure
+		.input(apiCreateCustom)
+		.mutation(async ({ input, ctx }) => {
+			try {
+				return await createCustomNotification(
+					input,
+					ctx.session.activeOrganizationId,
+				);
+			} catch (error) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Error creating the notification",
+					cause: error,
+				});
+			}
+		}),
+	updateCustom: adminProcedure
+		.input(apiUpdateCustom)
+		.mutation(async ({ input, ctx }) => {
+			try {
+				const notification = await findNotificationById(input.notificationId);
+				if (notification.organizationId !== ctx.session.activeOrganizationId) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to update this notification",
+					});
+				}
+				return await updateCustomNotification({
+					...input,
+					organizationId: ctx.session.activeOrganizationId,
+				});
+			} catch (error) {
+				throw error;
+			}
+		}),
+	testCustomConnection: adminProcedure
+		.input(apiTestCustomConnection)
+		.mutation(async ({ input }) => {
+			try {
+				await sendCustomNotification(input, {
+					title: "Test Notification",
+					message: "Hi, From Dokploy 👋",
+					timestamp: new Date().toISOString(),
+				});
+				return true;
+			} catch (error) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: `${error instanceof Error ? error.message : "Unknown error"}`,
+					cause: error,
+				});
+			}
+		}),
+	createLark: adminProcedure
+		.input(apiCreateLark)
+		.mutation(async ({ input, ctx }) => {
+			try {
+				return await createLarkNotification(
+					input,
+					ctx.session.activeOrganizationId,
+				);
+			} catch (error) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Error creating the notification",
+					cause: error,
+				});
+			}
+		}),
+	updateLark: adminProcedure
+		.input(apiUpdateLark)
+		.mutation(async ({ input, ctx }) => {
+			try {
+				const notification = await findNotificationById(input.notificationId);
+				if (
+					IS_CLOUD &&
+					notification.organizationId !== ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to update this notification",
+					});
+				}
+				return await updateLarkNotification({
+					...input,
+					organizationId: ctx.session.activeOrganizationId,
+				});
+			} catch (error) {
+				throw error;
+			}
+		}),
+	testLarkConnection: adminProcedure
+		.input(apiTestLarkConnection)
+		.mutation(async ({ input }) => {
+			try {
+				await sendLarkNotification(input, {
+					msg_type: "text",
+					content: {
+						text: "Hi, From Dokploy 👋",
+					},
+				});
+				return true;
+			} catch (error) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Error testing the notification",
+					cause: error,
+				});
+			}
+		}),
+	createTeams: adminProcedure
+		.input(apiCreateTeams)
+		.mutation(async ({ input, ctx }) => {
+			try {
+				return await createTeamsNotification(
+					input,
+					ctx.session.activeOrganizationId,
+				);
+			} catch (error) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Error creating the notification",
+					cause: error,
+				});
+			}
+		}),
+	updateTeams: adminProcedure
+		.input(apiUpdateTeams)
+		.mutation(async ({ input, ctx }) => {
+			try {
+				const notification = await findNotificationById(input.notificationId);
+				if (
+					IS_CLOUD &&
+					notification.organizationId !== ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to update this notification",
+					});
+				}
+				return await updateTeamsNotification({
+					...input,
+					organizationId: ctx.session.activeOrganizationId,
+				});
+			} catch (error) {
+				throw error;
+			}
+		}),
+	testTeamsConnection: adminProcedure
+		.input(apiTestTeamsConnection)
+		.mutation(async ({ input }) => {
+			try {
+				await sendTeamsNotification(input, {
+					title: "🤚 Test Notification",
+					facts: [{ name: "Message", value: "Hi, From Dokploy 👋" }],
+				});
+				return true;
+			} catch (error) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: `${error instanceof Error ? error.message : "Unknown error"}`,
+					cause: error,
+				});
+			}
+		}),
+	createPushover: adminProcedure
+		.input(apiCreatePushover)
+		.mutation(async ({ input, ctx }) => {
+			try {
+				return await createPushoverNotification(
+					input,
+					ctx.session.activeOrganizationId,
+				);
+			} catch (error) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Error creating the notification",
+					cause: error,
+				});
+			}
+		}),
+	updatePushover: adminProcedure
+		.input(apiUpdatePushover)
+		.mutation(async ({ input, ctx }) => {
+			try {
+				const notification = await findNotificationById(input.notificationId);
+				if (
+					IS_CLOUD &&
+					notification.organizationId !== ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to update this notification",
+					});
+				}
+				return await updatePushoverNotification({
+					...input,
+					organizationId: ctx.session.activeOrganizationId,
+				});
+			} catch (error) {
+				throw error;
+			}
+		}),
+	testPushoverConnection: adminProcedure
+		.input(apiTestPushoverConnection)
+		.mutation(async ({ input }) => {
+			try {
+				await sendPushoverNotification(
+					input,
+					"Test Notification",
+					"Hi, From Dokploy 👋",
+				);
+				return true;
+			} catch (error) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Error testing the notification",
+					cause: error,
+				});
+			}
+		}),
 	getEmailProviders: adminProcedure.query(async ({ ctx }) => {
 		return await db.query.notifications.findMany({
 			where: eq(notifications.organizationId, ctx.session.activeOrganizationId),
