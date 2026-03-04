@@ -13,6 +13,8 @@ import {
 	applications,
 	compose,
 	deployments,
+	environments,
+	projects,
 } from "@hanzo/platform/db/schema";
 import { removeDirectoryIfExistsContent } from "@hanzo/platform/utils/filesystem/directory";
 import {
@@ -21,7 +23,7 @@ import {
 } from "@hanzo/platform/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { z } from "zod";
 import {
 	type Application,

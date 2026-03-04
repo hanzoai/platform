@@ -19,6 +19,7 @@ import {
 import { execAsync, execAsyncRemote } from "../utils/process/execAsync";
 import { getRemoteDocker } from "../utils/servers/remote-docker";
 import { type Application, findApplicationById } from "./application";
+import { safeDockerLoginCommand } from "./registry";
 import { findDeploymentById } from "./deployment";
 import type { Mount } from "./mount";
 import type { Port } from "./port";
