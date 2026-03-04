@@ -37,7 +37,7 @@ export const recordAdvancedStats = async (
 		outputMb: stats.NetIO.split(" ")[2],
 	});
 
-	if (appName === "dokploy") {
+	if (appName === "hanzo") {
 		const osutils = new OSUtils();
 		const diskResult = await osutils.disk.usageByMountPoint("/");
 
@@ -60,7 +60,7 @@ export const recordAdvancedStats = async (
 
 /**
  * Get host system statistics using node-os-utils
- * This is used when monitoring "dokploy" to show host stats instead of container stats
+ * This is used when monitoring "hanzo" to show host stats instead of container stats
  */
 export const getHostSystemStats = async (): Promise<Container> => {
 	const osutils = new OSUtils({
@@ -148,9 +148,9 @@ export const getHostSystemStats = async (): Promise<Container> => {
 		MemUsage: memUsageFormatted,
 		BlockIO: blockIOFormatted,
 		NetIO: netIOFormatted,
-		Container: "dokploy",
+		Container: "hanzo",
 		ID: "host-system",
-		Name: "dokploy",
+		Name: "hanzo",
 	};
 };
 
