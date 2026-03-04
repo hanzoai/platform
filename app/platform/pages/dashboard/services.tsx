@@ -77,12 +77,12 @@ const ServicesPage = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <HardDrive className="h-5 w-5" />
-              MinIO
+              S3 Object Storage
             </CardTitle>
-            <CardDescription>Object storage</CardDescription>
+            <CardDescription>S3-compatible object storage</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full" variant="outline">Deploy MinIO</Button>
+            <Button className="w-full" variant="outline">Deploy Storage</Button>
           </CardContent>
         </Card>
 
