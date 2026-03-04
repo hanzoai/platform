@@ -1,6 +1,6 @@
 import path from "node:path";
 import { IS_CLOUD, paths } from "@hanzo/platform-server/constants";
-import { getHanzo PlatformUrl } from "@hanzo/platform-server/services/admin";
+import { getHanzoUrl } from "@hanzo/platform-server/services/admin";
 import {
 	createServerDeployment,
 	updateDeploymentStatus,
@@ -75,7 +75,7 @@ export const serverSetup = async (
 		if (IS_CLOUD) {
 			onData?.("\nConfiguring Monitoring: 🔄\n");
 
-			const baseUrl = await getHanzo PlatformUrl();
+			const baseUrl = await getHanzoUrl();
 			const token = generateToken();
 			const urlCallback = `${baseUrl}/api/trpc/notification.receiveNotification`;
 
