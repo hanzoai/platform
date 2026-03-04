@@ -15,7 +15,7 @@ export type TemplateProps = {
 	date: string;
 };
 
-export const Hanzo PlatformRestartEmail = ({
+export const PlatformRestartEmail = ({
 	date = "2023-05-01T00:00:00.000Z",
 }: TemplateProps) => {
 	const previewText = "Your hanzo server was restarted";
@@ -40,7 +40,7 @@ export const Hanzo PlatformRestartEmail = ({
 						<Section className="mt-[32px]">
 							<Img
 								src={
-									"https://raw.githubusercontent.com/Hanzo Platform/hanzo/refs/heads/canary/apps/hanzo/logo.png"
+									"https://raw.githubusercontent.com/hanzoai/platform/refs/heads/main/app/platform/public/logo.png"
 								}
 								width="100"
 								height="50"
@@ -71,4 +71,4 @@ export const Hanzo PlatformRestartEmail = ({
 	);
 };
 
-export default Hanzo PlatformRestartEmail;
+export default PlatformRestartEmail;
