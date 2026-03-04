@@ -1,13 +1,13 @@
 import { join } from "node:path";
-import { paths } from "@dokploy/server/constants";
-import type { apiGitlabTestConnection } from "@dokploy/server/db/schema";
+import { paths } from "@hanzo/platform-server/constants";
+import type { apiGitlabTestConnection } from "@hanzo/platform-server/db/schema";
 import type { z } from "zod";
 import {
 	findGitlabById,
 	type Gitlab,
 	updateGitlab,
-} from "@dokploy/server/services/gitlab";
-import type { InferResultType } from "@dokploy/server/types/with";
+} from "@hanzo/platform-server/services/gitlab";
+import type { InferResultType } from "@hanzo/platform-server/types/with";
 import { TRPCError } from "@trpc/server";
 
 export const refreshGitlabToken = async (gitlabProviderId: string) => {

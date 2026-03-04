@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Readable } from "node:stream";
-import { docker, paths } from "@dokploy/server/constants";
-import type { Compose } from "@dokploy/server/services/compose";
+import { docker, paths } from "@hanzo/platform-server/constants";
+import type { Compose } from "@hanzo/platform-server/services/compose";
 import type { ContainerInfo, ResourceRequirements } from "dockerode";
 import { parse } from "dotenv";
 import { quote } from "shell-quote";
