@@ -60,7 +60,7 @@ func (db *DB) GetLastNContainerMetrics(containerName string, limit int) ([]Conta
 		)
 		SELECT metrics_json FROM recent_metrics ORDER BY json_extract(metrics_json, '$.timestamp') ASC
 	`
-	rows, err := db.Query(query, containerName, limit)
+	rows, err := db.Query(query, containerName, containerName+".%", limit)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (db *DB) GetAllMetricsContainer(containerName string) ([]ContainerMetric, e
 		)
 		SELECT metrics_json FROM recent_metrics ORDER BY json_extract(metrics_json, '$.timestamp') ASC
 	`
-	rows, err := db.Query(query, containerName)
+	rows, err := db.Query(query, containerName, containerName+".%")
 	if err != nil {
 		return nil, err
 	}

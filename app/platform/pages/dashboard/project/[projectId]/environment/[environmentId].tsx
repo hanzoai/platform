@@ -370,6 +370,8 @@ const EnvironmentPage = (
 			{ projectId: selectedTargetProject },
 			{ enabled: !!selectedTargetProject },
 		);
+	const { config: whitelabeling } = useWhitelabeling();
+	const appName = whitelabeling?.appName || "Dokploy";
 
 	const emptyServices =
 		!currentEnvironment ||
@@ -777,7 +779,7 @@ const EnvironmentPage = (
 		}
 		if (success > 0) {
 			toast.success(
-				`${success} service${success !== 1 ? "s" : ""} deployed successfully`,
+				`${success} service${success !== 1 ? "s" : ""} queued for deployment`,
 			);
 		}
 		if (failed > 0) {
