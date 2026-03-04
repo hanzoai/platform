@@ -15,9 +15,15 @@ import {
 	deleteDnsRecordForDefaultZone,
 	listDnsRecordsForDefaultZone,
 } from "./cloudflare";
+import { createDnsProvider, type DnsProviderType } from "./dns-provider";
+import { isHanzoDnsConfigured } from "./hanzo-dns-provider";
 import { findServerById } from "./server";
 
 export type Domain = typeof domains.$inferSelect;
+
+// ============================================================================
+// DNS Provider Detection
+// ============================================================================
 
 const isCloudflareConfigured = (): boolean =>
 	Boolean(
@@ -26,42 +32,124 @@ const isCloudflareConfigured = (): boolean =>
 			process.env.CLOUDFLARE_ACCOUNT_ID,
 	);
 
+/**
+ * Detect which DNS provider to use.
+ * Prefers Hanzo DNS (multi-provider, dns.hanzo.ai) over direct Cloudflare.
+ * Returns null when no provider is configured.
+ */
+const detectDnsProviderType = (): DnsProviderType | null => {
+	if (isHanzoDnsConfigured()) return "hanzo";
+	if (isCloudflareConfigured()) return "cloudflare";
+	return null;
+};
+
+// ============================================================================
+// Zone Matching Helper
+// ============================================================================
+
+/**
+ * Find the zone whose name is the longest suffix of `host`.
+ * E.g. host "app.staging.hanzo.ai" matches zone "hanzo.ai".
+ */
+function findMatchingZone(
+	zones: Array<{ id: string; name: string }>,
+	host: string,
+): { id: string; name: string } | undefined {
+	const normalized = host.toLowerCase();
+	return zones
+		.filter((z) => normalized === z.name || normalized.endsWith(`.${z.name}`))
+		.sort((a, b) => b.name.length - a.name.length)[0];
+}
+
+// ============================================================================
+// DNS Auto-Sync (create / delete)
+// ============================================================================
+
+/**
+ * Create a DNS A record pointing `host` to `serverIp`.
+ *
+ * When HANZO_DNS_API_KEY is set, uses the Hanzo DNS API (dns.hanzo.ai) which
+ * works with any upstream provider the org has configured.  Falls back to
+ * direct Cloudflare API when only CLOUDFLARE_* vars are present.
+ */
 const syncDnsRecordCreate = async (
 	host: string,
 	serverIp: string,
 ): Promise<void> => {
-	if (!isCloudflareConfigured()) {
-		return;
-	}
+	const providerType = detectDnsProviderType();
+	if (!providerType) return;
+
 	try {
-		await createDnsRecordForDefaultZone({
-			type: "A",
-			name: host,
-			content: serverIp,
-			ttl: 1,
-			proxied: true,
-			comment: "Created by Hanzo Platform",
-		});
+		if (providerType === "hanzo") {
+			const provider = await createDnsProvider("hanzo");
+			const zones = await provider.listZones();
+			const zone = findMatchingZone(zones, host);
+			if (!zone) {
+				console.warn(
+					`[domain] No matching Hanzo DNS zone found for ${host}, skipping DNS sync`,
+				);
+				return;
+			}
+			await provider.createRecord(zone.id, {
+				type: "A",
+				name: host,
+				content: serverIp,
+				ttl: 1,
+				proxied: true,
+				comment: "Created by Hanzo Platform",
+			});
+		} else {
+			await createDnsRecordForDefaultZone({
+				type: "A",
+				name: host,
+				content: serverIp,
+				ttl: 1,
+				proxied: true,
+				comment: "Created by Hanzo Platform",
+			});
+		}
 	} catch (error) {
 		console.error(
-			`[domain] Failed to create CF DNS record for ${host}:`,
+			`[domain] Failed to create DNS record for ${host} via ${providerType}:`,
 			error instanceof Error ? error.message : error,
 		);
 	}
 };
 
+/**
+ * Delete all DNS records matching `host`.
+ *
+ * Same provider-detection logic as syncDnsRecordCreate.
+ */
 const syncDnsRecordDelete = async (host: string): Promise<void> => {
-	if (!isCloudflareConfigured()) {
-		return;
-	}
+	const providerType = detectDnsProviderType();
+	if (!providerType) return;
+
 	try {
-		const records = await listDnsRecordsForDefaultZone({ name: host });
-		for (const record of records) {
-			await deleteDnsRecordForDefaultZone(record.id);
+		if (providerType === "hanzo") {
+			const provider = await createDnsProvider("hanzo");
+			const zones = await provider.listZones();
+			const zone = findMatchingZone(zones, host);
+			if (!zone) {
+				console.warn(
+					`[domain] No matching Hanzo DNS zone found for ${host}, skipping DNS delete`,
+				);
+				return;
+			}
+			const records = await provider.listRecords(zone.id);
+			const matching = records.filter((r) => r.name === host);
+			for (const record of matching) {
+				await provider.deleteRecord(zone.id, record.id);
+			}
+		} else {
+			const records = await listDnsRecordsForDefaultZone({ name: host });
+			for (const record of records) {
+				await deleteDnsRecordForDefaultZone(record.id);
+			}
 		}
 	} catch (error) {
 		console.error(
-			`[domain] Failed to delete CF DNS record for ${host}:`,
+			`[domain] Failed to delete DNS record for ${host} via ${providerType}:`,
 			error instanceof Error ? error.message : error,
 		);
 	}
