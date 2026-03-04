@@ -1,4 +1,3 @@
-import { loadStripe } from "@stripe/stripe-js";
 import clsx from "clsx";
 import {
 	AlertTriangle,
@@ -29,9 +28,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 
-const stripePromise = loadStripe(
-	process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
-);
+const BILLING_PORTAL_URL = process.env.NEXT_PUBLIC_BILLING_PORTAL_URL || "https://billing.hanzo.ai";
 
 /** Precio legacy / Hobby: $4.50/mo primer servidor, $3.50 siguientes; anual $45.90 primero, $35.70 siguientes. */
 export const calculatePrice = (count: number, isAnnual = false) => {
@@ -85,8 +82,6 @@ export const ShowBilling = () => {
 	const { mutateAsync: createCheckoutSession } =
 		api.stripe.createCheckoutSession.useMutation();
 
-	const { mutateAsync: createCustomerPortalSession } =
-		api.stripe.createCustomerPortalSession.useMutation();
 	const { mutateAsync: upgradeSubscription, isPending: isUpgrading } =
 		api.stripe.upgradeSubscription.useMutation();
 	const utils = api.useUtils();
@@ -110,24 +105,30 @@ export const ShowBilling = () => {
 		tier: "legacy" | "hobby" | "startup",
 		productId: string,
 	) => {
-		const stripe = await stripePromise;
 		if (data && data.subscriptions.length === 0) {
-			createCheckoutSession({
-				tier,
-				productId,
-				serverQuantity,
-				isAnnual,
-			}).then(async (session) => {
-				await stripe?.redirectToCheckout({
-					sessionId: session.sessionId,
+			try {
+				const session = await createCheckoutSession({
+					tier,
+					productId,
+					serverQuantity,
+					isAnnual,
 				});
-			});
+				// Redirect to Commerce checkout
+				if (session.sessionId) {
+					window.location.href = `${BILLING_PORTAL_URL}/checkout/${session.sessionId}`;
+				}
+			} catch {
+				toast.error("Error creating checkout session");
+			}
 		}
 	};
 
+	const handleManageSubscription = () => {
+		window.open(BILLING_PORTAL_URL, "_blank");
+	};
+
 	const useNewPricing = data?.hobbyProductId && data?.startupProductId;
-	const products = data?.products.filter((product) => {
-		// @ts-ignore
+	const products = data?.products.filter((product: any) => {
 		const interval = product?.default_price?.recurring?.interval;
 		return isAnnual ? interval === "year" : interval === "month";
 	});
@@ -173,7 +174,7 @@ export const ShowBilling = () => {
 						</nav>
 
 						<div className="flex flex-col gap-4 w-full mt-6">
-							{admin?.user.stripeSubscriptionId && (
+							{admin?.user.serversQuantity > 0 && (
 								<div className="space-y-2 flex flex-col">
 									<h3 className="text-lg font-medium">Servers Plan</h3>
 									<p className="text-sm text-muted-foreground">
@@ -201,9 +202,9 @@ export const ShowBilling = () => {
 									<div className="rounded-xl border border-border bg-primary/5 p-4 space-y-4 max-w-2xl">
 										<h3 className="text-lg font-medium">Upgrade your plan</h3>
 										<p className="text-sm text-muted-foreground">
-											You’re on the legacy plan. Switch to Hobby or Startup
+											You're on the legacy plan. Switch to Hobby or Startup
 											(same benefits). You can also choose annual billing (20%
-											off). Stripe will prorate the change.
+											off).
 										</p>
 
 										<span className="text-sm font-medium block">
@@ -339,9 +340,6 @@ export const ShowBilling = () => {
 																/{updateFormAnnual ? "yr" : "mo"} (
 																{updateFormAnnual ? "annual" : "monthly"})
 															</p>
-															<p className="text-sm text-muted-foreground">
-																Stripe will prorate the change.
-															</p>
 														</div>
 													}
 													type="default"
@@ -373,7 +371,7 @@ export const ShowBilling = () => {
 														{isUpgrading ? (
 															<>
 																<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-																Upgrading…
+																Upgrading...
 															</>
 														) : (
 															"Upgrade plan"
@@ -384,7 +382,7 @@ export const ShowBilling = () => {
 										)}
 									</div>
 								)}
-							{/* Cambiar plan o cantidad de servidores (usuarios en Hobby o Startup; el portal no permite esto) */}
+							{/* Cambiar plan o cantidad de servidores (usuarios en Hobby o Startup) */}
 							{useNewPricing &&
 								(data?.currentPlan === "hobby" ||
 									data?.currentPlan === "startup") &&
@@ -416,8 +414,7 @@ export const ShowBilling = () => {
 										</p>
 										<p className="text-sm text-muted-foreground">
 											Add more servers, switch between Hobby and Startup, or
-											change to annual billing (20% off). Stripe will prorate
-											the change.
+											change to annual billing (20% off).
 										</p>
 
 										<span className="text-sm font-medium block">
@@ -565,9 +562,6 @@ export const ShowBilling = () => {
 																/{updateFormAnnual ? "yr" : "mo"} (
 																{updateFormAnnual ? "annual" : "monthly"})
 															</p>
-															<p className="text-sm text-muted-foreground">
-																Stripe will prorate the change.
-															</p>
 														</div>
 													}
 													type="default"
@@ -606,7 +600,7 @@ export const ShowBilling = () => {
 														{isUpgrading ? (
 															<>
 																<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-																Updating…
+																Updating...
 															</>
 														) : (
 															"Update subscription"
@@ -756,15 +750,11 @@ export const ShowBilling = () => {
 													</Button>
 												</div>
 												<div className="flex flex-col gap-2 w-full">
-													{admin?.user.stripeCustomerId && (
+													{data?.subscriptions?.length > 0 && (
 														<Button
 															variant="secondary"
 															className="w-full"
-															onClick={async () => {
-																const session =
-																	await createCustomerPortalSession();
-																window.open(session.url);
-															}}
+															onClick={handleManageSubscription}
 														>
 															Manage Subscription
 														</Button>
@@ -828,7 +818,7 @@ export const ShowBilling = () => {
 											<ul className="mt-5 flex flex-col gap-2 text-sm text-muted-foreground">
 												<li className="flex items-start gap-2 font-medium text-foreground">
 													<CheckIcon className="h-4 w-4 shrink-0 text-green-600 dark:text-green-500 mt-0.5" />
-													All the features of Hobby, plus…
+													All the features of Hobby, plus...
 												</li>
 												{[
 													"3 Servers Included",
@@ -894,15 +884,11 @@ export const ShowBilling = () => {
 													</div>
 												</div>
 												<div className="flex flex-col gap-2 w-full">
-													{admin?.user.stripeCustomerId && (
+													{data?.subscriptions?.length > 0 && (
 														<Button
 															variant="secondary"
 															className="w-full"
-															onClick={async () => {
-																const session =
-																	await createCustomerPortalSession();
-																window.open(session.url);
-															}}
+															onClick={handleManageSubscription}
 														>
 															Manage Subscription
 														</Button>
@@ -943,7 +929,7 @@ export const ShowBilling = () => {
 											<ul className="mt-5 flex flex-col gap-2 text-sm text-muted-foreground">
 												<li className="flex items-start gap-2 font-medium text-foreground">
 													<CheckIcon className="h-4 w-4 shrink-0 text-green-600 dark:text-green-500 mt-0.5" />
-													All the features of Startup, plus…
+													All the features of Startup, plus...
 												</li>
 												{[
 													"Up to Unlimited Servers",
@@ -987,7 +973,7 @@ export const ShowBilling = () => {
 											<TabsTrigger value="annual">Annual (20% off)</TabsTrigger>
 										</TabsList>
 									</Tabs>
-									{products?.map((product) => {
+									{products?.map((product: any) => {
 										const featured = true;
 										return (
 											<div key={product.id}>
@@ -1001,7 +987,7 @@ export const ShowBilling = () => {
 												>
 													{isAnnual && (
 														<div className="mb-4 flex flex-row items-center gap-2">
-															<Badge>Recommended 🚀</Badge>
+															<Badge>Recommended</Badge>
 														</div>
 													)}
 													{isAnnual ? (
@@ -1106,15 +1092,11 @@ export const ShowBilling = () => {
 															</Button>
 														</div>
 														<div className="flex flex-col gap-2 mt-4 w-full">
-															{admin?.user.stripeCustomerId && (
+															{data?.subscriptions?.length > 0 && (
 																<Button
 																	variant="secondary"
 																	className="w-full"
-																	onClick={async () => {
-																		const session =
-																			await createCustomerPortalSession();
-																		window.open(session.url);
-																	}}
+																	onClick={handleManageSubscription}
 																>
 																	Manage Subscription
 																</Button>
