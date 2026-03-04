@@ -58,7 +58,7 @@
 		"@codemirror/language": "^6.11.0",
 		"@codemirror/legacy-modes": "6.4.0",
 		"@codemirror/view": "6.29.0",
-		"@hanzo/platform-trpc": "npm:@dokploy/trpc-openapi@0.0.17",
+		"@hanzo/platform-trpc": "github:hanzoai/trpc-openapi#v0.0.17",
 		"@faker-js/faker": "^8.4.1",
 		"@hanzo/platform": "workspace:*",
 		"@hanzo/platform-server": "workspace:*",
