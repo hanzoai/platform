@@ -1,20 +1,21 @@
+import dns from "node:dns/promises";
 import {
-	getCloudflareConfig,
-	listPagesProjects,
-	getPagesProject,
-	createPagesProject,
-	createPagesDeployment,
 	addPagesCustomDomain,
+	createPagesDeployment,
+	createPagesProject,
+	getCloudflareConfig,
+	getPagesProject,
+	listPagesProjects,
 	removePagesCustomDomain,
 } from "@hanzo/platform/services/cloudflare";
 import {
 	createDnsProvider,
 	type DnsProviderType,
 } from "@hanzo/platform/services/dns-provider";
+import { isHanzoDnsConfigured } from "@hanzo/platform/services/hanzo-dns-provider";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import dns from "node:dns/promises";
 
 // ============================================================================
 // Shared Schemas
@@ -50,10 +51,13 @@ const dnsRecordTypeSchema = z.enum([
 
 /**
  * Resolve a DnsProvider instance from the optional provider input.
- * Defaults to "cloudflare" when no provider is specified.
+ * When no explicit provider is given, prefers Hanzo DNS (dns.hanzo.ai)
+ * if HANZO_DNS_API_KEY is set, otherwise falls back to Cloudflare.
  */
 async function resolveProvider(providerType?: DnsProviderType) {
-	return createDnsProvider(providerType ?? "cloudflare");
+	const effectiveType =
+		providerType ?? (isHanzoDnsConfigured() ? "hanzo" : "cloudflare");
+	return createDnsProvider(effectiveType);
 }
 
 /**
@@ -69,8 +73,7 @@ async function withProviderError<T>(
 	} catch (error) {
 		throw new TRPCError({
 			code,
-			message:
-				error instanceof Error ? error.message : fallbackMessage,
+			message: error instanceof Error ? error.message : fallbackMessage,
 			cause: error,
 		});
 	}
@@ -303,8 +306,7 @@ export const dnsRouter = createTRPCRouter({
 						: `DNS resolves to ${addresses.join(", ")} but expected ${input.expectedIp}`,
 				};
 			} catch (error) {
-				const isNodeError =
-					error instanceof Error && "code" in error;
+				const isNodeError = error instanceof Error && "code" in error;
 				const errorCode = isNodeError
 					? (error as NodeJS.ErrnoException).code
 					: undefined;
