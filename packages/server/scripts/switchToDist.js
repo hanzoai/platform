@@ -19,21 +19,44 @@ pkg.exports = {
 		import: "./dist/db/index.js",
 		require: "./dist/db/index.cjs.js",
 	},
+	"./db/schema": {
+		import: "./dist/db/schema/index.js",
+		require: "./dist/db/schema/index.cjs.js",
+	},
+	"./db/schema/*": {
+		import: "./dist/db/schema/*",
+	},
+	"./services/*": {
+		import: "./dist/services/*",
+	},
+	"./lib/*": {
+		import: "./dist/lib/*",
+	},
+	"./setup/*": {
+		import: "./dist/setup/*",
+	},
+	"./constants": {
+		import: "./dist/constants/index.js",
+		require: "./dist/constants/index.cjs.js",
+	},
+	"./templates": {
+		import: "./dist/templates/index.js",
+	},
+	"./templates/*": {
+		import: "./dist/templates/*",
+	},
+	"./utils/*": {
+		import: "./dist/utils/*",
+	},
+	"./types/*": {
+		import: "./dist/types/*",
+	},
+	"./wss/*": {
+		import: "./dist/wss/*",
+	},
 	"./*": {
 		import: "./dist/*",
 		require: "./dist/*.cjs",
-	},
-	"./dist": {
-		import: "./dist/index.js",
-		require: "./dist/index.cjs.js",
-	},
-	"./dist/db": {
-		import: "./dist/db/index.js",
-		require: "./dist/db/index.cjs.js",
-	},
-	"./dist/db/schema": {
-		import: "./dist/db/schema/index.js",
-		require: "./dist/db/schema/index.cjs.js",
 	},
 };
 
