@@ -103,9 +103,12 @@ const ServicesPage = () => {
   );
 };
 
-// NO AUTHENTICATION - Direct access for internal use
 export default ServicesPage;
 
 ServicesPage.getLayout = (page: ReactElement) => {
   return <DashboardLayout>{page}</DashboardLayout>;
 };
+
+export async function getServerSideProps() {
+  return { props: {} };
+}
