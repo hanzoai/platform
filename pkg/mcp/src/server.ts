@@ -8,7 +8,7 @@ export function createServer() {
   });
 
   for (const tool of allTools) {
-    server.tool(tool.name, tool.description, tool.schema.shape, tool.handler);
+    (server as any).tool(tool.name, tool.description, tool.schema.shape, tool.handler);
   }
 
   return server;
