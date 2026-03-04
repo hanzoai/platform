@@ -48,6 +48,9 @@ pkg.exports = {
 	"./monitoring/*": {
 		import: "./dist/monitoring/*.js",
 	},
+	"./utils/builders": {
+		import: "./dist/utils/builders/index.js",
+	},
 	"./utils/*": {
 		import: "./dist/utils/*.js",
 	},
@@ -56,6 +59,9 @@ pkg.exports = {
 	},
 	"./wss/*": {
 		import: "./dist/wss/*.js",
+	},
+	"./emails/*": {
+		import: "./dist/emails/*.js",
 	},
 	"./*": {
 		import: "./dist/*.js",
