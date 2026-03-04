@@ -1,5 +1,5 @@
-import { db } from "@dokploy/server/db";
-import { IS_CLOUD } from "@dokploy/server/index";
+import { db } from "@hanzo/platform-server/db";
+import { IS_CLOUD } from "@hanzo/platform-server/index";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, exists } from "drizzle-orm";
 import { nanoid } from "nanoid";

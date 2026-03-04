@@ -1,4 +1,4 @@
-import type { InferResultType } from "@dokploy/server/types/with";
+import type { InferResultType } from "@hanzo/platform-server/types/with";
 import type { CreateServiceOptions } from "dockerode";
 import {
 	calculateResources,

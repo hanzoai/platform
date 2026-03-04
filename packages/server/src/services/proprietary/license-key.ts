@@ -1,5 +1,5 @@
-import { db } from "@dokploy/server/db";
-import { user } from "@dokploy/server/db/schema";
+import { db } from "@hanzo/platform-server/db";
+import { user } from "@hanzo/platform-server/db/schema";
 import { eq } from "drizzle-orm";
 import { getOrganizationOwnerId } from "./sso";
 
