@@ -1,6 +1,6 @@
-import { db } from "@dokploy/server/db";
-import { user } from "@dokploy/server/db/schema";
-import { hasValidLicense, validateLicenseKey } from "@dokploy/server/index";
+import { db } from "@hanzo/platform-server/db";
+import { user } from "@hanzo/platform-server/db/schema";
+import { hasValidLicense, validateLicenseKey } from "@hanzo/platform-server/index";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
