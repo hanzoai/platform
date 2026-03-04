@@ -79,9 +79,12 @@ const DashboardPage = () => {
   );
 };
 
-// NO AUTHENTICATION - Direct access for internal use
 export default DashboardPage;
 
 DashboardPage.getLayout = (page: ReactElement) => {
   return <DashboardLayout>{page}</DashboardLayout>;
 };
+
+export async function getServerSideProps() {
+  return { props: {} };
+}
