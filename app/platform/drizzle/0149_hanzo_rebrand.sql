@@ -1,6 +1,17 @@
 -- Hanzo rebrand migration: rename dokploy references
 -- All statements are idempotent (safe to re-run)
 
+-- 0. Add whitelabelingConfig column if missing (upstream 0148_futuristic_bullseye may not have run)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'webServerSettings' AND column_name = 'whitelabelingConfig'
+  ) THEN
+    ALTER TABLE "webServerSettings" ADD COLUMN "whitelabelingConfig" jsonb DEFAULT '{"appName":null,"appDescription":null,"logoUrl":null,"faviconUrl":null,"customCss":null,"loginLogoUrl":null,"supportUrl":null,"docsUrl":null,"errorPageTitle":null,"errorPageDescription":null,"metaTitle":null,"footerText":null}'::jsonb;
+  END IF;
+END $$;
+
 -- 1. Rename notification column dokployRestart -> hanzoRestart (if not already renamed)
 DO $$
 BEGIN
