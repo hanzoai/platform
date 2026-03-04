@@ -35,7 +35,7 @@ import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
 import { encodeBase64 } from "../utils/docker/utils";
-import { getDokployUrl } from "./admin";
+import { getHanzoUrl } from "./admin";
 import {
 	createDeploymentCompose,
 	updateDeployment,
@@ -216,7 +216,7 @@ export const deployCompose = async ({
 }) => {
 	const compose = await findComposeById(composeId);
 
-	const buildLink = `${await getDokployUrl()}/dashboard/project/${
+	const buildLink = `${await getHanzoUrl()}/dashboard/project/${
 		compose.environment.projectId
 	}/environment/${compose.environmentId}/services/compose/${compose.composeId}?tab=deployments`;
 	const deployment = await createDeploymentCompose({
@@ -405,7 +405,7 @@ export const removeCompose = async (
 
 		if (compose.composeType === "stack") {
 			const command = `
-			docker network disconnect ${compose.appName} dokploy-traefik;
+			docker network disconnect ${compose.appName} hanzo-traefik;
 			docker stack rm ${compose.appName};
 			rm -rf ${projectPath}`;
 
@@ -416,7 +416,7 @@ export const removeCompose = async (
 			}
 		} else {
 			const command = `
-			 docker network disconnect ${compose.appName} dokploy-traefik;
+			 docker network disconnect ${compose.appName} hanzo-traefik;
 			cd ${projectPath} && env -i PATH="$PATH" docker compose -p ${compose.appName} down ${
 				deleteVolumes ? "--volumes" : ""
 			} && rm -rf ${projectPath}`;
