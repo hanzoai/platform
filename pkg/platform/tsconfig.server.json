@@ -8,7 +8,7 @@
 		"isolatedModules": false,
 		"noEmit": false,
 		"declaration": true,
-		"moduleResolution": "Node",
+		"moduleResolution": "Bundler",
 		"rootDir": "./src",
 		"baseUrl": ".",
 		"jsx": "react-jsx",
