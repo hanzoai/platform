@@ -111,7 +111,7 @@ const deleteRollbackImage = async (image: string, serverId?: string | null) => {
 	const command = `docker image rm ${image} --force`;
 
 	if (serverId) {
-		await execAsyncRemote(command, serverId);
+		await execAsyncRemote(serverId, command);
 	} else {
 		await execAsync(command);
 	}
@@ -171,6 +171,23 @@ export const rollback = async (rollbackId: string) => {
 	);
 };
 
+const dockerLoginForRegistry = async (
+	registry: Registry,
+	serverId?: string | null,
+) => {
+	const loginCommand = safeDockerLoginCommand(
+		registry.registryUrl,
+		registry.username,
+		registry.password,
+	);
+
+	if (serverId) {
+		await execAsyncRemote(serverId, loginCommand);
+	} else {
+		await execAsync(loginCommand);
+	}
+};
+
 const rollbackApplication = async (
 	appName: string,
 	image: string,
@@ -186,6 +203,14 @@ const rollbackApplication = async (
 ) => {
 	if (!fullContext) {
 		throw new Error("Full context is required for rollback");
+	}
+
+	// Ensure Docker daemon is authenticated with the rollback registry
+	// before updating the swarm service. The authconfig in CreateServiceOptions
+	// alone is not sufficient — Docker Swarm also relies on the daemon's
+	// cached credentials (~/.docker/config.json) to distribute auth to nodes.
+	if (fullContext.rollbackRegistry) {
+		await dockerLoginForRegistry(fullContext.rollbackRegistry, serverId);
 	}
 
 	const docker = await getRemoteDocker(serverId);

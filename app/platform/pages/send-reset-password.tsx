@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
+import { useWhitelabelingPublic } from "@/utils/hooks/use-whitelabeling";
 
 const loginSchema = z.object({
 	email: z
@@ -42,6 +43,7 @@ type AuthResponse = {
 };
 
 export default function Home() {
+	const { config: whitelabeling } = useWhitelabelingPublic();
 	const [temp, _setTemp] = useState<AuthResponse>({
 		is2FAEnabled: false,
 		authId: "",
