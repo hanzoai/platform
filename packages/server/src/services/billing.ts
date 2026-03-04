@@ -1,9 +1,9 @@
-import { db } from "@hanzo/platform/db";
+import { db } from "../db";
 import {
 	billingRecord,
 	doksCluster,
 	type CostItem,
-} from "@hanzo/platform/db/schema";
+} from "../db/schema";
 import { eq } from "drizzle-orm";
 import { getDropletPricing } from "./doks-provisioner";
 
