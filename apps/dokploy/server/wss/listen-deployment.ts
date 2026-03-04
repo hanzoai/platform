@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import type http from "node:http";
-import { findServerById, IS_CLOUD, validateRequest } from "@dokploy/server";
-import { readValidDirectory } from "@dokploy/server/wss/utils";
+import { findServerById, IS_CLOUD, validateRequest } from "@hanzo/platform-server";
+import { readValidDirectory } from "@hanzo/platform-server/wss/utils";
 import { Client } from "ssh2";
 import { WebSocketServer } from "ws";
 
