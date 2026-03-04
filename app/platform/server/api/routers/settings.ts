@@ -911,12 +911,11 @@ export const settingsRouter = createTRPCRouter({
 		return getLogCleanupStatus();
 	}),
 
-	// NOTE: DOKPLOY_CLOUD_IPS env var kept for backward compatibility
 	getHanzoCloudIps: adminProcedure.query(async () => {
 		if (!IS_CLOUD) {
 			return [];
 		}
-		const ips = (process.env.HANZO_CLOUD_IPS ?? process.env.DOKPLOY_CLOUD_IPS)?.split(",");
+		const ips = process.env.PLATFORM_CLOUD_IPS?.split(",");
 		return ips;
 	}),
 });
