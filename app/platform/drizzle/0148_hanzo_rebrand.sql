@@ -23,11 +23,19 @@ BEGIN
   END IF;
 END $$;
 
--- 3. Update metricsConfig default JSON in webServerSettings
-ALTER TABLE "web_server_settings" ALTER COLUMN "metricsConfig" SET DEFAULT '{"server":{"type":"Hanzo Platform","refreshRate":60,"port":4500,"token":"","retentionDays":2,"cronJob":"","urlCallback":"","thresholds":{"cpu":0,"memory":0}},"containers":{"refreshRate":60,"services":{"include":[],"exclude":[]}}}'::jsonb;
+-- 3. Update metricsConfig default JSON in webServerSettings (if table exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'web_server_settings') THEN
+    ALTER TABLE "web_server_settings" ALTER COLUMN "metricsConfig" SET DEFAULT '{"server":{"type":"Hanzo Platform","refreshRate":60,"port":4500,"token":"","retentionDays":2,"cronJob":"","urlCallback":"","thresholds":{"cpu":0,"memory":0}},"containers":{"refreshRate":60,"services":{"include":[],"exclude":[]}}}'::jsonb;
+    UPDATE "web_server_settings" SET "metricsConfig" = jsonb_set("metricsConfig", '{server,type}', '"Hanzo Platform"') WHERE "metricsConfig"->'server'->>'type' = 'Dokploy';
+  END IF;
+END $$;
 
--- 4. Update existing metricsConfig rows from "Dokploy" to "Hanzo Platform"
-UPDATE "web_server_settings" SET "metricsConfig" = jsonb_set("metricsConfig", '{server,type}', '"Hanzo Platform"') WHERE "metricsConfig"->'server'->>'type' = 'Dokploy';
-
--- 5. Update existing metricsConfig on server table too
-UPDATE "server" SET "metricsConfig" = jsonb_set("metricsConfig", '{server,type}', '"Hanzo Platform"') WHERE "metricsConfig"->'server'->>'type' = 'Dokploy';
+-- 4. Update existing metricsConfig on server table too (if table exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'server') THEN
+    UPDATE "server" SET "metricsConfig" = jsonb_set("metricsConfig", '{server,type}', '"Hanzo Platform"') WHERE "metricsConfig"->'server'->>'type' = 'Dokploy';
+  END IF;
+END $$;
