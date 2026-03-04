@@ -1,5 +1,5 @@
-import { db } from "@dokploy/server/db";
-import { organization } from "@dokploy/server/db/schema";
+import { db } from "@hanzo/platform-server/db";
+import { organization } from "@hanzo/platform-server/db/schema";
 import { eq } from "drizzle-orm";
 
 export const getSSOProviders = async () => {

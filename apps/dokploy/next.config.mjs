@@ -9,7 +9,7 @@ const nextConfig = {
 	typescript: {
 		ignoreBuildErrors: true,
 	},
-	transpilePackages: ["@dokploy/server"],
+	transpilePackages: ["@hanzo/platform-server"],
 	async headers() {
 		return [
 			{
