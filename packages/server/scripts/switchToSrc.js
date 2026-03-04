@@ -19,6 +19,18 @@ pkg.exports = {
 		import: "./src/db/index.ts",
 		require: "./dist/db/index.cjs.js",
 	},
+	"./db/schema": {
+		import: "./src/db/schema/index.ts",
+	},
+	"./db/schema/*": {
+		import: "./src/db/schema/*.ts",
+	},
+	"./services/*": {
+		import: "./src/services/*.ts",
+	},
+	"./lib/*": {
+		import: "./src/lib/*.ts",
+	},
 	"./setup/*": {
 		import: "./src/setup/*.ts",
 		require: "./dist/setup/index.cjs.js",
@@ -26,6 +38,12 @@ pkg.exports = {
 	"./constants": {
 		import: "./src/constants/index.ts",
 		require: "./dist/constants.cjs.js",
+	},
+	"./templates": {
+		import: "./src/templates/index.ts",
+	},
+	"./templates/*": {
+		import: "./src/templates/*.ts",
 	},
 };
 
