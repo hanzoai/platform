@@ -10,7 +10,6 @@
 
 Hanzo is a free, self-hostable Platform as a Service (PaaS) that simplifies the deployment and management of applications and databases.
 
-
 ## ✨ Features
 
 Hanzo includes multiple features to make your life easier.
