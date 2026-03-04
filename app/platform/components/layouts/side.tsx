@@ -373,6 +373,15 @@ const MENU: Menu = {
 			isEnabled: ({ auth }) =>
 				!!(auth?.role === "owner" || auth?.role === "admin"),
 		},
+		{
+			isSingle: true,
+			title: "Deploy Providers",
+			url: "/dashboard/settings/deploy-providers",
+			icon: Rocket,
+			// Only enabled for admins
+			isEnabled: ({ auth }) =>
+				!!(auth?.role === "owner" || auth?.role === "admin"),
+		},
 
 		{
 			isSingle: true,
