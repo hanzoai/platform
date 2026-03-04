@@ -45,6 +45,7 @@ import { UseKeyboardNav } from "@/hooks/use-keyboard-nav";
 import { cn } from "@/lib/utils";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
+import { useWhitelabeling } from "@/utils/hooks/use-whitelabeling";
 
 type TabState = "projects" | "monitoring" | "settings" | "backups" | "advanced";
 

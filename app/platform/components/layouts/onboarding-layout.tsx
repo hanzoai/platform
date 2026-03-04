@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type React from "react";
 import { cn } from "@/lib/utils";
+import { useWhitelabelingPublic } from "@/utils/hooks/use-whitelabeling";
 import { GithubIcon } from "../icons/data-tools-icons";
 import { Logo } from "../shared/logo";
 import { Button } from "../ui/button";
@@ -9,6 +10,14 @@ interface Props {
 	children: React.ReactNode;
 }
 export const OnboardingLayout = ({ children }: Props) => {
+	const { config: whitelabeling } = useWhitelabelingPublic();
+	const appName = whitelabeling?.appName || "Dokploy";
+	const appDescription =
+		whitelabeling?.appDescription ||
+		"\u201CThe Open Source alternative to Netlify, Vercel, Heroku.\u201D";
+	const logoUrl =
+		whitelabeling?.loginLogoUrl || whitelabeling?.logoUrl || undefined;
+
 	return (
 		<div className="container relative min-h-svh flex-col items-center justify-center flex lg:max-w-none lg:grid lg:grid-cols-2 lg:px-0 w-full">
 			<Link
@@ -29,10 +38,7 @@ export const OnboardingLayout = ({ children }: Props) => {
 				</Link>
 				<div className="relative z-20 mt-auto">
 					<blockquote className="space-y-2">
-						<p className="text-lg text-primary">
-							&ldquo;The Open Source alternative to Netlify, Vercel,
-							Heroku.&rdquo;
-						</p>
+						<p className="text-lg text-primary">{appDescription}</p>
 					</blockquote>
 				</div>
 			</div>
