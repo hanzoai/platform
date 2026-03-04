@@ -1,5 +1,5 @@
-import { findServerById } from "@dokploy/server/services/server";
-import { getWebServerSettings } from "@dokploy/server/services/web-server-settings";
+import { findServerById } from "@hanzo/platform-server/services/server";
+import { getWebServerSettings } from "@hanzo/platform-server/services/web-server-settings";
 import type { ContainerCreateOptions } from "dockerode";
 import { IS_CLOUD } from "../constants";
 import { getDokployImageTag } from "../services/settings";
