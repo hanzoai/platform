@@ -1,42 +1,59 @@
 /**
  * Hanzo DNS Provider
  *
- * Implements the DnsProvider interface by calling the Hanzo DNS REST API.
+ * Implements the DnsProvider interface by calling the Hanzo DNS REST API
+ * at dns.hanzo.ai. Works with any upstream DNS provider the org has
+ * configured (Cloudflare, Route53, etc.) -- the Hanzo DNS service
+ * abstracts the provider details.
+ *
  * Configuration is read from environment variables:
- *   - HANZO_DNS_API_URL:   base URL (default: http://hanzo-dns.hanzo.svc.cluster.local:8853)
- *   - HANZO_DNS_API_TOKEN: bearer token for authentication
+ *   - HANZO_DNS_API_KEY:   bearer token (preferred)
+ *   - HANZO_DNS_API_TOKEN: bearer token (legacy alias)
+ *   - HANZO_DNS_API_URL:   base URL (default: https://dns.hanzo.ai)
  */
 
 import type {
 	DnsProvider,
-	DnsProviderType,
-	DnsZone,
-	DnsRecord,
 	DnsProviderRecordCreateParams,
 	DnsProviderRecordUpdateParams,
+	DnsProviderType,
+	DnsRecord,
+	DnsZone,
 } from "./dns-provider";
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-const DEFAULT_BASE_URL = "http://hanzo-dns.hanzo.svc.cluster.local:8853";
+const DEFAULT_BASE_URL = "https://dns.hanzo.ai";
 
 interface HanzoDnsConfig {
 	baseUrl: string;
 	apiToken: string;
 }
 
-function getHanzoDnsConfig(): HanzoDnsConfig {
-	const apiToken = process.env.HANZO_DNS_API_TOKEN;
+export function getHanzoDnsConfig(): HanzoDnsConfig {
+	const apiToken =
+		process.env.HANZO_DNS_API_KEY ?? process.env.HANZO_DNS_API_TOKEN;
 	if (!apiToken) {
-		throw new Error("HANZO_DNS_API_TOKEN environment variable is required");
+		throw new Error(
+			"HANZO_DNS_API_KEY (or HANZO_DNS_API_TOKEN) environment variable is required",
+		);
 	}
 
 	return {
 		baseUrl: process.env.HANZO_DNS_API_URL ?? DEFAULT_BASE_URL,
 		apiToken,
 	};
+}
+
+/**
+ * Returns true when Hanzo DNS credentials are available.
+ */
+export function isHanzoDnsConfigured(): boolean {
+	return Boolean(
+		process.env.HANZO_DNS_API_KEY ?? process.env.HANZO_DNS_API_TOKEN,
+	);
 }
 
 // ============================================================================
@@ -80,8 +97,12 @@ async function hanzoDnsFetch<T>(
 	if (!response.ok) {
 		let errorMessage: string;
 		try {
-			const errorBody = (await response.json()) as { error?: string; message?: string };
-			errorMessage = errorBody.error ?? errorBody.message ?? response.statusText;
+			const errorBody = (await response.json()) as {
+				error?: string;
+				message?: string;
+			};
+			errorMessage =
+				errorBody.error ?? errorBody.message ?? response.statusText;
 		} catch {
 			errorMessage = response.statusText;
 		}
@@ -193,11 +214,9 @@ export class HanzoDnsProvider implements DnsProvider {
 	}
 
 	async deleteZone(zoneId: string): Promise<void> {
-		await hanzoDnsFetch<unknown>(
-			this.config,
-			`/api/v1/zones/${zoneId}`,
-			{ method: "DELETE" },
-		);
+		await hanzoDnsFetch<unknown>(this.config, `/api/v1/zones/${zoneId}`, {
+			method: "DELETE",
+		});
 	}
 
 	async listRecords(zoneId: string): Promise<DnsRecord[]> {
@@ -208,7 +227,10 @@ export class HanzoDnsProvider implements DnsProvider {
 		return records.map(mapRecord);
 	}
 
-	async createRecord(zoneId: string, record: DnsProviderRecordCreateParams): Promise<DnsRecord> {
+	async createRecord(
+		zoneId: string,
+		record: DnsProviderRecordCreateParams,
+	): Promise<DnsRecord> {
 		const created = await hanzoDnsFetch<HanzoDnsRecord>(
 			this.config,
 			`/api/v1/zones/${zoneId}/records`,
