@@ -144,15 +144,15 @@ importers:
       '@codemirror/view':
         specifier: 6.29.0
         version: 6.29.0
-      '@dokploy/trpc-openapi':
-        specifier: 0.0.17
-        version: 0.0.17(@trpc/server@11.10.0(typescript@5.8.3))(zod-openapi@5.4.6(zod@4.3.6))(zod@4.3.6)
       '@faker-js/faker':
         specifier: ^8.4.1
         version: 8.4.1
       '@hanzo/platform':
         specifier: workspace:*
         version: link:../../pkg/platform
+      '@hanzo/platform-trpc':
+        specifier: npm:@dokploy/trpc-openapi@0.0.17
+        version: '@dokploy/trpc-openapi@0.0.17(@trpc/server@11.10.0(typescript@5.8.3))(zod-openapi@5.4.6(zod@4.3.6))(zod@4.3.6)'
       '@hanzo/ui':
         specifier: ^5.3.36
         version: 5.3.36(@hookform/resolvers@5.2.2(react-hook-form@7.71.2(react@18.2.0)))(@modelcontextprotocol/sdk@1.19.1)(@tanstack/react-query@5.90.21(react@18.2.0))(@tanstack/react-table@8.21.3(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(@types/react-dom@18.3.0)(@types/react@18.3.5)(date-fns@3.6.0)(embla-carousel@8.6.0)(lucide-react@0.469.0(react@18.2.0))(mobx@6.15.0)(next-themes@0.2.1(next@16.1.6(@opentelemetry/api@1.9.0)(@playwright/test@1.58.2)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(next@16.1.6(@opentelemetry/api@1.9.0)(@playwright/test@1.58.2)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-day-picker@8.10.1(date-fns@3.6.0)(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react-hook-form@7.71.2(react@18.2.0))(react@18.2.0)(recharts@2.15.3(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(tailwindcss@3.4.17)(validator@13.15.26)
