@@ -1,32 +1,32 @@
-import { docker } from "@dokploy/server/constants";
-import { db } from "@dokploy/server/db";
+import { docker } from "@hanzo/platform-server/constants";
+import { db } from "@hanzo/platform-server/db";
 import {
 	type apiCreateApplication,
 	applications,
 	buildAppName,
-} from "@dokploy/server/db/schema";
-import { getAdvancedStats } from "@dokploy/server/monitoring/utils";
+} from "@hanzo/platform-server/db/schema";
+import { getAdvancedStats } from "@hanzo/platform-server/monitoring/utils";
 import {
 	getBuildCommand,
 	mechanizeDockerContainer,
-} from "@dokploy/server/utils/builders";
-import { sendBuildErrorNotifications } from "@dokploy/server/utils/notifications/build-error";
-import { sendBuildSuccessNotifications } from "@dokploy/server/utils/notifications/build-success";
+} from "@hanzo/platform-server/utils/builders";
+import { sendBuildErrorNotifications } from "@hanzo/platform-server/utils/notifications/build-error";
+import { sendBuildSuccessNotifications } from "@hanzo/platform-server/utils/notifications/build-success";
 import {
 	ExecError,
 	execAsync,
 	execAsyncRemote,
-} from "@dokploy/server/utils/process/execAsync";
-import { cloneBitbucketRepository } from "@dokploy/server/utils/providers/bitbucket";
-import { buildRemoteDocker } from "@dokploy/server/utils/providers/docker";
+} from "@hanzo/platform-server/utils/process/execAsync";
+import { cloneBitbucketRepository } from "@hanzo/platform-server/utils/providers/bitbucket";
+import { buildRemoteDocker } from "@hanzo/platform-server/utils/providers/docker";
 import {
 	cloneGitRepository,
 	getGitCommitInfo,
-} from "@dokploy/server/utils/providers/git";
-import { cloneGiteaRepository } from "@dokploy/server/utils/providers/gitea";
-import { cloneGithubRepository } from "@dokploy/server/utils/providers/github";
-import { cloneGitlabRepository } from "@dokploy/server/utils/providers/gitlab";
-import { createTraefikConfig } from "@dokploy/server/utils/traefik/application";
+} from "@hanzo/platform-server/utils/providers/git";
+import { cloneGiteaRepository } from "@hanzo/platform-server/utils/providers/gitea";
+import { cloneGithubRepository } from "@hanzo/platform-server/utils/providers/github";
+import { cloneGitlabRepository } from "@hanzo/platform-server/utils/providers/gitlab";
+import { createTraefikConfig } from "@hanzo/platform-server/utils/traefik/application";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
