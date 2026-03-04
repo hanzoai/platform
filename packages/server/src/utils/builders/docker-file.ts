@@ -1,7 +1,7 @@
 import {
 	getEnviromentVariablesObject,
 	prepareEnvironmentVariablesForShell,
-} from "@dokploy/server/utils/docker/utils";
+} from "@hanzo/platform-server/utils/docker/utils";
 import { quote } from "shell-quote";
 import {
 	getBuildAppDirectory,

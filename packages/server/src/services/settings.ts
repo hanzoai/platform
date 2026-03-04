@@ -3,7 +3,7 @@ import { join } from "node:path";
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@dokploy/server/utils/process/execAsync";
+} from "@hanzo/platform-server/utils/process/execAsync";
 import { and, eq } from "drizzle-orm";
 
 import semver from "semver";
