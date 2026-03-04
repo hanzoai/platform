@@ -24,6 +24,7 @@ COPY app/api/package.json ./app/api/
 COPY app/platform/package.json ./app/platform/
 COPY app/schedules/package.json ./app/schedules/
 COPY pkg/platform/package.json ./pkg/platform/
+COPY packages/server/package.json ./packages/server/
 COPY pkg/mcp/package.json ./pkg/mcp/
 
 # Install dependencies (cached unless package.json or lockfile changes)
