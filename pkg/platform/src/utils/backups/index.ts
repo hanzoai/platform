@@ -11,7 +11,7 @@ import { startLogCleanup } from "../access-log/handler";
 import { cleanupAll } from "../docker/utils";
 import { sendDockerCleanupNotifications } from "../notifications/docker-cleanup";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
-import { getS3Credentials, scheduleBackup } from "./utils";
+import { getS3Credentials, normalizeS3Path, scheduleBackup } from "./utils";
 
 export const initCronJobs = async () => {
 	console.log("Setting up cron jobs....");
@@ -107,6 +107,20 @@ export const initCronJobs = async () => {
 	}
 };
 
+const getServiceAppName = (backup: BackupSchedule): string => {
+	if (backup.compose?.appName) {
+		return backup.serviceName
+			? `${backup.compose.appName}_${backup.serviceName}`
+			: backup.compose.appName;
+	}
+	const serviceAppName =
+		backup.postgres?.appName ||
+		backup.mysql?.appName ||
+		backup.mariadb?.appName ||
+		backup.mongo?.appName;
+	return serviceAppName || backup.appName;
+};
+
 export const keepLatestNBackups = async (
 	backup: BackupSchedule,
 	serverId?: string | null,
@@ -117,18 +131,16 @@ export const keepLatestNBackups = async (
 
 	try {
 		const rcloneFlags = getS3Credentials(backup.destination);
-		const backupFilesPath = path.join(
-			`:s3:${backup.destination.bucket}`,
-			backup.prefix,
-		);
+		const appName = getServiceAppName(backup);
+		const backupFilesPath = `:s3:${backup.destination.bucket}/${appName}/${normalizeS3Path(backup.prefix)}`;
 
 		// --include "*.sql.gz" or "*.zip" ensures nothing else other than the Hanzo Platform backup files are touched by rclone
 		const rcloneList = `rclone lsf ${rcloneFlags.join(" ")} --include "*${backup.databaseType === "web-server" ? ".zip" : ".sql.gz"}" ${backupFilesPath}`;
 		// when we pipe the above command with this one, we only get the list of files we want to delete
 		const sortAndPickUnwantedBackups = `sort -r | tail -n +$((${backup.keepLatestCount}+1)) | xargs -I{}`;
 		// this command deletes the files
-		// to test the deletion before actually deleting we can add --dry-run before ${backupFilesPath}/{}
-		const rcloneDelete = `rclone delete ${rcloneFlags.join(" ")} ${backupFilesPath}/{}`;
+		// to test the deletion before actually deleting we can add --dry-run before ${backupFilesPath}{}
+		const rcloneDelete = `rclone delete ${rcloneFlags.join(" ")} ${backupFilesPath}{}`;
 
 		const rcloneCommand = `${rcloneList} | ${sortAndPickUnwantedBackups} ${rcloneDelete}`;
 
