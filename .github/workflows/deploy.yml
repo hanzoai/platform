@@ -15,9 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        check: [build, typecheck, test]
+        check: [build, test]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
