@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import { hanzoIamProvider } from "@hanzo/iam/betterauth";
+import { iamProvider } from "@hanzo/iam/betterauth";
 import { sso } from "@better-auth/sso";
 import * as bcrypt from "bcrypt";
 import { betterAuth } from "better-auth";
@@ -44,7 +44,7 @@ const IAM_CLIENT_SECRET =
 	process.env.IAM_CLIENT_SECRET ||
 	"";
 
-const hanzoIam = hanzoIamProvider({
+const iam = iamProvider({
 	serverUrl: IAM_SERVER_URL,
 	clientId: IAM_CLIENT_ID,
 	clientSecret: IAM_CLIENT_SECRET,
@@ -81,7 +81,7 @@ const { handler, api } = betterAuth({
 			enabled: true,
 			async trustedProviders() {
 				const fromDb = await getTrustedProviders();
-				return ["github", "google", "hanzo-iam", ...fromDb] as string[];
+				return ["github", "google", "iam", ...fromDb] as string[];
 			},
 			allowDifferentEmails: true,
 		},
@@ -344,16 +344,16 @@ const { handler, api } = betterAuth({
 					genericOAuth({
 						config: [
 							{
-								providerId: hanzoIam.id,
+								providerId: iam.id,
 								discoveryUrl: `${IAM_SERVER_URL}/.well-known/openid-configuration`,
-								authorizationUrl: hanzoIam.authorization.url,
-								tokenUrl: hanzoIam.token.url,
-								userInfoUrl: hanzoIam.userinfo.url,
-								clientId: hanzoIam.clientId,
-								clientSecret: hanzoIam.clientSecret,
-								scopes: hanzoIam.authorization.params.scope.split(" "),
+								authorizationUrl: iam.authorization.url,
+								tokenUrl: iam.token.url,
+								userInfoUrl: iam.userinfo.url,
+								clientId: iam.clientId,
+								clientSecret: iam.clientSecret,
+								scopes: iam.authorization.params.scope.split(" "),
 								mapProfileToUser: (profile) => {
-									const mapped = hanzoIam.profile(profile);
+									const mapped = iam.profile(profile);
 									return {
 										id: mapped.id,
 										name: mapped.name,
