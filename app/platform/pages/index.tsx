@@ -12,6 +12,7 @@ import { z } from "zod";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { SignInWithGithub } from "@/components/auth/sign-in-with-github";
 import { SignInWithGoogle } from "@/components/auth/sign-in-with-google";
+import { SignInWithHanzo } from "@/components/auth/sign-in-with-hanzo";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
@@ -162,6 +163,7 @@ export default function Home({ IS_CLOUD }: Props) {
 
 	const loginContent = (
 		<>
+			<SignInWithHanzo />
 			{IS_CLOUD && <SignInWithGithub />}
 			{IS_CLOUD && <SignInWithGoogle />}
 			<Form {...loginForm}>
