@@ -76,7 +76,7 @@ export const S3_PROVIDERS: Array<{
 	},
 	{
 		key: "Minio",
-		name: "Minio Object Storage",
+		name: "S3-Compatible Storage",
 	},
 	{
 		key: "Netease",
