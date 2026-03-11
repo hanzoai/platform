@@ -1,6 +1,6 @@
-# License
+Copyright 2026-present Dokploy Technology, Inc.
 
-## Core License (Apache License 2.0)
+Portions of this software are licensed as follows:
 
 Copyright 2025 Hanzo Industries Inc.
 
@@ -15,7 +15,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and limitations under the License.
 
-## Additional Terms for Specific Features
 
 The following additional terms apply to the multi-node support, Docker Compose file, Preview Deployments and Multi Server features of Hanzo. In the event of a conflict, these provisions shall take precedence over those in the Apache License:
 
