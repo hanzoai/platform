@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
+import { useWhitelabelingPublic } from "@/utils/hooks/use-whitelabeling";
 
 const registerSchema = z
 	.object({
@@ -77,6 +78,7 @@ interface Props {
 
 const Register = ({ isCloud }: Props) => {
 	const router = useRouter();
+	const { config: whitelabeling } = useWhitelabelingPublic();
 	const [isError, setIsError] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [data, setData] = useState<any>(null);
