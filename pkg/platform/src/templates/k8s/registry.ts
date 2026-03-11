@@ -458,9 +458,9 @@ export const stackRegistry: StackCategory[] = [
 		category: "Object Storage",
 		templates: [
 			{
-				name: "MinIO",
+				name: "S3 Object Storage",
 				description:
-					"MinIO is a high performance, Amazon S3 compatible distributed object storage server, designed for large-scale cloud infrastructure.",
+					"High-performance, S3-compatible distributed object storage for large-scale cloud infrastructure.",
 				manifest: "miniov1.0.yaml",
 				version: "1.0",
 				isLatest: true,
