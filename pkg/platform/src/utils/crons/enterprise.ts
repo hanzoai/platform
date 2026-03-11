@@ -15,7 +15,4 @@ export const validateLicenseKey = async (_licenseKey: string) => {
 	return true;
 };
 
-/** Always returns true -- no license gating. */
-export const hasValidLicense = async (_organizationId: string) => {
-	return true;
-};
+// hasValidLicense is exported from services/proprietary/license-key.ts
