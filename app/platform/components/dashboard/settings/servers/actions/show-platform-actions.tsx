@@ -1,4 +1,3 @@
-import { useTranslation } from "next-i18next";
 import { toast } from "sonner";
 import { UpdateServerIp } from "@/components/dashboard/settings/web-server/update-server-ip";
 import { Button } from "@/components/ui/button";
@@ -23,18 +22,18 @@ export const ShowHanzoActions = () => {
 
 	const { mutateAsync: cleanRedis } = api.settings.cleanRedis.useMutation();
 	const { mutateAsync: reloadRedis } = api.settings.reloadRedis.useMutation();
+	const { mutateAsync: cleanAllDeploymentQueue } =
+		api.settings.cleanAllDeploymentQueue.useMutation();
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger asChild disabled={isLoading}>
-				<Button isLoading={isLoading} variant="outline">
-					{t("settings.server.webServer.server.label")}
+			<DropdownMenuTrigger asChild disabled={isPending}>
+				<Button isLoading={isPending} variant="outline">
+					Server
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent className="w-56" align="start">
-				<DropdownMenuLabel>
-					{t("settings.server.webServer.actions")}
-				</DropdownMenuLabel>
+				<DropdownMenuLabel>Actions</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem
@@ -49,17 +48,17 @@ export const ShowHanzoActions = () => {
 						}}
 						className="cursor-pointer"
 					>
-						<span>{t("settings.server.webServer.reload")}</span>
+						<span>Reload</span>
 					</DropdownMenuItem>
 					<TerminalModal serverId="local">
-						<span>{t("settings.common.enterTerminal")}</span>
+						<span>Terminal</span>
 					</TerminalModal>
 					<ShowModalLogs appName="platform">
 						<DropdownMenuItem
 							className="cursor-pointer"
 							onSelect={(e) => e.preventDefault()}
 						>
-							{t("settings.server.webServer.watchLogs")}
+							View Logs
 						</DropdownMenuItem>
 					</ShowModalLogs>
 					<GPUSupportModal />
@@ -68,7 +67,7 @@ export const ShowHanzoActions = () => {
 							className="cursor-pointer"
 							onSelect={(e) => e.preventDefault()}
 						>
-							{t("settings.server.webServer.updateServerIp")}
+							Update Server IP
 						</DropdownMenuItem>
 					</UpdateServerIp>
 
@@ -85,6 +84,21 @@ export const ShowHanzoActions = () => {
 						}}
 					>
 						Clean Redis
+					</DropdownMenuItem>
+
+					<DropdownMenuItem
+						className="cursor-pointer"
+						onClick={async () => {
+							await cleanAllDeploymentQueue()
+								.then(() => {
+									toast.success("Deployment queue cleaned");
+								})
+								.catch(() => {
+									toast.error("Error cleaning deployment queue");
+								});
+						}}
+					>
+						Clean all deployment queue
 					</DropdownMenuItem>
 
 					<DropdownMenuItem

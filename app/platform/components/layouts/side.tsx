@@ -27,7 +27,9 @@ import {
 	type LucideIcon,
 	Network,
 	Package,
+	Palette,
 	PieChart,
+	Rocket,
 	Server,
 	ShieldCheck,
 	Star,
@@ -147,6 +149,12 @@ const MENU: Menu = {
 			title: "Projects",
 			url: "/dashboard/projects",
 			icon: Folder,
+		},
+		{
+			isSingle: true,
+			title: "Deployments",
+			url: "/dashboard/deployments",
+			icon: Rocket,
 		},
 		{
 			isSingle: true,
@@ -459,38 +467,39 @@ const MENU: Menu = {
 function createMenuForAuthUser(opts: {
 	auth?: AuthQueryOutput;
 	isCloud: boolean;
+	whitelabeling?: {
+		docsUrl?: string | null;
+		supportUrl?: string | null;
+	} | null;
 }): Menu {
+	const filterEnabled = <
+		T extends {
+			isEnabled?: (o: { auth?: AuthQueryOutput; isCloud: boolean }) => boolean;
+		},
+	>(
+		items: readonly T[],
+	): T[] =>
+		items.filter((item) =>
+			!item.isEnabled
+				? true
+				: item.isEnabled({ auth: opts.auth, isCloud: opts.isCloud }),
+		) as T[];
+
+	// Apply whitelabeling URL overrides to help items
+	const helpItems = filterEnabled(MENU.help).map((item) => {
+		if (opts.whitelabeling?.docsUrl && item.name === "Documentation") {
+			return { ...item, url: opts.whitelabeling.docsUrl };
+		}
+		if (opts.whitelabeling?.supportUrl && item.name === "Support") {
+			return { ...item, url: opts.whitelabeling.supportUrl };
+		}
+		return item;
+	});
+
 	return {
-		// Filter the home items based on the user's role and permissions
-		// Calls the `isEnabled` function if it exists to determine if the item should be displayed
-		home: MENU.home.filter((item) =>
-			!item.isEnabled
-				? true
-				: item.isEnabled({
-						auth: opts.auth,
-						isCloud: opts.isCloud,
-					}),
-		),
-		// Filter the settings items based on the user's role and permissions
-		// Calls the `isEnabled` function if it exists to determine if the item should be displayed
-		settings: MENU.settings.filter((item) =>
-			!item.isEnabled
-				? true
-				: item.isEnabled({
-						auth: opts.auth,
-						isCloud: opts.isCloud,
-					}),
-		),
-		// Filter the help items based on the user's role and permissions
-		// Calls the `isEnabled` function if it exists to determine if the item should be displayed
-		help: MENU.help.filter((item) =>
-			!item.isEnabled
-				? true
-				: item.isEnabled({
-						auth: opts.auth,
-						isCloud: opts.isCloud,
-					}),
-		),
+		home: filterEnabled(MENU.home),
+		settings: filterEnabled(MENU.settings),
+		help: helpItems,
 	};
 }
 
@@ -571,8 +580,7 @@ function SidebarLogo() {
 	const { mutateAsync: setDefaultOrganization, isPending: isSettingDefault } =
 		api.organization.setDefault.useMutation();
 	const { isMobile } = useSidebar();
-	const { data: activeOrganization } = authClient.useActiveOrganization();
-	const _utils = api.useUtils();
+	const { data: activeOrganization } = api.organization.active.useQuery();
 
 	const { data: invitations, refetch: refetchInvitations } =
 		api.user.getInvitations.useQuery();
@@ -908,7 +916,7 @@ export default function Page({ children }: Props) {
 		home: filteredHome,
 		settings: filteredSettings,
 		help,
-	} = createMenuForAuthUser({ auth, isCloud: !!isCloud });
+	} = createMenuForAuthUser({ auth, isCloud: !!isCloud, whitelabeling });
 
 	const activeItem = findActiveNavItem(
 		[...filteredHome, ...filteredSettings],
