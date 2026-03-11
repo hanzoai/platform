@@ -1,7 +1,4 @@
-import {
-	sendDiscordNotification,
-	sendEmailNotification,
-} from "../utils/notifications/utils";
+import { sendEmailNotification } from "../utils/notifications/utils";
 export const sendEmail = async ({
 	email,
 	subject,
