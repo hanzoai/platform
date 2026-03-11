@@ -52,7 +52,6 @@ const iam = iamProvider({
 
 const { handler, api } = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL || "https://platform.hanzo.ai",
-	trustedOrigins: ["https://platform.hanzo.ai"],
 	database: drizzleAdapter(db, {
 		provider: "pg",
 		schema: schema,
