@@ -365,7 +365,7 @@ const createSchema = createInsertSchema(applications, {
 	previewPath: z.string().optional(),
 	previewCertificateType: z.enum(["letsencrypt", "none", "custom"]).optional(),
 	previewRequireCollaboratorPermissions: z.boolean().optional(),
-	watchPaths: z.array(z.string()).optional(),
+	watchPaths: z.array(z.string()).optional().optional(),
 	previewLabels: z.array(z.string()).optional(),
 	cleanCache: z.boolean().optional(),
 	stopGracePeriodSwarm: z.bigint().nullable(),
@@ -433,13 +433,13 @@ export const apiSaveGithubProvider = createSchema
 		owner: true,
 		buildPath: true,
 		githubId: true,
-		watchPaths: true,
-		enableSubmodules: true,
 	})
 	.required()
 	.extend({
 		triggerType: z.enum(["push", "tag"]).default("push"),
-	});
+	})
+	.required()
+	.merge(createSchema.pick({ enableSubmodules: true, watchPaths: true }));
 
 export const apiSaveGitlabProvider = createSchema
 	.pick({
@@ -451,10 +451,9 @@ export const apiSaveGitlabProvider = createSchema
 		gitlabId: true,
 		gitlabProjectId: true,
 		gitlabPathNamespace: true,
-		watchPaths: true,
-		enableSubmodules: true,
 	})
-	.required();
+	.required()
+	.merge(createSchema.pick({ enableSubmodules: true, watchPaths: true }));
 
 export const apiSaveBitbucketProvider = createSchema
 	.pick({
@@ -465,10 +464,9 @@ export const apiSaveBitbucketProvider = createSchema
 		bitbucketRepositorySlug: true,
 		bitbucketId: true,
 		applicationId: true,
-		watchPaths: true,
-		enableSubmodules: true,
 	})
-	.required();
+	.required()
+	.merge(createSchema.pick({ enableSubmodules: true, watchPaths: true }));
 
 export const apiSaveGiteaProvider = createSchema
 	.pick({
@@ -478,10 +476,9 @@ export const apiSaveGiteaProvider = createSchema
 		giteaOwner: true,
 		giteaRepository: true,
 		giteaId: true,
-		watchPaths: true,
-		enableSubmodules: true,
 	})
-	.required();
+	.required()
+	.merge(createSchema.pick({ enableSubmodules: true, watchPaths: true }));
 
 export const apiSaveDockerProvider = createSchema
 	.pick({
@@ -506,6 +503,7 @@ export const apiSaveGitProvider = createSchema
 	.merge(
 		createSchema.pick({
 			customGitSSHKeyId: true,
+			enableSubmodules: true,
 		}),
 	);
 

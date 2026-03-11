@@ -1,6 +1,6 @@
 {
-  "id": "2e0aba0b-93fc-4bfe-a975-1c5d45354753",
-  "prevId": "f152cf50-c7de-44de-b4a7-57b0f0c02596",
+  "id": "a293a443-ceaf-418e-8e34-ff46e183995f",
+  "prevId": "2e0aba0b-93fc-4bfe-a975-1c5d45354753",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4478,6 +4478,13 @@
           "notNull": true,
           "default": false
         },
+        "dokployRestart": {
+          "name": "dokployRestart",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "dockerCleanup": {
           "name": "dockerCleanup",
           "type": "boolean",
@@ -4576,13 +4583,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "hanzoRestart": {
-          "name": "hanzoRestart",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         }
       },
       "indexes": {},
@@ -7172,7 +7172,14 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "'{\"server\":{\"type\":\"Hanzo Platform\",\"refreshRate\":60,\"port\":4500,\"token\":\"\",\"retentionDays\":2,\"cronJob\":\"\",\"urlCallback\":\"\",\"thresholds\":{\"cpu\":0,\"memory\":0}},\"containers\":{\"refreshRate\":60,\"services\":{\"include\":[],\"exclude\":[]}}}'::jsonb"
+          "default": "'{\"server\":{\"type\":\"Dokploy\",\"refreshRate\":60,\"port\":4500,\"token\":\"\",\"retentionDays\":2,\"cronJob\":\"\",\"urlCallback\":\"\",\"thresholds\":{\"cpu\":0,\"memory\":0}},\"containers\":{\"refreshRate\":60,\"services\":{\"include\":[],\"exclude\":[]}}}'::jsonb"
+        },
+        "whitelabelingConfig": {
+          "name": "whitelabelingConfig",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{\"appName\":null,\"appDescription\":null,\"logoUrl\":null,\"faviconUrl\":null,\"customCss\":null,\"loginLogoUrl\":null,\"supportUrl\":null,\"docsUrl\":null,\"errorPageTitle\":null,\"errorPageDescription\":null,\"metaTitle\":null,\"footerText\":null}'::jsonb"
         },
         "cleanupCacheApplications": {
           "name": "cleanupCacheApplications",
@@ -7392,7 +7399,7 @@
         "application",
         "compose",
         "server",
-        "hanzo-platform"
+        "dokploy-server"
       ]
     },
     "public.shellType": {
