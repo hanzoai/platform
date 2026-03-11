@@ -12,7 +12,7 @@ import {
 import { scheduledJobs, scheduleJob } from "node-schedule";
 import { getS3Credentials, normalizeS3Path } from "../backups/utils";
 import { sendVolumeBackupNotifications } from "../notifications/volume-backup";
-import { backupVolume } from "./backup";
+import { backupVolume, getVolumeServiceAppName } from "./backup";
 
 // Helper functions to extract project info from volume backup
 const getProjectName = (
