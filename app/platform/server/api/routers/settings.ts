@@ -46,7 +46,7 @@ import {
 	writeTraefikSetup,
 } from "@hanzo/platform";
 import { db } from "@hanzo/platform/db";
-import { generateOpenApiDocument } from "@dokploy/trpc-openapi";
+import { generateOpenApiDocument } from "@hanzo/platform-trpc";
 import { TRPCError } from "@trpc/server";
 import { eq, sql } from "drizzle-orm";
 import { scheduledJobs, scheduleJob } from "node-schedule";
