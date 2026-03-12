@@ -1,8 +1,8 @@
 import fs, { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { paths } from "@dokploy/server/constants";
-import type { Compose } from "@dokploy/server/services/compose";
-import type { Domain } from "@dokploy/server/services/domain";
+import { paths } from "@hanzo/platform-server/constants";
+import type { Compose } from "@hanzo/platform-server/services/compose";
+import type { Domain } from "@hanzo/platform-server/services/domain";
 import { parse, stringify } from "yaml";
 import { execAsyncRemote } from "../process/execAsync";
 import { cloneBitbucketRepository } from "../providers/bitbucket";

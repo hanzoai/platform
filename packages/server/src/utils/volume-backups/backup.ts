@@ -1,7 +1,7 @@
 import path from "node:path";
-import { paths } from "@dokploy/server/constants";
-import { findComposeById } from "@dokploy/server/services/compose";
-import type { findVolumeBackupById } from "@dokploy/server/services/volume-backups";
+import { paths } from "@hanzo/platform-server/constants";
+import { findComposeById } from "@hanzo/platform-server/services/compose";
+import type { findVolumeBackupById } from "@hanzo/platform-server/services/volume-backups";
 import { getS3Credentials, normalizeS3Path } from "../backups/utils";
 
 export const getVolumeServiceAppName = (
