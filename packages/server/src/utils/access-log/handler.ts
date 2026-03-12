@@ -32,7 +32,7 @@ export const startLogCleanup = async (
 				await execAsync(
 					`tail -n 1000 ${accessLogPath} > ${accessLogPath}.tmp && mv ${accessLogPath}.tmp ${accessLogPath}`,
 				);
-				await execAsync("docker exec dokploy-traefik kill -USR1 1");
+				await execAsync("docker exec hanzo-traefik kill -USR1 1");
 			} catch (error) {
 				console.error("Error during log cleanup:", error);
 			}
