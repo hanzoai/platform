@@ -61,6 +61,7 @@
 		"@hanzo/platform-trpc": "npm:@dokploy/trpc-openapi@0.0.17",
 		"@faker-js/faker": "^8.4.1",
 		"@hanzo/platform": "workspace:*",
+		"@hanzo/platform-server": "workspace:*",
 		"@hanzo/ui": "^5.3.36",
 		"@hookform/resolvers": "^5.2.2",
 		"@octokit/auth-app": "^6.1.3",
