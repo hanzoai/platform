@@ -68,7 +68,7 @@ export const findDeployProvidersByOrg = async (organizationId: string) => {
 
 export const findDefaultDeployProvider = async (
 	organizationId: string,
-	providerType: string,
+	providerType: DeployProvider["providerType"],
 ) => {
 	return db.query.deployProvider.findFirst({
 		where: and(
