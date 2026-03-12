@@ -1,6 +1,6 @@
-import { findAllDeploymentsByApplicationId } from "@dokploy/server/services/deployment";
-import type { Registry } from "@dokploy/server/services/registry";
-import { createRollback } from "@dokploy/server/services/rollbacks";
+import { findAllDeploymentsByApplicationId } from "@hanzo/platform-server/services/deployment";
+import type { Registry } from "@hanzo/platform-server/services/registry";
+import { createRollback } from "@hanzo/platform-server/services/rollbacks";
 import type { ApplicationNested } from "../builders";
 
 export const uploadImageRemoteCommand = async (
