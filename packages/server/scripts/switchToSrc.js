@@ -45,6 +45,27 @@ pkg.exports = {
 	"./templates/*": {
 		import: "./src/templates/*.ts",
 	},
+	"./monitoring/*": {
+		import: "./src/monitoring/*.ts",
+	},
+	"./utils/builders": {
+		import: "./src/utils/builders/index.ts",
+	},
+	"./utils/*": {
+		import: "./src/utils/*.ts",
+	},
+	"./types/*": {
+		import: "./src/types/*.ts",
+	},
+	"./wss/*": {
+		import: "./src/wss/*.ts",
+	},
+	"./emails/*": {
+		import: "./src/emails/*.tsx",
+	},
+	"./*": {
+		import: "./src/*.ts",
+	},
 };
 
 // Guardar los cambios en package.json
