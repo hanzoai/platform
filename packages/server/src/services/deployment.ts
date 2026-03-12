@@ -136,7 +136,7 @@ export const createDeployment = async (
 			const command = `
 				mkdir -p ${LOGS_PATH}/${application.appName};
             	echo "Initializing deployment" >> ${logFilePath};
-			    echo "Building on ${serverId ? "Build Server" : "Dokploy Server"}" >> ${logFilePath};
+			    echo "Building on ${serverId ? "Build Server" : "Hanzo Server"}" >> ${logFilePath};
 			`;
 
 			await execAsyncRemote(server.serverId, command);
