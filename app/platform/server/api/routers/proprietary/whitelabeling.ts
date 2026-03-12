@@ -2,7 +2,7 @@ import {
 	getWebServerSettings,
 	IS_CLOUD,
 	updateWebServerSettings,
-} from "@dokploy/server";
+} from "@hanzo/platform-server";
 import { TRPCError } from "@trpc/server";
 import { apiUpdateWhitelabeling } from "@/server/db/schema";
 import {
