@@ -1,32 +1,39 @@
 {
   "name": "@hanzo/platform-server",
   "version": "1.0.0",
-  "main": "./dist/index.js",
+  "main": "./src/index.ts",
   "type": "module",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs.js"
-    },
+    ".": "./src/index.ts",
     "./db": {
-      "import": "./dist/db/index.js",
+      "import": "./src/db/index.ts",
       "require": "./dist/db/index.cjs.js"
     },
-    "./*": {
-      "import": "./dist/*",
-      "require": "./dist/*.cjs"
+    "./db/schema": {
+      "import": "./src/db/schema/index.ts"
     },
-    "./dist": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs.js"
+    "./db/schema/*": {
+      "import": "./src/db/schema/*.ts"
     },
-    "./dist/db": {
-      "import": "./dist/db/index.js",
-      "require": "./dist/db/index.cjs.js"
+    "./services/*": {
+      "import": "./src/services/*.ts"
     },
-    "./dist/db/schema": {
-      "import": "./dist/db/schema/index.js",
-      "require": "./dist/db/schema/index.cjs.js"
+    "./lib/*": {
+      "import": "./src/lib/*.ts"
+    },
+    "./setup/*": {
+      "import": "./src/setup/*.ts",
+      "require": "./dist/setup/index.cjs.js"
+    },
+    "./constants": {
+      "import": "./src/constants/index.ts",
+      "require": "./dist/constants.cjs.js"
+    },
+    "./templates": {
+      "import": "./src/templates/index.ts"
+    },
+    "./templates/*": {
+      "import": "./src/templates/*.ts"
     }
   },
   "scripts": {
