@@ -4,8 +4,7 @@ import * as bcrypt from "bcrypt";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { apiKey } from "@better-auth/api-key";
-import { admin, organization, twoFactor } from "better-auth/plugins";
+import { admin, apiKey, organization, twoFactor } from "better-auth/plugins";
 import { and, desc, eq } from "drizzle-orm";
 import { BETTER_AUTH_SECRET, IS_CLOUD } from "../constants";
 import { db } from "../db";
@@ -316,6 +315,7 @@ const { handler, api } = betterAuth({
 			},
 		},
 	},
+	// Plugin types are not fully inferrable by TypeScript but work at runtime
 	plugins: [
 		apiKey({
 			enableMetadata: true,
@@ -348,14 +348,16 @@ const { handler, api } = betterAuth({
 					}),
 				]
 			: []),
-	],
+	] as any,
 });
 
+// BetterAuth plugin methods exist at runtime but TypeScript can't infer them
+const _api = api as any;
 const _auth = {
 	handler,
-	createApiKey: api.createApiKey,
-	registerSSOProvider: api.registerSSOProvider,
-	updateSSOProvider: api.updateSSOProvider,
+	createApiKey: _api.createApiKey,
+	registerSSOProvider: _api.registerSSOProvider,
+	updateSSOProvider: _api.updateSSOProvider,
 };
 
 export type AuthType = typeof _auth;
@@ -365,7 +367,7 @@ export const validateRequest = async (request: IncomingMessage) => {
 	const apiKey = request.headers["x-api-key"] as string;
 	if (apiKey) {
 		try {
-			const { valid, key, error } = await api.verifyApiKey({
+			const { valid, key, error } = await _api.verifyApiKey({
 				body: {
 					key: apiKey,
 				},
@@ -454,11 +456,11 @@ export const validateRequest = async (request: IncomingMessage) => {
 	}
 
 	// If no API key, proceed with normal session validation
-	const session = await api.getSession({
+	const session = (await api.getSession({
 		headers: new Headers({
 			cookie: request.headers.cookie || "",
 		}),
-	});
+	})) as any;
 
 	if (!session?.session || !session.user) {
 		return {
