@@ -168,7 +168,7 @@ export const sendVolumeBackupNotifications = async ({
 				],
 				timestamp: date.toISOString(),
 				footer: {
-					text: "Dokploy Volume Backup Notification",
+					text: "Hanzo Platform Volume Backup Notification",
 				},
 			});
 		}
