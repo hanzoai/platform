@@ -10,7 +10,7 @@ import type {
 	slack,
 	teams,
 	telegram,
-} from "@dokploy/server/db/schema";
+} from "@hanzo/platform-server/db/schema";
 import nodemailer from "nodemailer";
 import { Resend } from "resend";
 

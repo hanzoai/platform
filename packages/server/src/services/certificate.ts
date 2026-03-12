@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { paths } from "@dokploy/server/constants";
-import { db } from "@dokploy/server/db";
+import { paths } from "@hanzo/platform-server/constants";
+import { db } from "@hanzo/platform-server/db";
 import {
 	type apiCreateCertificate,
 	certificates,
-} from "@dokploy/server/db/schema";
-import { removeDirectoryIfExistsContent } from "@dokploy/server/utils/filesystem/directory";
+} from "@hanzo/platform-server/db/schema";
+import { removeDirectoryIfExistsContent } from "@hanzo/platform-server/utils/filesystem/directory";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { stringify } from "yaml";
