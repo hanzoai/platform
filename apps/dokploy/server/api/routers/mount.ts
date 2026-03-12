@@ -14,8 +14,8 @@ import {
 	findRedisById,
 	getServiceContainer,
 	updateMount,
-} from "@dokploy/server";
-import type { ServiceType } from "@dokploy/server/db/schema/mount";
+} from "@hanzo/platform-server";
+import type { ServiceType } from "@hanzo/platform-server/db/schema/mount";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {

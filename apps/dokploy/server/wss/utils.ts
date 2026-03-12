@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execAsync, IS_CLOUD, paths } from "@dokploy/server";
+import { execAsync, IS_CLOUD, paths } from "@hanzo/platform-server";
 
 /**
  * Validates that the container ID matches Docker's expected format.

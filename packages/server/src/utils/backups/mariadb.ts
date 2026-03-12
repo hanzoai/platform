@@ -1,11 +1,11 @@
-import type { BackupSchedule } from "@dokploy/server/services/backup";
+import type { BackupSchedule } from "@hanzo/platform-server/services/backup";
 import {
 	createDeploymentBackup,
 	updateDeploymentStatus,
-} from "@dokploy/server/services/deployment";
-import { findEnvironmentById } from "@dokploy/server/services/environment";
-import type { Mariadb } from "@dokploy/server/services/mariadb";
-import { findProjectById } from "@dokploy/server/services/project";
+} from "@hanzo/platform-server/services/deployment";
+import { findEnvironmentById } from "@hanzo/platform-server/services/environment";
+import type { Mariadb } from "@hanzo/platform-server/services/mariadb";
+import { findProjectById } from "@hanzo/platform-server/services/project";
 import { sendDatabaseBackupNotifications } from "../notifications/database-backup";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
 import { getBackupCommand, getS3Credentials, normalizeS3Path } from "./utils";

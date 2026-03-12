@@ -5,13 +5,13 @@ vi.mock("node:fs", () => ({
 	default: fs,
 }));
 
-import type { FileConfig } from "@dokploy/server";
+import type { FileConfig } from "@hanzo/platform-server";
 import {
 	createDefaultServerTraefikConfig,
 	loadOrCreateConfig,
 	updateServerTraefik,
-} from "@dokploy/server";
-import type { webServerSettings } from "@dokploy/server/db/schema";
+} from "@hanzo/platform-server";
+import type { webServerSettings } from "@hanzo/platform-server/db/schema";
 import { beforeEach, expect, test, vi } from "vitest";
 
 type WebServerSettings = typeof webServerSettings.$inferSelect;
