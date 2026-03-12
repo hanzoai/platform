@@ -864,7 +864,7 @@ export const notificationRouter = createTRPCRouter({
 			try {
 				await sendCustomNotification(input, {
 					title: "Test Notification",
-					message: "Hi, From Dokploy 👋",
+					message: "Hi from Hanzo Platform",
 					timestamp: new Date().toISOString(),
 				});
 				return true;
@@ -921,7 +921,7 @@ export const notificationRouter = createTRPCRouter({
 				await sendLarkNotification(input, {
 					msg_type: "text",
 					content: {
-						text: "Hi, From Dokploy 👋",
+						text: "Hi from Hanzo Platform",
 					},
 				});
 				return true;
@@ -977,7 +977,7 @@ export const notificationRouter = createTRPCRouter({
 			try {
 				await sendTeamsNotification(input, {
 					title: "🤚 Test Notification",
-					facts: [{ name: "Message", value: "Hi, From Dokploy 👋" }],
+					facts: [{ name: "Message", value: "Hi from Hanzo Platform" }],
 				});
 				return true;
 			} catch (error) {
@@ -1033,7 +1033,7 @@ export const notificationRouter = createTRPCRouter({
 				await sendPushoverNotification(
 					input,
 					"Test Notification",
-					"Hi, From Dokploy 👋",
+					"Hi from Hanzo Platform",
 				);
 				return true;
 			} catch (error) {
