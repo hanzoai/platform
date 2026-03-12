@@ -1,4 +1,4 @@
-import { addDokployNetworkToService } from "@dokploy/server";
+import { addDokployNetworkToService } from "@hanzo/platform-server";
 import { describe, expect, it } from "vitest";
 
 describe("addDokployNetworkToService", () => {

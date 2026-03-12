@@ -13,7 +13,7 @@ import {
 	type DnsProviderType,
 } from "@hanzo/platform/services/dns-provider";
 import { isHanzoDnsConfigured } from "@hanzo/platform/services/hanzo-dns-provider";
-import { resolveCloudflareCredentials } from "@dokploy/server/services/deploy-provider";
+import { resolveCloudflareCredentials } from "@hanzo/platform-server/services/deploy-provider";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";

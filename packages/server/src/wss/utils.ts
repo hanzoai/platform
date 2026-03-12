@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import { paths } from "@dokploy/server/constants";
+import { paths } from "@hanzo/platform-server/constants";
 import { publicIpv4, publicIpv6 } from "public-ip";
 
 export const getShell = () => {
