@@ -104,9 +104,9 @@ export const removeUserById = async (userId: string) => {
 		.then((res) => res[0]);
 };
 
-export const getDokployUrl = async () => {
+export const getHanzoUrl = async () => {
 	if (IS_CLOUD) {
-		return "https://app.dokploy.com";
+		return "https://app.hanzo.com";
 	}
 	const settings = await getWebServerSettings();
 

@@ -371,7 +371,7 @@ const EnvironmentPage = (
 			{ enabled: !!selectedTargetProject },
 		);
 	const { config: whitelabeling } = useWhitelabeling();
-	const appName = whitelabeling?.appName || "Dokploy";
+	const appName = whitelabeling?.appName || "Hanzo Platform";
 
 	const emptyServices =
 		!currentEnvironment ||
