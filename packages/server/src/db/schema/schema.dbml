@@ -92,7 +92,7 @@ enum scheduleType {
   application
   compose
   server
-  "dokploy-server"
+  "platform-server"
 }
 
 enum serverStatus {
@@ -668,7 +668,7 @@ table notification {
   appDeploy boolean [not null, default: false]
   appBuildError boolean [not null, default: false]
   databaseBackup boolean [not null, default: false]
-  dokployRestart boolean [not null, default: false]
+  hanzoRestart boolean [not null, default: false]
   dockerCleanup boolean [not null, default: false]
   serverThreshold boolean [not null, default: false]
   notificationType notificationType [not null]
@@ -943,7 +943,7 @@ table user_temp {
   role text [not null, default: 'user']
   enablePaidFeatures boolean [not null, default: false]
   allowImpersonation boolean [not null, default: false]
-  metricsConfig jsonb [not null, default: `{"server":{"type":"Dokploy","refreshRate":60,"port":4500,"token":"","retentionDays":2,"cronJob":"","urlCallback":"","thresholds":{"cpu":0,"memory":0}},"containers":{"refreshRate":60,"services":{"include":[],"exclude":[]}}}`]
+  metricsConfig jsonb [not null, default: `{"server":{"type":"Hanzo","refreshRate":60,"port":4500,"token":"","retentionDays":2,"cronJob":"","urlCallback":"","thresholds":{"cpu":0,"memory":0}},"containers":{"refreshRate":60,"services":{"include":[],"exclude":[]}}}`]
   cleanupCacheApplications boolean [not null, default: false]
   cleanupCacheOnPreviews boolean [not null, default: false]
   cleanupCacheOnCompose boolean [not null, default: false]
