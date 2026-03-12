@@ -39,3 +39,13 @@ export * from "./user";
 export * from "./utils";
 export * from "./volume-backups";
 export * from "./web-server-settings";
+
+// Hanzo-specific schemas
+export * from "./billing";
+export * from "./wallet";
+export * from "./cloud-provider";
+export * from "./compute-offer";
+export * from "./compute-pool";
+export * from "./doks-cluster";
+export * from "./gateway";
+export * from "./oss-payments";
