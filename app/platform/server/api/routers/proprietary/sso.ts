@@ -1,13 +1,13 @@
-import { normalizeTrustedOrigin } from "@dokploy/server";
-import { IS_CLOUD } from "@dokploy/server/constants";
-import { db } from "@dokploy/server/db";
-import { member, ssoProvider, user } from "@dokploy/server/db/schema";
-import { ssoProviderBodySchema } from "@dokploy/server/db/schema/sso";
+import { normalizeTrustedOrigin } from "@hanzo/platform-server";
+import { IS_CLOUD } from "@hanzo/platform-server/constants";
+import { db } from "@hanzo/platform-server/db";
+import { member, ssoProvider, user } from "@hanzo/platform-server/db/schema";
+import { ssoProviderBodySchema } from "@hanzo/platform-server/db/schema/sso";
 import {
 	getOrganizationOwnerId,
 	requestToHeaders,
-} from "@dokploy/server/index";
-import { auth } from "@dokploy/server/lib/auth";
+} from "@hanzo/platform-server/index";
+import { auth } from "@hanzo/platform-server/lib/auth";
 import { TRPCError } from "@trpc/server";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
