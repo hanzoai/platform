@@ -24,16 +24,16 @@ pkg.exports = {
 		require: "./dist/db/schema/index.cjs.js",
 	},
 	"./db/schema/*": {
-		import: "./dist/db/schema/*",
+		import: "./dist/db/schema/*.js",
 	},
 	"./services/*": {
-		import: "./dist/services/*",
+		import: "./dist/services/*.js",
 	},
 	"./lib/*": {
-		import: "./dist/lib/*",
+		import: "./dist/lib/*.js",
 	},
 	"./setup/*": {
-		import: "./dist/setup/*",
+		import: "./dist/setup/*.js",
 	},
 	"./constants": {
 		import: "./dist/constants/index.js",
@@ -43,19 +43,22 @@ pkg.exports = {
 		import: "./dist/templates/index.js",
 	},
 	"./templates/*": {
-		import: "./dist/templates/*",
+		import: "./dist/templates/*.js",
+	},
+	"./monitoring/*": {
+		import: "./dist/monitoring/*.js",
 	},
 	"./utils/*": {
-		import: "./dist/utils/*",
+		import: "./dist/utils/*.js",
 	},
 	"./types/*": {
-		import: "./dist/types/*",
+		import: "./dist/types/*.js",
 	},
 	"./wss/*": {
-		import: "./dist/wss/*",
+		import: "./dist/wss/*.js",
 	},
 	"./*": {
-		import: "./dist/*",
+		import: "./dist/*.js",
 		require: "./dist/*.cjs",
 	},
 };
