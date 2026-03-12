@@ -23,7 +23,7 @@
 		/* Path Aliases */
 		"baseUrl": ".",
 		"paths": {
-			"@dokploy/server/*": ["./src/*"]
+			"@hanzo/platform-server/*": ["./src/*"]
 		}
 	},
 	"include": ["next-env.d.ts", "./src/**/*.ts"],

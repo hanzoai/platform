@@ -1,4 +1,4 @@
-import { getDockerCommand } from "@dokploy/server/utils/builders/docker-file";
+import { getDockerCommand } from "@hanzo/platform-server/utils/builders/docker-file";
 import { getCreateFileCommand } from "../docker/utils";
 import { getBuildAppDirectory } from "../filesystem/directory";
 import type { ApplicationNested } from ".";
