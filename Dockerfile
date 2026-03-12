@@ -36,6 +36,7 @@ COPY . .
 # Build platform
 ENV NODE_ENV=production
 RUN pnpm --filter=@hanzo/platform build
+RUN pnpm --filter=@hanzo/platform-server build
 RUN pnpm --filter=./app/platform run build
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=./app/platform --prod deploy --legacy /prod/platform
