@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build-base:
-    runs-on: hanzo-build
+    runs-on: hanzo-build-linux-amd64
     permissions:
       contents: read
       packages: write
