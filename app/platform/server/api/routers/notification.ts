@@ -1026,24 +1026,6 @@ export const notificationRouter = createTRPCRouter({
 				throw error;
 			}
 		}),
-	testPushoverConnection: adminProcedure
-		.input(apiTestPushoverConnection)
-		.mutation(async ({ input }) => {
-			try {
-				await sendPushoverNotification(
-					input,
-					"Test Notification",
-					"Hi from Hanzo Platform",
-				);
-				return true;
-			} catch (error) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Error testing the notification",
-					cause: error,
-				});
-			}
-		}),
 	getEmailProviders: adminProcedure.query(async ({ ctx }) => {
 		return await db.query.notifications.findMany({
 			where: eq(notifications.organizationId, ctx.session.activeOrganizationId),
