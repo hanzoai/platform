@@ -106,7 +106,7 @@ export const removeUserById = async (userId: string) => {
 
 export const getHanzoUrl = async () => {
 	if (IS_CLOUD) {
-		return "https://app.hanzo.com";
+		return "https://app.hanzo.ai";
 	}
 	const settings = await getWebServerSettings();
 

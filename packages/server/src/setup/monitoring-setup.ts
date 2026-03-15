@@ -11,14 +11,14 @@ export const setupMonitoring = async (serverId: string) => {
 	const server = await findServerById(serverId);
 
 	const containerName = "hanzo-monitoring";
-	let imageName = "hanzo/monitoring:latest";
+	let imageName = "platform/monitoring:latest";
 
 	if (
 		(getHanzoImageTag() !== "latest" ||
 			process.env.NODE_ENV === "development") &&
 		!IS_CLOUD
 	) {
-		imageName = "hanzo/monitoring:canary";
+		imageName = "platform/monitoring:canary";
 	}
 
 	const settings: ContainerCreateOptions = {
@@ -87,14 +87,14 @@ export const setupWebMonitoring = async () => {
 	const webServerSettings = await getWebServerSettings();
 
 	const containerName = "hanzo-monitoring";
-	let imageName = "hanzo/monitoring:latest";
+	let imageName = "platform/monitoring:latest";
 
 	if (
 		(getHanzoImageTag() !== "latest" ||
 			process.env.NODE_ENV === "development") &&
 		!IS_CLOUD
 	) {
-		imageName = "hanzo/monitoring:canary";
+		imageName = "platform/monitoring:canary";
 	}
 
 	const settings: ContainerCreateOptions = {
