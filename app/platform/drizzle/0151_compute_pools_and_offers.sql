@@ -11,6 +11,7 @@ DO $$ BEGIN
 	CREATE TYPE "pool_status" AS ENUM('pending', 'active', 'maintenance', 'suspended', 'decommissioned');
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -18,6 +19,7 @@ DO $$ BEGIN
 	CREATE TYPE "node_status" AS ENUM('online', 'offline', 'syncing', 'draining', 'maintenance');
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -25,6 +27,7 @@ DO $$ BEGIN
 	CREATE TYPE "node_type" AS ENUM('validator', 'worker', 'storage', 'gpu', 'inference');
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -32,6 +35,7 @@ DO $$ BEGIN
 	CREATE TYPE "gpu_vendor" AS ENUM('nvidia', 'amd', 'intel', 'apple');
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -39,6 +43,7 @@ DO $$ BEGIN
 	CREATE TYPE "offer_status" AS ENUM('draft', 'active', 'paused', 'expired', 'depleted', 'retired');
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -46,6 +51,7 @@ DO $$ BEGIN
 	CREATE TYPE "pricing_model" AS ENUM('per_hour', 'per_resource_hour', 'spot', 'reserved', 'auction');
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -53,6 +59,7 @@ DO $$ BEGIN
 	CREATE TYPE "billing_cycle" AS ENUM('hourly', 'daily', 'weekly', 'monthly');
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -60,6 +67,7 @@ DO $$ BEGIN
 	CREATE TYPE "lease_status" AS ENUM('pending', 'provisioning', 'active', 'suspended', 'terminating', 'terminated', 'failed');
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -270,6 +278,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_pool" ADD CONSTRAINT "compute_pool_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "organization"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -277,6 +286,8 @@ DO $$ BEGIN
 	ALTER TABLE "compute_pool" ADD CONSTRAINT "compute_pool_owner_id_user_temp_id_fk" FOREIGN KEY ("owner_id") REFERENCES "user_temp"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -284,6 +295,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_node" ADD CONSTRAINT "compute_node_pool_id_compute_pool_pool_id_fk" FOREIGN KEY ("pool_id") REFERENCES "compute_pool"("pool_id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -291,6 +303,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_offer" ADD CONSTRAINT "compute_offer_pool_id_compute_pool_pool_id_fk" FOREIGN KEY ("pool_id") REFERENCES "compute_pool"("pool_id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -298,6 +311,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_lease" ADD CONSTRAINT "compute_lease_offer_id_compute_offer_offer_id_fk" FOREIGN KEY ("offer_id") REFERENCES "compute_offer"("offer_id") ON DELETE restrict ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -305,6 +319,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_lease" ADD CONSTRAINT "compute_lease_pool_id_compute_pool_pool_id_fk" FOREIGN KEY ("pool_id") REFERENCES "compute_pool"("pool_id") ON DELETE restrict ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -312,6 +327,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_lease" ADD CONSTRAINT "compute_lease_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "organization"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -319,6 +335,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_lease" ADD CONSTRAINT "compute_lease_user_id_user_temp_id_fk" FOREIGN KEY ("user_id") REFERENCES "user_temp"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -326,6 +343,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_lease" ADD CONSTRAINT "compute_lease_node_id_compute_node_node_id_fk" FOREIGN KEY ("node_id") REFERENCES "compute_node"("node_id") ON DELETE set null ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -333,6 +351,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_lease" ADD CONSTRAINT "compute_lease_wallet_id_organization_wallet_wallet_id_fk" FOREIGN KEY ("wallet_id") REFERENCES "organization_wallet"("wallet_id") ON DELETE set null ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -340,6 +359,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_usage" ADD CONSTRAINT "compute_usage_lease_id_compute_lease_lease_id_fk" FOREIGN KEY ("lease_id") REFERENCES "compute_lease"("lease_id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -347,6 +367,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_usage" ADD CONSTRAINT "compute_usage_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "organization"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -354,6 +375,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_usage" ADD CONSTRAINT "compute_usage_offer_id_compute_offer_offer_id_fk" FOREIGN KEY ("offer_id") REFERENCES "compute_offer"("offer_id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
@@ -361,6 +383,7 @@ DO $$ BEGIN
 	ALTER TABLE "compute_usage" ADD CONSTRAINT "compute_usage_transaction_id_wallet_transactions_transaction_id_fk" FOREIGN KEY ("transaction_id") REFERENCES "wallet_transactions"("transaction_id") ON DELETE set null ON UPDATE no action;
 EXCEPTION
 	WHEN duplicate_object THEN null;
+	WHEN undefined_table THEN null;
 END $$;
 --> statement-breakpoint
 
