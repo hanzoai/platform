@@ -8,11 +8,11 @@ version: "3.8"
 
 services:
   db1:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
     volumes:
       - "db-test:/var/lib/postgresql/data"
   db2:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
     volumes:
       - type: volume
         source: db-test
@@ -28,11 +28,11 @@ version: "3.8"
 
 services:
   db1:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
     volumes:
       - "db-test-testhash:/var/lib/postgresql/data"
   db2:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
     volumes:
       - type: volume
         source: db-test-testhash
