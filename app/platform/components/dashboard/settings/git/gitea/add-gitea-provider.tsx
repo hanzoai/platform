@@ -188,7 +188,7 @@ export const AddGiteaProvider = () => {
 									<li>
 										Create a new application with the following details:
 										<ul className="list-disc list-inside ml-4">
-											<li>Name: Hanzo</li>
+											<li>Name: Hanzo Platform</li>
 											<li>
 												Redirect URI:{" "}
 												<span className="text-primary">{webhookUrl}</span>{" "}

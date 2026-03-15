@@ -18,14 +18,11 @@ import {
 	Forward,
 	GalleryVerticalEnd,
 	GitBranch,
-	Globe,
-	HeartIcon,
 	Key,
 	KeyRound,
 	Loader2,
 	LogIn,
 	type LucideIcon,
-	Network,
 	Package,
 	Palette,
 	PieChart,
@@ -373,15 +370,6 @@ const MENU: Menu = {
 			isEnabled: ({ auth }) =>
 				!!(auth?.role === "owner" || auth?.role === "admin"),
 		},
-		{
-			isSingle: true,
-			title: "Deploy Providers",
-			url: "/dashboard/settings/deploy-providers",
-			icon: Rocket,
-			// Only enabled for admins
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.role === "admin"),
-		},
 
 		{
 			isSingle: true,
@@ -389,24 +377,6 @@ const MENU: Menu = {
 			url: "/dashboard/settings/certificates",
 			icon: ShieldCheck,
 			// Only enabled for admins
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.role === "admin"),
-		},
-		{
-			isSingle: true,
-			title: "Gateway",
-			url: "/dashboard/settings/gateway",
-			icon: Network,
-			// Only enabled for admins
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.role === "admin"),
-		},
-		{
-			isSingle: true,
-			title: "DNS & Pages",
-			url: "/dashboard/settings/dns",
-			icon: Globe,
-			// Only enabled for admins/owners
 			isEnabled: ({ auth }) =>
 				!!(auth?.role === "owner" || auth?.role === "admin"),
 		},
@@ -438,12 +408,28 @@ const MENU: Menu = {
 		},
 		{
 			isSingle: true,
+			title: "License",
+			url: "/dashboard/settings/license",
+			icon: Key,
+			// Only enabled for admins in non-cloud environments
+			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
+		},
+		{
+			isSingle: true,
 			title: "SSO",
 			url: "/dashboard/settings/sso",
 			icon: LogIn,
 			// Enabled for admins in both cloud and self-hosted (enterprise)
 			isEnabled: ({ auth }) =>
 				!!(auth?.role === "owner" || auth?.role === "admin"),
+		},
+		{
+			isSingle: true,
+			title: "Whitelabeling",
+			url: "/dashboard/settings/whitelabeling",
+			icon: Palette,
+			// Only enabled for owners in non-cloud environments (enterprise)
+			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && !isCloud),
 		},
 	],
 
@@ -570,7 +556,7 @@ function SidebarLogo() {
 	const { state } = useSidebar();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 	const { data: user } = api.user.get.useQuery();
-	const { data: session } = authClient.useSession();
+	const { data: session } = api.user.session.useQuery();
 	const {
 		data: organizations,
 		refetch,
@@ -908,7 +894,11 @@ export default function Page({ children }: Props) {
 
 	const pathname = usePathname();
 	const { data: auth } = api.user.get.useQuery();
-	const { data: hanzoVersion } = api.settings.getHanzoVersion.useQuery();
+	const { data: dokployVersion } = api.settings.getHanzoVersion.useQuery();
+	const { data: whitelabeling } = api.whitelabeling.get.useQuery(undefined, {
+		staleTime: 5 * 60 * 1000,
+		refetchOnWindowFocus: false,
+	});
 
 	const includesProjects = pathname?.includes("/dashboard/project");
 	const { data: isCloud } = api.settings.isCloud.useQuery();
@@ -1165,13 +1155,18 @@ export default function Page({ children }: Props) {
 						<SidebarMenuItem>
 							<UserNav />
 						</SidebarMenuItem>
-						{hanzoVersion && (
+						{whitelabeling?.footerText && (
+							<div className="px-3 text-xs text-muted-foreground text-center group-data-[collapsible=icon]:hidden">
+								{whitelabeling.footerText}
+							</div>
+						)}
+						{dokployVersion && (
 							<>
 								<div className="px-3 text-xs text-muted-foreground text-center group-data-[collapsible=icon]:hidden">
-									Version {hanzoVersion}
+									Version {dokployVersion}
 								</div>
 								<div className="hidden text-xs text-muted-foreground text-center group-data-[collapsible=icon]:block">
-									{hanzoVersion}
+									{dokployVersion}
 								</div>
 							</>
 						)}
