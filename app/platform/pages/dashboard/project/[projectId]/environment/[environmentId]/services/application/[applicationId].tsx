@@ -96,6 +96,8 @@ const Service = (
 	const { data: environments } = api.environment.byProjectId.useQuery({
 		projectId: data?.environment?.project?.projectId || "",
 	});
+	const { config: whitelabeling } = useWhitelabeling();
+	const appName = whitelabeling?.appName || "Hanzo Platform";
 	const environmentDropdownItems =
 		environments?.map((env) => ({
 			name: env.name,
@@ -123,7 +125,8 @@ const Service = (
 			/>
 			<Head>
 				<title>
-					Application: {data?.name} - {data?.environment.project.name} | Hanzo
+					Application: {data?.name} - {data?.environment.project.name} |{" "}
+					{appName}
 				</title>
 			</Head>
 			<div className="w-full">
@@ -167,7 +170,7 @@ const Service = (
 													: "destructive"
 										}
 									>
-										{data?.server?.name || "Hanzo Server"}
+										{data?.server?.name || "Hanzo Platform Server"}
 									</Badge>
 									{data?.server?.serverStatus === "inactive" && (
 										<TooltipProvider delayDuration={0}>
