@@ -417,15 +417,15 @@ export const setupSwarm = () => `
 	`;
 
 const setupNetwork = () => `
-	# Check if the hanzo-network already exists
-	if docker network ls | grep -q 'hanzo-network'; then
-		echo "Network hanzo-network already exists ✅"
+	# Check if the platform-network already exists
+	if docker network ls | grep -q 'platform-network'; then
+		echo "Network platform-network already exists ✅"
 	else
-		# Create the hanzo-network if it doesn't exist
-		if docker network create --driver overlay --attachable hanzo-network; then
+		# Create the platform-network if it doesn't exist
+		if docker network create --driver overlay --attachable platform-network; then
 			echo "Network created ✅"
 		else
-			echo "Failed to create hanzo-network ❌" >&2
+			echo "Failed to create platform-network ❌" >&2
 			exit 1
 		fi
 	fi
@@ -656,20 +656,20 @@ export const installRClone = () => `
 export const createTraefikInstance = () => {
 	const command = `
 	    # Check if dokpyloy-traefik exists
-		if docker service inspect hanzo-traefik > /dev/null 2>&1; then
+		if docker service inspect platform-traefik > /dev/null 2>&1; then
 			echo "Migrating Traefik to Standalone..."
-			docker service rm hanzo-traefik
+			docker service rm platform-traefik
 			sleep 8
 			echo "Traefik migrated to Standalone ✅"
 		fi
 
-		if docker inspect hanzo-traefik > /dev/null 2>&1; then
+		if docker inspect platform-traefik > /dev/null 2>&1; then
 			echo "Traefik already exists ✅"
 		else
-			# Create the hanzo-traefik container
+			# Create the platform-traefik container
 			TRAEFIK_VERSION=${TRAEFIK_VERSION}
 			docker run -d \
-				--name hanzo-traefik \
+				--name platform-traefik \
 				--restart always \
 				-v /etc/hanzo/traefik/traefik.yml:/etc/traefik/traefik.yml \
 				-v /etc/hanzo/traefik/dynamic:/etc/hanzo/traefik/dynamic \
@@ -679,7 +679,7 @@ export const createTraefikInstance = () => {
 				-p ${TRAEFIK_HTTP3_PORT}:${TRAEFIK_HTTP3_PORT}/udp \
 				traefik:v$TRAEFIK_VERSION
 
-			docker network connect hanzo-network hanzo-traefik;
+			docker network connect platform-network platform-traefik;
 			echo "Traefik version $TRAEFIK_VERSION installed ✅"
 		fi
 	`;

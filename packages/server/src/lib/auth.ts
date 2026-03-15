@@ -59,7 +59,7 @@ const { handler, api } = betterAuth({
 			allowDifferentEmails: true,
 		},
 	},
-	appName: "Hanzo",
+	appName: "Hanzo Platform",
 	socialProviders: {
 		github: {
 			clientId: process.env.GITHUB_CLIENT_ID as string,
@@ -316,7 +316,6 @@ const { handler, api } = betterAuth({
 			},
 		},
 	},
-	// Plugin types are not fully inferrable by TypeScript but work at runtime
 	plugins: [
 		apiKey({
 			enableMetadata: true,
@@ -329,14 +328,14 @@ const { handler, api } = betterAuth({
 					const host =
 						process.env.NODE_ENV === "development"
 							? "http://localhost:3000"
-							: "https://app.hanzo.com";
+							: "https://app.hanzo.ai";
 					const inviteLink = `${host}/invitation?token=${data.id}`;
 
 					await sendEmail({
 						email: data.email,
 						subject: "Invitation to join organization",
 						text: `
-					<p>You are invited to join ${data.organization.name} on Hanzo. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
+					<p>You are invited to join ${data.organization.name} on Hanzo Platform. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
 					`,
 					});
 				}
@@ -349,16 +348,14 @@ const { handler, api } = betterAuth({
 					}),
 				]
 			: []),
-	] as any,
+	],
 });
 
-// BetterAuth plugin methods exist at runtime but TypeScript can't infer them
-const _api = api as any;
 const _auth = {
 	handler,
-	createApiKey: _api.createApiKey,
-	registerSSOProvider: _api.registerSSOProvider,
-	updateSSOProvider: _api.updateSSOProvider,
+	createApiKey: api.createApiKey,
+	registerSSOProvider: api.registerSSOProvider,
+	updateSSOProvider: api.updateSSOProvider,
 };
 
 export type AuthType = typeof _auth;
@@ -368,7 +365,7 @@ export const validateRequest = async (request: IncomingMessage) => {
 	const apiKey = request.headers["x-api-key"] as string;
 	if (apiKey) {
 		try {
-			const { valid, key, error } = await _api.verifyApiKey({
+			const { valid, key, error } = await api.verifyApiKey({
 				body: {
 					key: apiKey,
 				},
@@ -457,11 +454,11 @@ export const validateRequest = async (request: IncomingMessage) => {
 	}
 
 	// If no API key, proceed with normal session validation
-	const session = (await api.getSession({
+	const session = await api.getSession({
 		headers: new Headers({
 			cookie: request.headers.cookie || "",
 		}),
-	})) as any;
+	});
 
 	if (!session?.session || !session.user) {
 		return {

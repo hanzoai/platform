@@ -405,7 +405,7 @@ export const removeCompose = async (
 
 		if (compose.composeType === "stack") {
 			const command = `
-			docker network disconnect ${compose.appName} hanzo-traefik;
+			docker network disconnect ${compose.appName} platform-traefik;
 			docker stack rm ${compose.appName};
 			rm -rf ${projectPath}`;
 
@@ -416,7 +416,7 @@ export const removeCompose = async (
 			}
 		} else {
 			const command = `
-			 docker network disconnect ${compose.appName} hanzo-traefik;
+			 docker network disconnect ${compose.appName} platform-traefik;
 			cd ${projectPath} && env -i PATH="$PATH" docker compose -p ${compose.appName} down ${
 				deleteVolumes ? "--volumes" : ""
 			} && rm -rf ${projectPath}`;

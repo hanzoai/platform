@@ -87,7 +87,7 @@ version: "3.8"
 
 services:
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
     volumes:
       - db_data:/var/lib/postgresql/data
 
@@ -128,7 +128,7 @@ services:
     image: node:latest
 
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
 
 volumes:
   web_data:
@@ -159,7 +159,7 @@ services:
     image: node:latest
 
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
 
 volumes:
   web_data-testhash:
