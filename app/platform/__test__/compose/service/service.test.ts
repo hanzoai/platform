@@ -28,7 +28,7 @@ services:
       - db
 
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
 
   base_service:
     image: base:latest
@@ -60,7 +60,7 @@ services:
       - db-testhash
 
   db-testhash:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
 
   base_service-testhash:
     image: base:latest
@@ -114,7 +114,7 @@ services:
       - frontend
 
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:13
     networks:
       - backend
 
@@ -158,7 +158,7 @@ services:
       - frontend
 
   db-testhash:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:13
     networks:
       - backend
 
@@ -210,7 +210,7 @@ services:
       - public
 
   cache:
-    image: ghcr.io/hanzoai/kv:8
+    image: redis:latest
     networks:
       - private
 
@@ -253,7 +253,7 @@ services:
       - public
 
   cache-testhash:
-    image: ghcr.io/hanzoai/kv:8
+    image: redis:latest
     networks:
       - private
 

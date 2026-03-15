@@ -24,7 +24,7 @@ export function processLogs(
 		.map((entry) => {
 			try {
 				const log: LogEntry = JSON.parse(entry);
-				if (log.ServiceName === "hanzo-service-app@file") {
+				if (log.ServiceName === "platform-service-app@file") {
 					return null;
 				}
 				const date = new Date(log.StartUTC);
@@ -99,9 +99,9 @@ export function parseRawConfig(
 			.compact()
 			.value();
 
-		// Filter out Hanzo dashboard requests
+		// Filter out Hanzo Platform dashboard requests
 		parsedLogs = parsedLogs.filter(
-			(log) => log.ServiceName !== "hanzo-service-app@file",
+			(log) => log.ServiceName !== "platform-service-app@file",
 		);
 
 		// Apply date range filter if provided
