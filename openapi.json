@@ -2,20 +2,20 @@
 	"openapi": "3.0.3",
 	"info": {
 		"title": "Hanzo Platform API",
-		"description": "Complete API documentation for Hanzo Platform - Deploy applications, manage databases, and orchestrate your infrastructure. This API allows you to programmatically manage all aspects of your platform instance.",
+		"description": "Complete API documentation for Hanzo Platform - Deploy applications, manage databases, and orchestrate your infrastructure. This API allows you to programmatically manage all aspects of your Hanzo Platform instance.",
 		"version": "1.0.0",
 		"contact": {
-			"name": "Hanzo AI",
-			"url": "https://hanzo.ai"
+			"name": "Hanzo Platform Team",
+			"url": "https://platform.com"
 		},
 		"license": {
 			"name": "Apache 2.0",
-			"url": "https://github.com/hanzoai/platform/blob/main/LICENSE.MD"
+			"url": "https://github.com/platform/platform/blob/canary/LICENSE"
 		}
 	},
 	"servers": [
 		{
-			"url": "https://platform.hanzo.ai/api"
+			"url": "https://your-platform-instance.com/api"
 		}
 	],
 	"paths": {
@@ -12157,9 +12157,9 @@
 				}
 			}
 		},
-		"/settings.getVersion": {
+		"/settings.getHanzo PlatformVersion": {
 			"get": {
-				"operationId": "settings-getVersion",
+				"operationId": "settings-getHanzo PlatformVersion",
 				"tags": ["settings"],
 				"security": [
 					{
@@ -12876,9 +12876,9 @@
 				}
 			}
 		},
-		"/settings.getHanzoCloudIps": {
+		"/settings.getHanzo PlatformCloudIps": {
 			"get": {
-				"operationId": "settings-getHanzoCloudIps",
+				"operationId": "settings-getHanzo PlatformCloudIps",
 				"tags": ["settings"],
 				"security": [
 					{
@@ -13955,7 +13955,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -13982,7 +13982,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"hanzoRestart",
+									"platformRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -14034,7 +14034,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14156,7 +14156,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14187,7 +14187,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"hanzoRestart",
+									"platformRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -14240,7 +14240,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14371,7 +14371,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14398,7 +14398,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"hanzoRestart",
+									"platformRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -14450,7 +14450,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14573,7 +14573,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -14620,7 +14620,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"hanzoRestart",
+									"platformRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -14676,7 +14676,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15009,7 +15009,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15041,7 +15041,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"hanzoRestart",
+									"platformRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -15094,7 +15094,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15230,7 +15230,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15262,7 +15262,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"hanzoRestart",
+									"platformRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -15315,7 +15315,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15451,7 +15451,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15522,7 +15522,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15651,7 +15651,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15675,7 +15675,7 @@
 									"appBuildError",
 									"databaseBackup",
 									"volumeBackup",
-									"hanzoRestart",
+									"platformRestart",
 									"name",
 									"appDeploy",
 									"dockerCleanup",
@@ -15726,7 +15726,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15843,7 +15843,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -15964,7 +15964,7 @@
 									"volumeBackup": {
 										"type": "boolean"
 									},
-									"hanzoRestart": {
+									"platformRestart": {
 										"type": "boolean"
 									},
 									"name": {
@@ -19436,7 +19436,7 @@
 											"application",
 											"compose",
 											"server",
-											"hanzo-platform"
+											"platform-server"
 										]
 									},
 									"command": {
@@ -19536,7 +19536,7 @@
 											"application",
 											"compose",
 											"server",
-											"hanzo-platform"
+											"platform-server"
 										]
 									},
 									"command": {
@@ -19657,7 +19657,7 @@
 						"required": true,
 						"schema": {
 							"type": "string",
-							"enum": ["application", "compose", "server", "hanzo-platform"]
+							"enum": ["application", "compose", "server", "platform-server"]
 						}
 					}
 				],
@@ -21039,7 +21039,7 @@
 				"type": "apiKey",
 				"in": "header",
 				"name": "x-api-key",
-				"description": "API key authentication. Generate an API key from your Platform dashboard under Settings > API Keys."
+				"description": "API key authentication. Generate an API key from your Hanzo Platform dashboard under Settings > API Keys."
 			}
 		},
 		"responses": {
@@ -21193,7 +21193,7 @@
 	],
 	"externalDocs": {
 		"description": "Full documentation",
-		"url": "https://docs.hanzo.ai/platform"
+		"url": "https://docs.platform.com"
 	},
 	"security": [
 		{

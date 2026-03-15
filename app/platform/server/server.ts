@@ -10,14 +10,12 @@ import {
 	initializeNetwork,
 	initSchedules,
 	initVolumeBackupsCronJobs,
-	sendHanzoPlatformRestartNotifications,
+	sendPlatformRestartNotifications,
 	setupDirectories,
 } from "@hanzo/platform";
-import { createPlatformZapServer } from "@hanzo/platform/services/zap-bridge";
 import { config } from "dotenv";
 import next from "next";
 import packageInfo from "../package.json";
-import { migration } from "./db/migration";
 import { setupDockerContainerLogsWebSocketServer } from "./wss/docker-container-logs";
 import { setupDockerContainerTerminalWebSocketServer } from "./wss/docker-container-terminal";
 import { setupDockerStatsMonitoringSocketServer } from "./wss/docker-stats";
@@ -43,7 +41,7 @@ const app = next({ dev, turbopack: process.env.TURBOPACK === "1" });
 const handle = app.getRequestHandler();
 void app.prepare().then(async () => {
 	try {
-		console.log("Running Hanzo Platform Version: ", packageInfo.version);
+		console.log("Running PlatformVersion: ", packageInfo.version);
 		const server = http.createServer((req, res) => {
 			handle(req, res);
 		});
@@ -65,26 +63,7 @@ void app.prepare().then(async () => {
 			await initSchedules();
 			await initCancelDeployments();
 			await initVolumeBackupsCronJobs();
-			await sendHanzoPlatformRestartNotifications();
-		}
-
-		if (IS_CLOUD && process.env.NODE_ENV === "production") {
-			await migration();
-
-			// Initialize billing jobs
-			console.log("Starting billing jobs...");
-			const { startUsageCollectionSchedule } = await import("@hanzo/platform/billing/usage-tracker");
-			const { startBillingSchedule } = await import("@hanzo/platform/billing/billing-job");
-			const { startBillingCycleScheduler } = await import("@hanzo/platform/billing/billing-cycle");
-			startUsageCollectionSchedule();
-			startBillingSchedule();
-			startBillingCycleScheduler();
-			console.log("Billing jobs started");
-		}
-
-		// Start ZAP bridge for AI agent/MCP access
-		if (process.env.ZAP_ENABLED !== "false") {
-			createPlatformZapServer();
+			await sendPlatformRestartNotifications();
 		}
 
 		server.listen(PORT, HOST);
