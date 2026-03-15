@@ -18,7 +18,7 @@ version: "3.8"
 
 services:
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
     volumes:
       - db_data:/var/lib/postgresql/data
 `;
@@ -47,7 +47,7 @@ version: "3.8"
 
 services:
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
     volumes:
       - type: volume
         source: db-test

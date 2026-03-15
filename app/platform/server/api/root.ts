@@ -8,13 +8,8 @@ import { certificateRouter } from "./routers/certificate";
 import { clusterRouter } from "./routers/cluster";
 import { composeRouter } from "./routers/compose";
 import { deploymentRouter } from "./routers/deployment";
-import { deployProviderRouter } from "./routers/deploy-provider";
 import { destinationRouter } from "./routers/destination";
-import { dnsRouter } from "./routers/dns";
-import { digitaloceanRouter } from "./routers/digitalocean";
-import { gatewayRouter } from "./routers/gateway";
 import { dockerRouter } from "./routers/docker";
-import { doksRouter } from "./routers/doks";
 import { domainRouter } from "./routers/domain";
 import { environmentRouter } from "./routers/environment";
 import { gitProviderRouter } from "./routers/git-provider";
@@ -28,6 +23,9 @@ import { mysqlRouter } from "./routers/mysql";
 import { notificationRouter } from "./routers/notification";
 import { organizationRouter } from "./routers/organization";
 import { patchRouter } from "./routers/patch";
+import { licenseKeyRouter } from "./routers/proprietary/license-key";
+import { ssoRouter } from "./routers/proprietary/sso";
+import { whitelabelingRouter } from "./routers/proprietary/whitelabeling";
 import { portRouter } from "./routers/port";
 import { postgresRouter } from "./routers/postgres";
 import { previewDeploymentRouter } from "./routers/preview-deployment";
@@ -42,7 +40,6 @@ import { serverRouter } from "./routers/server";
 import { settingsRouter } from "./routers/settings";
 import { sshRouter } from "./routers/ssh-key";
 import { stripeRouter } from "./routers/stripe";
-import { billingRouter } from "./routers/billing";
 import { swarmRouter } from "./routers/swarm";
 import { userRouter } from "./routers/user";
 import { volumeBackupsRouter } from "./routers/volume-backups";
@@ -54,11 +51,7 @@ import { volumeBackupsRouter } from "./routers/volume-backups";
 
 export const appRouter = createTRPCRouter({
 	admin: adminRouter,
-	dns: dnsRouter,
-	digitalocean: digitaloceanRouter,
-	gateway: gatewayRouter,
 	docker: dockerRouter,
-	doks: doksRouter,
 	project: projectRouter,
 	application: applicationRouter,
 	mysql: mysqlRouter,
@@ -72,7 +65,6 @@ export const appRouter = createTRPCRouter({
 	destination: destinationRouter,
 	backup: backupRouter,
 	deployment: deploymentRouter,
-	deployProvider: deployProviderRouter,
 	previewDeployment: previewDeploymentRouter,
 	mounts: mountRouter,
 	certificates: certificateRouter,
@@ -91,10 +83,12 @@ export const appRouter = createTRPCRouter({
 	github: githubRouter,
 	server: serverRouter,
 	stripe: stripeRouter,
-	billing: billingRouter,
 	swarm: swarmRouter,
 	ai: aiRouter,
 	organization: organizationRouter,
+	licenseKey: licenseKeyRouter,
+	sso: ssoRouter,
+	whitelabeling: whitelabelingRouter,
 	schedule: scheduleRouter,
 	rollback: rollbackRouter,
 	volumeBackups: volumeBackupsRouter,
