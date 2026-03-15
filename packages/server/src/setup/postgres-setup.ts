@@ -10,8 +10,8 @@ export const initializePostgres = async () => {
 			ContainerSpec: {
 				Image: imageName,
 				Env: [
-					"POSTGRES_USER=hanzo",
-					"POSTGRES_DB=hanzo",
+					"POSTGRES_USER=platform",
+					"POSTGRES_DB=platform",
 					"POSTGRES_PASSWORD=amukds4wi9001583845717ad2",
 				],
 				Mounts: [
@@ -22,7 +22,7 @@ export const initializePostgres = async () => {
 					},
 				],
 			},
-			Networks: [{ Target: "hanzo-network" }],
+			Networks: [{ Target: "platform-network" }],
 			Placement: {
 				Constraints: ["node.role==manager"],
 			},

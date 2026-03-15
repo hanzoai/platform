@@ -19,7 +19,7 @@ export const CreateSSHKey = () => {
 	);
 
 	const cloudSSHKey = data?.find(
-		(sshKey) => sshKey.name === "hanzo-cloud-ssh-key",
+		(sshKey) => sshKey.name === "dokploy-cloud-ssh-key",
 	);
 
 	useEffect(() => {
@@ -35,7 +35,7 @@ export const CreateSSHKey = () => {
 					type: "rsa",
 				});
 				await mutateAsync({
-					name: "hanzo-cloud-ssh-key",
+					name: "dokploy-cloud-ssh-key",
 					description: "Used on Hanzo Platform Cloud",
 					privateKey: keys.privateKey,
 					publicKey: keys.publicKey,

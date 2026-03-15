@@ -90,7 +90,7 @@ export const sendBuildSuccessNotifications = async ({
 				if (email) {
 					await sendEmailNotification(
 						email,
-						"Build success for hanzo",
+						"Build success for platform",
 						template,
 					);
 				}
@@ -98,7 +98,7 @@ export const sendBuildSuccessNotifications = async ({
 				if (resend) {
 					await sendResendNotification(
 						resend,
-						"Build success for hanzo",
+						"Build success for platform",
 						template,
 					);
 				}
