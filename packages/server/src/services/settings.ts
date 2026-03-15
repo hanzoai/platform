@@ -24,15 +24,15 @@ export const DEFAULT_UPDATE_DATA: IUpdateData = {
 	updateAvailable: false,
 };
 
-/** Returns current Hanzo docker image tag or `latest` by default. */
+/** Returns current Hanzo Platform docker image tag or `latest` by default. */
 export const getHanzoImageTag = () => {
 	return process.env.RELEASE_TAG || "latest";
 };
 
-/** Returns Hanzo docker service image digest */
+/** Returns Hanzo Platform docker service image digest */
 export const getServiceImageDigest = async () => {
 	const { stdout } = await execAsync(
-		"docker service inspect hanzo --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'",
+		"docker service inspect platform --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'",
 	);
 
 	const currentDigest = stdout.trim().split("@")[1];
@@ -50,7 +50,7 @@ export const getUpdateData = async (
 ): Promise<IUpdateData> => {
 	try {
 		const baseUrl =
-			"https://hub.docker.com/v2/repositories/hanzo/hanzo/tags";
+			"https://hub.docker.com/v2/repositories/platform/platform/tags";
 		let url: string | null = `${baseUrl}?page_size=100`;
 		let allResults: { digest: string; name: string }[] = [];
 
@@ -295,7 +295,7 @@ export const reloadDockerResource = async (
 				imageTag = currentImageTag;
 			}
 
-			command = `docker service update --force --image hanzo/hanzo:${imageTag} ${resourceName}`;
+			command = `docker service update --force --image platform/platform:${imageTag} ${resourceName}`;
 		} else {
 			command = `docker service update --force ${resourceName}`;
 		}
@@ -414,7 +414,7 @@ export const checkPortInUse = async (
 ): Promise<{ isInUse: boolean; conflictingContainer?: string }> => {
 	try {
 		// Check if port is in use by a Docker container
-		const dockerCommand = `docker ps -a --format '{{.Names}}' | grep -v '^hanzo-traefik$' | while read name; do docker port "$name" 2>/dev/null | grep -q ':${port}' && echo "$name" && break; done || true`;
+		const dockerCommand = `docker ps -a --format '{{.Names}}' | grep -v '^platform-traefik$' | while read name; do docker port "$name" 2>/dev/null | grep -q ':${port}' && echo "$name" && break; done || true`;
 		const { stdout: dockerOut } = serverId
 			? await execAsyncRemote(serverId, dockerCommand)
 			: await execAsync(dockerCommand);
@@ -429,7 +429,7 @@ export const checkPortInUse = async (
 		}
 
 		// Check if port is in use by a host-level service (non-Docker)
-		// Hanzo runs inside a container, so we spawn an ephemeral container
+		// Hanzo Platform runs inside a container, so we spawn an ephemeral container
 		// with --net=host to share the host's network stack and use nc -z to
 		// check if something is listening on the port
 		const hostCommand = `docker run --rm --net=host busybox sh -c 'nc -z 0.0.0.0 ${port} 2>/dev/null && echo in_use || echo free'`;
@@ -453,7 +453,7 @@ export const checkPortInUse = async (
 
 export const writeTraefikSetup = async (input: TraefikOptions) => {
 	const resourceType = await getDockerResourceType(
-		"hanzo-traefik",
+		"platform-traefik",
 		input.serverId,
 	);
 
@@ -491,7 +491,7 @@ export const reconnectServicesToTraefik = async (serverId?: string) => {
 	let commands = "";
 
 	for (const compose of composeResult) {
-		commands += `docker network connect ${compose.appName} $(docker ps --filter "name=hanzo-traefik" -q) >/dev/null 2>&1\n`;
+		commands += `docker network connect ${compose.appName} $(docker ps --filter "name=platform-traefik" -q) >/dev/null 2>&1\n`;
 	}
 
 	if (serverId) {
