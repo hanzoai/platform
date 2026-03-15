@@ -17,13 +17,13 @@ mkdir -p $HOME/.ssh && \\
 chmod 700 $HOME/.ssh && \\
 touch $HOME/.ssh/authorized_keys && \\
 chmod 600 $HOME/.ssh/authorized_keys && \\
-cat /etc/platform/ssh/auto_generated-hanzo-local.pub >> $HOME/.ssh/authorized_keys && \\
+cat /etc/hanzo/ssh/auto_generated-platform-local.pub >> $HOME/.ssh/authorized_keys && \\
 echo "✓ Hanzo Platform SSH key added successfully. Reopen the terminal in Hanzo Platform to reconnect."
 # ----------------------------------------`;
 
 const COMMAND_TO_GRANT_PERMISSION_ACCESS = `
 # ----------------------------------------
-sudo chown -R $USER:$USER /etc/platform/ssh
+sudo chown -R $USER:$USER /etc/hanzo/ssh
 # ----------------------------------------
 `;
 

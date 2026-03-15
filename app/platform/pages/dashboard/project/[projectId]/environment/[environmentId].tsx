@@ -98,6 +98,7 @@ import {
 import { cn } from "@/lib/utils";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
+import { useWhitelabeling } from "@/utils/hooks/use-whitelabeling";
 
 export type Services = {
 	serverId?: string | null;
@@ -825,7 +826,7 @@ const EnvironmentPage = (
 				(selectedTypes.length === 0 || selectedTypes.includes(service.type)) &&
 				(selectedServerId === "" ||
 					selectedServerId === "all" ||
-					(selectedServerId === "hanzo-platform" && !service.serverId) ||
+					(selectedServerId === "dokploy-server" && !service.serverId) ||
 					service.serverId === selectedServerId),
 		);
 		return sortServices(filtered);
@@ -873,7 +874,8 @@ const EnvironmentPage = (
 			/>
 			<Head>
 				<title>
-					Environment: {currentEnvironment.name} | {projectData?.name} | Hanzo Platform
+					Environment: {currentEnvironment.name} | {projectData?.name} |{" "}
+					{appName}
 				</title>
 			</Head>
 			<div className="w-full">
@@ -1419,7 +1421,7 @@ const EnvironmentPage = (
 												<SelectContent>
 													<SelectItem value="all">All servers</SelectItem>
 													{hasServicesWithoutServer && (
-														<SelectItem value="hanzo-platform">
+														<SelectItem value="dokploy-server">
 															<div className="flex items-center gap-2">
 																<ServerIcon className="size-4" />
 																<span>Hanzo Platform server</span>
