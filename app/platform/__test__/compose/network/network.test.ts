@@ -26,7 +26,7 @@ services:
           - api
 
   redis:
-    image: ghcr.io/hanzoai/kv:8
+    image: redis:alpine
     networks:
       backend:
 
@@ -107,7 +107,7 @@ services:
           - api
 
   redis:
-    image: ghcr.io/hanzoai/kv:8
+    image: redis:alpine
     networks:
       backend-testhash:
 
@@ -142,7 +142,7 @@ services:
       - backend
 
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
     networks:
       backend:
         aliases:
@@ -167,7 +167,7 @@ services:
       - backend-testhash
 
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
     networks:
       backend-testhash:
         aliases:
