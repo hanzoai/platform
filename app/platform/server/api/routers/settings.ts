@@ -97,7 +97,7 @@ export const settingsRouter = createTRPCRouter({
 		}
 
 		const { stdout: containerId } = await execAsync(
-			`docker ps --filter "name=platform-redis" --filter "status=running" -q | head -n 1`,
+			`docker ps --filter "name=hanzo-redis" --filter "status=running" -q | head -n 1`,
 		);
 
 		if (!containerId) {
@@ -113,7 +113,7 @@ export const settingsRouter = createTRPCRouter({
 		if (IS_CLOUD) {
 			return true;
 		}
-		await reloadDockerResource("platform-redis");
+		await reloadDockerResource("hanzo-redis");
 
 		return true;
 	}),
@@ -149,12 +149,12 @@ export const settingsRouter = createTRPCRouter({
 				// Check if port 8080 is already in use before enabling dashboard
 				const portCheck = await checkPortInUse(8080, input.serverId);
 				if (portCheck.isInUse) {
-					const conflictingContainer = portCheck.conflictingContainer
-						? ` by container "${portCheck.conflictingContainer}"`
+					const conflictInfo = portCheck.conflictingContainer
+						? ` by ${portCheck.conflictingContainer}`
 						: "";
 					throw new TRPCError({
 						code: "CONFLICT",
-						message: `Port 8080 is already in use${conflictingContainer}. Please stop the conflicting service or use a different port for the Traefik dashboard.`,
+						message: `Port 8080 is already in use${conflictInfo}. Please stop the conflicting service or use a different port for the Traefik dashboard.`,
 					});
 				}
 				newPorts.push({
@@ -572,7 +572,7 @@ export const settingsRouter = createTRPCRouter({
 
 			openApiDocument.info = {
 				title: "Hanzo Platform API",
-				description: "Endpoints for Hanzo Platform",
+				description: "Endpoints for platform",
 				version: packageInfo.version,
 			};
 
@@ -731,7 +731,7 @@ export const settingsRouter = createTRPCRouter({
 			if (input.enable) {
 				const config = {
 					accessLog: {
-						filePath: "/etc/platform/traefik/dynamic/access.log",
+						filePath: "/etc/hanzo/traefik/dynamic/access.log",
 						format: "json",
 						bufferingSize: 100,
 					},

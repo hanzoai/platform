@@ -412,12 +412,12 @@ export const deployPreviewApplication = async ({
 		);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Hanzo Preview Deployment\n\n${buildingComment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${buildingComment}`,
 		});
 		application.appName = previewDeployment.appName;
-		application.env = `${application.previewEnv}\nHANZO_DEPLOY_URL=${previewDeployment?.domain?.host}`;
-		application.buildArgs = `${application.previewBuildArgs}\nHANZO_DEPLOY_URL=${previewDeployment?.domain?.host}`;
-		application.buildSecrets = `${application.previewBuildSecrets}\nHANZO_DEPLOY_URL=${previewDeployment?.domain?.host}`;
+		application.env = `${application.previewEnv}\nPLATFORM_DEPLOY_URL=${previewDeployment?.domain?.host}`;
+		application.buildArgs = `${application.previewBuildArgs}\nPLATFORM_DEPLOY_URL=${previewDeployment?.domain?.host}`;
+		application.buildSecrets = `${application.previewBuildSecrets}\nPLATFORM_DEPLOY_URL=${previewDeployment?.domain?.host}`;
 		application.rollbackActive = false;
 		application.buildRegistry = null;
 		application.rollbackRegistry = null;
@@ -447,7 +447,7 @@ export const deployPreviewApplication = async ({
 		);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Hanzo Preview Deployment\n\n${successComment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${successComment}`,
 		});
 		await updateDeploymentStatus(deployment.deploymentId, "done");
 		await updatePreviewDeployment(previewDeploymentId, {
@@ -457,7 +457,7 @@ export const deployPreviewApplication = async ({
 		const comment = getIssueComment(application.name, "error", previewDomain);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Hanzo Preview Deployment\n\n${comment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${comment}`,
 		});
 		await updateDeploymentStatus(deployment.deploymentId, "error");
 		await updatePreviewDeployment(previewDeploymentId, {
@@ -529,14 +529,14 @@ export const rebuildPreviewApplication = async ({
 		);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Hanzo Preview Deployment\n\n${buildingComment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${buildingComment}`,
 		});
 
 		// Set application properties for preview deployment
 		application.appName = previewDeployment.appName;
-		application.env = `${application.previewEnv}\nHANZO_DEPLOY_URL=${previewDeployment?.domain?.host}`;
-		application.buildArgs = `${application.previewBuildArgs}\nHANZO_DEPLOY_URL=${previewDeployment?.domain?.host}`;
-		application.buildSecrets = `${application.previewBuildSecrets}\nHANZO_DEPLOY_URL=${previewDeployment?.domain?.host}`;
+		application.env = `${application.previewEnv}\nPLATFORM_DEPLOY_URL=${previewDeployment?.domain?.host}`;
+		application.buildArgs = `${application.previewBuildArgs}\nPLATFORM_DEPLOY_URL=${previewDeployment?.domain?.host}`;
+		application.buildSecrets = `${application.previewBuildSecrets}\nPLATFORM_DEPLOY_URL=${previewDeployment?.domain?.host}`;
 		application.rollbackActive = false;
 		application.buildRegistry = null;
 		application.rollbackRegistry = null;
@@ -561,7 +561,7 @@ export const rebuildPreviewApplication = async ({
 		);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Hanzo Preview Deployment\n\n${successComment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${successComment}`,
 		});
 		await updateDeploymentStatus(deployment.deploymentId, "done");
 		await updatePreviewDeployment(previewDeploymentId, {
@@ -588,7 +588,7 @@ export const rebuildPreviewApplication = async ({
 		const comment = getIssueComment(application.name, "error", previewDomain);
 		await updateIssueComment({
 			...issueParams,
-			body: `### Hanzo Preview Deployment\n\n${comment}`,
+			body: `### Hanzo Platform Preview Deployment\n\n${comment}`,
 		});
 		await updateDeploymentStatus(deployment.deploymentId, "error");
 		await updatePreviewDeployment(previewDeploymentId, {

@@ -33,7 +33,7 @@ if (DATABASE_URL) {
 		This mode WILL BE REMOVED in a future release.
 		
 		Please migrate to Docker Secrets using POSTGRES_PASSWORD_FILE.
-		Please execute this command in your server: curl -sSL https://hanzo.com/security/0.26.6.sh | bash
+		Please execute this command in your server: curl -sSL https://hanzo.ai/security/0.26.6.sh | bash
 		`);
 	}
 
