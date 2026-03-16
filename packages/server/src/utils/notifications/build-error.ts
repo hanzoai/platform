@@ -87,7 +87,7 @@ export const sendBuildErrorNotifications = async ({
 				if (email) {
 					await sendEmailNotification(
 						email,
-						"Build failed for hanzo",
+						"Build failed for platform",
 						template,
 					);
 				}
@@ -95,7 +95,7 @@ export const sendBuildErrorNotifications = async ({
 				if (resend) {
 					await sendResendNotification(
 						resend,
-						"Build failed for hanzo",
+						"Build failed for platform",
 						template,
 					);
 				}

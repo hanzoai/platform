@@ -64,6 +64,8 @@ const Postgresql = (
 	const { data: environments } = api.environment.byProjectId.useQuery({
 		projectId: data?.environment?.projectId || "",
 	});
+	const { config: whitelabeling } = useWhitelabeling();
+	const appName = whitelabeling?.appName || "Hanzo Platform";
 	const environmentDropdownItems =
 		environments?.map((env) => ({
 			name: env.name,
@@ -91,7 +93,8 @@ const Postgresql = (
 			/>
 			<Head>
 				<title>
-					Database: {data?.name} - {data?.environment?.project?.name} | Hanzo
+					Database: {data?.name} - {data?.environment?.project?.name} |{" "}
+					{appName}
 				</title>
 			</Head>
 			<div className="w-full">
@@ -128,7 +131,7 @@ const Postgresql = (
 													: "destructive"
 										}
 									>
-										{data?.server?.name || "Hanzo Server"}
+										{data?.server?.name || "Hanzo Platform Server"}
 									</Badge>
 									{data?.server?.serverStatus === "inactive" && (
 										<TooltipProvider delayDuration={0}>
