@@ -42,6 +42,7 @@ import { sshRouter } from "./routers/ssh-key";
 import { stripeRouter } from "./routers/stripe";
 import { swarmRouter } from "./routers/swarm";
 import { userRouter } from "./routers/user";
+import { visorRouter } from "./routers/visor";
 import { volumeBackupsRouter } from "./routers/volume-backups";
 /**
  * This is the primary router for your server.
@@ -91,6 +92,7 @@ export const appRouter = createTRPCRouter({
 	whitelabeling: whitelabelingRouter,
 	schedule: scheduleRouter,
 	rollback: rollbackRouter,
+	visor: visorRouter,
 	volumeBackups: volumeBackupsRouter,
 	environment: environmentRouter,
 	patch: patchRouter,
