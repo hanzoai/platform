@@ -56,12 +56,12 @@ describe("processLogs", () => {
 	});
 
 	it("should filter out Hanzo Platform dashboard requests", () => {
-		const platformDashboardEntry = `{"ClientAddr":"172.71.187.131:9485","ClientHost":"172.71.187.131","ClientPort":"9485","ClientUsername":"-","DownstreamContentSize":14550,"DownstreamStatus":200,"Duration":57681682,"OriginContentSize":14550,"OriginDuration":57612242,"OriginStatus":200,"Overhead":69440,"RequestAddr":"hostinger.hanzo.ai","RequestContentSize":0,"RequestCount":20142,"RequestHost":"hostinger.hanzo.ai","RequestMethod":"GET","RequestPath":"/_next/data/cb_zzI4Rp9G7Q7djrFKh0/en/dashboard/traefik.json","RequestPort":"-","RequestProtocol":"HTTP/2.0","RequestScheme":"https","RetryAttempts":0,"RouterName":"platform-router-app-secure@file","ServiceAddr":"hanzo:3000","ServiceName":"platform-service-app@file","ServiceURL":"http://platform:3000","StartLocal":"2025-12-10T05:10:41.957755949Z","StartUTC":"2025-12-10T05:10:41.957755949Z","TLSCipher":"TLS_AES_128_GCM_SHA256","TLSVersion":"1.3","entryPointName":"websecure","level":"info","msg":"","time":"2025-12-10T05:10:42Z"}`;
+		const platformDashboardEntry = `{"ClientAddr":"172.71.187.131:9485","ClientHost":"172.71.187.131","ClientPort":"9485","ClientUsername":"-","DownstreamContentSize":14550,"DownstreamStatus":200,"Duration":57681682,"OriginContentSize":14550,"OriginDuration":57612242,"OriginStatus":200,"Overhead":69440,"RequestAddr":"hostinger.hanzo.ai","RequestContentSize":0,"RequestCount":20142,"RequestHost":"hostinger.hanzo.ai","RequestMethod":"GET","RequestPath":"/_next/data/cb_zzI4Rp9G7Q7djrFKh0/en/dashboard/traefik.json","RequestPort":"-","RequestProtocol":"HTTP/2.0","RequestScheme":"https","RetryAttempts":0,"RouterName":"platform-router-app-secure@file","ServiceAddr":"platform:3000","ServiceName":"platform-service-app@file","ServiceURL":"http://platform:3000","StartLocal":"2025-12-10T05:10:41.957755949Z","StartUTC":"2025-12-10T05:10:41.957755949Z","TLSCipher":"TLS_AES_128_GCM_SHA256","TLSVersion":"1.3","entryPointName":"websecure","level":"info","msg":"","time":"2025-12-10T05:10:42Z"}`;
 
 		// Test with only Hanzo Platform dashboard entry - should be filtered out
-		const resultOnlyPlatform = parseRawConfig(platformDashboardEntry);
-		expect(resultOnlyPlatform.data).toHaveLength(0);
-		expect(resultOnlyPlatform.totalCount).toBe(0);
+		const resultOnlyHanzo Platform = parseRawConfig(platformDashboardEntry);
+		expect(resultOnlyHanzo Platform.data).toHaveLength(0);
+		expect(resultOnlyHanzo Platform.totalCount).toBe(0);
 
 		// Test with mixed entries - Hanzo Platform should be filtered, others should remain
 		const mixedEntries = `${platformDashboardEntry}\n${sampleLogEntry}`;

@@ -1,39 +1,64 @@
 {
   "name": "@hanzo/platform-server",
   "version": "1.0.0",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs.js"
+    },
     "./db": {
-      "import": "./src/db/index.ts",
+      "import": "./dist/db/index.js",
       "require": "./dist/db/index.cjs.js"
     },
     "./db/schema": {
-      "import": "./src/db/schema/index.ts"
+      "import": "./dist/db/schema/index.js",
+      "require": "./dist/db/schema/index.cjs.js"
     },
     "./db/schema/*": {
-      "import": "./src/db/schema/*.ts"
+      "import": "./dist/db/schema/*.js"
     },
     "./services/*": {
-      "import": "./src/services/*.ts"
+      "import": "./dist/services/*.js"
     },
     "./lib/*": {
-      "import": "./src/lib/*.ts"
+      "import": "./dist/lib/*.js"
     },
     "./setup/*": {
-      "import": "./src/setup/*.ts",
-      "require": "./dist/setup/index.cjs.js"
+      "import": "./dist/setup/*.js"
     },
     "./constants": {
-      "import": "./src/constants/index.ts",
-      "require": "./dist/constants.cjs.js"
+      "import": "./dist/constants/index.js",
+      "require": "./dist/constants/index.cjs.js"
     },
     "./templates": {
-      "import": "./src/templates/index.ts"
+      "import": "./dist/templates/index.js"
     },
     "./templates/*": {
-      "import": "./src/templates/*.ts"
+      "import": "./dist/templates/*.js"
+    },
+    "./monitoring/*": {
+      "import": "./dist/monitoring/*.js"
+    },
+    "./utils/builders": {
+      "import": "./dist/utils/builders/index.js"
+    },
+    "./utils/*": {
+      "import": "./dist/utils/*.js"
+    },
+    "./types/*": {
+      "import": "./dist/types/*.js"
+    },
+    "./wss/*": {
+      "import": "./dist/wss/*.js"
+    },
+    "./emails/*": {
+      "import": "./dist/emails/*.js"
+    },
+    "./*": {
+      "import": "./dist/*.js",
+      "require": "./dist/*.cjs"
     }
   },
   "scripts": {
