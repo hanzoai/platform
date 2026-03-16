@@ -114,7 +114,7 @@ export function ScalePoolDialog({
 	const scaleUpMutation = api.digitalocean.scaleUp.useMutation({
 		onSuccess: (data) => {
 			toast.success(`Scaling operation started. Job ID: ${data.jobId}`);
-			utils.digitalocean.listPoolDroplets.invalidate({ poolId });
+			utils.digitalocean.listPoolInstances.invalidate({ poolId });
 			utils.digitalocean.listScalingJobs.invalidate({ poolId });
 			setOpen(false);
 			onScaleStart?.();
@@ -127,7 +127,7 @@ export function ScalePoolDialog({
 	const scaleDownMutation = api.digitalocean.scaleDown.useMutation({
 		onSuccess: (data) => {
 			toast.success(`Scale down started. Job ID: ${data.jobId}`);
-			utils.digitalocean.listPoolDroplets.invalidate({ poolId });
+			utils.digitalocean.listPoolInstances.invalidate({ poolId });
 			utils.digitalocean.listScalingJobs.invalidate({ poolId });
 			setOpen(false);
 			onScaleStart?.();
@@ -266,13 +266,13 @@ export function ScalePoolDialog({
 						{/* Scale Up Options */}
 						{direction === "up" && (
 							<>
-								{/* Droplet Size */}
+								{/* Instance Size */}
 								<FormField
 									control={form.control}
 									name="size"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Droplet Size</FormLabel>
+											<FormLabel>Instance Size</FormLabel>
 											<Select
 												onValueChange={field.onChange}
 												defaultValue={field.value}

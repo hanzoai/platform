@@ -7,8 +7,8 @@
  *
  * Architecture:
  * - Organization -> has multiple CloudProviders (credentials)
- * - CloudProvider -> provisions ProvisionedDroplets
- * - ProvisionedDroplet -> links to ComputeNode (from compute-pool.ts)
+ * - CloudProvider -> provisions ProvisionedInstances
+ * - ProvisionedInstance -> links to ComputeNode (from compute-pool.ts)
  */
 
 import { relations, sql } from "drizzle-orm";
@@ -42,15 +42,15 @@ export const cloudProviderType = pgEnum("cloud_provider_type", [
 	"linode",
 ]);
 
-export const dropletStatus = pgEnum("droplet_status", [
-	"pending",       // Record created, awaiting DO API call
-	"provisioning",  // DO is creating the droplet
-	"booting",       // Droplet created, running cloud-init
+export const instanceStatus = pgEnum("instance_status", [
+	"pending",       // Record created, awaiting API call
+	"provisioning",  // Provider is creating the instance
+	"booting",       // Instance created, running cloud-init
 	"registering",   // Node is registering with Platform
 	"running",       // Fully operational
 	"draining",      // Workloads being migrated off
 	"stopping",      // Shutting down
-	"terminated",    // Deleted from DO
+	"terminated",    // Deleted from provider
 	"failed",        // Provisioning failed
 ]);
 
@@ -127,13 +127,13 @@ export const cloudProvider = pgTable(
 );
 
 // ============================================================================
-// Provisioned Droplet (Cloud Instance Tracking)
+// Provisioned Instance (Cloud Instance Tracking)
 // ============================================================================
 
-export const provisionedDroplet = pgTable(
-	"provisioned_droplet",
+export const provisionedInstance = pgTable(
+	"provisioned_instance",
 	{
-		dropletId: text("droplet_id")
+		instanceId: text("instance_id")
 			.primaryKey()
 			.$defaultFn(() => nanoid()),
 
@@ -142,7 +142,7 @@ export const provisionedDroplet = pgTable(
 			.notNull()
 			.references(() => cloudProvider.providerId, { onDelete: "cascade" }),
 
-		// Pool reference (optional - some droplets may be standalone)
+		// Pool reference (optional - some instances may be standalone)
 		poolId: text("pool_id")
 			.references(() => computePool.poolId, { onDelete: "set null" }),
 
@@ -161,7 +161,7 @@ export const provisionedDroplet = pgTable(
 		vpcId: text("vpc_id"),
 
 		// Status
-		status: dropletStatus("status").notNull().default("pending"),
+		status: instanceStatus("status").notNull().default("pending"),
 
 		// Networking
 		publicIp: text("public_ip"),
@@ -203,11 +203,11 @@ export const provisionedDroplet = pgTable(
 		terminatedAt: timestamp("terminated_at", { withTimezone: true }),
 	},
 	(table) => ({
-		providerIdx: index("idx_provisioned_droplet_provider").on(table.cloudProviderId),
-		poolIdx: index("idx_provisioned_droplet_pool").on(table.poolId),
-		nodeIdx: index("idx_provisioned_droplet_node").on(table.computeNodeId),
-		statusIdx: index("idx_provisioned_droplet_status").on(table.status),
-		externalIdx: index("idx_provisioned_droplet_external").on(table.externalId),
+		providerIdx: index("idx_provisioned_instance_provider").on(table.cloudProviderId),
+		poolIdx: index("idx_provisioned_instance_pool").on(table.poolId),
+		nodeIdx: index("idx_provisioned_instance_node").on(table.computeNodeId),
+		statusIdx: index("idx_provisioned_instance_status").on(table.status),
+		externalIdx: index("idx_provisioned_instance_external").on(table.externalId),
 	}),
 );
 
@@ -281,21 +281,21 @@ export const cloudProviderRelations = relations(cloudProvider, ({ one, many }) =
 		fields: [cloudProvider.organizationId],
 		references: [organization.id],
 	}),
-	droplets: many(provisionedDroplet),
+	instances: many(provisionedInstance),
 	scalingJobs: many(scalingJob),
 }));
 
-export const provisionedDropletRelations = relations(provisionedDroplet, ({ one }) => ({
+export const provisionedInstanceRelations = relations(provisionedInstance, ({ one }) => ({
 	cloudProvider: one(cloudProvider, {
-		fields: [provisionedDroplet.cloudProviderId],
+		fields: [provisionedInstance.cloudProviderId],
 		references: [cloudProvider.providerId],
 	}),
 	pool: one(computePool, {
-		fields: [provisionedDroplet.poolId],
+		fields: [provisionedInstance.poolId],
 		references: [computePool.poolId],
 	}),
 	computeNode: one(computeNode, {
-		fields: [provisionedDroplet.computeNodeId],
+		fields: [provisionedInstance.computeNodeId],
 		references: [computeNode.nodeId],
 	}),
 }));
@@ -363,8 +363,8 @@ export const apiScaleDown = z.object({
 	nodeIds: z.array(z.string()).optional(), // Specific nodes to remove
 });
 
-export const apiResizeDroplet = z.object({
-	dropletId: z.string().min(1),
+export const apiResizeInstance = z.object({
+	instanceId: z.string().min(1),
 	newSize: z.string().min(1),
 	resizeDisk: z.boolean().default(false),
 });
@@ -375,8 +375,8 @@ export const apiDrainNode = z.object({
 	timeoutSeconds: z.number().int().min(30).max(600).default(300),
 });
 
-export const apiRemoveDroplet = z.object({
-	dropletId: z.string().min(1),
+export const apiRemoveInstance = z.object({
+	instanceId: z.string().min(1),
 	force: z.boolean().default(false),
 });
 
@@ -395,7 +395,7 @@ export const apiRegisterNode = z.object({
 
 export type CloudProvider = typeof cloudProvider.$inferSelect;
 export type NewCloudProvider = typeof cloudProvider.$inferInsert;
-export type ProvisionedDroplet = typeof provisionedDroplet.$inferSelect;
-export type NewProvisionedDroplet = typeof provisionedDroplet.$inferInsert;
+export type ProvisionedInstance = typeof provisionedInstance.$inferSelect;
+export type NewProvisionedInstance = typeof provisionedInstance.$inferInsert;
 export type ScalingJob = typeof scalingJob.$inferSelect;
 export type NewScalingJob = typeof scalingJob.$inferInsert;
