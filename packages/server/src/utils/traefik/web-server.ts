@@ -43,7 +43,7 @@ export const updateServerTraefik = (
 			loadBalancer: {
 				servers: [
 					{
-						url: `http://hanzo:${process.env.PORT || 3000}`,
+						url: `http://platform:${process.env.PORT || 3000}`,
 					},
 				],
 				passHostHeader: true,
