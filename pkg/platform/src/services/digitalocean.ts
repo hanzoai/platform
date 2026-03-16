@@ -6,7 +6,7 @@
  * for Platform's multi-cloud architecture.
  *
  * Features:
- * - Droplet lifecycle management (create, delete, resize)
+ * - Instance lifecycle management (create, delete, resize)
  * - Firewall management
  * - Load balancer integration
  * - VPC/private networking
@@ -16,10 +16,10 @@
 import { db } from "@hanzo/platform/db";
 import {
 	cloudProvider,
-	provisionedDroplet,
+	provisionedInstance,
 	scalingJob,
 	type CloudProvider,
-	type ProvisionedDroplet,
+	type ProvisionedInstance,
 } from "@hanzo/platform/db/schema/cloud-provider";
 import {
 	computeNode,
@@ -169,7 +169,7 @@ class DigitalOceanClient {
 		return this.request<{ account: { email: string; status: string } }>("/account");
 	}
 
-	// Droplets
+	// Droplets (DO API uses "droplet" terminology)
 	async createDroplet(data: DropletCreateRequest) {
 		return this.request<{ droplet: DropletResponse }>("/droplets", {
 			method: "POST",
@@ -414,9 +414,9 @@ export async function configureDigitalOceanProvider(
 }
 
 /**
- * List available droplet sizes
+ * List available instance sizes
  */
-export async function listDropletSizes(
+export async function listInstanceSizes(
 	providerId: string,
 	region?: string
 ): Promise<DOSize[]> {
@@ -440,9 +440,9 @@ export async function listRegions(providerId: string): Promise<DORegion[]> {
 }
 
 /**
- * Create a new droplet
+ * Create a new instance
  */
-export async function createDroplet(
+export async function createInstance(
 	providerId: string,
 	config: {
 		poolId: string;
@@ -471,8 +471,8 @@ export async function createDroplet(
 	const registrationToken = nanoid(32);
 	const registrationExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-	// Get droplet specs for database record
-	const specs = getDropletSpecs(config.size);
+	// Get instance specs for database record
+	const specs = getInstanceSpecs(config.size);
 
 	// Build tags (nodeId added after insert)
 	const baseTags = [
@@ -522,7 +522,7 @@ export async function createDroplet(
 		platformApiUrl: process.env.PLATFORM_API_URL || "https://platform.hanzo.ai",
 	});
 
-	// Create droplet via DO API
+	// Create instance via DO API
 	const { droplet } = await client.createDroplet({
 		name: config.name,
 		region: config.region,
@@ -540,7 +540,7 @@ export async function createDroplet(
 	const publicIp = droplet.networks.v4.find((n) => n.type === "public")?.ip_address;
 	const privateIp = droplet.networks.v4.find((n) => n.type === "private")?.ip_address;
 
-	// Update compute node with IP and create provisioned droplet record
+	// Update compute node with IP and create provisioned instance record
 	await db.transaction(async (tx) => {
 		// Update compute node with IP
 		await tx
@@ -551,8 +551,8 @@ export async function createDroplet(
 			} as any)
 			.where(eq(computeNode.nodeId, nodeId));
 
-		// Create provisioned droplet record - let Drizzle generate dropletId
-		await tx.insert(provisionedDroplet).values({
+		// Create provisioned instance record - let Drizzle generate instanceId
+		await tx.insert(provisionedInstance).values({
 			cloudProviderId: providerId,
 			poolId: config.poolId,
 			computeNodeId: nodeId,
@@ -581,7 +581,7 @@ export async function createDroplet(
 		try {
 			await client.addDropletsToFirewall(provider.firewallId, [droplet.id]);
 		} catch (error) {
-			console.error("Failed to add droplet to firewall:", error);
+			console.error("Failed to add instance to firewall:", error);
 		}
 	}
 
@@ -589,81 +589,81 @@ export async function createDroplet(
 }
 
 /**
- * Delete a droplet
+ * Delete an instance
  */
-export async function deleteDroplet(
-	dropletId: string,
+export async function deleteInstance(
+	instanceId: string,
 	force: boolean = false
 ): Promise<void> {
-	const droplet = await db.query.provisionedDroplet.findFirst({
-		where: eq(provisionedDroplet.dropletId, dropletId),
+	const instance = await db.query.provisionedInstance.findFirst({
+		where: eq(provisionedInstance.instanceId, instanceId),
 		with: { cloudProvider: true },
 	});
 
-	if (!droplet) {
-		throw new TRPCError({ code: "NOT_FOUND", message: "Droplet not found" });
+	if (!instance) {
+		throw new TRPCError({ code: "NOT_FOUND", message: "Instance not found" });
 	}
 
 	// Drain node first unless force=true
-	if (!force && droplet.computeNodeId && droplet.status === "running") {
-		await drainNode(droplet.computeNodeId, false);
+	if (!force && instance.computeNodeId && instance.status === "running") {
+		await drainNode(instance.computeNodeId, false);
 	}
 
 	// Delete from DO
-	if (droplet.externalId) {
-		const client = await getClient(droplet.cloudProviderId);
+	if (instance.externalId) {
+		const client = await getClient(instance.cloudProviderId);
 		try {
-			await client.deleteDroplet(parseInt(droplet.externalId));
+			await client.deleteDroplet(parseInt(instance.externalId));
 		} catch (error) {
-			console.error("Failed to delete droplet from DO:", error);
+			console.error("Failed to delete instance from provider:", error);
 			if (!force) throw error;
 		}
 	}
 
 	// Update database
 	await db.transaction(async (tx) => {
-		// Update droplet record
+		// Update instance record
 		await tx
-			.update(provisionedDroplet)
+			.update(provisionedInstance)
 			.set({
 				status: "terminated",
 				terminatedAt: new Date(),
 				updatedAt: new Date(),
 			} as any)
-			.where(eq(provisionedDroplet.dropletId, dropletId));
+			.where(eq(provisionedInstance.instanceId, instanceId));
 
 		// Delete compute node record if exists
-		if (droplet.computeNodeId) {
+		if (instance.computeNodeId) {
 			await tx
 				.delete(computeNode)
-				.where(eq(computeNode.nodeId, droplet.computeNodeId));
+				.where(eq(computeNode.nodeId, instance.computeNodeId));
 		}
 	});
 
 	// Recalculate pool capacity
-	if (droplet.poolId) {
-		await recalculatePoolCapacity(droplet.poolId);
+	if (instance.poolId) {
+		await recalculatePoolCapacity(instance.poolId);
 	}
 }
 
 /**
- * Resize a droplet
+ * Resize an instance
  */
-export async function resizeDroplet(config: {
-	dropletId: string;
+export async function resizeInstance(config: {
+	instanceId: string;
 	newSize: string;
 	resizeDisk: boolean;
 }): Promise<void> {
-	const droplet = await db.query.provisionedDroplet.findFirst({
-		where: eq(provisionedDroplet.dropletId, config.dropletId),
+	const instance = await db.query.provisionedInstance.findFirst({
+		where: eq(provisionedInstance.instanceId, config.instanceId),
 	});
 
-	if (!droplet || !droplet.externalId) {
-		throw new TRPCError({ code: "NOT_FOUND", message: "Droplet not found" });
+	if (!instance || !instance.externalId) {
+		throw new TRPCError({ code: "NOT_FOUND", message: "Instance not found" });
 	}
 
-	const client = await getClient(droplet.cloudProviderId);
-	const doDropletId = parseInt(droplet.externalId);
+	const client = await getClient(instance.cloudProviderId);
+	const doDropletId = parseInt(instance.externalId);
 
 	// Power off first (required for resize)
 	await client.dropletAction(doDropletId, { type: "power_off" });
@@ -682,36 +682,36 @@ export async function resizeDroplet(config: {
 	await waitForDropletStatus(client, doDropletId, "active", 120);
 
 	// Update database
-	const specs = getDropletSpecs(config.newSize);
+	const specs = getInstanceSpecs(config.newSize);
 
 	await db.transaction(async (tx) => {
 		await tx
-			.update(provisionedDroplet)
+			.update(provisionedInstance)
 			.set({
 				size: config.newSize,
 				cpuCores: specs.cpuCores,
 				memoryMb: specs.memoryMb,
-				storageGb: config.resizeDisk ? specs.storageGb : droplet.storageGb,
+				storageGb: config.resizeDisk ? specs.storageGb : instance.storageGb,
 				updatedAt: new Date(),
 			} as any)
-			.where(eq(provisionedDroplet.dropletId, config.dropletId));
+			.where(eq(provisionedInstance.instanceId, config.instanceId));
 
-		if (droplet.computeNodeId) {
+		if (instance.computeNodeId) {
 			await tx
 				.update(computeNode)
 				.set({
 					cpuCores: specs.cpuCores,
 					memoryMb: specs.memoryMb,
-					storageGb: config.resizeDisk ? specs.storageGb : droplet.storageGb,
+					storageGb: config.resizeDisk ? specs.storageGb : instance.storageGb,
 					updatedAt: new Date(),
 				} as any)
-				.where(eq(computeNode.nodeId, droplet.computeNodeId));
+				.where(eq(computeNode.nodeId, instance.computeNodeId));
 		}
 	});
 
 	// Recalculate pool capacity
-	if (droplet.poolId) {
-		await recalculatePoolCapacity(droplet.poolId);
+	if (instance.poolId) {
+		await recalculatePoolCapacity(instance.poolId);
 	}
 }
 
@@ -756,7 +756,7 @@ export async function scaleUpPool(
 
 	const jobId = job.jobId;
 
-	// Create droplets (batch to avoid rate limits)
+	// Create instances (batch to avoid rate limits)
 	const batchSize = 5;
 	for (let i = 0; i < config.count; i += batchSize) {
 		const batchPromises = [];
@@ -765,7 +765,7 @@ export async function scaleUpPool(
 		for (let j = i; j < batchEnd; j++) {
 			const name = `platform-${config.poolId.slice(0, 8)}-${nanoid(6)}`;
 			batchPromises.push(
-				createDroplet(config.providerId, {
+				createInstance(config.providerId, {
 					poolId: config.poolId,
 					name,
 					size: config.size,
@@ -820,14 +820,14 @@ export async function scaleDownPool(
 	const removedNodeIds: string[] = [];
 
 	// Get nodes to remove
-	let nodesToRemove: ProvisionedDroplet[];
+	let nodesToRemove: ProvisionedInstance[];
 
 	if (config.nodeIds && config.nodeIds.length > 0) {
 		// Specific nodes requested
-		nodesToRemove = await db.query.provisionedDroplet.findMany({
+		nodesToRemove = await db.query.provisionedInstance.findMany({
 			where: and(
-				eq(provisionedDroplet.poolId, config.poolId),
-				sql`${provisionedDroplet.computeNodeId} = ANY(${config.nodeIds})`
+				eq(provisionedInstance.poolId, config.poolId),
+				sql`${provisionedInstance.computeNodeId} = ANY(${config.nodeIds})`
 			),
 		});
 	} else {
@@ -835,20 +835,20 @@ export async function scaleDownPool(
 		let orderBy;
 		switch (config.strategy) {
 			case "newest":
-				orderBy = desc(provisionedDroplet.createdAt);
+				orderBy = desc(provisionedInstance.createdAt);
 				break;
 			case "least-utilized":
 				// Would need to join with compute_node and sort by utilization
-				orderBy = provisionedDroplet.createdAt;
+				orderBy = provisionedInstance.createdAt;
 				break;
 			default: // oldest
-				orderBy = provisionedDroplet.createdAt;
+				orderBy = provisionedInstance.createdAt;
 		}
 
-		nodesToRemove = await db.query.provisionedDroplet.findMany({
+		nodesToRemove = await db.query.provisionedInstance.findMany({
 			where: and(
-				eq(provisionedDroplet.poolId, config.poolId),
-				eq(provisionedDroplet.status, "running")
+				eq(provisionedInstance.poolId, config.poolId),
+				eq(provisionedInstance.status, "running")
 			),
 			orderBy,
 			limit: config.count,
@@ -879,14 +879,14 @@ export async function scaleDownPool(
 	const jobId = scaleDownJob.jobId;
 
 	// Remove nodes
-	for (const droplet of nodesToRemove) {
+	for (const instance of nodesToRemove) {
 		try {
-			await deleteDroplet(droplet.dropletId, false);
-			if (droplet.computeNodeId) {
-				removedNodeIds.push(droplet.computeNodeId);
+			await deleteInstance(instance.instanceId, false);
+			if (instance.computeNodeId) {
+				removedNodeIds.push(instance.computeNodeId);
 			}
 		} catch (error) {
-			console.error(`Failed to remove droplet ${droplet.dropletId}:`, error);
+			console.error(`Failed to remove instance ${instance.instanceId}:`, error);
 		}
 
 		// Update progress
@@ -958,15 +958,15 @@ export async function registerNode(
 		dockerNodeId?: string;
 	}
 ): Promise<void> {
-	// Find the droplet record
-	const droplet = await db.query.provisionedDroplet.findFirst({
+	// Find the instance record
+	const instance = await db.query.provisionedInstance.findFirst({
 		where: and(
-			eq(provisionedDroplet.computeNodeId, nodeId),
-			eq(provisionedDroplet.registrationToken, registrationToken)
+			eq(provisionedInstance.computeNodeId, nodeId),
+			eq(provisionedInstance.registrationToken, registrationToken)
 		),
 	});
 
-	if (!droplet) {
+	if (!instance) {
 		throw new TRPCError({
 			code: "UNAUTHORIZED",
 			message: "Invalid registration token or node ID",
@@ -974,7 +974,7 @@ export async function registerNode(
 	}
 
 	// Check token expiry
-	if (droplet.registrationExpiry && new Date() > droplet.registrationExpiry) {
+	if (instance.registrationExpiry && new Date() > instance.registrationExpiry) {
 		throw new TRPCError({
 			code: "UNAUTHORIZED",
 			message: "Registration token expired",
@@ -984,7 +984,7 @@ export async function registerNode(
 	// Update records
 	await db.transaction(async (tx) => {
 		await tx
-			.update(provisionedDroplet)
+			.update(provisionedInstance)
 			.set({
 				status: "running",
 				publicIp: data.publicIp,
@@ -993,7 +993,7 @@ export async function registerNode(
 				registeredAt: new Date(),
 				updatedAt: new Date(),
 			} as any)
-			.where(eq(provisionedDroplet.dropletId, droplet.dropletId));
+			.where(eq(provisionedInstance.instanceId, instance.instanceId));
 
 		await tx
 			.update(computeNode)
@@ -1009,8 +1009,8 @@ export async function registerNode(
 	});
 
 	// Recalculate pool capacity
-	if (droplet.poolId) {
-		await recalculatePoolCapacity(droplet.poolId);
+	if (instance.poolId) {
+		await recalculatePoolCapacity(instance.poolId);
 	}
 }
 
@@ -1074,15 +1074,15 @@ export async function createPoolLoadBalancer(
 ): Promise<string> {
 	const client = await getClient(providerId);
 
-	// Get all running droplets in pool
-	const droplets = await db.query.provisionedDroplet.findMany({
+	// Get all running instances in pool
+	const instances = await db.query.provisionedInstance.findMany({
 		where: and(
-			eq(provisionedDroplet.poolId, poolId),
-			eq(provisionedDroplet.status, "running")
+			eq(provisionedInstance.poolId, poolId),
+			eq(provisionedInstance.status, "running")
 		),
 	});
 
-	const dropletIds = droplets
+	const dropletIds = instances
 		.filter((d) => d.externalId)
 		.map((d) => parseInt(d.externalId!));
 
@@ -1122,15 +1122,15 @@ export async function createPoolLoadBalancer(
 }
 
 /**
- * List droplets in a pool
+ * List instances in a pool
  */
-export async function listPoolDroplets(poolId: string): Promise<ProvisionedDroplet[]> {
-	return db.query.provisionedDroplet.findMany({
-		where: eq(provisionedDroplet.poolId, poolId),
+export async function listPoolInstances(poolId: string): Promise<ProvisionedInstance[]> {
+	return db.query.provisionedInstance.findMany({
+		where: eq(provisionedInstance.poolId, poolId),
 		with: {
 			computeNode: true,
 		},
-		orderBy: desc(provisionedDroplet.createdAt),
+		orderBy: desc(provisionedInstance.createdAt),
 	});
 }
 
@@ -1142,6 +1142,21 @@ export async function getScalingJobStatus(jobId: string) {
 		where: eq(scalingJob.jobId, jobId),
 	});
 }
+
+// ============================================================================
+// Backward Compatibility Aliases
+// ============================================================================
+
+/** @deprecated Use createInstance */
+export const createDroplet = createInstance;
+/** @deprecated Use deleteInstance */
+export const deleteDroplet = deleteInstance;
+/** @deprecated Use resizeInstance */
+export const resizeDroplet = resizeInstance;
+/** @deprecated Use listPoolInstances */
+export const listPoolDroplets = listPoolInstances;
+/** @deprecated Use listInstanceSizes */
+export const listDropletSizes = listInstanceSizes;
 
 // ============================================================================
 // Helper Functions
@@ -1207,7 +1222,7 @@ runcmd:
 final_message: "Platform node bootstrap complete"`;
 }
 
-function getDropletSpecs(size: string): {
+function getInstanceSpecs(size: string): {
 	cpuCores: number;
 	memoryMb: number;
 	storageGb: number;
@@ -1249,7 +1264,7 @@ async function waitForDropletStatus(
 		await new Promise((resolve) => setTimeout(resolve, pollInterval));
 	}
 
-	throw new Error(`Timeout waiting for droplet ${dropletId} to reach status ${targetStatus}`);
+	throw new Error(`Timeout waiting for instance ${dropletId} to reach status ${targetStatus}`);
 }
 
 async function recalculatePoolCapacity(poolId: string): Promise<void> {
