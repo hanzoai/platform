@@ -162,8 +162,8 @@ export const readMonitoringConfig = async (readAll = false) => {
 						trimmed.endsWith("}")
 					) {
 						const log = JSON.parse(trimmed);
-						// Exclude Hanzo service app and Dashboard requests
-						if (log.ServiceName !== "hanzo-service-app@file") {
+						// Exclude Hanzo Platform service app and Dashboard requests
+						if (log.ServiceName !== "platform-service-app@file") {
 							content += `${line}\n`;
 							validCount++;
 							if (validCount >= 500) {
