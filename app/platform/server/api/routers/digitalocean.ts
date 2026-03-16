@@ -3,7 +3,7 @@
  *
  * Provides API endpoints for managing DigitalOcean cloud resources:
  * - Provider configuration and credentials
- * - Droplet lifecycle management
+ * - Instance lifecycle management
  * - Scaling operations (scale up/down)
  * - Firewall and load balancer management
  * - Real-time status monitoring
@@ -19,28 +19,28 @@ import {
 	apiConfigureCloudProvider,
 	apiDrainNode,
 	apiRegisterNode,
-	apiRemoveDroplet,
-	apiResizeDroplet,
+	apiRemoveInstance,
+	apiResizeInstance,
 	apiScaleDown,
 	apiScaleUp,
 	apiUpdateCloudProvider,
 	cloudProvider,
-	provisionedDroplet,
+	provisionedInstance,
 	scalingJob,
 } from "@/server/db/schema";
 import {
 	configureDigitalOceanProvider,
-	createDroplet,
+	createInstance,
 	createPoolFirewall,
 	createPoolLoadBalancer,
-	deleteDroplet,
+	deleteInstance,
 	drainNode,
 	getScalingJobStatus,
-	listDropletSizes,
-	listPoolDroplets,
+	listInstanceSizes,
+	listPoolInstances,
 	listRegions,
 	registerNode,
-	resizeDroplet,
+	resizeInstance,
 	scaleDownPool,
 	scaleUpPool,
 } from "@hanzo/platform/services/digitalocean";
@@ -209,18 +209,18 @@ export const digitaloceanRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			await verifyProviderOwnership(input.providerId, ctx.session.activeOrganizationId);
 
-			// Check for active droplets
-			const activeDroplets = await db.query.provisionedDroplet.findMany({
+			// Check for active instances
+			const activeInstances = await db.query.provisionedInstance.findMany({
 				where: and(
-					eq(provisionedDroplet.cloudProviderId, input.providerId),
-					eq(provisionedDroplet.status, "running")
+					eq(provisionedInstance.cloudProviderId, input.providerId),
+					eq(provisionedInstance.status, "running")
 				),
 			});
 
-			if (activeDroplets.length > 0) {
+			if (activeInstances.length > 0) {
 				throw new TRPCError({
 					code: "BAD_REQUEST",
-					message: `Cannot delete provider with ${activeDroplets.length} active droplets`,
+					message: `Cannot delete provider with ${activeInstances.length} active instances`,
 				});
 			}
 
@@ -236,7 +236,7 @@ export const digitaloceanRouter = createTRPCRouter({
 	// ========================================================================
 
 	/**
-	 * List available droplet sizes
+	 * List available instance sizes
 	 */
 	listSizes: protectedProcedure
 		.input(
@@ -247,7 +247,7 @@ export const digitaloceanRouter = createTRPCRouter({
 		)
 		.query(async ({ ctx, input }) => {
 			await verifyProviderOwnership(input.providerId, ctx.session.activeOrganizationId);
-			return listDropletSizes(input.providerId, input.region);
+			return listInstanceSizes(input.providerId, input.region);
 		}),
 
 	/**
@@ -303,28 +303,28 @@ export const digitaloceanRouter = createTRPCRouter({
 		}),
 
 	/**
-	 * Resize a specific droplet
+	 * Resize a specific instance
 	 */
-	resizeDroplet: protectedProcedure
-		.input(apiResizeDroplet)
+	resizeInstance: protectedProcedure
+		.input(apiResizeInstance)
 		.mutation(async ({ ctx, input }) => {
-			// Verify ownership through droplet -> provider -> organization chain
-			const droplet = await db.query.provisionedDroplet.findFirst({
-				where: eq(provisionedDroplet.dropletId, input.dropletId),
+			// Verify ownership through instance -> provider -> organization chain
+			const instance = await db.query.provisionedInstance.findFirst({
+				where: eq(provisionedInstance.instanceId, input.instanceId),
 				with: { cloudProvider: true },
 			});
 
-			if (!droplet) {
-				throw new TRPCError({ code: "NOT_FOUND", message: "Droplet not found" });
+			if (!instance) {
+				throw new TRPCError({ code: "NOT_FOUND", message: "Instance not found" });
 			}
 
-			if (droplet.cloudProvider.organizationId !== ctx.session.activeOrganizationId) {
+			if (instance.cloudProvider.organizationId !== ctx.session.activeOrganizationId) {
 				throw new TRPCError({ code: "UNAUTHORIZED" });
 			}
 
 			// Assert required fields after validation
-			await resizeDroplet({
-				dropletId: input.dropletId,
+			await resizeInstance({
+				instanceId: input.instanceId,
 				newSize: input.newSize,
 				resizeDisk: input.resizeDisk ?? false,
 			});
@@ -357,25 +357,25 @@ export const digitaloceanRouter = createTRPCRouter({
 		}),
 
 	/**
-	 * Remove a specific droplet
+	 * Remove a specific instance
 	 */
-	removeDroplet: protectedProcedure
-		.input(apiRemoveDroplet)
+	removeInstance: protectedProcedure
+		.input(apiRemoveInstance)
 		.mutation(async ({ ctx, input }) => {
-			const droplet = await db.query.provisionedDroplet.findFirst({
-				where: eq(provisionedDroplet.dropletId, input.dropletId),
+			const instance = await db.query.provisionedInstance.findFirst({
+				where: eq(provisionedInstance.instanceId, input.instanceId),
 				with: { cloudProvider: true },
 			});
 
-			if (!droplet) {
-				throw new TRPCError({ code: "NOT_FOUND", message: "Droplet not found" });
+			if (!instance) {
+				throw new TRPCError({ code: "NOT_FOUND", message: "Instance not found" });
 			}
 
-			if (droplet.cloudProvider.organizationId !== ctx.session.activeOrganizationId) {
+			if (instance.cloudProvider.organizationId !== ctx.session.activeOrganizationId) {
 				throw new TRPCError({ code: "UNAUTHORIZED" });
 			}
 
-			await deleteDroplet(input.dropletId, input.force);
+			await deleteInstance(input.instanceId, input.force);
 			return { success: true };
 		}),
 
@@ -384,13 +384,13 @@ export const digitaloceanRouter = createTRPCRouter({
 	// ========================================================================
 
 	/**
-	 * List all droplets in a pool
+	 * List all instances in a pool
 	 */
-	listPoolDroplets: protectedProcedure
+	listPoolInstances: protectedProcedure
 		.input(z.object({ poolId: z.string() }))
 		.query(async ({ ctx, input }) => {
 			await verifyPoolOwnership(input.poolId, ctx.session.activeOrganizationId);
-			return listPoolDroplets(input.poolId);
+			return listPoolInstances(input.poolId);
 		}),
 
 	/**
@@ -437,13 +437,13 @@ export const digitaloceanRouter = createTRPCRouter({
 			// Poll for changes every 5 seconds
 			// In production, this would use Redis pub/sub or similar
 			while (true) {
-				const droplets = await listPoolDroplets(input.poolId);
+				const instances = await listPoolInstances(input.poolId);
 				yield {
 					type: "status_update",
 					poolId: input.poolId,
-					droplets: droplets.map((d) => {
+					instances: instances.map((d) => {
 						// Type assertion for Drizzle's `with` clause result
-						const dropletWithRelation = d as typeof d & {
+						const instanceWithRelation = d as typeof d & {
 							computeNode?: {
 								status: string;
 								cpuUtilizationPercent: string | null;
@@ -451,14 +451,14 @@ export const digitaloceanRouter = createTRPCRouter({
 							} | null;
 						};
 						return {
-							dropletId: d.dropletId,
+							instanceId: d.instanceId,
 							status: d.status,
 							publicIp: d.publicIp,
-							computeNode: dropletWithRelation.computeNode
+							computeNode: instanceWithRelation.computeNode
 								? {
-										status: dropletWithRelation.computeNode.status,
-										cpuUtilization: dropletWithRelation.computeNode.cpuUtilizationPercent,
-										memoryUtilization: dropletWithRelation.computeNode.memoryUtilizationPercent,
+										status: instanceWithRelation.computeNode.status,
+										cpuUtilization: instanceWithRelation.computeNode.cpuUtilizationPercent,
+										memoryUtilization: instanceWithRelation.computeNode.memoryUtilizationPercent,
 								  }
 								: null,
 						};
@@ -565,14 +565,14 @@ export const digitaloceanRouter = createTRPCRouter({
 		)
 		.query(async ({ input }) => {
 			// Verify registration token
-			const droplet = await db.query.provisionedDroplet.findFirst({
+			const instance = await db.query.provisionedInstance.findFirst({
 				where: and(
-					eq(provisionedDroplet.poolId, input.poolId),
-					eq(provisionedDroplet.registrationToken, input.registrationToken)
+					eq(provisionedInstance.poolId, input.poolId),
+					eq(provisionedInstance.registrationToken, input.registrationToken)
 				),
 			});
 
-			if (!droplet) {
+			if (!instance) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "Invalid registration token",
@@ -582,7 +582,7 @@ export const digitaloceanRouter = createTRPCRouter({
 			// In production, fetch the actual swarm join token from the pool manager
 			// For now, return a placeholder
 			return {
-				token: droplet.swarmJoinToken || "SWMTKN-placeholder",
+				token: instance.swarmJoinToken || "SWMTKN-placeholder",
 			};
 		}),
 });
