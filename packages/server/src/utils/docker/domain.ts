@@ -204,27 +204,27 @@ export const addDomainToCompose = async (
 			labels.unshift(...httpLabels);
 			if (!compose.isolatedDeployment) {
 				if (compose.composeType === "docker-compose") {
-					if (!labels.includes("traefik.docker.network=hanzo-network")) {
-						labels.unshift("traefik.docker.network=hanzo-network");
+					if (!labels.includes("traefik.docker.network=platform-network")) {
+						labels.unshift("traefik.docker.network=platform-network");
 					}
 				} else {
 					// Stack Case
-					if (!labels.includes("traefik.swarm.network=hanzo-network")) {
-						labels.unshift("traefik.swarm.network=hanzo-network");
+					if (!labels.includes("traefik.swarm.network=platform-network")) {
+						labels.unshift("traefik.swarm.network=platform-network");
 					}
 				}
 			}
 		}
 
 		if (!compose.isolatedDeployment) {
-			// Add the hanzo-network to the service
+			// Add the platform-network to the service
 			result.services[serviceName].networks = addHanzoNetworkToService(
 				result.services[serviceName].networks,
 			);
 		}
 	}
 
-	// Add hanzo-network to the root of the compose file
+	// Add platform-network to the root of the compose file
 	if (!compose.isolatedDeployment) {
 		result.networks = addHanzoNetworkToRoot(result.networks);
 	}
@@ -331,7 +331,7 @@ export const addHanzoNetworkToService = (
 	networkService: DefinitionsService["networks"],
 ) => {
 	let networks = networkService;
-	const network = "hanzo-network";
+	const network = "platform-network";
 	const defaultNetwork = "default";
 	if (!networks) {
 		networks = [];
@@ -360,7 +360,7 @@ export const addHanzoNetworkToRoot = (
 	networkRoot: PropertiesNetworks | undefined,
 ) => {
 	let networks = networkRoot;
-	const network = "hanzo-network";
+	const network = "platform-network";
 
 	if (!networks) {
 		networks = {};

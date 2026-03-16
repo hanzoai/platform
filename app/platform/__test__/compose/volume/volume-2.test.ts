@@ -14,7 +14,7 @@ services:
     restart: always
 
   plausible_db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:14-alpine
     restart: always
     volumes:
       - db-data:/var/lib/postgresql/data
@@ -52,7 +52,7 @@ services:
         target: /data
 
   mysql:
-    image: ghcr.io/hanzoai/sql-mysql:8
+    image: mysql:5.7
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: example
@@ -77,7 +77,7 @@ services:
     restart: always
 
   plausible_db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:14-alpine
     restart: always
     volumes:
       - db-data-testhash:/var/lib/postgresql/data
@@ -115,7 +115,7 @@ services:
         target: /data
 
   mysql:
-    image: ghcr.io/hanzoai/sql-mysql:8
+    image: mysql:5.7
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: example
@@ -187,7 +187,7 @@ services:
     environment:
       - NODE_ENV=production
   mongo:
-    image: ghcr.io/hanzoai/docdb:latest
+    image: mongo:4.2
     volumes:
       - mongo-data:/data/db
 volumes:
@@ -209,7 +209,7 @@ services:
     environment:
       - NODE_ENV=production
   mongo:
-    image: ghcr.io/hanzoai/docdb:latest
+    image: mongo:4.2
     volumes:
       - mongo-data-testhash:/data/db
 volumes:
@@ -240,7 +240,7 @@ services:
     environment:
       - NODE_ENV=production
   mongo:
-    image: ghcr.io/hanzoai/docdb:latest
+    image: mongo:4.2
     volumes:
       - mongo-data:/data/db
 volumes:
@@ -262,7 +262,7 @@ services:
     environment:
       - NODE_ENV=production
   mongo:
-    image: ghcr.io/hanzoai/docdb:latest
+    image: mongo:4.2
     volumes:
       - mongo-data-testhash:/data/db
 volumes:
@@ -1045,7 +1045,7 @@ services:
       - ./src:/usr/src/app/src
 
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:13
     environment:
       POSTGRES_PASSWORD: example
     networks:
@@ -1090,7 +1090,7 @@ services:
       - ./src:/usr/src/app/src
 
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:13
     environment:
       POSTGRES_PASSWORD: example
     networks:
