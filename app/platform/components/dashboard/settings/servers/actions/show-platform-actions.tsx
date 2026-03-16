@@ -15,9 +15,8 @@ import { ShowModalLogs } from "../../web-server/show-modal-logs";
 import { TerminalModal } from "../../web-server/terminal-modal";
 import { GPUSupportModal } from "../gpu-support-modal";
 
-export const ShowHanzoActions = () => {
-	const { t } = useTranslation("settings");
-	const { mutateAsync: reloadServer, isPending: isLoading } =
+export const ShowPlatformActions = () => {
+	const { mutateAsync: reloadServer, isPending } =
 		api.settings.reloadServer.useMutation();
 
 	const { mutateAsync: cleanRedis } = api.settings.cleanRedis.useMutation();
@@ -53,7 +52,7 @@ export const ShowHanzoActions = () => {
 					<TerminalModal serverId="local">
 						<span>Terminal</span>
 					</TerminalModal>
-					<ShowModalLogs appName="platform">
+					<ShowModalLogs appName="hanzo">
 						<DropdownMenuItem
 							className="cursor-pointer"
 							onSelect={(e) => e.preventDefault()}
