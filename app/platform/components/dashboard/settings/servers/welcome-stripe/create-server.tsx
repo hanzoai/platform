@@ -57,12 +57,12 @@ export const CreateServer = ({ stepper }: Props) => {
 		api.stripe.canCreateMoreServers.useQuery();
 	const { mutateAsync } = api.server.create.useMutation();
 	const cloudSSHKey = sshKeys?.find(
-		(sshKey) => sshKey.name === "platform-cloud-ssh-key",
+		(sshKey) => sshKey.name === "dokploy-cloud-ssh-key",
 	);
 
 	const form = useForm<Schema>({
 		defaultValues: {
-			description: "Hanzo Cloud Server",
+			description: "Hanzo Platform Cloud Server",
 			name: "My First Server",
 			ipAddress: "",
 			port: 22,
@@ -74,7 +74,7 @@ export const CreateServer = ({ stepper }: Props) => {
 
 	useEffect(() => {
 		form.reset({
-			description: "Hanzo Cloud Server",
+			description: "Hanzo Platform Cloud Server",
 			name: "My First Server",
 			ipAddress: "",
 			port: 22,
@@ -96,7 +96,7 @@ export const CreateServer = ({ stepper }: Props) => {
 			username: data.username || "root",
 			sshKeyId: data.sshKeyId || "",
 			serverType: "deploy",
-		} as any)
+		})
 			.then(async (_data) => {
 				toast.success("Server Created");
 				stepper.next();

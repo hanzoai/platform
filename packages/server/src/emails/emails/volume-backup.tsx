@@ -61,7 +61,7 @@ export const VolumeBackupEmail = ({
 						<Section className="mt-[32px]">
 							<Img
 								src={
-									"https://raw.githubusercontent.com/Hanzo Platform/hanzo/refs/heads/canary/apps/hanzo/logo.png"
+									"https://raw.githubusercontent.com/Hanzo Platform/platform/refs/heads/canary/apps/platform/logo.png"
 								}
 								width="100"
 								height="50"
