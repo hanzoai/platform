@@ -1079,6 +1079,13 @@
                   "when": 1773800300000,
                   "tag": "0153_amused_terror",
                   "breakpoints": true
+            },
+            {
+                  "idx": 154,
+                  "version": "7",
+                  "when": 1773800400000,
+                  "tag": "0154_rename_droplet_to_instance",
+                  "breakpoints": true
             }
       ]
 }
