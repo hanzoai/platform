@@ -23,7 +23,7 @@ services:
     image: myapi:latest
 
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
 
 networks:
   default:
@@ -65,7 +65,7 @@ test("Add suffix to service names with links in compose file", () => {
 	expect(actualComposeData.services).toHaveProperty(`db-${suffix}`);
 	expect(actualComposeData.services).not.toHaveProperty("db");
 	expect(actualComposeData.services?.[`db-${suffix}`]?.image).toBe(
-		"ghcr.io/hanzoai/sql:18",
+		"postgres:latest",
 	);
 	expect(actualComposeData.services).toHaveProperty(`api-${suffix}`);
 	expect(actualComposeData.services).not.toHaveProperty("api");
