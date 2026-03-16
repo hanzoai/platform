@@ -335,7 +335,7 @@ export const composeRouter = createTRPCRouter({
 			}
 			const container = await getComposeContainer(compose, input.serviceName);
 			const mounts = container?.Mounts.filter(
-				(mount: any) => mount.Type === "volume" && mount.Source !== "",
+				(mount) => mount.Type === "volume" && mount.Source !== "",
 			);
 			return mounts;
 		}),
