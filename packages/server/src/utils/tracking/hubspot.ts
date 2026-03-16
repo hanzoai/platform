@@ -66,7 +66,7 @@ export function formatContactDataForHubSpot(
 			},
 		],
 		context: {
-			pageUri: "https://app.hanzo.com/register",
+			pageUri: "https://app.hanzo.ai/register",
 			pageName: "Sign Up",
 		},
 	};

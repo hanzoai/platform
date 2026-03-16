@@ -1,8 +1,13 @@
 import { validateRequest } from "@hanzo/platform";
+import { createServerSideHelpers } from "@trpc/react-query/server";
 import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";
+import superjson from "superjson";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { EnterpriseFeatureGate } from "@/components/proprietary/enterprise-feature-gate";
+import { SSOSettings } from "@/components/proprietary/sso/sso-settings";
 import { Card } from "@/components/ui/card";
+import { appRouter } from "@/server/api/root";
 
 const Page = () => {
 	return (
@@ -11,14 +16,16 @@ const Page = () => {
 				<Card className="h-full bg-sidebar p-2.5 rounded-xl mx-auto w-full">
 					<div className="rounded-xl bg-background shadow-md">
 						<div className="p-6">
-							<h2 className="text-xl font-semibold mb-2">
-								Single Sign-On (SSO)
-							</h2>
-							<p className="text-muted-foreground">
-								SSO is configured via the platform identity provider (hanzo.id).
-								OIDC and SAML providers can be managed through the better-auth
-								SSO plugin settings.
-							</p>
+							<EnterpriseFeatureGate
+								lockedProps={{
+									title: "Enterprise SSO",
+									description:
+										"Single sign-on (SSO) with OIDC and SAML is part of Hanzo Platform Enterprise. Add a valid license to configure it.",
+									ctaLabel: "Go to License",
+								}}
+							>
+								<SSOSettings />
+							</EnterpriseFeatureGate>
 						</div>
 					</div>
 				</Card>
@@ -34,7 +41,8 @@ Page.getLayout = (page: ReactElement) => {
 };
 
 export async function getServerSideProps(ctx: GetServerSidePropsContext) {
-	const { user } = await validateRequest(ctx.req);
+	const { req, res } = ctx;
+	const { user, session } = await validateRequest(ctx.req);
 	if (!user) {
 		return {
 			redirect: {
@@ -52,7 +60,22 @@ export async function getServerSideProps(ctx: GetServerSidePropsContext) {
 		};
 	}
 
+	const helpers = createServerSideHelpers({
+		router: appRouter,
+		ctx: {
+			req: req as any,
+			res: res as any,
+			db: null as any,
+			session: session as any,
+			user: user as any,
+		},
+		transformer: superjson,
+	});
+	await helpers.user.get.prefetch();
+
 	return {
-		props: {},
+		props: {
+			trpcState: helpers.dehydrate(),
+		},
 	};
 }

@@ -19,7 +19,7 @@ export const initializeRedis = async () => {
 					},
 				],
 			},
-			Networks: [{ Target: "hanzo-network" }],
+			Networks: [{ Target: "platform-network" }],
 			Placement: {
 				Constraints: ["node.role==manager"],
 			},
