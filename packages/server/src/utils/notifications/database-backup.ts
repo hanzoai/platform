@@ -87,7 +87,7 @@ export const sendDatabaseBackupNotifications = async ({
 				if (email) {
 					await sendEmailNotification(
 						email,
-						"Database backup for hanzo",
+						"Database backup for platform",
 						template,
 					);
 				}
@@ -95,7 +95,7 @@ export const sendDatabaseBackupNotifications = async ({
 				if (resend) {
 					await sendResendNotification(
 						resend,
-						"Database backup for hanzo",
+						"Database backup for platform",
 						template,
 					);
 				}
