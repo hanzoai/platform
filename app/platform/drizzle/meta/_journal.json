@@ -1051,6 +1051,34 @@
                   "when": 1772477477219,
                   "tag": "0149_hanzo_rebrand",
                   "breakpoints": true
+            },
+            {
+                  "idx": 150,
+                  "version": "7",
+                  "when": 1773800000000,
+                  "tag": "0150_add_organization_wallet",
+                  "breakpoints": true
+            },
+            {
+                  "idx": 151,
+                  "version": "7",
+                  "when": 1773800100000,
+                  "tag": "0151_compute_pools_and_offers",
+                  "breakpoints": true
+            },
+            {
+                  "idx": 152,
+                  "version": "7",
+                  "when": 1773800200000,
+                  "tag": "0152_cloud_provider_digitalocean",
+                  "breakpoints": true
+            },
+            {
+                  "idx": 153,
+                  "version": "7",
+                  "when": 1773800300000,
+                  "tag": "0153_amused_terror",
+                  "breakpoints": true
             }
       ]
 }
