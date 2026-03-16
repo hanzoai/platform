@@ -325,7 +325,7 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 										</SelectContent>
 									</Select>
 									<FormDescription>
-										Default region for new droplets
+										Default region for new instances
 									</FormDescription>
 									<FormMessage />
 								</FormItem>
@@ -347,7 +347,7 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 												<AlertDialogTitle>Delete Cloud Provider?</AlertDialogTitle>
 												<AlertDialogDescription>
 													This will remove the provider configuration. Any existing
-													droplets will not be deleted from DigitalOcean, but you
+													instances will not be deleted from the cloud provider, but you
 													will not be able to manage them from Platform.
 												</AlertDialogDescription>
 											</AlertDialogHeader>
