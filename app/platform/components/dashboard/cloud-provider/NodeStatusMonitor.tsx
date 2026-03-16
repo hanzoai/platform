@@ -61,8 +61,8 @@ import { api } from "@/utils/api";
 // Types
 // ============================================================================
 
-interface PoolDroplet {
-	dropletId: string;
+interface PoolInstance {
+	instanceId: string;
 	externalName: string;
 	region: string;
 	size: string;
@@ -97,13 +97,13 @@ interface NodeStatusMonitorProps {
 
 export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps) {
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [selectedDroplet, setSelectedDroplet] = useState<PoolDroplet | null>(null);
+	const [selectedInstance, setSelectedInstance] = useState<PoolInstance | null>(null);
 	const [isDraining, setIsDraining] = useState<string | null>(null);
 
 	const utils = api.useUtils();
 
-	// Fetch droplets with polling
-	const { data: droplets, isLoading, isRefetching } = api.digitalocean.listPoolDroplets.useQuery(
+	// Fetch instances with polling
+	const { data: instances, isLoading, isRefetching } = api.digitalocean.listPoolInstances.useQuery(
 		{ poolId },
 		{ refetchInterval: 10000 } // Poll every 10 seconds
 	);
@@ -112,7 +112,7 @@ export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps)
 	const drainMutation = api.digitalocean.drainNode.useMutation({
 		onSuccess: () => {
 			toast.success("Node drain started");
-			utils.digitalocean.listPoolDroplets.invalidate({ poolId });
+			utils.digitalocean.listPoolInstances.invalidate({ poolId });
 		},
 		onError: (error) => {
 			toast.error(`Failed to drain node: ${error.message}`);
@@ -123,32 +123,32 @@ export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps)
 	});
 
 	// Remove mutation
-	const removeMutation = api.digitalocean.removeDroplet.useMutation({
+	const removeMutation = api.digitalocean.removeInstance.useMutation({
 		onSuccess: () => {
 			toast.success("Node removal started");
-			utils.digitalocean.listPoolDroplets.invalidate({ poolId });
+			utils.digitalocean.listPoolInstances.invalidate({ poolId });
 			setDeleteDialogOpen(false);
-			setSelectedDroplet(null);
+			setSelectedInstance(null);
 		},
 		onError: (error) => {
 			toast.error(`Failed to remove node: ${error.message}`);
 		},
 	});
 
-	const handleDrain = (droplet: PoolDroplet) => {
-		if (!droplet.computeNode) return;
-		setIsDraining(droplet.dropletId);
-		drainMutation.mutate({ nodeId: droplet.computeNode.nodeId, force: false });
+	const handleDrain = (instance: PoolInstance) => {
+		if (!instance.computeNode) return;
+		setIsDraining(instance.instanceId);
+		drainMutation.mutate({ nodeId: instance.computeNode.nodeId, force: false });
 	};
 
-	const handleRemove = (droplet: PoolDroplet) => {
-		setSelectedDroplet(droplet);
+	const handleRemove = (instance: PoolInstance) => {
+		setSelectedInstance(instance);
 		setDeleteDialogOpen(true);
 	};
 
 	const confirmRemove = () => {
-		if (selectedDroplet) {
-			removeMutation.mutate({ dropletId: selectedDroplet.dropletId, force: false });
+		if (selectedInstance) {
+			removeMutation.mutate({ instanceId: selectedInstance.instanceId, force: false });
 		}
 	};
 
@@ -172,7 +172,7 @@ export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps)
 		);
 	}
 
-	if (!droplets || droplets.length === 0) {
+	if (!instances || instances.length === 0) {
 		return (
 			<Card className={`bg-sidebar ${className}`}>
 				<CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -190,7 +190,7 @@ export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps)
 		<>
 			<div className="flex items-center justify-between mb-4">
 				<div className="text-sm text-muted-foreground">
-					{droplets.length} node{droplets.length !== 1 ? "s" : ""} in pool
+					{instances.length} node{instances.length !== 1 ? "s" : ""} in pool
 				</div>
 				{isRefetching && (
 					<div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -201,13 +201,13 @@ export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps)
 			</div>
 
 			<div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${className}`}>
-				{droplets.map((droplet) => (
+				{instances.map((instance) => (
 					<NodeCard
-						key={droplet.dropletId}
-						droplet={droplet}
-						onDrain={() => handleDrain(droplet)}
-						onRemove={() => handleRemove(droplet)}
-						isDraining={isDraining === droplet.dropletId}
+						key={instance.instanceId}
+						instance={instance}
+						onDrain={() => handleDrain(instance)}
+						onRemove={() => handleRemove(instance)}
+						isDraining={isDraining === instance.instanceId}
 					/>
 				))}
 			</div>
@@ -218,8 +218,8 @@ export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps)
 					<AlertDialogHeader>
 						<AlertDialogTitle>Remove Node?</AlertDialogTitle>
 						<AlertDialogDescription>
-							This will drain workloads and delete the droplet{" "}
-							<strong>{selectedDroplet?.externalName}</strong> from DigitalOcean.
+							This will drain workloads and delete the instance{" "}
+							<strong>{selectedInstance?.externalName}</strong> from the cloud provider.
 							This action cannot be undone.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
@@ -248,14 +248,14 @@ export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps)
 // ============================================================================
 
 interface NodeCardProps {
-	droplet: PoolDroplet;
+	instance: PoolInstance;
 	onDrain: () => void;
 	onRemove: () => void;
 	isDraining: boolean;
 }
 
-function NodeCard({ droplet, onDrain, onRemove, isDraining }: NodeCardProps) {
-	const node = droplet.computeNode;
+function NodeCard({ instance, onDrain, onRemove, isDraining }: NodeCardProps) {
+	const node = instance.computeNode;
 
 	const cpuUtil = node?.cpuUtilizationPercent ? parseFloat(node.cpuUtilizationPercent) : 0;
 	const memUtil = node?.memoryUtilizationPercent ? parseFloat(node.memoryUtilizationPercent) : 0;
@@ -263,7 +263,7 @@ function NodeCard({ droplet, onDrain, onRemove, isDraining }: NodeCardProps) {
 		? parseFloat(node.storageUtilizationPercent)
 		: 0;
 
-	const isHealthy = node?.status === "online" && droplet.status === "running";
+	const isHealthy = node?.status === "online" && instance.status === "running";
 	const lastHeartbeat = node?.lastHeartbeat
 		? formatDistanceToNow(new Date(node.lastHeartbeat), { addSuffix: true })
 		: "Never";
@@ -278,10 +278,10 @@ function NodeCard({ droplet, onDrain, onRemove, isDraining }: NodeCardProps) {
 						) : (
 							<WifiOff className="h-4 w-4 text-red-500" />
 						)}
-						<span className="truncate max-w-[150px]">{droplet.externalName}</span>
+						<span className="truncate max-w-[150px]">{instance.externalName}</span>
 					</CardTitle>
 					<div className="flex items-center gap-1">
-						<NodeStatusBadge status={droplet.status} nodeStatus={node?.status} />
+						<NodeStatusBadge status={instance.status} nodeStatus={node?.status} />
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<Button variant="ghost" size="sm" className="h-7 w-7 p-0">
@@ -293,7 +293,7 @@ function NodeCard({ droplet, onDrain, onRemove, isDraining }: NodeCardProps) {
 									onClick={onDrain}
 									disabled={
 										!node ||
-										droplet.status !== "running" ||
+										instance.status !== "running" ||
 										isDraining
 									}
 								>
@@ -322,23 +322,23 @@ function NodeCard({ droplet, onDrain, onRemove, isDraining }: NodeCardProps) {
 				<div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
 					<div className="flex items-center gap-1 text-muted-foreground">
 						<Globe className="h-3 w-3" />
-						{droplet.region}
+						{instance.region}
 					</div>
 					<div className="flex items-center gap-1 text-muted-foreground">
 						<Server className="h-3 w-3" />
-						{droplet.size}
+						{instance.size}
 					</div>
-					{droplet.publicIp && (
+					{instance.publicIp && (
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<div className="flex items-center gap-1 text-muted-foreground truncate cursor-help">
 									<Wifi className="h-3 w-3 flex-shrink-0" />
-									<span className="font-mono truncate">{droplet.publicIp}</span>
+									<span className="font-mono truncate">{instance.publicIp}</span>
 								</div>
 							</TooltipTrigger>
 							<TooltipContent>
-								<p>Public IP: {droplet.publicIp}</p>
-								{droplet.privateIp && <p>Private IP: {droplet.privateIp}</p>}
+								<p>Public IP: {instance.publicIp}</p>
+								{instance.privateIp && <p>Private IP: {instance.privateIp}</p>}
 							</TooltipContent>
 						</Tooltip>
 					)}
@@ -349,7 +349,7 @@ function NodeCard({ droplet, onDrain, onRemove, isDraining }: NodeCardProps) {
 				</div>
 
 				{/* Resource Utilization (only if node is registered) */}
-				{node && droplet.status === "running" && (
+				{node && instance.status === "running" && (
 					<div className="space-y-2 pt-2 border-t">
 						<UtilizationBar
 							icon={<Cpu className="h-3 w-3" />}
@@ -370,10 +370,10 @@ function NodeCard({ droplet, onDrain, onRemove, isDraining }: NodeCardProps) {
 				)}
 
 				{/* Provisioning state */}
-				{["pending", "provisioning", "booting", "registering"].includes(droplet.status) && (
+				{["pending", "provisioning", "booting", "registering"].includes(instance.status) && (
 					<div className="flex items-center justify-center py-3 text-sm text-muted-foreground">
 						<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-						{getProvisioningLabel(droplet.status)}
+						{getProvisioningLabel(instance.status)}
 					</div>
 				)}
 			</CardContent>
@@ -415,12 +415,12 @@ function UtilizationBar({ icon, label, value }: UtilizationBarProps) {
 }
 
 interface NodeStatusBadgeProps {
-	status: PoolDroplet["status"];
-	nodeStatus?: NonNullable<PoolDroplet["computeNode"]>["status"];
+	status: PoolInstance["status"];
+	nodeStatus?: NonNullable<PoolInstance["computeNode"]>["status"];
 }
 
 function NodeStatusBadge({ status, nodeStatus }: NodeStatusBadgeProps) {
-	// Combine droplet and node status for display
+	// Combine instance and node status for display
 	if (status === "running" && nodeStatus === "online") {
 		return <Badge variant="green">Online</Badge>;
 	}
@@ -437,7 +437,7 @@ function NodeStatusBadge({ status, nodeStatus }: NodeStatusBadgeProps) {
 		return <Badge variant="yellow">Syncing</Badge>;
 	}
 
-	const statusMap: Record<PoolDroplet["status"], { variant: "green" | "yellow" | "red" | "blue" | "blank"; label: string }> = {
+	const statusMap: Record<PoolInstance["status"], { variant: "green" | "yellow" | "red" | "blue" | "blank"; label: string }> = {
 		pending: { variant: "yellow", label: "Pending" },
 		provisioning: { variant: "yellow", label: "Provisioning" },
 		booting: { variant: "yellow", label: "Booting" },
@@ -453,9 +453,9 @@ function NodeStatusBadge({ status, nodeStatus }: NodeStatusBadgeProps) {
 	return <Badge variant={variant}>{label}</Badge>;
 }
 
-function getProvisioningLabel(status: PoolDroplet["status"]): string {
+function getProvisioningLabel(status: PoolInstance["status"]): string {
 	const labels: Record<string, string> = {
-		pending: "Creating droplet...",
+		pending: "Creating instance...",
 		provisioning: "Provisioning...",
 		booting: "Booting system...",
 		registering: "Registering with cluster...",
