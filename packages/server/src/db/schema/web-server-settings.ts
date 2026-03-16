@@ -23,7 +23,7 @@ export const webServerSettings = pgTable("webServerSettings", {
 	metricsConfig: jsonb("metricsConfig")
 		.$type<{
 			server: {
-				type: "Hanzo" | "Remote";
+				type: "Hanzo Platform" | "Remote";
 				refreshRate: number;
 				port: number;
 				token: string;
@@ -46,7 +46,7 @@ export const webServerSettings = pgTable("webServerSettings", {
 		.notNull()
 		.default({
 			server: {
-				type: "Hanzo",
+				type: "Hanzo Platform",
 				refreshRate: 60,
 				port: 4500,
 				token: "",
@@ -131,7 +131,7 @@ export const apiUpdateWebServerSettings = createSchema.partial().extend({
 	metricsConfig: z
 		.object({
 			server: z.object({
-				type: z.enum(["Hanzo", "Remote"]),
+				type: z.enum(["Hanzo Platform", "Remote"]),
 				refreshRate: z.number(),
 				port: z.number(),
 				token: z.string(),

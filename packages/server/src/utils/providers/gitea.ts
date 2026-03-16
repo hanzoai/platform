@@ -49,7 +49,7 @@ export const refreshGiteaToken = async (giteaProviderId: string) => {
 		}
 
 		// Token is expired or about to expire, refresh it
-		// Use internal URL when Gitea is on same instance as Hanzo
+		// Use internal URL when Gitea is on same instance as Hanzo Platform
 		const baseUrl = giteaProvider.giteaInternalUrl || giteaProvider.giteaUrl;
 		const tokenEndpoint = `${baseUrl}/login/oauth/access_token`;
 		const params = new URLSearchParams({
