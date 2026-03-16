@@ -476,7 +476,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 						? Object.entries(notification.custom.headers).map(
 								([key, value]) => ({
 									key,
-									value: String(value),
+									value,
 								}),
 							)
 						: [],
@@ -547,7 +547,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				slackId: notification?.slackId || "",
 				notificationId: notificationId || "",
 				serverThreshold: serverThreshold,
-			} as any);
+			});
 		} else if (data.type === "telegram") {
 			promise = telegramMutation.mutateAsync({
 				appBuildError: appBuildError,
@@ -563,7 +563,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				notificationId: notificationId || "",
 				telegramId: notification?.telegramId || "",
 				serverThreshold: serverThreshold,
-			} as any);
+			});
 		} else if (data.type === "discord") {
 			promise = discordMutation.mutateAsync({
 				appBuildError: appBuildError,
@@ -578,7 +578,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				notificationId: notificationId || "",
 				discordId: notification?.discordId || "",
 				serverThreshold: serverThreshold,
-			} as any);
+			});
 		} else if (data.type === "email") {
 			promise = emailMutation.mutateAsync({
 				appBuildError: appBuildError,
@@ -597,7 +597,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				notificationId: notificationId || "",
 				emailId: notification?.emailId || "",
 				serverThreshold: serverThreshold,
-			} as any);
+			});
 		} else if (data.type === "resend") {
 			promise = resendMutation.mutateAsync({
 				appBuildError: appBuildError,
@@ -613,7 +613,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				notificationId: notificationId || "",
 				resendId: notification?.resendId || "",
 				serverThreshold: serverThreshold,
-			} as any);
+			});
 		} else if (data.type === "gotify") {
 			promise = gotifyMutation.mutateAsync({
 				appBuildError: appBuildError,
@@ -629,7 +629,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				decoration: data.decoration,
 				notificationId: notificationId || "",
 				gotifyId: notification?.gotifyId || "",
-			} as any);
+			});
 		} else if (data.type === "ntfy") {
 			promise = ntfyMutation.mutateAsync({
 				appBuildError: appBuildError,
@@ -645,7 +645,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				dockerCleanup: dockerCleanup,
 				notificationId: notificationId || "",
 				ntfyId: notification?.ntfyId || "",
-			} as any);
+			});
 		} else if (data.type === "lark") {
 			promise = larkMutation.mutateAsync({
 				appBuildError: appBuildError,
@@ -659,7 +659,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				notificationId: notificationId || "",
 				larkId: notification?.larkId || "",
 				serverThreshold: serverThreshold,
-			} as any);
+			});
 		} else if (data.type === "teams") {
 			promise = teamsMutation.mutateAsync({
 				appBuildError: appBuildError,
@@ -673,7 +673,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				notificationId: notificationId || "",
 				teamsId: notification?.teamsId || "",
 				serverThreshold: serverThreshold,
-			} as any);
+			});
 		} else if (data.type === "custom") {
 			// Convert headers array to object
 			const headersRecord =
@@ -700,7 +700,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				serverThreshold: serverThreshold,
 				notificationId: notificationId || "",
 				customId: notification?.customId || "",
-			} as any);
+			});
 		} else if (data.type === "pushover") {
 			if (data.priority === 2 && (data.retry == null || data.expire == null)) {
 				toast.error("Retry and expire are required for emergency priority (2)");
@@ -722,7 +722,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				serverThreshold: serverThreshold,
 				notificationId: notificationId || "",
 				pushoverId: notification?.pushoverId || "",
-			} as any);
+			});
 		}
 
 		if (promise) {
@@ -1801,7 +1801,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 												<div className="space-y-0.5">
 													<FormLabel>Hanzo Platform Restart</FormLabel>
 													<FormDescription>
-														Trigger the action when Hanzo Platform is restarted.
+														Trigger the action when dokploy is restarted.
 													</FormDescription>
 												</div>
 												<FormControl>

@@ -10,9 +10,10 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
-import { SignInWithGithub } from "@/components/auth/sign-in-with-github";
-import { SignInWithGoogle } from "@/components/auth/sign-in-with-google";
+import { SignInWithGithub } from "@/components/proprietary/auth/sign-in-with-github";
+import { SignInWithGoogle } from "@/components/proprietary/auth/sign-in-with-google";
 import { SignInWithHanzo } from "@/components/auth/sign-in-with-hanzo";
+import { SignInWithSSO } from "@/components/proprietary/sso/sign-in-with-sso";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
@@ -242,7 +243,11 @@ export default function Home({ IS_CLOUD }: Props) {
 			<CardContent className="p-0">
 				{!isTwoFactor ? (
 					<>
-						{loginContent}
+						{showSignInWithSSO ? (
+							<SignInWithSSO>{loginContent}</SignInWithSSO>
+						) : (
+							loginContent
+						)}
 					</>
 				) : (
 					<>

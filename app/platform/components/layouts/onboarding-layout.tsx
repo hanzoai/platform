@@ -14,27 +14,20 @@ export const OnboardingLayout = ({ children }: Props) => {
 	const appName = whitelabeling?.appName || "Hanzo Platform";
 	const appDescription =
 		whitelabeling?.appDescription ||
-		"\u201COpen Source PaaS for deploying apps, databases, and services.\u201D";
+		"\u201CThe Open Source alternative to Netlify, Vercel, Heroku.\u201D";
 	const logoUrl =
 		whitelabeling?.loginLogoUrl || whitelabeling?.logoUrl || undefined;
 
 	return (
 		<div className="container relative min-h-svh flex-col items-center justify-center flex lg:max-w-none lg:grid lg:grid-cols-2 lg:px-0 w-full">
-			<Link
-				href="https://hanzo.ai"
-				className="absolute top-6 left-6 z-30 flex items-center gap-3 text-lg font-medium text-primary lg:hidden"
-			>
-				<Logo className="size-8" />
-				Hanzo
-			</Link>
 			<div className="relative hidden h-full flex-col  p-10 text-primary dark:border-r lg:flex">
 				<div className="absolute inset-0 bg-muted" />
 				<Link
-					href="https://hanzo.ai"
+					href="/"
 					className="relative z-20 flex items-center text-lg font-medium gap-4  text-primary"
 				>
-					<Logo className="size-10" />
-					Hanzo
+					<Logo className="size-10" logoUrl={logoUrl} />
+					{appName}
 				</Link>
 				<div className="relative z-20 mt-auto">
 					<blockquote className="space-y-2">
@@ -53,7 +46,7 @@ export const OnboardingLayout = ({ children }: Props) => {
 						</Link>
 					</Button>
 					<Button variant="ghost" size="icon">
-						<Link href="https://x.com/getplatform">
+						<Link href="https://x.com/getdokploy">
 							<svg
 								stroke="currentColor"
 								fill="currentColor"

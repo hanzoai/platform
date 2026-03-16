@@ -140,7 +140,7 @@ version: "3.8"
 
 services:
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:13
     networks:
       - db_net
 
