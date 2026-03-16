@@ -149,7 +149,7 @@ services:
         target: /usr/src/app/config.json
 
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
     configs:
       - source: db_config
         target: /etc/postgresql/postgresql.conf
@@ -174,7 +174,7 @@ services:
         target: /usr/src/app/config.json
 
   db:
-    image: ghcr.io/hanzoai/sql:18
+    image: postgres:latest
     configs:
       - source: db_config-testhash
         target: /etc/postgresql/postgresql.conf

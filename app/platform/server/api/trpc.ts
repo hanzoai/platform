@@ -9,6 +9,7 @@
 
 // import { getServerAuthSession } from "@/server/auth";
 import { db } from "@hanzo/platform/db";
+import { hasValidLicense } from "@hanzo/platform/index";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { OpenApiMeta } from "@hanzo/platform-trpc";
 import { initTRPC, TRPCError } from "@trpc/server";
@@ -30,6 +31,8 @@ interface CreateContextOptions {
 		| (User & {
 				role: "member" | "admin" | "owner";
 				ownerId: string;
+				enableEnterpriseFeatures: boolean;
+				isValidEnterpriseLicense: boolean;
 		  })
 		| null;
 	session:
@@ -201,7 +204,34 @@ export const adminProcedure = t.procedure.use(({ ctx, next }) => {
 });
 
 /**
- * Enterprise procedure -- all features are available (no license gating).
- * Kept as an alias of adminProcedure for backward compatibility.
+ * Requires admin/owner role AND enterprise enabled with a license key in DB.
+ * Does NOT call the license server on every request; full validation (haveValidLicenseKey)
+ * is used in the UI gate and when activating/validating keys.
  */
-export const enterpriseProcedure = adminProcedure;
+export const enterpriseProcedure = t.procedure.use(async ({ ctx, next }) => {
+	if (
+		!ctx.session ||
+		!ctx.user ||
+		(ctx.user.role !== "owner" && ctx.user.role !== "admin")
+	) {
+		throw new TRPCError({ code: "UNAUTHORIZED" });
+	}
+
+	const hasValidLicenseResult = await hasValidLicense(
+		ctx.session.activeOrganizationId,
+	);
+
+	if (!hasValidLicenseResult) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: "Valid enterprise license required",
+		});
+	}
+
+	return next({
+		ctx: {
+			session: ctx.session,
+			user: ctx.user,
+		},
+	});
+});

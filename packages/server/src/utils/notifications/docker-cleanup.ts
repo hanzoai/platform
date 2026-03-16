@@ -20,7 +20,7 @@ import {
 
 export const sendDockerCleanupNotifications = async (
 	organizationId: string,
-	message = "Docker cleanup for hanzo",
+	message = "Docker cleanup for platform",
 ) => {
 	const date = new Date();
 	const unixDate = ~~(Number(date) / 1000);
@@ -67,7 +67,7 @@ export const sendDockerCleanupNotifications = async (
 				if (email) {
 					await sendEmailNotification(
 						email,
-						"Docker cleanup for hanzo",
+						"Docker cleanup for platform",
 						template,
 					);
 				}
@@ -75,7 +75,7 @@ export const sendDockerCleanupNotifications = async (
 				if (resend) {
 					await sendResendNotification(
 						resend,
-						"Docker cleanup for hanzo",
+						"Docker cleanup for platform",
 						template,
 					);
 				}

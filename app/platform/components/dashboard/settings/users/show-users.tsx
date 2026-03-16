@@ -37,7 +37,7 @@ export const ShowUsers = () => {
 	const { mutateAsync } = api.user.remove.useMutation();
 
 	const utils = api.useUtils();
-	const { data: session } = authClient.useSession();
+	const { data: session } = api.user.session.useQuery();
 
 	return (
 		<div className="w-full">
@@ -49,7 +49,7 @@ export const ShowUsers = () => {
 							Users
 						</CardTitle>
 						<CardDescription>
-							Add your users to your Hanzo account.
+							Add your users to your Hanzo Platform account.
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-2 py-8 border-t">
@@ -64,7 +64,7 @@ export const ShowUsers = () => {
 									<div className="flex flex-col items-center gap-3  min-h-[25vh] justify-center">
 										<Users className="size-8 self-center text-muted-foreground" />
 										<span className="text-base text-muted-foreground">
-											Invite users to your Hanzo account
+											Invite users to your Hanzo Platform account
 										</span>
 									</div>
 								) : (
