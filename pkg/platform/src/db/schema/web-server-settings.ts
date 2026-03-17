@@ -154,6 +154,33 @@ export const apiUpdateDockerCleanup = z.object({
 	serverId: z.string().optional(),
 });
 
+// Whitelabeling validation schemas
+const safeUrl = z
+	.string()
+	.refine((url) => /^https?:\/\//i.test(url), {
+		message: "Only http:// and https:// URLs are allowed",
+	})
+	.nullable();
+
+export const whitelabelingConfigSchema = z.object({
+	appName: z.string().nullable(),
+	appDescription: z.string().nullable(),
+	logoUrl: safeUrl,
+	faviconUrl: safeUrl,
+	customCss: z.string().nullable(),
+	loginLogoUrl: safeUrl,
+	supportUrl: safeUrl,
+	docsUrl: safeUrl,
+	errorPageTitle: z.string().nullable(),
+	errorPageDescription: z.string().nullable(),
+	metaTitle: z.string().nullable(),
+	footerText: z.string().nullable(),
+});
+
+export const apiUpdateWhitelabeling = z.object({
+	whitelabelingConfig: whitelabelingConfigSchema,
+});
+
 export const apiUpdateWebServerMonitoring = z.object({
 	metricsConfig: z
 		.object({
