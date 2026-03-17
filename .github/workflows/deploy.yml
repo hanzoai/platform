@@ -1,4 +1,5 @@
-name: Build & Deploy Platform
+# Deployment managed by hanzoai/universe — this workflow only builds and pushes images
+name: Build Platform
 
 on:
   push:
@@ -36,6 +37,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
@@ -167,3 +170,18 @@ jobs:
           platforms: linux/amd64
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:buildcache,mode=max
+
+  # ── Notify universe of new images ──────────────────────────
+  notify-universe:
+    needs: [platform, platform-cloud, schedule, server]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Notify universe of new images
+        # Requires UNIVERSE_DISPATCH_TOKEN secret (a PAT with repo scope on hanzoai/universe)
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.UNIVERSE_DISPATCH_TOKEN }}
+          repository: hanzoai/universe
+          event-type: image-updated
+          client-payload: '{"service":"platform","version":"${{ needs.platform.outputs.version }}","sha":"${{ github.sha }}"}'
