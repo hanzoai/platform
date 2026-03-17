@@ -10,17 +10,13 @@ env:
   ORG: hanzoai
 
 jobs:
-  # ── Test gates — broken code does not ship ───────────────────
+  # ── Build gate — broken code does not ship ───────────────────
+  # Integration tests (Redis, Docker Swarm) are NOT run here.
+  # Production deployment is gated by universe repo E2E tests.
+  # See: github.com/hanzoai/universe/.github/workflows/deploy-production.yml
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        check: [build, test]
-    # test job is advisory — don't block image builds on integration tests
-    # that need Redis/Docker Swarm (not available in standard CI runners)
-    continue-on-error: ${{ matrix.check == 'test' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -29,31 +25,9 @@ jobs:
           node-version: 22
           cache: 'pnpm'
 
-      - name: Install Nixpacks
-        if: matrix.check == 'test'
-        run: |
-          export NIXPACKS_VERSION=1.41.0
-          curl -sSL https://nixpacks.com/install.sh | bash
-
-      - name: Install Railpack
-        if: matrix.check == 'test'
-        run: |
-          export RAILPACK_VERSION=0.15.4
-          curl -sSL https://railpack.com/install.sh | bash
-
-      - name: Add build tools to PATH
-        if: matrix.check == 'test'
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Initialize Docker Swarm
-        if: matrix.check == 'test'
-        run: |
-          docker swarm init
-          docker network create --driver overlay platform-network || true
-
       - run: pnpm install --frozen-lockfile
       - run: pnpm server:build
-      - run: pnpm ${{ matrix.check }}
+      - run: pnpm build
 
   # ── Build platform ──────────────────────────────────────────
   platform:
