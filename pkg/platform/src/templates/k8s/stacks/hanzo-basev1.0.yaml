@@ -1,0 +1,181 @@
+apiVersion: secrets.lux.network/v1alpha1
+kind: KMSSecret
+metadata:
+  name: {{iid}}-kms-sync
+  namespace: {{namespace}}
+spec:
+  hostAPI: https://kms.hanzo.ai
+  resyncInterval: 60
+  authentication:
+    universalAuth:
+      credentialsRef:
+        secretName: base-kms-auth
+        secretNamespace: {{namespace}}
+      secretsScope:
+        projectSlug: base
+        envSlug: production
+        secretsPath: /orgs/{{namespace}}/base/{{iid}}
+  managedSecretReference:
+    secretName: {{iid}}-base-secrets
+    secretNamespace: {{namespace}}
+    secretType: Opaque
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{iid}}-superuser
+  namespace: {{namespace}}
+type: Opaque
+stringData:
+  email: {{secrets.superuserEmail}}
+  password: {{secrets.superuserPassword}}
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{iid}}
+  namespace: {{namespace}}
+spec:
+  serviceName: {{iid}}
+  replicas: 1
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+  revisionHistoryLimit: 5
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      app: {{iid}}
+  template:
+    metadata:
+      labels:
+        app: {{iid}}
+      annotations:
+        secrets.lux.network/auto-reload: "true"
+        secrets.lux.network/managed-secret: "{{iid}}-base-secrets"
+    spec:
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: base
+          image: {{registry.imageUrl}}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{networking.containerPort}}
+              name: http
+          env:
+            - name: HZ_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{iid}}-base-secrets
+                  key: ENCRYPTION_KEY
+                  optional: true
+            - name: HZ_SUPERUSER_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{iid}}-superuser
+                  key: email
+            - name: HZ_SUPERUSER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{iid}}-superuser
+                  key: password
+            - name: HZ_DATA_DIR
+              value: /app/data
+            - name: HANZO_IAM_URL
+              value: http://iam.hanzo.svc.cluster.local
+            - name: {{variables.0.name}}
+              value: "{{variables.0.value}}"
+            - name: {{variables.1.name}}
+              value: "{{variables.1.value}}"
+            - name: {{variables.2.name}}
+              value: "{{variables.2.value}}"
+            - name: {{variables.3.name}}
+              value: "{{variables.3.value}}"
+          envFrom:
+            - secretRef:
+                name: {{iid}}-base-secrets
+                optional: true
+          resources:
+            requests:
+              memory: {{podConfig.memoryRequest}}{{podConfig.memoryRequestType}}
+              cpu: {{podConfig.cpuRequest}}{{podConfig.cpuRequestType}}
+            limits:
+              memory: {{podConfig.memoryLimit}}{{podConfig.memoryLimitType}}
+              cpu: {{podConfig.cpuLimit}}{{podConfig.cpuLimitType}}
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: {{networking.containerPort}}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: {{networking.containerPort}}
+            failureThreshold: 5
+            initialDelaySeconds: 0
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{networking.containerPort}}
+            failureThreshold: 5
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{storageConfig.size}}{{storageConfig.sizeType}}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{iid}}-headless
+  namespace: {{namespace}}
+spec:
+  ports:
+    - port: 8090
+      targetPort: {{networking.containerPort}}
+      name: http
+  clusterIP: None
+  selector:
+    app: {{iid}}
+  type: ClusterIP
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{iid}}
+  namespace: {{namespace}}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: {{networking.containerPort}}
+      name: http
+  selector:
+    app: {{iid}}
