@@ -435,18 +435,16 @@ metadata:
   name: tekton-ingress
   namespace: tekton-builds
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 500m
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: '6000'
-    nginx.ingress.kubernetes.io/proxy-send-timeout: '6000'
-    nginx.ingress.kubernetes.io/proxy-read-timeout: '6000'
-    nginx.ingress.kubernetes.io/proxy-next-upstream-timeout: '6000'
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    kubernetes.io/ingress.class: ingress
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: 'true'
+    traefik.ingress.kubernetes.io/router.middlewares: hanzo-security-headers@kubernetescrd,tekton-bitbucket-stripprefix@kubernetescrd
 spec:
   rules:
     - http:
         paths:
-          - path: /tekton-bitbucket/(.*)
-            pathType: ImplementationSpecific
+          - path: /tekton-bitbucket
+            pathType: Prefix
             backend:
               service:
                 name: el-bitbucket-listener

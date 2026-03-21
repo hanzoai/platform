@@ -152,7 +152,7 @@ export async function createTektonPipeline(
 					resource.spec.rules[0].http.paths[0].backend.service.name += suffix;
 
 					if (clusterInfo.domains.length > 0) {
-						resource.metadata.annotations["kubernetes.io/ingress.class"] = "nginx";
+						resource.metadata.annotations["kubernetes.io/ingress.class"] = "ingress";
 						resource.spec.tls = clusterInfo.domains.map((d: string) => ({ hosts: [d] }));
 						for (const domain of clusterInfo.domains) {
 							resource.spec.rules.unshift({
