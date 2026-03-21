@@ -143,7 +143,7 @@ export const ComposeFileEditor = ({ composeId }: Props) => {
 												placeholder={`version: '3'
 services:
     web:
-    image: nginx
+    image: httpd
     ports:
         - "80:80"
     
