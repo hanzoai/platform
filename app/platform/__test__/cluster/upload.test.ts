@@ -23,13 +23,13 @@ describe("getRegistryTag", () => {
 		it("should handle simple image name without tag", () => {
 			const registry = createMockRegistry({ username: "myuser" });
 			const result = getRegistryTag(registry, "caddy");
-			expect(result).toBe("docker.io/myuser/nginx");
+			expect(result).toBe("docker.io/myuser/caddy");
 		});
 
 		it("should handle image name with tag", () => {
 			const registry = createMockRegistry({ username: "myuser" });
 			const result = getRegistryTag(registry, "httpd:alpine");
-			expect(result).toBe("docker.io/myuser/nginx:latest");
+			expect(result).toBe("docker.io/myuser/caddy:alpine");
 		});
 
 		it("should handle image name with username already present (no duplication)", () => {
@@ -66,9 +66,9 @@ describe("getRegistryTag", () => {
 
 		it("should handle image name with full registry URL (no username)", () => {
 			const registry = createMockRegistry({ username: "myuser" });
-			const result = getRegistryTag(registry, "docker.io/nginx");
+			const result = getRegistryTag(registry, "docker.io/caddy");
 			// Should add username since imageName doesn't have one
-			expect(result).toBe("docker.io/myuser/nginx");
+			expect(result).toBe("docker.io/myuser/caddy");
 		});
 
 		it("should handle image name with custom registry URL and username", () => {
@@ -93,7 +93,7 @@ describe("getRegistryTag", () => {
 				imagePrefix: "myorg",
 			});
 			const result = getRegistryTag(registry, "caddy");
-			expect(result).toBe("docker.io/myorg/nginx");
+			expect(result).toBe("docker.io/myorg/caddy");
 		});
 
 		it("should use imagePrefix with image tag", () => {
@@ -102,7 +102,7 @@ describe("getRegistryTag", () => {
 				imagePrefix: "myorg",
 			});
 			const result = getRegistryTag(registry, "httpd:alpine");
-			expect(result).toBe("docker.io/myorg/nginx:latest");
+			expect(result).toBe("docker.io/myorg/caddy:alpine");
 		});
 
 		it("should handle imagePrefix with username already in image name", () => {
@@ -132,7 +132,7 @@ describe("getRegistryTag", () => {
 				registryUrl: "",
 			});
 			const result = getRegistryTag(registry, "caddy");
-			expect(result).toBe("myuser/nginx");
+			expect(result).toBe("myuser/caddy");
 		});
 
 		it("should work without registryUrl with imagePrefix", () => {
@@ -142,7 +142,7 @@ describe("getRegistryTag", () => {
 				registryUrl: "",
 			});
 			const result = getRegistryTag(registry, "caddy");
-			expect(result).toBe("myorg/nginx");
+			expect(result).toBe("myorg/caddy");
 		});
 
 		it("should handle username already present without registryUrl", () => {
@@ -163,7 +163,7 @@ describe("getRegistryTag", () => {
 				registryUrl: "ghcr.io",
 			});
 			const result = getRegistryTag(registry, "caddy");
-			expect(result).toBe("ghcr.io/myuser/nginx");
+			expect(result).toBe("ghcr.io/myuser/caddy");
 		});
 
 		it("should handle custom registry URL with imagePrefix", () => {
@@ -173,7 +173,7 @@ describe("getRegistryTag", () => {
 				registryUrl: "ghcr.io",
 			});
 			const result = getRegistryTag(registry, "caddy");
-			expect(result).toBe("ghcr.io/myorg/nginx");
+			expect(result).toBe("ghcr.io/myorg/caddy");
 		});
 
 		it("should handle custom registry URL with username already present", () => {
@@ -213,7 +213,7 @@ describe("getRegistryTag", () => {
 				username: "robot$library+dokploy",
 			});
 			const result = getRegistryTag(registry, "caddy");
-			expect(result).toBe("docker.io/robot$library+dokploy/nginx");
+			expect(result).toBe("docker.io/robot$library+dokploy/caddy");
 		});
 
 		it("should handle username with $ and other special characters", () => {
@@ -237,7 +237,7 @@ describe("getRegistryTag", () => {
 				username: "robot+test-user",
 			});
 			const result = getRegistryTag(registry, "httpd:alpine");
-			expect(result).toBe("docker.io/robot+test-user/nginx:latest");
+			expect(result).toBe("docker.io/robot+test-user/caddy:alpine");
 		});
 	});
 });
