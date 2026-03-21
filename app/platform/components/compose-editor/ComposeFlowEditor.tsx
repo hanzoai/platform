@@ -240,7 +240,7 @@ export function ComposeFlowEditor({
       data: {
         name,
         service: {
-          image: "nginx:latest",
+          image: "httpd:alpine",
         },
         onUpdate: (service: ServiceSpec) => updateService(name, service),
       },
