@@ -8,7 +8,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     networks:
       - frontend
 
@@ -99,7 +99,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     networks:
       - frontend
       - backend
@@ -221,7 +221,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     networks:
       - frontend
 
@@ -245,7 +245,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     networks:
       - frontend-testhash
 
@@ -284,7 +284,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     networks:
       - platform-network
 

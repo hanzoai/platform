@@ -8,7 +8,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     container_name: web_container
 
   api:
@@ -50,7 +50,7 @@ test("Add suffix to service names with container_name in compose file", () => {
 
 	// Verificar que la configuración de la imagen sigue igual
 	expect(actualComposeData.services?.[`web-${suffix}`]?.image).toBe(
-		"nginx:latest",
+		"httpd:alpine",
 	);
 	expect(actualComposeData.services?.[`api-${suffix}`]?.image).toBe(
 		"myapi:latest",
