@@ -3,7 +3,7 @@
  *
  * Ported from: paas/platform/handlers/ingress.js
  * Uses @kubernetes/client-node v1.x request-object API.
- * Supports both NGINX and Traefik ingress controllers.
+ * Uses Hanzo Ingress (Traefik) only.
  */
 
 import { TRPCError } from "@trpc/server";
@@ -20,17 +20,6 @@ export interface IngressSpec {
 	ingressClass?: string;
 	annotations?: Record<string, string>;
 }
-
-const NGINX_DEFAULTS: Record<string, string> = {
-	"nginx.ingress.kubernetes.io/proxy-body-size": "500m",
-	"nginx.ingress.kubernetes.io/proxy-connect-timeout": "6000",
-	"nginx.ingress.kubernetes.io/proxy-send-timeout": "6000",
-	"nginx.ingress.kubernetes.io/proxy-read-timeout": "6000",
-	"nginx.ingress.kubernetes.io/proxy-next-upstream-timeout": "6000",
-	"nginx.ingress.kubernetes.io/ssl-redirect": "true",
-	"nginx.ingress.kubernetes.io/force-ssl-redirect": "true",
-	"kubernetes.io/ingress.class": "nginx",
-};
 
 const TRAEFIK_DEFAULTS: Record<string, string> = {
 	"kubernetes.io/ingress.class": "ingress",
@@ -53,8 +42,7 @@ async function getExisting(clients: K8sClients, namespace: string, name: string)
 }
 
 function buildAnnotations(spec: IngressSpec): Record<string, string> {
-	const base = spec.ingressClass === "traefik" ? { ...TRAEFIK_DEFAULTS } : { ...NGINX_DEFAULTS };
-	return { ...base, ...spec.annotations };
+	return { ...TRAEFIK_DEFAULTS, ...spec.annotations };
 }
 
 function buildIngressBody(namespace: string, spec: IngressSpec): any {
