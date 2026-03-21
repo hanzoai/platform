@@ -136,7 +136,7 @@ export const suggestVariants = async ({
 		    Strategy B - If the user describes a GENERAL NEED or USE CASE (e.g., "personal blog", "project management tool", "chat application"):
 		    - Suggest different open source projects that fulfill that need
 		    - Each suggestion should be a different tool/platform that solves the same problem
-		    - Example: For "personal blog" → "WordPress", "Ghost", "Hugo with Caddy"
+		    - Example: For "personal blog" → "WordPress", "Ghost", "Hugo"
 		    - The name should be the actual project name
 
 		    Return your response as a JSON object with the following structure:
