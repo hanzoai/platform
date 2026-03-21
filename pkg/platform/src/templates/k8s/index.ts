@@ -162,6 +162,20 @@ export function resolveVariables(
 // ---------------------------------------------------------------------------
 
 /**
+ * Escape a string value so it is safe to interpolate into YAML.
+ *
+ * If the value contains characters that could break YAML structure
+ * (colons, newlines, quotes, anchors, etc.), wrap it in double quotes
+ * using JSON.stringify which produces valid YAML double-quoted scalars.
+ */
+function escapeYamlValue(value: string): string {
+	if (/[\n\r:{}[\],&*#?|<>=!%@`"'\\]/.test(value)) {
+		return JSON.stringify(value);
+	}
+	return value;
+}
+
+/**
  * Recursively get a value from a nested object using a dot-separated path.
  *
  * Example: `getPath(ctx, "podConfig.memoryRequestType")` => "mebibyte"
@@ -186,6 +200,8 @@ function getPath(obj: Record<string, unknown>, path: string): unknown {
  * Replace all `{{path.to.value}}` expressions in a YAML string with values
  * from the given substitution context.
  *
+ * All substituted string values are YAML-escaped to prevent injection.
+ *
  * Unresolved expressions are left as-is (to allow multi-pass rendering or
  * to surface missing variables clearly).
  */
@@ -201,7 +217,8 @@ export function substituteTemplate(
 			if (value === undefined || value === null) {
 				return match; // leave unresolved
 			}
-			return String(value);
+			const strValue = String(value);
+			return escapeYamlValue(strValue);
 		},
 	);
 }
