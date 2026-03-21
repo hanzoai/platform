@@ -30,13 +30,34 @@ jobs:
       - run: pnpm server:build
       - run: pnpm build
 
-  # ── Build platform ──────────────────────────────────────────
-  platform:
+  # ── Docker image builds ─────────────────────────────────────
+  # Uses a matrix strategy with max-parallel: 2 to avoid exhausting
+  # self-hosted runner resources (4 concurrent buildx builds cause
+  # Docker daemon OOM / graceful_stop EOF errors).
+  images:
     needs: [quality]
     runs-on: hanzo-build-linux-amd64
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - image: platform
+            file: ./Dockerfile
+            tag-style: suffix   # produces :latest/:canary + :version + :sha
+          - image: platform-cloud
+            file: ./Dockerfile.cloud
+            tag-style: suffix
+          - image: platform-schedule
+            file: ./Dockerfile.schedule
+            tag-style: csv
+          - image: platform-server
+            file: ./Dockerfile.server
+            tag-style: csv
     outputs:
       version: ${{ steps.meta.outputs.version }}
     steps:
@@ -52,136 +73,43 @@ jobs:
           VERSION=$(jq -r .version app/platform/package.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "suffix=latest" >> $GITHUB_OUTPUT
+            SUFFIX=latest
           else
-            echo "suffix=canary" >> $GITHUB_OUTPUT
+            SUFFIX=canary
           fi
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.ORG }}/platform:${{ steps.meta.outputs.suffix }}
-            ${{ env.REGISTRY }}/${{ env.ORG }}/platform:${{ steps.meta.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.ORG }}/platform:${{ github.sha }}
-          platforms: linux/amd64
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform:buildcache,mode=max
+          echo "suffix=$SUFFIX" >> $GITHUB_OUTPUT
 
-  # ── Build platform-cloud ───────────────────────────────────
-  platform-cloud:
-    needs: [quality]
-    runs-on: hanzo-build-linux-amd64
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
-      - id: meta
-        run: |
-          VERSION=$(jq -r .version app/platform/package.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "suffix=latest" >> $GITHUB_OUTPUT
+          if [ "${{ matrix.tag-style }}" = "suffix" ]; then
+            TAGS="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:${SUFFIX}"
+            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:${VERSION}"
+            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:${{ github.sha }}"
           else
-            echo "suffix=canary" >> $GITHUB_OUTPUT
+            TAGS="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:${SUFFIX}"
+            if [ "$SUFFIX" = "latest" ]; then
+              TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:${VERSION}"
+            fi
           fi
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.cloud
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:${{ steps.meta.outputs.suffix }}
-            ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:${{ steps.meta.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:${{ github.sha }}
-          platforms: linux/amd64
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:buildcache,mode=max
-
-  # ── Build schedule + server ────────────────────────────────
-  schedule:
-    needs: [quality]
-    runs-on: hanzo-build-linux-amd64
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
-      - id: meta
-        run: |
-          VERSION=$(jq -r .version app/platform/package.json)
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "tags=${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:latest,${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:${VERSION}" >> $GITHUB_OUTPUT
-          else
-            echo "tags=${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:canary" >> $GITHUB_OUTPUT
-          fi
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile.schedule
+          file: ${{ matrix.file }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           platforms: linux/amd64
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-schedule:buildcache,mode=max
-
-  server:
-    needs: [quality]
-    runs-on: hanzo-build-linux-amd64
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
-      - id: meta
-        run: |
-          VERSION=$(jq -r .version app/platform/package.json)
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "tags=${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:latest,${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:${VERSION}" >> $GITHUB_OUTPUT
-          else
-            echo "tags=${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:canary" >> $GITHUB_OUTPUT
-          fi
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile.server
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          platforms: linux/amd64
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/platform-server:buildcache,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:buildcache,mode=max
 
   # ── Notify universe of new images ──────────────────────────
   notify-universe:
-    needs: [platform, platform-cloud, schedule, server]
+    needs: [images]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Notify universe of new images
-        # Requires UNIVERSE_DISPATCH_TOKEN secret (a PAT with repo scope on hanzoai/universe)
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.UNIVERSE_DISPATCH_TOKEN }}
           repository: hanzoai/universe
           event-type: image-updated
-          client-payload: '{"service":"platform","version":"${{ needs.platform.outputs.version }}","sha":"${{ github.sha }}"}'
+          client-payload: '{"service":"platform","version":"${{ needs.images.outputs.version }}","sha":"${{ github.sha }}"}'
