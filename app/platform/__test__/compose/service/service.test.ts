@@ -11,7 +11,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     container_name: web_container
     links:
       - api
@@ -43,7 +43,7 @@ version: "3.8"
 
 services:
   web-testhash:
-    image: nginx:latest
+    image: httpd:alpine
     container_name: web_container-testhash
     links:
       - api-testhash
@@ -94,7 +94,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     container_name: web_container
     depends_on:
       - app
@@ -138,7 +138,7 @@ version: "3.8"
 
 services:
   web-testhash:
-    image: nginx:latest
+    image: httpd:alpine
     container_name: web_container-testhash
     depends_on:
       - app-testhash
@@ -191,7 +191,7 @@ version: "3.8"
 
 services:
   frontend:
-    image: nginx:latest
+    image: httpd:alpine
     depends_on:
       - backend
     networks:
@@ -234,7 +234,7 @@ version: "3.8"
 
 services:
   frontend-testhash:
-    image: nginx:latest
+    image: httpd:alpine
     depends_on:
       - backend-testhash
     networks:

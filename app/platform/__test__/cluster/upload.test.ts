@@ -22,13 +22,13 @@ describe("getRegistryTag", () => {
 	describe("with username (no imagePrefix)", () => {
 		it("should handle simple image name without tag", () => {
 			const registry = createMockRegistry({ username: "myuser" });
-			const result = getRegistryTag(registry, "nginx");
+			const result = getRegistryTag(registry, "caddy");
 			expect(result).toBe("docker.io/myuser/nginx");
 		});
 
 		it("should handle image name with tag", () => {
 			const registry = createMockRegistry({ username: "myuser" });
-			const result = getRegistryTag(registry, "nginx:latest");
+			const result = getRegistryTag(registry, "httpd:alpine");
 			expect(result).toBe("docker.io/myuser/nginx:latest");
 		});
 
@@ -92,7 +92,7 @@ describe("getRegistryTag", () => {
 				username: "myuser",
 				imagePrefix: "myorg",
 			});
-			const result = getRegistryTag(registry, "nginx");
+			const result = getRegistryTag(registry, "caddy");
 			expect(result).toBe("docker.io/myorg/nginx");
 		});
 
@@ -101,7 +101,7 @@ describe("getRegistryTag", () => {
 				username: "myuser",
 				imagePrefix: "myorg",
 			});
-			const result = getRegistryTag(registry, "nginx:latest");
+			const result = getRegistryTag(registry, "httpd:alpine");
 			expect(result).toBe("docker.io/myorg/nginx:latest");
 		});
 
@@ -131,7 +131,7 @@ describe("getRegistryTag", () => {
 				username: "myuser",
 				registryUrl: "",
 			});
-			const result = getRegistryTag(registry, "nginx");
+			const result = getRegistryTag(registry, "caddy");
 			expect(result).toBe("myuser/nginx");
 		});
 
@@ -141,7 +141,7 @@ describe("getRegistryTag", () => {
 				imagePrefix: "myorg",
 				registryUrl: "",
 			});
-			const result = getRegistryTag(registry, "nginx");
+			const result = getRegistryTag(registry, "caddy");
 			expect(result).toBe("myorg/nginx");
 		});
 
@@ -162,7 +162,7 @@ describe("getRegistryTag", () => {
 				username: "myuser",
 				registryUrl: "ghcr.io",
 			});
-			const result = getRegistryTag(registry, "nginx");
+			const result = getRegistryTag(registry, "caddy");
 			expect(result).toBe("ghcr.io/myuser/nginx");
 		});
 
@@ -172,7 +172,7 @@ describe("getRegistryTag", () => {
 				imagePrefix: "myorg",
 				registryUrl: "ghcr.io",
 			});
-			const result = getRegistryTag(registry, "nginx");
+			const result = getRegistryTag(registry, "caddy");
 			expect(result).toBe("ghcr.io/myorg/nginx");
 		});
 
@@ -212,7 +212,7 @@ describe("getRegistryTag", () => {
 			const registry = createMockRegistry({
 				username: "robot$library+dokploy",
 			});
-			const result = getRegistryTag(registry, "nginx");
+			const result = getRegistryTag(registry, "caddy");
 			expect(result).toBe("docker.io/robot$library+dokploy/nginx");
 		});
 
@@ -236,7 +236,7 @@ describe("getRegistryTag", () => {
 			const registry = createMockRegistry({
 				username: "robot+test-user",
 			});
-			const result = getRegistryTag(registry, "nginx:latest");
+			const result = getRegistryTag(registry, "httpd:alpine");
 			expect(result).toBe("docker.io/robot+test-user/nginx:latest");
 		});
 	});
