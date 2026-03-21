@@ -76,7 +76,7 @@ export function ComposeVisualEditor({ spec, onChange }: Props) {
       };
 
       nodes.forEach(node => {
-        newSpec.services[node.id] = node.data.service || { image: "nginx" };
+        newSpec.services[node.id] = node.data.service || { image: "httpd:alpine" };
       });
 
       onChange(newSpec);
