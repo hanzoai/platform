@@ -22,18 +22,6 @@ spec:
 
 ---
 
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{iid}}-superuser
-  namespace: {{namespace}}
-type: Opaque
-stringData:
-  email: {{secrets.superuserEmail}}
-  password: {{secrets.superuserPassword}}
-
----
-
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -64,10 +52,20 @@ spec:
       restartPolicy: Always
       imagePullSecrets:
         - name: ghcr-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: base
           image: {{registry.imageUrl}}
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: {{networking.containerPort}}
               name: http
@@ -81,13 +79,13 @@ spec:
             - name: HZ_SUPERUSER_EMAIL
               valueFrom:
                 secretKeyRef:
-                  name: {{iid}}-superuser
-                  key: email
+                  name: {{iid}}-base-secrets
+                  key: SUPERUSER_EMAIL
             - name: HZ_SUPERUSER_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{iid}}-superuser
-                  key: password
+                  name: {{iid}}-base-secrets
+                  key: SUPERUSER_PASSWORD
             - name: HZ_DATA_DIR
               value: /app/data
             - name: HZ_TASKS_ENABLED
@@ -151,6 +149,11 @@ spec:
         - name: tasks-worker
           image: {{registry.imageUrl}}
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           command: ["./base", "tasks", "worker"]
           env:
             - name: HZ_ENCRYPTION_KEY
@@ -232,3 +235,53 @@ spec:
       name: http
   selector:
     app: {{iid}}
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{iid}}-netpol
+  namespace: {{namespace}}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{iid}}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{namespace}}
+    ports:
+    - port: 8090
+      protocol: TCP
+  egress:
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - port: 53
+      protocol: UDP
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: hanzo
+    ports:
+    - port: 443
+      protocol: TCP
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: hanzo
+    ports:
+    - port: 443
+      protocol: TCP
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: hanzo
+    ports:
+    - port: 7233
+      protocol: TCP
