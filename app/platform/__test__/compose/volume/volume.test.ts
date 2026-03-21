@@ -59,12 +59,12 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     volumes:
       - "web-data:/var/www/html"
       - type: volume
         source: web-logs
-        target: /var/log/nginx
+        target: /var/log/httpd
 
 volumes:
   web-data:
@@ -78,12 +78,12 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     volumes:
       - "web-data-testhash:/var/www/html"
       - type: volume
         source: web-logs-testhash
-        target: /var/log/nginx
+        target: /var/log/httpd
 
 volumes:
   web-data-testhash:
@@ -169,12 +169,12 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     volumes:
-      - "web-data:/usr/share/nginx/html"
+      - "web-data:/srv"
       - type: volume
         source: web-logs
-        target: /var/log/nginx
+        target: /var/log/httpd
         volume:
           nocopy: true
 
@@ -223,12 +223,12 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     volumes:
-      - "web-data-testhash:/usr/share/nginx/html"
+      - "web-data-testhash:/srv"
       - type: volume
         source: web-logs-testhash
-        target: /var/log/nginx
+        target: /var/log/httpd
         volume:
           nocopy: true
 
