@@ -11,10 +11,10 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web-config
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
 
 configs:
   web-config:
@@ -34,7 +34,7 @@ test("Add suffix to configs in services", () => {
 
 	expect(actualComposeData.services?.web?.configs).toContainEqual({
 		source: `web-config-${suffix}`,
-		target: "/etc/nginx/nginx.conf",
+		target: "/etc/caddy/Caddyfile",
 	});
 });
 
@@ -43,10 +43,10 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web-config
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
 
 configs:
   web-config:
@@ -83,12 +83,12 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web-config
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
       - source: common-config
-        target: /etc/nginx/common.conf
+        target: /etc/caddy/common.conf
 
   app:
     image: node:14
@@ -137,10 +137,10 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web_config
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
 
   app:
     image: node:latest
@@ -162,10 +162,10 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web_config-testhash
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
 
   app:
     image: node:latest
