@@ -8,7 +8,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     secrets:
       - web_secret
 
@@ -30,7 +30,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     secrets:
       - web_secret-testhash
 
@@ -114,7 +114,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     secrets:
       - web_secret
 
@@ -135,7 +135,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     secrets:
       - web_secret-testhash
 
