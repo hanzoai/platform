@@ -1024,14 +1024,14 @@ const composeFileExample1 = `
 version: "3.8"
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     ports:
       - "80:80"
     networks:
       - frontend
     volumes:
       - web-data:/var/www/html
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   app:
     image: node:14
@@ -1069,14 +1069,14 @@ const expectedDockerComposeExample1 = parse(`
 version: "3.8"
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     ports:
       - "80:80"
     networks:
       - frontend
     volumes:
       - web-data-testhash:/var/www/html
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   app:
     image: node:14
