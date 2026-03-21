@@ -3,27 +3,16 @@ import { getCreateFileCommand } from "../docker/utils";
 import { getBuildAppDirectory } from "../filesystem/directory";
 import type { ApplicationNested } from ".";
 
-const caddyfileSpa = `
-:80 {
-	root * /srv
-	encode gzip
-	try_files {path} /index.html
-	file_server
-	handle /health {
-		respond "ok" 200
-	}
-}
+/**
+ * SPA entrypoint: serves static files from /srv, falls back to /srv/index.html
+ * for any path that does not match a real file (client-side routing).
+ */
+const spaEntrypoint = `#!/bin/sh
+# Serve static files; httpd.conf maps 404 -> /index.html for SPA routing.
+exec httpd -f -p 80 -h /srv -c /etc/httpd.conf
 `;
 
-const caddyfileStatic = `
-:80 {
-	root * /srv
-	encode gzip
-	file_server
-	handle /health {
-		respond "ok" 200
-	}
-}
+const spaHttpdConf = `E404:/index.html
 `;
 
 export const getStaticCommand = (application: ApplicationNested) => {
@@ -31,11 +20,10 @@ export const getStaticCommand = (application: ApplicationNested) => {
 	const buildAppDirectory = getBuildAppDirectory(application);
 	let command = "";
 
-	command += getCreateFileCommand(
-		buildAppDirectory,
-		"Caddyfile",
-		isStaticSpa ? caddyfileSpa : caddyfileStatic,
-	);
+	if (isStaticSpa) {
+		command += getCreateFileCommand(buildAppDirectory, "entrypoint.sh", spaEntrypoint);
+		command += getCreateFileCommand(buildAppDirectory, "httpd.conf", spaHttpdConf);
+	}
 
 	command += getCreateFileCommand(
 		buildAppDirectory,
@@ -47,10 +35,20 @@ export const getStaticCommand = (application: ApplicationNested) => {
 		buildAppDirectory,
 		"Dockerfile",
 		[
-			"FROM caddy:alpine",
+			"FROM busybox:latest",
 			`COPY ${publishDirectory || "."} /srv`,
-			"COPY Caddyfile /etc/caddy/Caddyfile",
-			"EXPOSE 80",
+			...(isStaticSpa
+				? [
+						"COPY entrypoint.sh /entrypoint.sh",
+						"COPY httpd.conf /etc/httpd.conf",
+						"RUN chmod +x /entrypoint.sh",
+						"EXPOSE 80",
+						'CMD ["/entrypoint.sh"]',
+					]
+				: [
+						"EXPOSE 80",
+						'CMD ["httpd", "-f", "-p", "80", "-h", "/srv"]',
+					]),
 		].join("\n"),
 	);
 
