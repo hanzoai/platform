@@ -15,7 +15,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     depends_on:
       - db
       - api
@@ -51,7 +51,7 @@ test("Add suffix to service names with depends_on (array) in compose file", () =
 
 	// Verificar que la configuración de la imagen sigue igual
 	expect(actualComposeData.services?.[`web-${suffix}`]?.image).toBe(
-		"nginx:latest",
+		"httpd:alpine",
 	);
 	expect(actualComposeData.services?.[`api-${suffix}`]?.image).toBe(
 		"myapi:latest",
@@ -83,7 +83,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     depends_on:
       db:
         condition: service_healthy
@@ -121,7 +121,7 @@ test("Add suffix to service names with depends_on (object) in compose file", () 
 
 	// Verificar que la configuración de la imagen sigue igual
 	expect(actualComposeData.services?.[`web-${suffix}`]?.image).toBe(
-		"nginx:latest",
+		"httpd:alpine",
 	);
 	expect(actualComposeData.services?.[`api-${suffix}`]?.image).toBe(
 		"myapi:latest",
