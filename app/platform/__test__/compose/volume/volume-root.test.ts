@@ -8,9 +8,9 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     volumes:
-      - web_data:/var/lib/nginx/data
+      - web_data:/var/lib/httpd/data
 
 volumes:
   web_data:
@@ -122,7 +122,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
 
   app:
     image: node:latest
@@ -153,7 +153,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
 
   app:
     image: node:latest

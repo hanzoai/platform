@@ -15,7 +15,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
 
 secrets:
   db_password:
@@ -74,7 +74,7 @@ version: "3.8"
 
 services:
   frontend:
-    image: nginx:latest
+    image: httpd:alpine
 
 secrets:
   frontend_secret:
