@@ -15,10 +15,10 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web_config
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
 
   app:
     image: node:14
@@ -48,10 +48,10 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web_config-testhash
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
 
   app:
     image: node:14
@@ -91,12 +91,12 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web_config
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
     environment:
-      - NGINX_CONFIG=/etc/nginx/nginx.conf
+      - APP_CONFIG=/etc/caddy/Caddyfile
 
   app:
     image: node:14
@@ -127,12 +127,12 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web_config-testhash
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
     environment:
-      - NGINX_CONFIG=/etc/nginx/nginx.conf
+      - APP_CONFIG=/etc/caddy/Caddyfile
 
   app:
     image: node:14
@@ -175,10 +175,10 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web_config
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
 
   app:
     image: node:14
@@ -205,10 +205,10 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web_config-testhash
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
 
   app:
     image: node:14
