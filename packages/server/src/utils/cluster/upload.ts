@@ -77,8 +77,8 @@ export const uploadImageRemoteCommand = async (
 /**
  * Extract the repository name from imageName by taking the last part after '/'
  * Examples:
- * - "nginx" -> "nginx"
- * - "nginx:latest" -> "nginx:latest"
+ * - "busybox" -> "busybox"
+ * - "busybox:latest" -> "busybox:latest"
  * - "myuser/myrepo" -> "myrepo"
  * - "myuser/myrepo:tag" -> "myrepo:tag"
  * - "docker.io/myuser/myrepo" -> "myrepo"
