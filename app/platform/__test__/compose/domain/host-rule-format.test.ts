@@ -88,7 +88,7 @@ describe("Host rule format regression tests", () => {
 			const composeSpec = {
 				services: {
 					myapp: {
-						image: "nginx",
+						image: "httpd",
 						labels: labels,
 					},
 				},
