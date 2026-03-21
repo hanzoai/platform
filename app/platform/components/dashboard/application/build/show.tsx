@@ -402,7 +402,7 @@ export const ShowBuildChooseForm = ({ applicationId }: Props) => {
 										<div className="space-y-0.5">
 											<FormLabel>Publish Directory</FormLabel>
 											<FormDescription>
-												Allows you to serve a single directory via NGINX after
+												Allows you to serve a single directory via a static file server after
 												the build phase. Useful if the final build assets should
 												be served as a static site.
 											</FormDescription>
