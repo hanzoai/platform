@@ -15,7 +15,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     extends: base_service
 
   api:
@@ -49,7 +49,7 @@ test("Add suffix to service names with extends (string) in compose file", () => 
 
 	// Verificar que la configuración de la imagen sigue igual
 	expect(actualComposeData.services?.[`web-${suffix}`]?.image).toBe(
-		"nginx:latest",
+		"httpd:alpine",
 	);
 	expect(actualComposeData.services?.[`api-${suffix}`]?.image).toBe(
 		"myapi:latest",
@@ -73,7 +73,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     extends:
       service: base_service
       file: docker-compose.base.yml
@@ -109,7 +109,7 @@ test("Add suffix to service names with extends (object) in compose file", () => 
 
 	// Verificar que la configuración de la imagen sigue igual
 	expect(actualComposeData.services?.[`web-${suffix}`]?.image).toBe(
-		"nginx:latest",
+		"httpd:alpine",
 	);
 	expect(actualComposeData.services?.[`api-${suffix}`]?.image).toBe(
 		"myapi:latest",
