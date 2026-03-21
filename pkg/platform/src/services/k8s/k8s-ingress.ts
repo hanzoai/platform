@@ -33,9 +33,10 @@ const NGINX_DEFAULTS: Record<string, string> = {
 };
 
 const TRAEFIK_DEFAULTS: Record<string, string> = {
-	"kubernetes.io/ingress.class": "traefik",
+	"kubernetes.io/ingress.class": "ingress",
 	"traefik.ingress.kubernetes.io/router.entrypoints": "websecure",
 	"traefik.ingress.kubernetes.io/router.tls": "true",
+	"traefik.ingress.kubernetes.io/router.middlewares": "hanzo-security-headers@kubernetescrd",
 };
 
 function k8sError(err: unknown): string {
