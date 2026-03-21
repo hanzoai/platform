@@ -1,14 +1,14 @@
-import { getDockerCommand } from "@hanzo/platform-server/utils/builders/docker-file";
+import { getDockerCommand } from "@hanzo/platform/utils/builders/docker-file";
 import { getCreateFileCommand } from "../docker/utils";
 import { getBuildAppDirectory } from "../filesystem/directory";
 import type { ApplicationNested } from ".";
 
 /**
- * SPA entrypoint: serves static files from /srv, falls back to /srv/index.html
- * for any path that does not match a real file (client-side routing).
+ * Static file serving via busybox httpd — zero external dependencies.
+ * SPA mode: 404s fall back to /index.html for client-side routing.
  */
+
 const spaEntrypoint = `#!/bin/sh
-# Serve static files; httpd.conf maps 404 -> /index.html for SPA routing.
 exec httpd -f -p 80 -h /srv -c /etc/httpd.conf
 `;
 
