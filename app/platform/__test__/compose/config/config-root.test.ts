@@ -15,7 +15,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
 
 configs:
   web-config:
@@ -44,12 +44,12 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
     configs:
       - source: web-config
-        target: /etc/nginx/nginx.conf
+        target: /etc/caddy/Caddyfile
       - source: another-config
-        target: /etc/nginx/another.conf
+        target: /etc/caddy/extra.conf
 
 configs:
   web-config:
@@ -82,7 +82,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
 
 configs:
   web-config:
@@ -117,7 +117,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
 
   app:
     image: node:latest
@@ -142,7 +142,7 @@ version: "3.8"
 
 services:
   web:
-    image: nginx:latest
+    image: httpd:alpine
 
   app:
     image: node:latest
