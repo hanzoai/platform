@@ -27,7 +27,7 @@ export const getNixpacksCommand = (application: ApplicationNested) => {
 	}
 
 	if (publishDirectory) {
-		/* No need for any start command, static files served by busybox httpd */
+		/* No need for any start command, static files served by caddy */
 		args.push("--no-error-without-start");
 	}
 	const command = `nixpacks ${args.join(" ")}`;
