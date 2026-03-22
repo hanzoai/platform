@@ -5,10 +5,14 @@
  * Provides health status checks for Traefik, Cloud API, and Bot Gateway.
  * Rules are stored in the platform's PostgreSQL database via Drizzle ORM.
  *
+ * After every mutating operation, rules are synced to K8s:
+ * - Rate limit rules → Traefik Middleware CRDs (traefik.io/v1alpha1)
+ * - Routing rules → K8s Ingress resources (networking.k8s.io/v1)
+ *
  * Features:
  * - Gateway component health monitoring
- * - Rate limit rule CRUD
- * - Routing rule CRUD
+ * - Rate limit rule CRUD with K8s enforcement
+ * - Routing rule CRUD with K8s enforcement
  */
 
 import { db } from "@hanzo/platform/db";
@@ -27,6 +31,7 @@ import type {
 	apiUpdateRateLimitRule,
 	apiUpdateRoutingRule,
 } from "../db/schema/gateway";
+import { getDefaultClients, type K8sClients } from "./k8s/k8s-client";
 
 // ============================================================================
 // Types — Gateway Status
@@ -181,6 +186,202 @@ async function getBotGatewayStatus(
 }
 
 // ============================================================================
+// K8s Sync — Helpers
+// ============================================================================
+
+const GATEWAY_NAMESPACE = process.env.GATEWAY_K8S_NAMESPACE ?? "hanzo";
+const MANAGED_BY_LABEL = "hanzo-platform";
+const TRAEFIK_CRD_GROUP = "traefik.io";
+const TRAEFIK_CRD_VERSION = "v1alpha1";
+
+function getK8sClients(): K8sClients | null {
+	try {
+		return getDefaultClients();
+	} catch {
+		console.warn("[gateway] K8s not available — skipping sync");
+		return null;
+	}
+}
+
+function k8sError(err: unknown): string {
+	const e = err as { response?: { body?: { message?: string } }; message?: string };
+	return e.response?.body?.message ?? e.message ?? String(err);
+}
+
+// ============================================================================
+// K8s Sync — Rate Limit → Traefik Middleware CRD
+// ============================================================================
+
+function buildRateLimitMiddleware(rule: RateLimitRule): Record<string, unknown> {
+	return {
+		apiVersion: `${TRAEFIK_CRD_GROUP}/${TRAEFIK_CRD_VERSION}`,
+		kind: "Middleware",
+		metadata: {
+			name: `rate-limit-${rule.rateLimitRuleId}`,
+			namespace: GATEWAY_NAMESPACE,
+			labels: { "managed-by": MANAGED_BY_LABEL },
+		},
+		spec: {
+			rateLimit: {
+				average: Math.max(1, Math.round(rule.requestsPerMinute / 60)),
+				burst: rule.burstSize,
+			},
+		},
+	};
+}
+
+async function syncRateLimitToK8s(rule: RateLimitRule): Promise<void> {
+	const clients = getK8sClients();
+	if (!clients) return;
+
+	const name = `rate-limit-${rule.rateLimitRuleId}`;
+	const body = buildRateLimitMiddleware(rule);
+
+	try {
+		// Try to get existing — if found, replace; otherwise create.
+		await clients.custom.getNamespacedCustomObject({
+			group: TRAEFIK_CRD_GROUP,
+			version: TRAEFIK_CRD_VERSION,
+			namespace: GATEWAY_NAMESPACE,
+			plural: "middlewares",
+			name,
+		});
+		await clients.custom.replaceNamespacedCustomObject({
+			group: TRAEFIK_CRD_GROUP,
+			version: TRAEFIK_CRD_VERSION,
+			namespace: GATEWAY_NAMESPACE,
+			plural: "middlewares",
+			name,
+			body,
+		});
+	} catch {
+		try {
+			await clients.custom.createNamespacedCustomObject({
+				group: TRAEFIK_CRD_GROUP,
+				version: TRAEFIK_CRD_VERSION,
+				namespace: GATEWAY_NAMESPACE,
+				plural: "middlewares",
+				body,
+			});
+		} catch (err) {
+			console.error(`[gateway] Failed to sync rate limit '${name}' to K8s: ${k8sError(err)}`);
+		}
+	}
+}
+
+async function deleteRateLimitFromK8s(rateLimitRuleId: string): Promise<void> {
+	const clients = getK8sClients();
+	if (!clients) return;
+
+	const name = `rate-limit-${rateLimitRuleId}`;
+	try {
+		await clients.custom.deleteNamespacedCustomObject({
+			group: TRAEFIK_CRD_GROUP,
+			version: TRAEFIK_CRD_VERSION,
+			namespace: GATEWAY_NAMESPACE,
+			plural: "middlewares",
+			name,
+		});
+	} catch {
+		// Idempotent — already gone
+	}
+}
+
+// ============================================================================
+// K8s Sync — Routing Rule → Ingress
+// ============================================================================
+
+function buildRoutingIngress(rule: RoutingRule): Record<string, unknown> {
+	const annotations: Record<string, string> = {
+		"kubernetes.io/ingress.class": "ingress",
+		"traefik.ingress.kubernetes.io/router.entrypoints": "websecure",
+		"traefik.ingress.kubernetes.io/router.tls": "true",
+		"managed-by": MANAGED_BY_LABEL,
+	};
+
+	if (rule.middlewares && rule.middlewares.length > 0) {
+		annotations["traefik.ingress.kubernetes.io/router.middlewares"] =
+			rule.middlewares.join(",");
+	}
+
+	return {
+		apiVersion: "networking.k8s.io/v1",
+		kind: "Ingress",
+		metadata: {
+			name: `platform-route-${rule.routingRuleId}`,
+			namespace: GATEWAY_NAMESPACE,
+			labels: { "managed-by": MANAGED_BY_LABEL },
+			annotations,
+		},
+		spec: {
+			ingressClassName: "ingress",
+			rules: [
+				{
+					host: rule.host,
+					http: {
+						paths: [
+							{
+								path: rule.pathPrefix || "/",
+								pathType: "Prefix",
+								backend: {
+									service: {
+										name: rule.backend,
+										port: { number: 80 },
+									},
+								},
+							},
+						],
+					},
+				},
+			],
+		},
+	};
+}
+
+async function syncRoutingRuleToK8s(rule: RoutingRule): Promise<void> {
+	const clients = getK8sClients();
+	if (!clients) return;
+
+	const name = `platform-route-${rule.routingRuleId}`;
+	const body = buildRoutingIngress(rule);
+
+	try {
+		const existing = await clients.networking.readNamespacedIngress({ name, namespace: GATEWAY_NAMESPACE });
+		if (existing) {
+			await clients.networking.replaceNamespacedIngress({
+				name,
+				namespace: GATEWAY_NAMESPACE,
+				body: body as any,
+			});
+			return;
+		}
+	} catch {
+		// Not found — fall through to create
+	}
+
+	try {
+		await clients.networking.createNamespacedIngress({
+			namespace: GATEWAY_NAMESPACE,
+			body: body as any,
+		});
+	} catch (err) {
+		console.error(`[gateway] Failed to sync routing rule '${name}' to K8s: ${k8sError(err)}`);
+	}
+}
+
+async function deleteRoutingRuleFromK8s(routingRuleId: string): Promise<void> {
+	const clients = getK8sClients();
+	if (!clients) return;
+
+	const name = `platform-route-${routingRuleId}`;
+	try {
+		await clients.networking.deleteNamespacedIngress({ name, namespace: GATEWAY_NAMESPACE });
+	} catch {
+		// Idempotent — already gone
+	}
+}
+
+// ============================================================================
 // Rate Limit Rules — CRUD
 // ============================================================================
 
@@ -220,6 +421,10 @@ export async function createRateLimitRule(
 		});
 	}
 
+	if (rule.enabled) {
+		await syncRateLimitToK8s(rule);
+	}
+
 	return rule;
 }
 
@@ -244,6 +449,12 @@ export async function updateRateLimitRule(
 		});
 	}
 
+	if (rule.enabled) {
+		await syncRateLimitToK8s(rule);
+	} else {
+		await deleteRateLimitFromK8s(rule.rateLimitRuleId);
+	}
+
 	return rule;
 }
 
@@ -261,6 +472,8 @@ export async function deleteRateLimitRule(
 			message: "Rate limit rule not found",
 		});
 	}
+
+	await deleteRateLimitFromK8s(rateLimitRuleId);
 
 	return rule;
 }
@@ -305,6 +518,10 @@ export async function createRoutingRule(
 		});
 	}
 
+	if (rule.enabled) {
+		await syncRoutingRuleToK8s(rule);
+	}
+
 	return rule;
 }
 
@@ -329,6 +546,12 @@ export async function updateRoutingRule(
 		});
 	}
 
+	if (rule.enabled) {
+		await syncRoutingRuleToK8s(rule);
+	} else {
+		await deleteRoutingRuleFromK8s(rule.routingRuleId);
+	}
+
 	return rule;
 }
 
@@ -346,6 +569,8 @@ export async function deleteRoutingRule(
 			message: "Routing rule not found",
 		});
 	}
+
+	await deleteRoutingRuleFromK8s(routingRuleId);
 
 	return rule;
 }
