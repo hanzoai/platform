@@ -472,4 +472,19 @@ export const serverRouter = createTRPCRouter({
 				throw error;
 			}
 		}),
+
+	getConsoleMetrics: protectedProcedure.query(async () => {
+		if (!IS_CLOUD) return null;
+
+		try {
+			const { fetchDailyMetrics, isConsoleConfigured } = await import(
+				"@hanzo/platform/services/console-client"
+			);
+			if (!isConsoleConfigured()) return null;
+			return await fetchDailyMetrics();
+		} catch (err: any) {
+			console.warn("Console metrics fetch error:", err.message);
+			return null;
+		}
+	}),
 });

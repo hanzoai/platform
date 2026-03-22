@@ -3,6 +3,7 @@ import { validateRequest } from "@hanzo/platform/lib/auth";
 import { Loader2 } from "lucide-react";
 import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";
+import { CloudMonitoring } from "@/components/dashboard/monitoring/cloud/show-cloud-monitoring";
 import { ContainerFreeMonitoring } from "@/components/dashboard/monitoring/free/container/show-free-container-monitoring";
 import { ShowPaidMonitoring } from "@/components/dashboard/monitoring/paid/servers/show-paid-monitoring";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
@@ -14,27 +15,35 @@ const BASE_URL = "http://localhost:3001/metrics";
 
 const DEFAULT_TOKEN = "metrics";
 
-const Dashboard = () => {
+interface Props {
+	isCloud: boolean;
+}
+
+const Dashboard = ({ isCloud }: Props) => {
 	const [toggleMonitoring, _setToggleMonitoring] = useLocalStorage(
 		"monitoring-enabled",
 		false,
 	);
 
-	const { data: monitoring, isPending } = api.user.getMetricsToken.useQuery();
+	const { data: monitoring, isPending } = api.user.getMetricsToken.useQuery(
+		undefined,
+		{ enabled: !isCloud },
+	);
+
+	if (isCloud) {
+		return (
+			<div className="space-y-4 pb-10">
+				<Card className="h-full bg-sidebar p-2.5 rounded-xl">
+					<div className="rounded-xl bg-background shadow-md p-6">
+						<CloudMonitoring />
+					</div>
+				</Card>
+			</div>
+		);
+	}
+
 	return (
 		<div className="space-y-4 pb-10">
-			{/* <AlertBlock>
-				You are watching the <strong>Free</strong> plan.{" "}
-				<a
-					href="https://hanzo.ai#pricing"
-					target="_blank"
-					className="underline"
-					rel="noreferrer"
-				>
-					Upgrade
-				</a>{" "}
-				to get more features.
-			</AlertBlock> */}
 			{isPending ? (
 				<Card className="bg-sidebar  p-2.5 rounded-xl  mx-auto  items-center">
 					<div className="rounded-xl bg-background flex shadow-md px-4 min-h-[50vh] justify-center items-center text-muted-foreground">
@@ -44,15 +53,6 @@ const Dashboard = () => {
 				</Card>
 			) : (
 				<>
-					{/* {monitoring?.enabledFeatures && (
-						<div className="flex flex-row border w-fit p-4 rounded-lg items-center gap-2">
-							<Label className="text-muted-foreground">Change Monitoring</Label>
-							<Switch
-								checked={toggleMonitoring}
-								onCheckedChange={setToggleMonitoring}
-							/>
-						</div>
-					)} */}
 					{toggleMonitoring ? (
 						<Card className="bg-sidebar  p-2.5 rounded-xl  mx-auto">
 							<div className="rounded-xl bg-background shadow-md">
@@ -91,14 +91,6 @@ Dashboard.getLayout = (page: ReactElement) => {
 export async function getServerSideProps(
 	ctx: GetServerSidePropsContext<{ serviceId: string }>,
 ) {
-	if (IS_CLOUD) {
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/dashboard/projects",
-			},
-		};
-	}
 	const { user } = await validateRequest(ctx.req);
 	if (!user) {
 		return {
@@ -110,6 +102,8 @@ export async function getServerSideProps(
 	}
 
 	return {
-		props: {},
+		props: {
+			isCloud: IS_CLOUD,
+		},
 	};
 }
