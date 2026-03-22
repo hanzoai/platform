@@ -64,7 +64,7 @@
 		"@hanzo/platform": "workspace:*",
 		"@hanzo/platform-server": "workspace:*",
 		"@hanzo/platform-trpc": "github:hanzoai/trpc-openapi#v0.0.17",
-		"@hanzo/ui": "^5.5.1",
+		"@hanzo/ui": "^5.6.0",
 		"@hookform/resolvers": "^5.2.2",
 		"@octokit/auth-app": "^8.2.0",
 		"@octokit/webhooks": "^14.2.0",
