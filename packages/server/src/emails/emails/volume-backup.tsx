@@ -52,7 +52,7 @@ export const VolumeBackupEmail = ({
 							},
 						},
 					},
-				}}
+				} as any}
 			>
 				<Head />
 
