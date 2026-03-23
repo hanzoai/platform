@@ -42,7 +42,7 @@ export const InvitationEmail = ({
 							},
 						},
 					},
-				}}
+				} as any}
 			>
 				<Body className="bg-white my-auto mx-auto font-sans px-2">
 					<Container className="border border-solid border-[#eaeaea] rounded-lg my-[40px] mx-auto p-[20px] max-w-[465px]">
