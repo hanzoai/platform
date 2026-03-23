@@ -1,7 +1,7 @@
 import { db } from "@hanzo/platform-server/db";
 import { notifications } from "@hanzo/platform-server/db/schema";
 import DockerCleanupEmail from "@hanzo/platform-server/emails/emails/docker-cleanup";
-import { renderAsync } from "@react-email/components";
+import { render } from "@react-email/components";
 import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";
 import {
@@ -60,9 +60,9 @@ export const sendDockerCleanupNotifications = async (
 		} = notification;
 		try {
 			if (email || resend) {
-				const template = await renderAsync(
+				const template = await render(
 					DockerCleanupEmail({ message, date: date.toLocaleString() }),
-				).catch();
+				);
 
 				if (email) {
 					await sendEmailNotification(

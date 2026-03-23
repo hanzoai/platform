@@ -1,7 +1,7 @@
 import { db } from "@hanzo/platform-server/db";
 import { notifications } from "@hanzo/platform-server/db/schema";
 import { VolumeBackupEmail } from "@hanzo/platform-server/emails/emails/volume-backup";
-import { renderAsync } from "@react-email/components";
+import { render } from "@react-email/components";
 import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";
 import {
@@ -80,7 +80,7 @@ export const sendVolumeBackupNotifications = async ({
 
 		if (email || resend) {
 			const subject = `Volume Backup ${type === "success" ? "Successful" : "Failed"} - ${applicationName}`;
-			const htmlContent = await renderAsync(
+			const htmlContent = await render(
 				VolumeBackupEmail({
 					projectName,
 					applicationName,
