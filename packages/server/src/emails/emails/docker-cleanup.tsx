@@ -33,7 +33,7 @@ export const DockerCleanupEmail = ({
 							},
 						},
 					},
-				}}
+				} as any}
 			>
 				<Head />
 
