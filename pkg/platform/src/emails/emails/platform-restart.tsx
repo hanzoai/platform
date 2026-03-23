@@ -31,7 +31,7 @@ export const HanzoRestartEmail = ({
 							},
 						},
 					},
-				}}
+				} as any}
 			>
 				<Head />
 
