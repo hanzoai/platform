@@ -41,7 +41,7 @@ export const DatabaseBackupEmail = ({
 							},
 						},
 					},
-				}}
+				} as any}
 			>
 				<Head />
 
