@@ -769,8 +769,8 @@ importers:
         specifier: ^1.6.8
         version: 1.6.8
       ssh2:
-        specifier: 1.17.0
-        version: 1.17.0
+        specifier: 1.15.0
+        version: 1.15.0
       toml:
         specifier: 3.0.0
         version: 3.0.0
@@ -827,8 +827,8 @@ importers:
         specifier: ^1.7.5
         version: 1.7.5
       '@types/ssh2':
-        specifier: 1.15.5
-        version: 1.15.5
+        specifier: 1.15.1
+        version: 1.15.1
       '@types/ws':
         specifier: 8.18.1
         version: 8.18.1
@@ -1065,8 +1065,8 @@ importers:
         specifier: ^1.6.8
         version: 1.6.8
       ssh2:
-        specifier: 1.17.0
-        version: 1.17.0
+        specifier: 1.15.0
+        version: 1.15.0
       toml:
         specifier: 3.0.0
         version: 3.0.0
@@ -1123,8 +1123,8 @@ importers:
         specifier: ^1.7.5
         version: 1.7.5
       '@types/ssh2':
-        specifier: 1.15.5
-        version: 1.15.5
+        specifier: 1.15.1
+        version: 1.15.1
       '@types/ws':
         specifier: 8.18.1
         version: 8.18.1
@@ -5086,9 +5086,6 @@ packages:
 
   '@types/ssh2@1.15.1':
     resolution: {integrity: sha512-ZIbEqKAsi5gj35y4P4vkJYly642wIbY6PqoN0xiyQGshKUGXR9WQjF/iF9mXBQ8uBKy3ezfsCkcoHKhd0BzuDA==}
-
-  '@types/ssh2@1.15.5':
-    resolution: {integrity: sha512-N1ASjp/nXH3ovBHddRJpli4ozpk6UdDYIX4RJWFa9L1YKnzdhTlVmiGHm4DZnj/jLbqZpes4aeR30EFGQtvhQQ==}
 
   '@types/stream-buffers@3.0.8':
     resolution: {integrity: sha512-J+7VaHKNvlNPJPEJXX/fKa9DZtR/xPMwuIbe+yNOwp1YB+ApUOBv2aUpEoBJEi8nJgbgs1x8e73ttg0r1rSUdw==}
@@ -9413,10 +9410,6 @@ packages:
 
   ssh2@1.15.0:
     resolution: {integrity: sha512-C0PHgX4h6lBxYx7hcXwu3QWdh4tg6tZZsTfXcdvc5caW/EMxaB4H9dWsl7qk+F7LAW762hp8VbXOX7x4xUYvEw==}
-    engines: {node: '>=10.16.0'}
-
-  ssh2@1.17.0:
-    resolution: {integrity: sha512-wPldCk3asibAjQ/kziWQQt1Wh3PgDFpC0XpwclzKcdT1vql6KeYxf5LIt4nlFkUeR8WuphYMKqUA56X4rjbfgQ==}
     engines: {node: '>=10.16.0'}
 
   stackback@0.0.2:
@@ -15108,13 +15101,13 @@ snapshots:
   '@types/docker-modem@3.0.6':
     dependencies:
       '@types/node': 25.5.0
-      '@types/ssh2': 1.15.5
+      '@types/ssh2': 1.15.1
 
   '@types/dockerode@4.0.1':
     dependencies:
       '@types/docker-modem': 3.0.6
       '@types/node': 25.5.0
-      '@types/ssh2': 1.15.5
+      '@types/ssh2': 1.15.1
 
   '@types/eslint@9.6.1':
     dependencies:
@@ -15301,10 +15294,6 @@ snapshots:
   '@types/shimmer@1.2.0': {}
 
   '@types/ssh2@1.15.1':
-    dependencies:
-      '@types/node': 18.19.104
-
-  '@types/ssh2@1.15.5':
     dependencies:
       '@types/node': 18.19.104
 
@@ -16588,7 +16577,7 @@ snapshots:
       debug: 4.4.3
       readable-stream: 3.6.2
       split-ca: 1.0.1
-      ssh2: 1.17.0
+      ssh2: 1.15.0
     transitivePeerDependencies:
       - supports-color
 
@@ -19870,14 +19859,6 @@ snapshots:
   sqlstring@2.3.3: {}
 
   ssh2@1.15.0:
-    dependencies:
-      asn1: 0.2.6
-      bcrypt-pbkdf: 1.0.2
-    optionalDependencies:
-      cpu-features: 0.0.10
-      nan: 2.26.2
-
-  ssh2@1.17.0:
     dependencies:
       asn1: 0.2.6
       bcrypt-pbkdf: 1.0.2
