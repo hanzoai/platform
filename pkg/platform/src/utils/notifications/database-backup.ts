@@ -1,7 +1,7 @@
 import { db } from "@hanzo/platform/db";
 import { notifications } from "@hanzo/platform/db/schema";
 import DatabaseBackupEmail from "@hanzo/platform/emails/emails/database-backup";
-import { renderAsync } from "@react-email/components";
+import { render } from "@react-email/components";
 import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";
 import {
@@ -73,7 +73,7 @@ export const sendDatabaseBackupNotifications = async ({
 		} = notification;
 		try {
 			if (email || resend) {
-				const template = await renderAsync(
+				const template = await render(
 					DatabaseBackupEmail({
 						projectName,
 						applicationName,
@@ -82,7 +82,7 @@ export const sendDatabaseBackupNotifications = async ({
 						errorMessage,
 						date: date.toLocaleString(),
 					}),
-				).catch();
+				);
 
 				if (email) {
 					await sendEmailNotification(
