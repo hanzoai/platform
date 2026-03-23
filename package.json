@@ -46,7 +46,8 @@
 	},
 	"pnpm": {
 		"overrides": {
-			"esbuild": "0.20.2"
+			"esbuild": "0.20.2",
+			"postgres": "3.4.4"
 		},
 		"onlyBuiltDependencies": [
 			"@scarf/scarf",
