@@ -31,7 +31,7 @@ export const PlatformRestartEmail = ({
 							},
 						},
 					},
-				}}
+				} as any}
 			>
 				<Head />
 
