@@ -1,7 +1,7 @@
 import { db } from "@hanzo/platform-server/db";
 import { notifications } from "@hanzo/platform-server/db/schema";
 import PlatformRestartEmail from "@hanzo/platform-server/emails/emails/platform-restart";
-import { renderAsync } from "@react-email/components";
+import { render } from "@react-email/components";
 import { format } from "date-fns";
 import { eq } from "drizzle-orm";
 import {
@@ -56,9 +56,9 @@ export const sendPlatformRestartNotifications = async () => {
 
 			try {
 				if (email || resend) {
-					const template = await renderAsync(
+					const template = await render(
 						PlatformRestartEmail({ date: date.toLocaleString() }),
-					).catch();
+					);
 
 					if (email) {
 						await sendEmailNotification(
