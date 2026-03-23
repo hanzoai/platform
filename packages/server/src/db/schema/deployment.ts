@@ -187,27 +187,21 @@ export const apiCreateDeploymentServer = schema
 		serverId: z.string().min(1),
 	});
 
-export const apiCreateDeploymentSchedule = schema
-	.pick({
-		title: true,
-		status: true,
-		logPath: true,
-		description: true,
-	})
-	.extend({
-		scheduleId: z.string().min(1),
-	});
+export const apiCreateDeploymentSchedule = z.object({
+	title: z.string().min(1),
+	status: z.string().default("running"),
+	logPath: z.string().min(1),
+	description: z.string().optional(),
+	scheduleId: z.string().min(1),
+});
 
-export const apiCreateDeploymentVolumeBackup = schema
-	.pick({
-		title: true,
-		status: true,
-		logPath: true,
-		description: true,
-	})
-	.extend({
-		volumeBackupId: z.string().min(1),
-	});
+export const apiCreateDeploymentVolumeBackup = z.object({
+	title: z.string().min(1),
+	status: z.string().default("running"),
+	logPath: z.string().min(1),
+	description: z.string().optional(),
+	volumeBackupId: z.string().min(1),
+});
 
 export const apiFindAllByApplication = z.object({
 	applicationId: z.string().min(1),
