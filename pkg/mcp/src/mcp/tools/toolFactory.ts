@@ -54,13 +54,13 @@ export function createTool<TShape extends import("zod").ZodRawShape>(
           context.logger.warn(
             `Input validation failed for tool: ${definition.name}`,
             {
-              errors: validationResult.error.errors,
+              errors: validationResult.error.issues,
               input,
             }
           );
 
-          const errorMessages = validationResult.error.errors
-            .map((err) => `${err.path.join(".")}: ${err.message}`)
+          const errorMessages = validationResult.error.issues
+            .map((err: any) => `${err.path.join(".")}: ${err.message}`)
             .join(", ");
 
           return ResponseFormatter.error(
