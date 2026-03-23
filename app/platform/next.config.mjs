@@ -6,6 +6,7 @@
 /** @type {import("next").NextConfig} */
 const nextConfig = {
 	reactStrictMode: true,
+	serverExternalPackages: ["ssh2", "node-pty", "cpu-features", "bcrypt"],
 	typescript: {
 		ignoreBuildErrors: true,
 	},
@@ -44,6 +45,15 @@ const nextConfig = {
 			},
 		];
 	},
+};
+
+// Exclude native modules from webpack bundling
+nextConfig.webpack = (config, { isServer }) => {
+	if (isServer) {
+		config.externals = config.externals || [];
+		config.externals.push("ssh2", "node-pty", "cpu-features", "bcrypt");
+	}
+	return config;
 };
 
 export default nextConfig;
