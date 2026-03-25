@@ -106,10 +106,22 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Notify universe of new images
+      - name: Dispatch image update to universe
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.UNIVERSE_DISPATCH_TOKEN }}
           repository: hanzoai/universe
-          event-type: image-updated
-          client-payload: '{"service":"platform","version":"${{ needs.images.outputs.version }}","sha":"${{ github.sha }}"}'
+          event-type: image-update
+          client-payload: |
+            {
+              "service": "platform",
+              "image": "ghcr.io/hanzoai/platform:${{ github.sha }}",
+              "sha": "${{ github.sha }}",
+              "repo": "${{ github.repository }}"
+            }
+
+      - name: Summary
+        run: |
+          echo "### Deploy dispatched to universe" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Image:** ghcr.io/hanzoai/platform:${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Flow:** image-receiver -> dev branch -> staging deploy -> E2E -> PR to main -> production" >> "$GITHUB_STEP_SUMMARY"
