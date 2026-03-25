@@ -57,7 +57,6 @@ export const githubRouter = createTRPCRouter({
 					ctx.session.activeOrganizationId &&
 				githubProvider.gitProvider.userId === ctx.session.userId
 			) {
-				//TODO: Remove this line when the cloud version is ready
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not allowed to access this github provider",
