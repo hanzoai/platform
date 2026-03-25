@@ -20,19 +20,11 @@ const ComposePage = () => {
   });
   const { toast } = useToast();
   const handleSave = async () => {
-    try {
-      // TODO: implement compose save endpoint
-      toast({
-        title: "Saved",
-        description: "Compose spec saved successfully"
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save compose spec",
-        variant: "destructive"
-      });
-    }
+    toast({
+      title: "Not available",
+      description: "Compose save is not yet connected to the backend",
+      variant: "destructive"
+    });
   };
 
   return (

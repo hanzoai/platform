@@ -136,7 +136,6 @@ export const DuplicateProject = ({
 			}
 		}
 
-		// TODO: Update duplicate API to support targetProjectId and targetEnvironmentId
 		await duplicateProject({
 			sourceEnvironmentId: selectedTargetEnvironment,
 			name,
