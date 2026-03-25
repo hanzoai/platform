@@ -168,7 +168,7 @@ const { handler, api } = betterAuth({
 				before: async (_user, context) => {
 					if (!IS_CLOUD) {
 						const xHanzoPlatformToken =
-							context?.request?.headers?.get("x-hanzo-token");
+							context?.request?.headers?.get("x-iam-token");
 						if (xHanzoPlatformToken) {
 							const user = await getUserByToken(xHanzoPlatformToken);
 							if (!user) {
