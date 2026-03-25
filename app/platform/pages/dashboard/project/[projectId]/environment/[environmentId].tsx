@@ -590,7 +590,6 @@ const EnvironmentPage = (
 				const service = filteredServices.find((s) => s.id === serviceId);
 				if (!service) continue;
 
-				// TODO: Update move APIs to use targetEnvironmentId instead of targetProjectId
 				switch (service.type) {
 					case "application":
 						await applicationActions.move.mutateAsync({
