@@ -124,7 +124,7 @@ const Invitation = ({
 				lastName: values.lastName,
 				fetchOptions: {
 					headers: {
-						"x-hanzo-token": token,
+						"x-iam-token": token,
 					},
 				},
 			});
