@@ -29,7 +29,6 @@ export async function routeApplicationDeployment(
   options: DeploymentOptions = { target: "local" }
 ) {
   const app = application as any;
-  console.log(`Routing deployment for ${application.name} to ${options.target}`);
 
   try {
     if (options.target === "cloud" && isHanzoCloudEnabled()) {
@@ -38,16 +37,6 @@ export async function routeApplicationDeployment(
         environment: options.environment || "production",
         region: options.region || process.env.DEFAULT_REGION || "us-west-1",
         resources: options.resources,
-      });
-
-      // Store deployment info in database
-      await storeDeploymentInfo({
-        applicationId: app.applicationId || app.id,
-        deploymentId: result.deploymentId,
-        target: "cloud",
-        region: options.region,
-        status: result.status,
-        url: result.url,
       });
 
       return {
@@ -81,7 +70,6 @@ export async function routeComposeDeployment(
   options: DeploymentOptions = { target: "local" }
 ) {
   const c = compose as any;
-  console.log(`Routing compose deployment for ${compose.name} to ${options.target}`);
 
   try {
     if (options.target === "cloud" && isHanzoCloudEnabled()) {
@@ -90,16 +78,6 @@ export async function routeComposeDeployment(
         environment: options.environment || "production",
         region: options.region || process.env.DEFAULT_REGION || "us-west-1",
         resources: options.resources,
-      });
-
-      // Store deployment info in database
-      await storeDeploymentInfo({
-        composeId: c.composeId || c.id,
-        deploymentId: result.deploymentId,
-        target: "cloud",
-        region: options.region,
-        status: result.status,
-        url: result.url,
       });
 
       return {
@@ -124,23 +102,6 @@ export async function routeComposeDeployment(
     console.error(`Compose deployment failed for ${compose.name}:`, error);
     throw error;
   }
-}
-
-/**
- * Store deployment information in database
- */
-async function storeDeploymentInfo(info: {
-  applicationId?: string;
-  composeId?: string;
-  deploymentId: string;
-  target: string;
-  region?: string;
-  status: string;
-  url?: string;
-}) {
-  // TODO: Implement database storage for deployment tracking
-  // This would store in a deployments table for tracking
-  console.log("Storing deployment info:", info);
 }
 
 /**
