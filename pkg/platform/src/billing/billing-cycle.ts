@@ -44,7 +44,7 @@ export async function runBillingCycle(): Promise<CycleRunResult | null> {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${COMMERCE_SERVICE_TOKEN}`,
-        "X-Hanzo-Org": COMMERCE_ORG,
+        "X-IAM-Org": COMMERCE_ORG,
       },
       body: "{}",
       signal: AbortSignal.timeout(120_000),
@@ -104,7 +104,7 @@ export async function runBillingCycleForUser(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${COMMERCE_SERVICE_TOKEN}`,
-        "X-Hanzo-Org": COMMERCE_ORG,
+        "X-IAM-Org": COMMERCE_ORG,
       },
       body: JSON.stringify({ userId }),
       signal: AbortSignal.timeout(30_000),
