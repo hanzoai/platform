@@ -3,7 +3,7 @@ version: "3"
 services:
   nginx:
 
-    image: "nginx:1.21.3"
+    image: "ghcr.io/hanzoai/static:latest"
     ports:
       - 80
     volumes:
