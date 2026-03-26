@@ -18,7 +18,7 @@ import {
 	sendTelegramNotification,
 } from "./utils";
 
-export const sendHanzoPlatformRestartNotifications = async () => {
+export const sendPlatformRestartNotifications = async () => {
 	try {
 		const date = new Date();
 		const unixDate = ~~(Number(date) / 1000);
