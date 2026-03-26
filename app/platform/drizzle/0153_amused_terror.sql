@@ -1,14 +1,14 @@
-CREATE TYPE "public"."cloud_provider_type" AS ENUM('digitalocean', 'aws', 'gcp', 'azure', 'hetzner', 'vultr', 'linode');--> statement-breakpoint
-CREATE TYPE "public"."droplet_status" AS ENUM('pending', 'provisioning', 'booting', 'registering', 'running', 'draining', 'stopping', 'terminated', 'failed');--> statement-breakpoint
-CREATE TYPE "public"."gpu_vendor" AS ENUM('nvidia', 'amd', 'intel', 'apple');--> statement-breakpoint
-CREATE TYPE "public"."node_status" AS ENUM('online', 'offline', 'syncing', 'draining', 'maintenance');--> statement-breakpoint
-CREATE TYPE "public"."node_type" AS ENUM('validator', 'worker', 'storage', 'gpu', 'inference');--> statement-breakpoint
-CREATE TYPE "public"."pool_status" AS ENUM('pending', 'active', 'maintenance', 'suspended', 'decommissioned');--> statement-breakpoint
-CREATE TYPE "public"."billing_cycle" AS ENUM('hourly', 'daily', 'weekly', 'monthly');--> statement-breakpoint
-CREATE TYPE "public"."lease_status" AS ENUM('pending', 'provisioning', 'active', 'suspended', 'terminating', 'terminated', 'failed');--> statement-breakpoint
-CREATE TYPE "public"."offer_status" AS ENUM('draft', 'active', 'paused', 'expired', 'depleted', 'retired');--> statement-breakpoint
-CREATE TYPE "public"."pricing_model" AS ENUM('per_hour', 'per_resource_hour', 'spot', 'reserved', 'auction');--> statement-breakpoint
-CREATE TYPE "public"."doksClusterStatus" AS ENUM('pending', 'provisioning', 'running', 'error', 'deleting', 'deleted');--> statement-breakpoint
+DO $$ BEGIN CREATE TYPE "public"."cloud_provider_type" AS ENUM('digitalocean', 'aws', 'gcp', 'azure', 'hetzner', 'vultr', 'linode'); EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN CREATE TYPE "public"."droplet_status" AS ENUM('pending', 'provisioning', 'booting', 'registering', 'running', 'draining', 'stopping', 'terminated', 'failed'); EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN CREATE TYPE "public"."gpu_vendor" AS ENUM('nvidia', 'amd', 'intel', 'apple'); EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN CREATE TYPE "public"."node_status" AS ENUM('online', 'offline', 'syncing', 'draining', 'maintenance'); EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN CREATE TYPE "public"."node_type" AS ENUM('validator', 'worker', 'storage', 'gpu', 'inference'); EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN CREATE TYPE "public"."pool_status" AS ENUM('pending', 'active', 'maintenance', 'suspended', 'decommissioned'); EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN CREATE TYPE "public"."billing_cycle" AS ENUM('hourly', 'daily', 'weekly', 'monthly'); EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN CREATE TYPE "public"."lease_status" AS ENUM('pending', 'provisioning', 'active', 'suspended', 'terminating', 'terminated', 'failed'); EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN CREATE TYPE "public"."offer_status" AS ENUM('draft', 'active', 'paused', 'expired', 'depleted', 'retired'); EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN CREATE TYPE "public"."pricing_model" AS ENUM('per_hour', 'per_resource_hour', 'spot', 'reserved', 'auction'); EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN CREATE TYPE "public"."doksClusterStatus" AS ENUM('pending', 'provisioning', 'running', 'error', 'deleting', 'deleted'); EXCEPTION WHEN duplicate_object THEN null; END $$;--> statement-breakpoint
 CREATE TABLE "billing_record" (
 	"billingId" text PRIMARY KEY NOT NULL,
 	"organizationId" text NOT NULL,
