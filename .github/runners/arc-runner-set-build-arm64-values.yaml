@@ -1,8 +1,8 @@
 githubConfigSecret: hanzo-build-gha-rs-github-secret
 githubConfigUrl: https://github.com/hanzoai
-maxRunners: 60
-minRunners: 2
-runnerScaleSetName: hanzo-build-linux-amd64
+maxRunners: 30
+minRunners: 0
+runnerScaleSetName: hanzo-build-linux-arm64
 template:
   spec:
     containers:
@@ -63,8 +63,7 @@ template:
       - mountPath: /home/runner/tmpDir
         name: dind-externals
     nodeSelector:
-      doks.digitalocean.com/node-pool: runner-pool-32g
-    serviceAccountName: hanzo-deploy
+      cloud.google.com/machine-family: t2a
     tolerations:
     - effect: NoSchedule
       key: dedicated
