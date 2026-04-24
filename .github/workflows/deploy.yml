@@ -1,22 +1,16 @@
 # Deployment managed by hanzoai/universe — this workflow only builds and pushes images
-name: Build Platform
-
+name: Docker
 on:
-  push:
-    branches: [main, canary]
   workflow_dispatch:
-
-env:
-  REGISTRY: ghcr.io
-  ORG: hanzoai
-
+  push:
+    branches: [main, canary, dev, test]
+    tags: ['v*']
+permissions:
+  contents: read
+  packages: write
 jobs:
-  # ── Build gate — broken code does not ship ───────────────────
-  # Integration tests (Redis, Docker Swarm) are NOT run here.
-  # Production deployment is gated by universe repo E2E tests.
-  # See: github.com/hanzoai/universe/.github/workflows/deploy-production.yml
   quality:
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -25,85 +19,32 @@ jobs:
         with:
           node-version: 22
           cache: 'pnpm'
-
       - run: pnpm install --frozen-lockfile
       - run: pnpm server:build
       - run: pnpm build
 
-  # ── Docker image builds ─────────────────────────────────────
-  # Uses a matrix strategy with max-parallel: 2 to avoid exhausting
-  # self-hosted runner resources (4 concurrent buildx builds cause
-  # Docker daemon OOM / graceful_stop EOF errors).
-  images:
-    needs: [quality]
-    runs-on: hanzo-build-linux-amd64
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      packages: write
+  docker:
+    needs: quality
     strategy:
-      fail-fast: false
-      max-parallel: 2
       matrix:
         include:
-          - image: platform
-            file: ./Dockerfile
-            tag-style: suffix   # produces :latest/:canary + :version + :sha
-          - image: platform-cloud
-            file: ./Dockerfile.cloud
-            tag-style: suffix
-          - image: platform-schedule
-            file: ./Dockerfile.schedule
-            tag-style: csv
-          - image: platform-server
-            file: ./Dockerfile.server
-            tag-style: csv
-    outputs:
-      version: ${{ steps.meta.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/setup-buildx-action@v3
-      - id: meta
-        run: |
-          VERSION=$(jq -r .version app/platform/package.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            SUFFIX=latest
-          else
-            SUFFIX=canary
-          fi
-          echo "suffix=$SUFFIX" >> $GITHUB_OUTPUT
+          - image: ghcr.io/hanzoai/platform
+            dockerfile: Dockerfile
+          - image: ghcr.io/hanzoai/platform-cloud
+            dockerfile: Dockerfile.cloud
+          - image: ghcr.io/hanzoai/platform-schedule
+            dockerfile: Dockerfile.schedule
+          - image: ghcr.io/hanzoai/platform-server
+            dockerfile: Dockerfile.server
+    uses: hanzoai/.github/.github/workflows/docker-build.yml@main
+    with:
+      image: ${{ matrix.image }}
+      dockerfile: ${{ matrix.dockerfile }}
+    secrets: inherit
 
-          if [ "${{ matrix.tag-style }}" = "suffix" ]; then
-            TAGS="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:${SUFFIX}"
-            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:${VERSION}"
-            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:${{ github.sha }}"
-          else
-            TAGS="${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:${SUFFIX}"
-            if [ "$SUFFIX" = "latest" ]; then
-              TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:${VERSION}"
-            fi
-          fi
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ matrix.file }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          platforms: linux/amd64
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.image }}:buildcache,mode=max
-
-  # ── Notify universe of new images ──────────────────────────
   notify-universe:
-    needs: [images]
-    runs-on: ubuntu-latest
+    needs: [docker]
+    runs-on: hanzo-deploy-linux-amd64
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Dispatch image update to universe
@@ -119,9 +60,3 @@ jobs:
               "sha": "${{ github.sha }}",
               "repo": "${{ github.repository }}"
             }
-
-      - name: Summary
-        run: |
-          echo "### Deploy dispatched to universe" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Image:** ghcr.io/hanzoai/platform:${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Flow:** image-receiver -> dev branch -> staging deploy -> E2E -> PR to main -> production" >> "$GITHUB_STEP_SUMMARY"
