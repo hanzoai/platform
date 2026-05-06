@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write
 jobs:
   quality:
     runs-on: hanzo-build-linux-amd64
