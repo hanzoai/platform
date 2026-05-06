@@ -11,7 +11,11 @@ permissions:
   id-token: write
 jobs:
   quality:
-    runs-on: hanzo-build-linux-amd64
+    # node-pty + cpu-features compile from source via node-gyp; the
+    # hanzo-build-linux-amd64 ARC runner ships only the docker tooling
+    # needed for buildx and lacks make/gcc. ubuntu-latest carries the
+    # full GitHub-hosted toolchain.
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
