@@ -45,6 +45,7 @@ jobs:
     with:
       image: ${{ matrix.image }}
       dockerfile: ${{ matrix.dockerfile }}
+      platforms: "linux/amd64"
     secrets: inherit
 
   notify-universe:
