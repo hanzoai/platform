@@ -16,4 +16,5 @@ jobs:
     with:
       image: ghcr.io/hanzoai/platform-base
       dockerfile: Dockerfile.base
+      platforms: "linux/amd64"
     secrets: inherit
