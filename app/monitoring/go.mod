@@ -1,6 +1,6 @@
 module github.com/hanzoai/platform/apps/monitoring
 
-go 1.26
+go 1.26.3
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.6
