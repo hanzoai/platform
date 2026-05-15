@@ -102,8 +102,8 @@ export const HANZO_CLOUD_CONFIG = {
     sharedAuth: {
       enabled: process.env.HANZO_SHARED_AUTH === "true",
       authUrl: process.env.BETTER_AUTH_URL || "https://auth.hanzo.ai",
-      clientId: process.env.HANZO_CLIENT_ID,
-      clientSecret: process.env.HANZO_CLIENT_SECRET,
+      clientId: process.env.IAM_CLIENT_ID,
+      clientSecret: process.env.IAM_CLIENT_SECRET,
     },
 
     // Webhook endpoints for deployment events
