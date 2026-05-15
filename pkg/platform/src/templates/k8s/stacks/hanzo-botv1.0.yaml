@@ -56,7 +56,7 @@ spec:
             - containerPort: {{networking.containerPort}}
               name: http
           env:
-            - name: HANZO_IAM_URL
+            - name: IAM_URL
               value: http://iam.hanzo.svc.cluster.local
             - name: HANZO_KV_HOST
               value: kv.hanzo.svc.cluster.local
