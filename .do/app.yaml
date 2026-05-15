@@ -42,12 +42,12 @@ services:
         value: "https://platform.hanzo.ai"
       - key: NEXT_PUBLIC_APP_URL
         value: "https://platform.hanzo.ai"
-      - key: HANZO_IAM_SERVER_URL
+      - key: IAM_ENDPOINT
         value: "https://hanzo.id"
-      - key: HANZO_IAM_CLIENT_ID
+      - key: IAM_CLIENT_ID
         scope: RUN_TIME
         type: SECRET
-      - key: HANZO_IAM_CLIENT_SECRET
+      - key: IAM_CLIENT_SECRET
         scope: RUN_TIME
         type: SECRET
 
