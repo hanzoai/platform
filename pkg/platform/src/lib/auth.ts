@@ -26,24 +26,11 @@ import { sendEmail } from "../verification/send-verification-email";
 import { getPublicIpWithFallback } from "../wss/utils";
 
 // Hanzo IAM OIDC provider via @hanzo/iam
-const IAM_SERVER_URL =
-	process.env.HANZO_IAM_URL ||
-	process.env.HANZO_IAM_ENDPOINT ||
-	process.env.HANZO_IAM_SERVER_URL ||
-	process.env.IAM_ENDPOINT ||
-	"https://hanzo.id";
+const IAM_SERVER_URL = process.env.IAM_ENDPOINT || "https://hanzo.id";
 
-const IAM_CLIENT_ID =
-	process.env.HANZO_IAM_CLIENT_ID ||
-	process.env.HANZO_CLIENT_ID ||
-	process.env.IAM_CLIENT_ID ||
-	"";
+const IAM_CLIENT_ID = process.env.IAM_CLIENT_ID || "";
 
-const IAM_CLIENT_SECRET =
-	process.env.HANZO_IAM_CLIENT_SECRET ||
-	process.env.HANZO_CLIENT_SECRET ||
-	process.env.IAM_CLIENT_SECRET ||
-	"";
+const IAM_CLIENT_SECRET = process.env.IAM_CLIENT_SECRET || "";
 
 const iam = iamProvider({
 	serverUrl: IAM_SERVER_URL,
