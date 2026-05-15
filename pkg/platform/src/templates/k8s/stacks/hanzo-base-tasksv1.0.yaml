@@ -94,7 +94,7 @@ spec:
               value: tasks.hanzo.svc.cluster.local:7233
             - name: HZ_TASKS_NAMESPACE
               value: "{{namespace}}"
-            - name: HANZO_IAM_URL
+            - name: IAM_URL
               value: http://iam.hanzo.svc.cluster.local
             - name: {{variables.0.name}}
               value: "{{variables.0.value}}"
@@ -170,7 +170,7 @@ spec:
               value: "{{namespace}}"
             - name: HZ_TASKS_QUEUE
               value: "{{iid}}-tasks"
-            - name: HANZO_IAM_URL
+            - name: IAM_URL
               value: http://iam.hanzo.svc.cluster.local
           envFrom:
             - secretRef:
