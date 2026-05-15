@@ -88,7 +88,7 @@ spec:
                   key: SUPERUSER_PASSWORD
             - name: HZ_DATA_DIR
               value: /app/data
-            - name: HANZO_IAM_URL
+            - name: IAM_URL
               value: http://iam.hanzo.svc.cluster.local
             - name: {{variables.0.name}}
               value: "{{variables.0.value}}"
@@ -219,4 +219,17 @@ spec:
           kubernetes.io/metadata.name: hanzo
     ports:
     - port: 443
+      protocol: TCP
+  # KMS ZAP listener — kms-fetch init container + in-process ZAP clients
+  # talk to  over TCP 9999 (binary protocol, X25519+ML-KEM-768
+  # PQ handshake). Required for kms-fetch (task #29) and the broader
+  # k8s-Secrets → KMS-ZAP migration (task #33). Without this rule, any
+  # service whose Pod is gated by this NetworkPolicy cannot reach KMS
+  # for secret fetch and panics on boot with "connection refused".
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: hanzo
+    ports:
+    - port: 9999
       protocol: TCP
