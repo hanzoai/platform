@@ -72,7 +72,7 @@ spec:
               value: http://iam.hanzo.svc.cluster.local
             - name: FLOW_LLM_GATEWAY_URL
               value: http://gateway.hanzo.svc.cluster.local:8080/v1
-            - name: HANZO_IAM_URL
+            - name: IAM_URL
               value: http://iam.hanzo.svc.cluster.local
             - name: {{variables.0.name}}
               value: "{{variables.0.value}}"
