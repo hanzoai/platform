@@ -10,7 +10,7 @@ template:
     containers:
     - command:
       - /home/runner/run.sh
-      image: ghcr.io/actions/actions-runner:latest
+      image: ghcr.io/hanzoai/runner:0.1.1
       name: runner
       resources:
         limits:
