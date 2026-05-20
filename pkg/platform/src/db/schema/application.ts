@@ -70,6 +70,16 @@ export const buildType = pgEnum("buildType", [
 	"railpack",
 ]);
 
+// Deploy target: where the built artifact ends up. Default 'local'
+// preserves Dokploy's existing Docker / Swarm behavior; 'cloud'
+// routes through Hanzo Cloud; 'k8s' invokes the Agnost-port at
+// services/k8s for direct Kubernetes deploys.
+export const deployTarget = pgEnum("deployTarget", [
+	"local",
+	"cloud",
+	"k8s",
+]);
+
 export const applications = pgTable("application", {
 	applicationId: text("applicationId")
 		.notNull()
@@ -182,6 +192,13 @@ export const applications = pgTable("application", {
 		.notNull()
 		.default("idle"),
 	buildType: buildType("buildType").notNull().default("nixpacks"),
+	// Deploy target — Agnost K8s graft (PR 3/5).
+	deployTarget: deployTarget("deployTarget").notNull().default("local"),
+	// K8s-only: target cluster + namespace. When deployTarget !== 'k8s',
+	// these are ignored. k8sClusterId references the existing clusters
+	// table by string id (no FK to keep migration order forgiving).
+	k8sClusterId: text("k8sClusterId"),
+	k8sNamespace: text("k8sNamespace"),
 	railpackVersion: text("railpackVersion").default("0.15.4"),
 	herokuVersion: text("herokuVersion").default("24"),
 	publishDirectory: text("publishDirectory"),
