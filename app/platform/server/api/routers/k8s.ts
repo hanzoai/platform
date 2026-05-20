@@ -20,6 +20,7 @@ import {
 	deployApplication,
 	teardownApplication,
 	getApplicationStatus,
+	getApplicationLogs,
 	deployStack,
 	type ApplicationSpec,
 } from "@hanzo/platform/services/k8s";
@@ -193,6 +194,39 @@ export const k8sRouter = createTRPCRouter({
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: `K8s status failed: ${(err as Error).message}`,
+				});
+			}
+		}),
+
+	/**
+	 * Stream-snapshot logs from an application's pods. Returns a map
+	 * of pod name → tailLines (default 200) of log content.
+	 */
+	logs: protectedProcedure
+		.input(
+			z.object({
+				namespace: namespaceSchema,
+				name: z.string().min(1).regex(namespaceRegex),
+				tailLines: z.number().int().positive().max(10000).optional(),
+				container: z.string().optional(),
+				previous: z.boolean().optional(),
+				kubeconfig: kubeconfigSchema,
+			}),
+		)
+		.query(async ({ input }) => {
+			try {
+				const logs = await getApplicationLogs(input.namespace, input.name, {
+					tailLines: input.tailLines,
+					container: input.container,
+					previous: input.previous,
+					kubeconfig: input.kubeconfig,
+				});
+				return { ok: true, logs };
+			} catch (err) {
+				if (err instanceof TRPCError) throw err;
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: `K8s logs failed: ${(err as Error).message}`,
 				});
 			}
 		}),
