@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{iid}}
+  namespace: {{namespace}}
+type: Opaque
+stringData:
+  htpasswd: {{secrets.htpasswd}}
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{iid}}
+  namespace: {{namespace}}
+spec:
+  serviceName: {{iid}}
+  replicas: 1
+  updateStrategy:
+    type: {{statefulSetConfig.strategy}}
+    rollingUpdate:
+      maxUnavailable: {{statefulSetConfig.rollingUpdate.maxUnavailable}}
+      partition: {{statefulSetConfig.rollingUpdate.partition}}
+  revisionHistoryLimit: {{statefulSetConfig.revisionHistoryLimit}}
+  podManagementPolicy: {{statefulSetConfig.podManagementPolicy}}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      app: {{iid}}
+  template:
+    metadata:
+      labels:
+        app: {{iid}}
+    spec:
+      containers:
+      - name: registry
+        image: {{registry.imageUrl}}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: {{networking.containerPort}}
+          protocol: TCP
+        env:
+        - name: REGISTRY_HTTP_ADDR
+          value: "0.0.0.0:{{networking.containerPort}}"
+        - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+          value: "/var/lib/registry"
+        - name: REGISTRY_AUTH
+          value: "htpasswd"
+        - name: REGISTRY_AUTH_HTPASSWD_REALM
+          value: "Hanzo Registry"
+        - name: REGISTRY_AUTH_HTPASSWD_PATH
+          value: "/auth/htpasswd"
+        - name: REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin
+          value: "*"
+        resources:
+          requests:
+            cpu: "{{podConfig.cpuRequest}}{{podConfig.cpuRequestType}}"
+            memory: "{{podConfig.memoryRequest}}{{podConfig.memoryRequestType}}"
+          limits:
+            cpu: "{{podConfig.cpuLimit}}{{podConfig.cpuLimitType}}"
+            memory: "{{podConfig.memoryLimit}}{{podConfig.memoryLimitType}}"
+        volumeMounts:
+        - name: storage
+          mountPath: /var/lib/registry
+        - name: auth
+          mountPath: /auth
+          readOnly: true
+      volumes:
+      - name: auth
+        secret:
+          secretName: {{iid}}
+          items:
+          - key: htpasswd
+            path: htpasswd
+  volumeClaimTemplates:
+  - metadata:
+      name: storage
+    spec:
+      accessModes: {{storageConfig.accessModes}}
+      resources:
+        requests:
+          storage: "{{storageConfig.size}}{{storageConfig.sizeType}}"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{iid}}
+  namespace: {{namespace}}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{iid}}
+  ports:
+  - name: http
+    port: {{networking.containerPort}}
+    targetPort: {{networking.containerPort}}
+    protocol: TCP
