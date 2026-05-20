@@ -234,6 +234,61 @@ export async function teardownApplication(
 // Application status
 // ---------------------------------------------------------------------------
 
+/**
+ * Read recent pod logs for an application's pods (label-selector
+ * `app=<appName>`). Returns a map of podName → log content. Each
+ * pod gets `tailLines` of log output (default 200) from the
+ * application's primary container.
+ *
+ * For long-lived streaming use the @kubernetes/client-node `Log`
+ * helper directly — this is the snapshot helper for the dashboard.
+ */
+export async function getApplicationLogs(
+	namespace: string,
+	appName: string,
+	options?: {
+		tailLines?: number;
+		container?: string;
+		previous?: boolean;
+		kubeconfig?: string;
+	},
+): Promise<Record<string, string>> {
+	const clients = getClients(options?.kubeconfig);
+	const tailLines = options?.tailLines ?? 200;
+	const labelSelector = `app=${appName}`;
+
+	let pods: { items?: Array<{ metadata?: { name?: string } }> };
+	try {
+		pods = await clients.core.listNamespacedPod({ namespace, labelSelector });
+	} catch (err) {
+		const e = err as { response?: { body?: { message?: string } }; message?: string };
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: `Cannot list pods for app '${appName}' in namespace '${namespace}': ${e.response?.body?.message ?? e.message ?? String(err)}`,
+		});
+	}
+
+	const logs: Record<string, string> = {};
+	for (const pod of pods.items ?? []) {
+		const podName = pod.metadata?.name;
+		if (!podName) continue;
+		try {
+			const body = await clients.core.readNamespacedPodLog({
+				name: podName,
+				namespace,
+				container: options?.container,
+				previous: options?.previous,
+				tailLines,
+			});
+			logs[podName] = typeof body === "string" ? body : String(body);
+		} catch (err) {
+			const e = err as { response?: { body?: { message?: string } }; message?: string };
+			logs[podName] = `[error reading logs: ${e.response?.body?.message ?? e.message ?? String(err)}]`;
+		}
+	}
+	return logs;
+}
+
 export async function getApplicationStatus(
 	namespace: string,
 	appName: string,
