@@ -158,7 +158,7 @@ export async function routeApplicationDeployment(
     }
 
     // Default: local Docker / Swarm
-    await dockerDeploy(application as Parameters<typeof dockerDeploy>[0]);
+    await dockerDeploy(application as unknown as Parameters<typeof dockerDeploy>[0]);
     return {
       success: true,
       deploymentId: `local-${app.applicationId || app.id}-${Date.now()}`,
@@ -200,7 +200,7 @@ export async function routeComposeDeployment(
     }
 
     const { deployCompose } = await import("@hanzo/platform");
-    await deployCompose(compose as Parameters<typeof deployCompose>[0]);
+    await deployCompose(compose as unknown as Parameters<typeof deployCompose>[0]);
     return {
       success: true,
       deploymentId: `local-compose-${c.composeId || c.id}-${Date.now()}`,
@@ -248,10 +248,11 @@ export async function cancelDeployment(
   if (target === "k8s") {
     // deploymentId format: k8s-<namespace>-<name>
     const m = deploymentId.match(/^k8s-(.+)-([^-]+)$/);
-    if (!m) {
+    const namespace = m?.[1];
+    const name = m?.[2];
+    if (!namespace || !name) {
       throw new Error(`Invalid K8s deploymentId: ${deploymentId}`);
     }
-    const [, namespace, name] = m;
     await k8sTeardown(namespace, name);
     return;
   }
@@ -271,10 +272,11 @@ export async function getDeploymentStatus(
   }
   if (target === "k8s") {
     const m = deploymentId.match(/^k8s-(.+)-([^-]+)$/);
-    if (!m) {
+    const namespace = m?.[1];
+    const name = m?.[2];
+    if (!namespace || !name) {
       return { deploymentId, status: "invalid-id" };
     }
-    const [, namespace, name] = m;
     try {
       const status = await k8sStatus(namespace, name);
       return { deploymentId, status };
