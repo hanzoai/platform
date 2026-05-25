@@ -1,0 +1,55 @@
+# ARC AutoscalingRunnerSet for the luxcpp GitHub org (cevm and friends).
+#
+# Lives in its OWN namespace (actions-runner-system-luxcpp) so the
+# auto-generated ServiceAccounts don't collide with the existing
+# lux-build-linux-amd64 release in actions-runner-system (which is
+# bound to the luxfi org). Runner LABEL is intentionally identical
+# (lux-build-linux-amd64) so existing workflows that say:
+#     runs-on: lux-build-linux-amd64
+# match against this scale set when the workflow lives under the
+# luxcpp org (the listener subscribes to org-scoped events).
+#
+# Helm release name: luxcpp-build-linux-amd64
+# Namespace: actions-runner-system-luxcpp
+# runnerScaleSetName: lux-build-linux-amd64 (workflow-facing label)
+# githubConfigUrl: https://github.com/luxcpp (org-level registration)
+#
+# Mirrors the production lux-build-linux-amd64 release exactly so behavior
+# is consistent: dind container mode, hanzoai/runner image, nodeSelector
+# role=runner. Runner pods land on the same DOKS runner-pool-32g nodes.
+githubConfigSecret: luxcpp-build-linux-amd64-gha-rs-github-secret
+githubConfigUrl: https://github.com/luxcpp
+maxRunners: 10
+minRunners: 1
+runnerGroup: Default
+runnerScaleSetName: lux-build-linux-amd64
+containerMode:
+  type: dind
+template:
+  spec:
+    containers:
+    - command:
+      - /home/runner/run.sh
+      env:
+      - name: ACTIONS_RUNNER_LABELS
+        value: lux-build-linux-amd64,self-hosted,Linux,X64
+      image: ghcr.io/hanzoai/runner:0.1.1
+      name: runner
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: false
+        runAsNonRoot: true
+        runAsUser: 1001
+    imagePullSecrets:
+    - name: ghcr-secret
+    nodeSelector:
+      role: runner
+    tolerations:
+    - effect: NoSchedule
+      key: role
+      operator: Equal
+      value: runner
+    - effect: NoSchedule
+      key: dedicated
+      operator: Equal
+      value: ci-runner
