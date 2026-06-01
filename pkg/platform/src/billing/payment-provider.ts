@@ -4,6 +4,9 @@
 const COMMERCE_API_URL = process.env.COMMERCE_API_URL || "https://billing.hanzo.ai";
 const COMMERCE_SERVICE_TOKEN = process.env.COMMERCE_SERVICE_TOKEN || "";
 
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+
 export interface PaymentProvider {
   name: string;
   isConfigured: boolean;
