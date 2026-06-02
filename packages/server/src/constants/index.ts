@@ -2,23 +2,23 @@ import path from "node:path";
 import Docker from "dockerode";
 
 export const IS_CLOUD = process.env.IS_CLOUD === "true";
-export const PLATFORM_DOCKER_API_VERSION =
-	process.env.PLATFORM_DOCKER_API_VERSION;
-export const PLATFORM_DOCKER_HOST = process.env.PLATFORM_DOCKER_HOST;
-export const PLATFORM_DOCKER_PORT = process.env.PLATFORM_DOCKER_PORT
-	? Number(process.env.PLATFORM_DOCKER_PORT)
+export const DOKPLOY_DOCKER_API_VERSION =
+	process.env.DOKPLOY_DOCKER_API_VERSION;
+export const DOKPLOY_DOCKER_HOST = process.env.DOKPLOY_DOCKER_HOST;
+export const DOKPLOY_DOCKER_PORT = process.env.DOKPLOY_DOCKER_PORT
+	? Number(process.env.DOKPLOY_DOCKER_PORT)
 	: undefined;
 
 export const CLEANUP_CRON_JOB = "50 23 * * *";
 export const docker = new Docker({
-	...(PLATFORM_DOCKER_API_VERSION && {
-		version: PLATFORM_DOCKER_API_VERSION,
+	...(DOKPLOY_DOCKER_API_VERSION && {
+		version: DOKPLOY_DOCKER_API_VERSION,
 	}),
-	...(PLATFORM_DOCKER_HOST && {
-		host: PLATFORM_DOCKER_HOST,
+	...(DOKPLOY_DOCKER_HOST && {
+		host: DOKPLOY_DOCKER_HOST,
 	}),
-	...(PLATFORM_DOCKER_PORT && {
-		port: PLATFORM_DOCKER_PORT,
+	...(DOKPLOY_DOCKER_PORT && {
+		port: DOKPLOY_DOCKER_PORT,
 	}),
 });
 
@@ -30,7 +30,7 @@ export const BETTER_AUTH_SECRET =
 export const paths = (isServer = false) => {
 	const BASE_PATH =
 		isServer || process.env.NODE_ENV === "production"
-			? "/etc/hanzo"
+			? "/etc/dokploy"
 			: path.join(process.cwd(), ".docker");
 	const MAIN_TRAEFIK_PATH = `${BASE_PATH}/traefik`;
 	const DYNAMIC_TRAEFIK_PATH = `${MAIN_TRAEFIK_PATH}/dynamic`;

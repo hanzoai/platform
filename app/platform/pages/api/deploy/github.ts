@@ -358,8 +358,7 @@ export default async function handler(
 			const shouldCreateDeployment =
 				action === "opened" ||
 				action === "synchronize" ||
-				action === "reopened" ||
-				action === "labeled";
+				action === "reopened";
 
 			const repository = githubBody?.repository?.name;
 			const deploymentHash = githubBody?.pull_request?.head?.sha;

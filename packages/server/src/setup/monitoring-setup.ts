@@ -1,8 +1,8 @@
-import { findServerById } from "@hanzo/platform-server/services/server";
-import { getWebServerSettings } from "@hanzo/platform-server/services/web-server-settings";
+import { findServerById } from "@dokploy/server/services/server";
+import { getWebServerSettings } from "@dokploy/server/services/web-server-settings";
 import type { ContainerCreateOptions } from "dockerode";
 import { IS_CLOUD } from "../constants";
-import { getHanzoImageTag } from "../services/settings";
+import { getDokployImageTag } from "../services/settings";
 import { pullImage, pullRemoteImage } from "../utils/docker/utils";
 import { execAsync, execAsyncRemote } from "../utils/process/execAsync";
 import { getRemoteDocker } from "../utils/servers/remote-docker";
@@ -10,15 +10,15 @@ import { getRemoteDocker } from "../utils/servers/remote-docker";
 export const setupMonitoring = async (serverId: string) => {
 	const server = await findServerById(serverId);
 
-	const containerName = "hanzo-monitoring";
-	let imageName = "platform/monitoring:latest";
+	const containerName = "dokploy-monitoring";
+	let imageName = "dokploy/monitoring:latest";
 
 	if (
-		(getHanzoImageTag() !== "latest" ||
+		(getDokployImageTag() !== "latest" ||
 			process.env.NODE_ENV === "development") &&
 		!IS_CLOUD
 	) {
-		imageName = "platform/monitoring:canary";
+		imageName = "dokploy/monitoring:canary";
 	}
 
 	const settings: ContainerCreateOptions = {
@@ -45,7 +45,7 @@ export const setupMonitoring = async (serverId: string) => {
 				"/sys:/host/sys:ro",
 				"/etc/os-release:/etc/os-release:ro",
 				"/proc:/host/proc:ro",
-				"/etc/hanzo/monitoring/monitoring.db:/app/monitoring.db",
+				"/etc/dokploy/monitoring/monitoring.db:/app/monitoring.db",
 			],
 			NetworkMode: "host",
 		},
@@ -57,7 +57,7 @@ export const setupMonitoring = async (serverId: string) => {
 	try {
 		await execAsyncRemote(
 			serverId,
-			"mkdir -p /etc/hanzo/monitoring && touch /etc/hanzo/monitoring/monitoring.db",
+			"mkdir -p /etc/dokploy/monitoring && touch /etc/dokploy/monitoring/monitoring.db",
 		);
 		if (serverId) {
 			await pullRemoteImage(imageName, serverId);
@@ -86,15 +86,15 @@ export const setupMonitoring = async (serverId: string) => {
 export const setupWebMonitoring = async () => {
 	const webServerSettings = await getWebServerSettings();
 
-	const containerName = "hanzo-monitoring";
-	let imageName = "platform/monitoring:latest";
+	const containerName = "dokploy-monitoring";
+	let imageName = "dokploy/monitoring:latest";
 
 	if (
-		(getHanzoImageTag() !== "latest" ||
+		(getDokployImageTag() !== "latest" ||
 			process.env.NODE_ENV === "development") &&
 		!IS_CLOUD
 	) {
-		imageName = "platform/monitoring:canary";
+		imageName = "dokploy/monitoring:canary";
 	}
 
 	const settings: ContainerCreateOptions = {
@@ -121,7 +121,7 @@ export const setupWebMonitoring = async () => {
 				"/sys:/host/sys:ro",
 				"/etc/os-release:/etc/os-release:ro",
 				"/proc:/host/proc:ro",
-				"/etc/hanzo/monitoring/monitoring.db:/app/monitoring.db",
+				"/etc/dokploy/monitoring/monitoring.db:/app/monitoring.db",
 			],
 			// NetworkMode: "host",
 		},
@@ -132,7 +132,7 @@ export const setupWebMonitoring = async () => {
 	const docker = await getRemoteDocker();
 	try {
 		await execAsync(
-			"mkdir -p /etc/hanzo/monitoring && touch /etc/hanzo/monitoring/monitoring.db",
+			"mkdir -p /etc/dokploy/monitoring && touch /etc/dokploy/monitoring/monitoring.db",
 		);
 		await pullImage(imageName);
 
