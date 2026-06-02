@@ -117,7 +117,7 @@ export const HandleAi = ({ aiId }: Props) => {
 
 	const onSubmit = async (data: Schema) => {
 		try {
-			await mutateAsync({
+			await (mutateAsync as any)({
 				...data,
 				aiId: aiId || "",
 			});

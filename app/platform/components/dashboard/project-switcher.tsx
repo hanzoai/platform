@@ -49,7 +49,7 @@ export function ProjectSwitcher({ collapsed }: { collapsed?: boolean }) {
 
 		// Auto-select first environment if available
 		const envs = project.environments ?? [];
-		if (envs.length === 1 && envs[0]) {
+		if (envs.length === 1) {
 			setActiveEnvironment(envs[0].environmentId);
 			router.push(
 				`/dashboard/project/${projectId}/environment/${envs[0].environmentId}`,
@@ -60,12 +60,10 @@ export function ProjectSwitcher({ collapsed }: { collapsed?: boolean }) {
 				(e: any) => e.name?.toLowerCase() === "production",
 			);
 			const targetEnv = prodEnv ?? envs[0];
-			if (targetEnv) {
-				setActiveEnvironment(targetEnv.environmentId);
-				router.push(
-					`/dashboard/project/${projectId}/environment/${targetEnv.environmentId}`,
-				);
-			}
+			setActiveEnvironment(targetEnv.environmentId);
+			router.push(
+				`/dashboard/project/${projectId}/environment/${targetEnv.environmentId}`,
+			);
 		} else {
 			router.push(`/dashboard/projects`);
 		}

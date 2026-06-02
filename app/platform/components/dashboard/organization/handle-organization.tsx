@@ -73,7 +73,7 @@ export function AddOrganization({ organizationId }: Props) {
 	}, [organization, form]);
 
 	const onSubmit = async (values: OrganizationFormValues) => {
-		await mutateAsync({
+		await (mutateAsync as any)({
 			name: values.name,
 			logo: values.logo,
 			organizationId: organizationId ?? "",
