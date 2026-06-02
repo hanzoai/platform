@@ -9,6 +9,8 @@ import {
 	sendDiscordNotification,
 	sendEmailNotification,
 	sendGotifyNotification,
+	sendLarkNotification,
+	sendMattermostNotification,
 	sendNtfyNotification,
 	sendPushoverNotification,
 	sendResendNotification,
@@ -37,7 +39,8 @@ export const sendVolumeBackupNotifications = async ({
 		| "mongodb"
 		| "mariadb"
 		| "redis"
-		| "compose";
+		| "compose"
+		| "libsql";
 	type: "error" | "success";
 	organizationId: string;
 	errorMessage?: string;
@@ -58,9 +61,11 @@ export const sendVolumeBackupNotifications = async ({
 			resend: true,
 			gotify: true,
 			ntfy: true,
+			mattermost: true,
+			custom: true,
+			lark: true,
 			pushover: true,
 			teams: true,
-			custom: true,
 		},
 	});
 
@@ -73,9 +78,11 @@ export const sendVolumeBackupNotifications = async ({
 			slack,
 			gotify,
 			ntfy,
+			mattermost,
+			custom,
+			lark,
 			pushover,
 			teams,
-			custom,
 		} = notification;
 
 		if (email || resend) {
@@ -87,13 +94,12 @@ export const sendVolumeBackupNotifications = async ({
 					volumeName,
 					serviceType,
 					type,
-					errorMessage,
-					backupSize,
-					date: date.toISOString(),
-				}),
-			);
-			if (email) {
-				await sendEmailNotification(email, subject, htmlContent);
+					errorMessage: errorMessage ?? "",
+					backupSize: backupSize ?? "",
+					timestamp: date.toISOString(),
+					date: date.toLocaleString(),
+					status: type,
+				});
 			}
 			if (resend) {
 				await sendResendNotification(resend, subject, htmlContent);
