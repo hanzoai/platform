@@ -8,14 +8,9 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write
 jobs:
   quality:
-    # node-pty + cpu-features compile from source via node-gyp; the
-    # hanzo-build-linux-amd64 ARC runner ships only the docker tooling
-    # needed for buildx and lacks make/gcc. ubuntu-latest carries the
-    # full GitHub-hosted toolchain.
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +40,6 @@ jobs:
     with:
       image: ${{ matrix.image }}
       dockerfile: ${{ matrix.dockerfile }}
-      platforms: "linux/amd64"
     secrets: inherit
 
   notify-universe:
