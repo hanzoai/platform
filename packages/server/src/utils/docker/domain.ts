@@ -1,8 +1,8 @@
 import fs, { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { paths } from "@hanzo/platform-server/constants";
-import type { Compose } from "@hanzo/platform-server/services/compose";
-import type { Domain } from "@hanzo/platform-server/services/domain";
+import { paths } from "@dokploy/server/constants";
+import type { Compose } from "@dokploy/server/services/compose";
+import type { Domain } from "@dokploy/server/services/domain";
 import { parse, stringify } from "yaml";
 import { execAsyncRemote } from "../process/execAsync";
 import { cloneBitbucketRepository } from "../providers/bitbucket";
@@ -204,29 +204,29 @@ export const addDomainToCompose = async (
 			labels.unshift(...httpLabels);
 			if (!compose.isolatedDeployment) {
 				if (compose.composeType === "docker-compose") {
-					if (!labels.includes("traefik.docker.network=platform-network")) {
-						labels.unshift("traefik.docker.network=platform-network");
+					if (!labels.includes("traefik.docker.network=dokploy-network")) {
+						labels.unshift("traefik.docker.network=dokploy-network");
 					}
 				} else {
 					// Stack Case
-					if (!labels.includes("traefik.swarm.network=platform-network")) {
-						labels.unshift("traefik.swarm.network=platform-network");
+					if (!labels.includes("traefik.swarm.network=dokploy-network")) {
+						labels.unshift("traefik.swarm.network=dokploy-network");
 					}
 				}
 			}
 		}
 
 		if (!compose.isolatedDeployment) {
-			// Add the platform-network to the service
-			result.services[serviceName].networks = addHanzoNetworkToService(
+			// Add the dokploy-network to the service
+			result.services[serviceName].networks = addDokployNetworkToService(
 				result.services[serviceName].networks,
 			);
 		}
 	}
 
-	// Add platform-network to the root of the compose file
+	// Add dokploy-network to the root of the compose file
 	if (!compose.isolatedDeployment) {
-		result.networks = addHanzoNetworkToRoot(result.networks);
+		result.networks = addDokployNetworkToRoot(result.networks);
 	}
 
 	return result;
@@ -327,11 +327,11 @@ export const createDomainLabels = (
 	return labels;
 };
 
-export const addHanzoNetworkToService = (
+export const addDokployNetworkToService = (
 	networkService: DefinitionsService["networks"],
 ) => {
 	let networks = networkService;
-	const network = "platform-network";
+	const network = "dokploy-network";
 	const defaultNetwork = "default";
 	if (!networks) {
 		networks = [];
@@ -356,11 +356,11 @@ export const addHanzoNetworkToService = (
 	return networks;
 };
 
-export const addHanzoNetworkToRoot = (
+export const addDokployNetworkToRoot = (
 	networkRoot: PropertiesNetworks | undefined,
 ) => {
 	let networks = networkRoot;
-	const network = "platform-network";
+	const network = "dokploy-network";
 
 	if (!networks) {
 		networks = {};

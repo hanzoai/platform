@@ -13,7 +13,6 @@ import {
 	type DnsProviderType,
 } from "@hanzo/platform/services/dns-provider";
 import { isHanzoDnsConfigured } from "@hanzo/platform/services/hanzo-dns-provider";
-import { resolveCloudflareCredentials } from "@hanzo/platform-server/services/deploy-provider";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
@@ -336,12 +335,10 @@ export const dnsRouter = createTRPCRouter({
 	// Cloudflare Pages endpoints (CF-only features, unchanged)
 	// -----------------------------------------------------------------------
 
-	listPagesProjects: protectedProcedure.query(async ({ ctx }) => {
+	listPagesProjects: protectedProcedure.query(async () => {
 		try {
-			const creds = await resolveCloudflareCredentials(
-				ctx.session.activeOrganizationId,
-			);
-			return await listPagesProjects(creds.apiToken, creds.accountId);
+			const config = getCloudflareConfig();
+			return await listPagesProjects(config.apiToken, config.accountId);
 		} catch (error) {
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
@@ -360,14 +357,12 @@ export const dnsRouter = createTRPCRouter({
 				projectName: z.string().min(1),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
+		.query(async ({ input }) => {
 			try {
-				const creds = await resolveCloudflareCredentials(
-					ctx.session.activeOrganizationId,
-				);
+				const config = getCloudflareConfig();
 				return await getPagesProject(
-					creds.apiToken,
-					creds.accountId,
+					config.apiToken,
+					config.accountId,
 					input.projectName,
 				);
 			} catch (error) {
@@ -389,12 +384,10 @@ export const dnsRouter = createTRPCRouter({
 				production_branch: z.string().optional(),
 			}),
 		)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const creds = await resolveCloudflareCredentials(
-					ctx.session.activeOrganizationId,
-				);
-				return await createPagesProject(creds.apiToken, creds.accountId, {
+				const config = getCloudflareConfig();
+				return await createPagesProject(config.apiToken, config.accountId, {
 					name: input.name,
 					production_branch: input.production_branch,
 				});
@@ -417,14 +410,12 @@ export const dnsRouter = createTRPCRouter({
 				branch: z.string().optional(),
 			}),
 		)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const creds = await resolveCloudflareCredentials(
-					ctx.session.activeOrganizationId,
-				);
+				const config = getCloudflareConfig();
 				return await createPagesDeployment(
-					creds.apiToken,
-					creds.accountId,
+					config.apiToken,
+					config.accountId,
 					input.projectName,
 					input.branch,
 				);
@@ -447,14 +438,12 @@ export const dnsRouter = createTRPCRouter({
 				domain: z.string().min(1),
 			}),
 		)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const creds = await resolveCloudflareCredentials(
-					ctx.session.activeOrganizationId,
-				);
+				const config = getCloudflareConfig();
 				return await addPagesCustomDomain(
-					creds.apiToken,
-					creds.accountId,
+					config.apiToken,
+					config.accountId,
 					input.projectName,
 					input.domain,
 				);
@@ -477,14 +466,12 @@ export const dnsRouter = createTRPCRouter({
 				domainId: z.string().min(1),
 			}),
 		)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const creds = await resolveCloudflareCredentials(
-					ctx.session.activeOrganizationId,
-				);
+				const config = getCloudflareConfig();
 				await removePagesCustomDomain(
-					creds.apiToken,
-					creds.accountId,
+					config.apiToken,
+					config.accountId,
 					input.projectName,
 					input.domainId,
 				);

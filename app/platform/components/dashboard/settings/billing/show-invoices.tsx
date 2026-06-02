@@ -1,5 +1,4 @@
 import { Download, ExternalLink, FileText, Loader2 } from "lucide-react";
-import type Stripe from "stripe";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +27,11 @@ const formatAmount = (amount: number, currency: string) => {
 	}).format(amount / 100);
 };
 
-const getStatusBadge = (status: Stripe.Invoice.Status | null) => {
+type InvoiceStatus = "paid" | "open" | "draft" | "void" | "uncollectible";
+
+const getStatusBadge = (status: InvoiceStatus | null) => {
 	const statusConfig: Record<
-		Stripe.Invoice.Status,
+		InvoiceStatus,
 		{ label: string; variant: "default" | "secondary" | "destructive" }
 	> = {
 		paid: { label: "Paid", variant: "default" },
@@ -78,7 +79,7 @@ export const ShowInvoices = () => {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{invoices.map((invoice) => (
+							{invoices.map((invoice: any) => (
 								<TableRow key={invoice.id}>
 									<TableCell className="font-medium">
 										{invoice.number || invoice.id.slice(0, 12)}
