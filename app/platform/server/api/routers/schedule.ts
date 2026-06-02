@@ -74,13 +74,6 @@ export const scheduleRouter = createTRPCRouter({
 		.mutation(async ({ input, ctx }) => {
 			const newSchedule = await createSchedule(input);
 
-			if (!newSchedule) {
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to create schedule",
-				});
-			}
-
 			// Verify org ownership on the newly created schedule
 			await assertScheduleOrgAccess(newSchedule, ctx.session.activeOrganizationId);
 
@@ -90,7 +83,6 @@ export const scheduleRouter = createTRPCRouter({
 						scheduleId: newSchedule.scheduleId,
 						type: "schedule",
 						cronSchedule: newSchedule.cronExpression,
-						timezone: newSchedule.timezone,
 					});
 				} else {
 					scheduleJob(newSchedule);
@@ -114,7 +106,6 @@ export const scheduleRouter = createTRPCRouter({
 						scheduleId: updatedSchedule.scheduleId,
 						type: "schedule",
 						cronSchedule: updatedSchedule.cronExpression,
-						timezone: updatedSchedule.timezone,
 					});
 				} else {
 					await removeJob({

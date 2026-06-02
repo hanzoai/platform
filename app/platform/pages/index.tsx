@@ -1,19 +1,12 @@
-import { IS_CLOUD, isAdminPresent } from "@hanzo/platform";
-import { validateRequest } from "@hanzo/platform/lib/auth";
-import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
-import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
-import { SignInWithGithub } from "@/components/proprietary/auth/sign-in-with-github";
-import { SignInWithGoogle } from "@/components/proprietary/auth/sign-in-with-google";
-import { SignInWithHanzo } from "@/components/auth/sign-in-with-hanzo";
-import { SignInWithSSO } from "@/components/proprietary/sso/sign-in-with-sso";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
@@ -41,27 +34,16 @@ import {
 } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
-import { api } from "@/utils/api";
-import { useWhitelabelingPublic } from "@/utils/hooks/use-whitelabeling";
 
 const LoginSchema = z.object({
 	email: z.string().email(),
 	password: z.string().min(8),
 });
 
-const _TwoFactorSchema = z.object({
-	code: z.string().min(6),
-});
-
 type LoginForm = z.infer<typeof LoginSchema>;
 
-interface Props {
-	IS_CLOUD: boolean;
-}
-export default function Home({ IS_CLOUD }: Props) {
+export default function Home() {
 	const router = useRouter();
-	const { config: whitelabeling } = useWhitelabelingPublic();
-	const { data: showSignInWithSSO } = api.sso.showSignInWithSSO.useQuery();
 	const [isLoginLoading, setIsLoginLoading] = useState(false);
 	const [isTwoFactorLoading, setIsTwoFactorLoading] = useState(false);
 	const [isBackupCodeLoading, setIsBackupCodeLoading] = useState(false);
@@ -70,6 +52,8 @@ export default function Home({ IS_CLOUD }: Props) {
 	const [twoFactorCode, setTwoFactorCode] = useState("");
 	const [isBackupCodeModalOpen, setIsBackupCodeModalOpen] = useState(false);
 	const [backupCode, setBackupCode] = useState("");
+	const [isLoading, setIsLoading] = useState(true);
+
 	const loginForm = useForm<LoginForm>({
 		resolver: zodResolver(LoginSchema),
 		defaultValues: {
@@ -77,6 +61,23 @@ export default function Home({ IS_CLOUD }: Props) {
 			password: "",
 		},
 	});
+
+	// Check if user is already logged in
+	useEffect(() => {
+		const checkAuth = async () => {
+			try {
+				const { data } = await authClient.getSession();
+				if (data?.session) {
+					router.push("/dashboard/projects");
+					return;
+				}
+			} catch (error) {
+				console.log('Not logged in:', error);
+			}
+			setIsLoading(false);
+		};
+		checkAuth();
+	}, [router]);
 
 	const onSubmit = async (values: LoginForm) => {
 		setIsLoginLoading(true);
@@ -108,6 +109,7 @@ export default function Home({ IS_CLOUD }: Props) {
 			setIsLoginLoading(false);
 		}
 	};
+
 	const onTwoFactorSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (twoFactorCode.length !== 6) {
@@ -166,68 +168,16 @@ export default function Home({ IS_CLOUD }: Props) {
 		}
 	};
 
-	const loginContent = (
-		<>
-			<SignInWithHanzo />
-			{IS_CLOUD && <SignInWithGithub />}
-			{IS_CLOUD && <SignInWithGoogle />}
-			<Form {...loginForm}>
-				<form
-					onSubmit={loginForm.handleSubmit(onSubmit)}
-					className="space-y-4"
-					id="login-form"
-				>
-					<FormField
-						control={loginForm.control}
-						name="email"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Email</FormLabel>
-								<FormControl>
-									<Input placeholder="john@example.com" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={loginForm.control}
-						name="password"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Password</FormLabel>
-								<FormControl>
-									<Input
-										type="password"
-										placeholder="Enter your password"
-										{...field}
-									/>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<Button className="w-full" type="submit" isLoading={isLoginLoading}>
-						Login
-					</Button>
-				</form>
-			</Form>
-		</>
-	);
+	if (isLoading) {
+		return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+	}
 
 	return (
 		<>
 			<div className="flex flex-col space-y-2 text-center">
 				<h1 className="text-2xl font-semibold tracking-tight">
 					<div className="flex flex-row items-center justify-center gap-2">
-						<Logo
-							className="size-12"
-							logoUrl={
-								whitelabeling?.loginLogoUrl ||
-								whitelabeling?.logoUrl ||
-								undefined
-							}
-						/>
+						<Logo className="size-12" />
 						Sign in
 					</div>
 				</h1>
@@ -243,11 +193,88 @@ export default function Home({ IS_CLOUD }: Props) {
 			<CardContent className="p-0">
 				{!isTwoFactor ? (
 					<>
-						{showSignInWithSSO ? (
-							<SignInWithSSO>{loginContent}</SignInWithSSO>
-						) : (
-							loginContent
-						)}
+						<Form {...loginForm}>
+							<form
+								onSubmit={loginForm.handleSubmit(onSubmit)}
+								className="space-y-4"
+								id="login-form"
+							>
+								<FormField
+									control={loginForm.control}
+									name="email"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Email</FormLabel>
+											<FormControl>
+												<Input placeholder="john@example.com" {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={loginForm.control}
+									name="password"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Password</FormLabel>
+											<FormControl>
+												<Input
+													type="password"
+													placeholder="Enter your password"
+													{...field}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<Button
+									className="w-full"
+									type="submit"
+									isLoading={isLoginLoading}
+								>
+									Login
+								</Button>
+							</form>
+						</Form>
+
+						{/* SSO Divider */}
+						<div className="relative my-4">
+							<div className="absolute inset-0 flex items-center">
+								<span className="w-full border-t" />
+							</div>
+							<div className="relative flex justify-center text-xs uppercase">
+								<span className="bg-background px-2 text-muted-foreground">
+									Or continue with
+								</span>
+							</div>
+						</div>
+
+						{/* Hanzo IAM Login */}
+						<Button
+							variant="outline"
+							className="w-full"
+							type="button"
+							onClick={async () => {
+								try {
+									await authClient.signIn.social({
+										provider: "hanzo" as any, // Hanzo IAM provider
+										callbackURL: "/dashboard/projects",
+									});
+								} catch (e) {
+									console.error('Hanzo login error:', e);
+									toast.error("Hanzo login is not configured");
+								}
+							}}
+						>
+							<svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+								<path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+								<path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+							</svg>
+							Sign in with Hanzo
+						</Button>
 					</>
 				) : (
 					<>
@@ -264,6 +291,7 @@ export default function Home({ IS_CLOUD }: Props) {
 									onChange={setTwoFactorCode}
 									maxLength={6}
 									pattern={REGEXP_ONLY_DIGITS}
+									autoComplete="off"
 									autoFocus
 								>
 									<InputOTPGroup>
@@ -363,34 +391,14 @@ export default function Home({ IS_CLOUD }: Props) {
 				)}
 
 				<div className="flex flex-row justify-between flex-wrap">
-					<div className="mt-4 text-center text-sm flex flex-row justify-center gap-2">
-						{IS_CLOUD && (
-							<Link
-								className="hover:underline text-muted-foreground"
-								href="/register"
-							>
-								Create an account
-							</Link>
-						)}
-					</div>
-
 					<div className="mt-4 text-sm flex flex-row justify-center gap-2">
-						{IS_CLOUD ? (
-							<Link
-								className="hover:underline text-muted-foreground"
-								href="/send-reset-password"
-							>
-								Lost your password?
-							</Link>
-						) : (
-							<Link
-								className="hover:underline text-muted-foreground"
-								href="https://docs.hanzo.ai/docs/core/reset-password"
-								target="_blank"
-							>
-								Lost your password?
-							</Link>
-						)}
+						<Link
+							className="hover:underline text-muted-foreground"
+							href="https://docs.hanzo.ai/docs/core/reset-password"
+							target="_blank"
+						>
+							Lost your password?
+						</Link>
 					</div>
 				</div>
 				<div className="p-2" />
@@ -402,51 +410,3 @@ export default function Home({ IS_CLOUD }: Props) {
 Home.getLayout = (page: ReactElement) => {
 	return <OnboardingLayout>{page}</OnboardingLayout>;
 };
-export async function getServerSideProps(context: GetServerSidePropsContext) {
-	if (IS_CLOUD) {
-		try {
-			const { user } = await validateRequest(context.req);
-			if (user) {
-				return {
-					redirect: {
-						permanent: true,
-						destination: "/dashboard/projects",
-					},
-				};
-			}
-		} catch {}
-
-		return {
-			props: {
-				IS_CLOUD: IS_CLOUD,
-			},
-		};
-	}
-	const hasAdmin = await isAdminPresent();
-
-	if (!hasAdmin) {
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/register",
-			},
-		};
-	}
-
-	const { user } = await validateRequest(context.req);
-
-	if (user) {
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/dashboard/projects",
-			},
-		};
-	}
-
-	return {
-		props: {
-			hasAdmin,
-		},
-	};
-}
