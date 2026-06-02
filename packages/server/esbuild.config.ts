@@ -17,7 +17,7 @@ build({
 	format: "esm",
 	plugins: [
 		alias({
-			"@hanzo/platform-server": path.resolve(__dirname, "src"),
+			"@dokploy/server": path.resolve(__dirname, "src"),
 		}),
 	],
 	packages: "external",

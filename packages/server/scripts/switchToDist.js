@@ -19,53 +19,21 @@ pkg.exports = {
 		import: "./dist/db/index.js",
 		require: "./dist/db/index.cjs.js",
 	},
-	"./db/schema": {
+	"./*": {
+		import: "./dist/*",
+		require: "./dist/*.cjs",
+	},
+	"./dist": {
+		import: "./dist/index.js",
+		require: "./dist/index.cjs.js",
+	},
+	"./dist/db": {
+		import: "./dist/db/index.js",
+		require: "./dist/db/index.cjs.js",
+	},
+	"./dist/db/schema": {
 		import: "./dist/db/schema/index.js",
 		require: "./dist/db/schema/index.cjs.js",
-	},
-	"./db/schema/*": {
-		import: "./dist/db/schema/*.js",
-	},
-	"./services/*": {
-		import: "./dist/services/*.js",
-	},
-	"./lib/*": {
-		import: "./dist/lib/*.js",
-	},
-	"./setup/*": {
-		import: "./dist/setup/*.js",
-	},
-	"./constants": {
-		import: "./dist/constants/index.js",
-		require: "./dist/constants/index.cjs.js",
-	},
-	"./templates": {
-		import: "./dist/templates/index.js",
-	},
-	"./templates/*": {
-		import: "./dist/templates/*.js",
-	},
-	"./monitoring/*": {
-		import: "./dist/monitoring/*.js",
-	},
-	"./utils/builders": {
-		import: "./dist/utils/builders/index.js",
-	},
-	"./utils/*": {
-		import: "./dist/utils/*.js",
-	},
-	"./types/*": {
-		import: "./dist/types/*.js",
-	},
-	"./wss/*": {
-		import: "./dist/wss/*.js",
-	},
-	"./emails/*": {
-		import: "./dist/emails/*.js",
-	},
-	"./*": {
-		import: "./dist/*.js",
-		require: "./dist/*.cjs",
 	},
 };
 

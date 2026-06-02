@@ -1,14 +1,14 @@
-import { db } from "@hanzo/platform-server/db";
+import { db } from "@dokploy/server/db";
 import {
 	type apiCreatePostgres,
 	backups,
 	buildAppName,
 	postgres,
-} from "@hanzo/platform-server/db/schema";
-import { generatePassword } from "@hanzo/platform-server/templates";
-import { buildPostgres } from "@hanzo/platform-server/utils/databases/postgres";
-import { pullImage } from "@hanzo/platform-server/utils/docker/utils";
-import { execAsyncRemote } from "@hanzo/platform-server/utils/process/execAsync";
+} from "@dokploy/server/db/schema";
+import { generatePassword } from "@dokploy/server/templates";
+import { buildPostgres } from "@dokploy/server/utils/databases/postgres";
+import { pullImage } from "@dokploy/server/utils/docker/utils";
+import { execAsyncRemote } from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq, getTableColumns } from "drizzle-orm";
 import type { z } from "zod";
