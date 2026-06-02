@@ -3,11 +3,10 @@ import {
 	doksCluster,
 	doksNodePool,
 	organization,
-	apiProvisionDoksCluster,
-	apiAddNodePool,
-	apiUpdateNodePool,
+	type apiProvisionDoksCluster,
+	type apiAddNodePool,
+	type apiUpdateNodePool,
 } from "@hanzo/platform/db/schema";
-import type { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 
@@ -56,15 +55,8 @@ async function doFetch<T>(
 // --- Cluster operations ---
 
 export const provisionDoksCluster = async (
-	input: z.infer<typeof apiProvisionDoksCluster>,
+	input: typeof apiProvisionDoksCluster._type,
 ) => {
-	if (!input.organizationId) {
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message: "Organization ID is required",
-		});
-	}
-
 	const org = await db.query.organization.findFirst({
 		where: eq(organization.id, input.organizationId),
 	});
@@ -252,7 +244,7 @@ export const deleteDoksCluster = async (doksClusterId: string) => {
 // --- Node pool operations ---
 
 export const addNodePool = async (
-	input: z.infer<typeof apiAddNodePool>,
+	input: typeof apiAddNodePool._type,
 ) => {
 	const cluster = await findDoksClusterById(input.doksClusterId);
 	if (!cluster.doClusterId) {
@@ -312,7 +304,7 @@ export const addNodePool = async (
 };
 
 export const updateNodePool = async (
-	input: z.infer<typeof apiUpdateNodePool>,
+	input: typeof apiUpdateNodePool._type,
 ) => {
 	const cluster = await findDoksClusterById(input.doksClusterId);
 	const pool = await db.query.doksNodePool.findFirst({

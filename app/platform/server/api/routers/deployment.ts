@@ -135,7 +135,40 @@ export const deploymentRouter = createTRPCRouter({
 
 	allByType: protectedProcedure
 		.input(apiFindAllByType)
-		.query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
+			// Verify the caller owns the parent resource before listing deployments
+			if (input.type === "application") {
+				const app = await findApplicationById(input.id);
+				if (
+					app.environment.project.organizationId !==
+					ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this resource",
+					});
+				}
+			} else if (input.type === "compose") {
+				const compose = await findComposeById(input.id);
+				if (
+					compose.environment.project.organizationId !==
+					ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this resource",
+					});
+				}
+			} else if (input.type === "server") {
+				const server = await findServerById(input.id);
+				if (server.organizationId !== ctx.session.activeOrganizationId) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to access this resource",
+					});
+				}
+			}
+
 			const deploymentsList = await db.query.deployments.findMany({
 				where: eq(deployments[`${input.type}Id`], input.id),
 				orderBy: desc(deployments.createdAt),
@@ -151,8 +184,24 @@ export const deploymentRouter = createTRPCRouter({
 				deploymentId: z.string().min(1),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			const deployment = await findDeploymentById(input.deploymentId);
+
+			// Verify org ownership via the associated application
+			if (deployment.application) {
+				const app = await findApplicationById(
+					deployment.application.applicationId,
+				);
+				if (
+					app.environment.project.organizationId !==
+					ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to kill this process",
+					});
+				}
+			}
 
 			if (!deployment.pid) {
 				throw new TRPCError({

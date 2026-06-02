@@ -391,7 +391,7 @@ export const serverRouter = createTRPCRouter({
 				}
 				const currentServer = await updateServerById(input.serverId, {
 					...input,
-				});
+				} as any);
 
 				return currentServer;
 			} catch (error) {

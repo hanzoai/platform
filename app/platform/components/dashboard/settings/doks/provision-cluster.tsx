@@ -39,7 +39,7 @@ export const ProvisionCluster = ({ onSuccess }: Props) => {
 	const { data: nodeSizes, isLoading: sizesLoading } =
 		api.doks.listNodeSizes.useQuery(undefined, { enabled: open });
 
-	const { mutateAsync: provision, isPending: provisioning } =
+	const { mutateAsync: provision, isLoading: provisioning } =
 		api.doks.provision.useMutation();
 
 	const handleProvision = async () => {
