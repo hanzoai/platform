@@ -23,8 +23,8 @@ export async function getServerSideProps(
 	if (IS_CLOUD) {
 		return {
 			redirect: {
-				permanent: true,
-				destination: "/dashboard/projects",
+				permanent: false,
+				destination: "/dashboard/home",
 			},
 		};
 	}
@@ -32,7 +32,7 @@ export async function getServerSideProps(
 	if (!user) {
 		return {
 			redirect: {
-				permanent: true,
+				permanent: false,
 				destination: "/",
 			},
 		};
@@ -53,19 +53,15 @@ export async function getServerSideProps(
 	try {
 		await helpers.project.all.prefetch();
 
-		if (user.role === "member") {
-			const userR = await helpers.user.one.fetch({
-				userId: user.id,
-			});
+		const userPermissions = await helpers.user.getPermissions.fetch();
 
-			if (!userR?.canAccessToTraefikFiles) {
-				return {
-					redirect: {
-						permanent: true,
-						destination: "/",
-					},
-				};
-			}
+		if (!userPermissions?.traefikFiles.read) {
+			return {
+				redirect: {
+					permanent: false,
+					destination: "/",
+				},
+			};
 		}
 		return {
 			props: {

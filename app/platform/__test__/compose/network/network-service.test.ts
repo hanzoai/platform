@@ -241,7 +241,7 @@ services:
       platform-network:
         aliases:
           - apid
-	
+
 `;
 
 test("It shoudn't add suffix to platform-network in services multiples cases", () => {
