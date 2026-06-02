@@ -59,24 +59,16 @@ const { handler, api } = betterAuth({
 			allowDifferentEmails: true,
 		},
 	},
-	appName: "Hanzo Platform",
+	appName: "Dokploy",
 	socialProviders: {
-		...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
-			? {
-					github: {
-						clientId: process.env.GITHUB_CLIENT_ID,
-						clientSecret: process.env.GITHUB_CLIENT_SECRET,
-					},
-				}
-			: {}),
-		...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-			? {
-					google: {
-						clientId: process.env.GOOGLE_CLIENT_ID,
-						clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-					},
-				}
-			: {}),
+		github: {
+			clientId: process.env.GITHUB_CLIENT_ID as string,
+			clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+		},
+		google: {
+			clientId: process.env.GOOGLE_CLIENT_ID as string,
+			clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+		},
 	},
 	logger: {
 		disabled: process.env.NODE_ENV === "production",
@@ -146,10 +138,10 @@ const { handler, api } = betterAuth({
 			create: {
 				before: async (_user, context) => {
 					if (!IS_CLOUD) {
-						const xHanzoToken =
-							context?.request?.headers?.get("x-iam-token");
-						if (xHanzoToken) {
-							const user = await getUserByToken(xHanzoToken);
+						const xDokployToken =
+							context?.request?.headers?.get("x-dokploy-token");
+						if (xDokployToken) {
+							const user = await getUserByToken(xDokployToken);
 							if (!user) {
 								throw new APIError("BAD_REQUEST", {
 									message: "User not found",
@@ -336,14 +328,14 @@ const { handler, api } = betterAuth({
 					const host =
 						process.env.NODE_ENV === "development"
 							? "http://localhost:3000"
-							: "https://app.hanzo.ai";
+							: "https://app.dokploy.com";
 					const inviteLink = `${host}/invitation?token=${data.id}`;
 
 					await sendEmail({
 						email: data.email,
 						subject: "Invitation to join organization",
 						text: `
-					<p>You are invited to join ${data.organization.name} on Hanzo Platform. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
+					<p>You are invited to join ${data.organization.name} on Dokploy. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
 					`,
 					});
 				}

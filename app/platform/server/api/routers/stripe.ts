@@ -1,161 +1,98 @@
+// Billing router (legacy name: stripeRouter for backward compat with frontend api.stripe.* calls)
+// All billing now goes through Commerce API at billing.hanzo.ai
+
 import {
 	findServersByUserId,
 	findUserById,
 	IS_CLOUD,
-	updateUser,
 } from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
-import Stripe from "stripe";
 import { z } from "zod";
-import {
-	type BillingTier,
-	getStripeItems,
-	HOBBY_PRICE_ANNUAL_ID,
-	HOBBY_PRICE_MONTHLY_ID,
-	HOBBY_PRODUCT_ID,
-	LEGACY_PRICE_IDS,
-	PRODUCT_ANNUAL_ID,
-	PRODUCT_MONTHLY_ID,
-	STARTUP_BASE_PRICE_ANNUAL_ID,
-	STARTUP_BASE_PRICE_MONTHLY_ID,
-	STARTUP_PRODUCT_ID,
-	WEBSITE_URL,
-} from "@/server/utils/stripe";
+import { WEBSITE_URL } from "@/server/utils/billing";
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
+const COMMERCE_API_URL = process.env.COMMERCE_API_URL || "https://billing.hanzo.ai";
+const COMMERCE_SERVICE_TOKEN = process.env.COMMERCE_SERVICE_TOKEN || "";
+
+async function commerceGet(path: string): Promise<any> {
+	const url = `${COMMERCE_API_URL}/api/v1/billing${path}`;
+	const res = await fetch(url, {
+		method: "GET",
+		headers: {
+			"Content-Type": "application/json",
+			...(COMMERCE_SERVICE_TOKEN ? { Authorization: `Bearer ${COMMERCE_SERVICE_TOKEN}` } : {}),
+		},
+		signal: AbortSignal.timeout(15_000),
+	});
+	if (!res.ok) return null;
+	return res.json();
+}
+
+async function commercePost(path: string, body: Record<string, unknown>): Promise<any> {
+	const url = `${COMMERCE_API_URL}/api/v1/billing${path}`;
+	const res = await fetch(url, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			...(COMMERCE_SERVICE_TOKEN ? { Authorization: `Bearer ${COMMERCE_SERVICE_TOKEN}` } : {}),
+		},
+		body: JSON.stringify(body),
+		signal: AbortSignal.timeout(15_000),
+	});
+	if (!res.ok) {
+		const text = await res.text().catch(() => "");
+		throw new Error(`Commerce API ${path} returned ${res.status}: ${text}`);
+	}
+	return res.json();
+}
+
 export const stripeRouter = createTRPCRouter({
-	/** Returns the current billing plan for the user's organization. Used to gate features like chat (Startup only). */
+	/** Returns the current billing plan for the user's organization. */
 	getCurrentPlan: protectedProcedure.query(async ({ ctx }) => {
 		if (!IS_CLOUD) return null;
 		const owner = await findUserById(ctx.user.ownerId);
-		if (!owner?.stripeCustomerId) return null;
 
-		const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-			apiVersion: "2024-09-30.acacia",
-		});
-		const subscriptions = await stripe.subscriptions.list({
-			customer: owner.stripeCustomerId,
-			status: "active",
-			expand: ["data.items.data.price"],
-		});
-		const activeSub = subscriptions.data[0];
-		if (!activeSub) return null;
+		try {
+			const subscription = await commerceGet(`/subscriptions?customerId=${encodeURIComponent(owner.id)}`);
+			if (!subscription?.plan) return null;
 
-		const priceIds = activeSub.items.data.map(
-			(item) => (item.price as Stripe.Price).id,
-		);
-		if (
-			priceIds.some(
-				(id) =>
-					id === STARTUP_BASE_PRICE_MONTHLY_ID ||
-					id === STARTUP_BASE_PRICE_ANNUAL_ID,
-			)
-		) {
-			return "startup" as const;
+			const plan = subscription.plan;
+			if (plan === "startup") return "startup" as const;
+			if (plan === "hobby") return "hobby" as const;
+			return null;
+		} catch {
+			return null;
 		}
-		if (
-			priceIds.some(
-				(id) => id === HOBBY_PRICE_MONTHLY_ID || id === HOBBY_PRICE_ANNUAL_ID,
-			)
-		) {
-			return "hobby" as const;
-		}
-		if (priceIds.some((id) => LEGACY_PRICE_IDS.includes(id))) {
-			return "legacy" as const;
-		}
-		return null;
 	}),
 
 	getProducts: adminProcedure.query(async ({ ctx }) => {
 		const user = await findUserById(ctx.user.ownerId);
-		const stripeCustomerId = user.stripeCustomerId;
 
-		const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-			apiVersion: "2024-09-30.acacia",
-		});
+		try {
+			const data = await commerceGet(`/products?customerId=${encodeURIComponent(user.id)}`);
 
-		const products = await stripe.products.list({
-			expand: ["data.default_price"],
-			active: true,
-		});
-
-		const productIds = [
-			PRODUCT_MONTHLY_ID,
-			PRODUCT_ANNUAL_ID,
-			HOBBY_PRODUCT_ID,
-			STARTUP_PRODUCT_ID,
-		].filter(Boolean);
-		const filteredProducts = products.data.filter((product) =>
-			productIds.includes(product.id),
-		);
-
-		if (!stripeCustomerId) {
 			return {
-				products: filteredProducts,
+				products: data?.products ?? [],
+				subscriptions: data?.subscriptions ?? [],
+				hobbyProductId: data?.hobbyProductId ?? undefined,
+				startupProductId: data?.startupProductId ?? undefined,
+				currentPlan: (data?.currentPlan ?? null) as "legacy" | "hobby" | "startup" | null,
+				isAnnualCurrent: data?.isAnnualCurrent ?? false,
+				currentPriceAmount: data?.currentPriceAmount ?? null,
+			};
+		} catch {
+			return {
+				products: [],
 				subscriptions: [],
-				hobbyProductId: HOBBY_PRODUCT_ID || undefined,
-				startupProductId: STARTUP_PRODUCT_ID || undefined,
+				hobbyProductId: undefined,
+				startupProductId: undefined,
 				currentPlan: null as "legacy" | "hobby" | "startup" | null,
 				isAnnualCurrent: false,
 				currentPriceAmount: null,
 			};
 		}
-
-		const subscriptions = await stripe.subscriptions.list({
-			customer: stripeCustomerId,
-			status: "active",
-			expand: ["data.items.data.price"],
-		});
-
-		type CurrentPlan = "legacy" | "hobby" | "startup";
-		let currentPlan: CurrentPlan = "legacy";
-		let isAnnualCurrent = false;
-		let currentPriceAmount: number | null = null;
-		const activeSub = subscriptions.data[0];
-		if (activeSub) {
-			const priceIds = activeSub.items.data.map(
-				(item) => (item.price as Stripe.Price).id,
-			);
-			if (
-				priceIds.some(
-					(id) =>
-						id === STARTUP_BASE_PRICE_MONTHLY_ID ||
-						id === STARTUP_BASE_PRICE_ANNUAL_ID,
-				)
-			) {
-				currentPlan = "startup";
-			} else if (
-				priceIds.some(
-					(id) => id === HOBBY_PRICE_MONTHLY_ID || id === HOBBY_PRICE_ANNUAL_ID,
-				)
-			) {
-				currentPlan = "hobby";
-			} else if (priceIds.some((id) => LEGACY_PRICE_IDS.includes(id))) {
-				currentPlan = "legacy";
-			}
-			const firstPrice = activeSub.items.data[0]?.price as
-				| Stripe.Price
-				| undefined;
-			isAnnualCurrent = firstPrice?.recurring?.interval === "year";
-			const totalCents = activeSub.items.data.reduce((sum, item) => {
-				const price = item.price as Stripe.Price;
-				const amount = price.unit_amount ?? 0;
-				const qty = item.quantity ?? 1;
-				return sum + amount * qty;
-			}, 0);
-			currentPriceAmount = totalCents / 100;
-		}
-
-		return {
-			products: filteredProducts,
-			subscriptions: subscriptions.data,
-			hobbyProductId: HOBBY_PRODUCT_ID || undefined,
-			startupProductId: STARTUP_PRODUCT_ID || undefined,
-			currentPlan: currentPlan as "legacy" | "hobby" | "startup" | null,
-			isAnnualCurrent,
-			currentPriceAmount,
-		};
 	}),
+
 	createCheckoutSession: adminProcedure
 		.input(
 			z
@@ -171,74 +108,33 @@ export const stripeRouter = createTRPCRouter({
 				}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-				apiVersion: "2024-09-30.acacia",
-			});
-
-			const items = getStripeItems(
-				input.tier as BillingTier,
-				input.serverQuantity,
-				input.isAnnual,
-			);
-			// Always operate on the organization owner's Stripe customer
 			const owner = await findUserById(ctx.user.ownerId);
 
-			let stripeCustomerId = owner.stripeCustomerId;
-
-			if (stripeCustomerId) {
-				const customer = await stripe.customers.retrieve(stripeCustomerId);
-
-				if (customer.deleted) {
-					await updateUser(owner.id, {
-						stripeCustomerId: null as any,
-					});
-					stripeCustomerId = null;
-				}
-			}
-
-			const session = await stripe.checkout.sessions.create({
-				mode: "subscription",
-				line_items: items,
-				...(stripeCustomerId
-					? { customer: stripeCustomerId }
-					: { customer_email: owner.email }),
-				metadata: {
-					adminId: owner.id,
-				},
-				allow_promotion_codes: true,
-				success_url: `${WEBSITE_URL}/dashboard/settings/servers?success=true`,
-				cancel_url: `${WEBSITE_URL}/dashboard/settings/billing`,
+			const result = await commercePost("/subscriptions", {
+				customerId: owner.id,
+				customerEmail: owner.email,
+				tier: input.tier,
+				serverQuantity: input.serverQuantity,
+				isAnnual: input.isAnnual,
+				successUrl: `${WEBSITE_URL}/dashboard/settings/servers?success=true`,
+				cancelUrl: `${WEBSITE_URL}/dashboard/settings/billing`,
 			});
 
-			return { sessionId: session.id };
+			return { sessionId: result.sessionId || result.id };
 		}),
+
 	createCustomerPortalSession: adminProcedure.mutation(async ({ ctx }) => {
-		// Use the organization's owner account for billing portal
 		const owner = await findUserById(ctx.user.ownerId);
 
-		if (!owner.stripeCustomerId) {
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: "Stripe Customer ID not found",
-			});
-		}
-		const stripeCustomerId = owner.stripeCustomerId;
-
-		const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-			apiVersion: "2024-09-30.acacia",
-		});
-
 		try {
-			const session = await stripe.billingPortal.sessions.create({
-				customer: stripeCustomerId,
-				return_url: `${WEBSITE_URL}/dashboard/settings/billing`,
+			const result = await commercePost("/portal-session", {
+				customerId: owner.id,
+				returnUrl: `${WEBSITE_URL}/dashboard/settings/billing`,
 			});
 
-			return { url: session.url };
-		} catch (_) {
-			return {
-				url: "",
-			};
+			return { url: result.url || `${COMMERCE_API_URL}/billing` };
+		} catch {
+			return { url: `${COMMERCE_API_URL}/billing` };
 		}
 	}),
 
@@ -256,59 +152,13 @@ export const stripeRouter = createTRPCRouter({
 				}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-				apiVersion: "2024-09-30.acacia",
-			});
 			const owner = await findUserById(ctx.user.ownerId);
 
-			if (!owner.stripeSubscriptionId) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "No active subscription found",
-				});
-			}
-
-			const subscription = await stripe.subscriptions.retrieve(
-				owner.stripeSubscriptionId,
-				{ expand: ["items.data.price"] },
-			);
-
-			if (subscription.status !== "active") {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Subscription is not active",
-				});
-			}
-
-			const newItems = getStripeItems(
-				input.tier as BillingTier,
-				input.serverQuantity,
-				input.isAnnual,
-			);
-			const currentItems = subscription.items.data;
-
-			const updateItems: Stripe.SubscriptionUpdateParams["items"] =
-				currentItems.map((item, i) => {
-					if (i < newItems.length) {
-						return {
-							id: item.id,
-							price: newItems[i]!.price,
-							quantity: newItems[i]!.quantity,
-						};
-					}
-					return { id: item.id, deleted: true };
-				});
-
-			for (let i = currentItems.length; i < newItems.length; i++) {
-				updateItems.push({
-					price: newItems[i]!.price,
-					quantity: newItems[i]!.quantity,
-				});
-			}
-
-			await stripe.subscriptions.update(owner.stripeSubscriptionId, {
-				items: updateItems,
-				proration_behavior: "create_prorations",
+			await commercePost("/subscriptions/upgrade", {
+				customerId: owner.id,
+				tier: input.tier,
+				serverQuantity: input.serverQuantity,
+				isAnnual: input.isAnnual,
 			});
 
 			return { ok: true };
@@ -327,35 +177,24 @@ export const stripeRouter = createTRPCRouter({
 
 	getInvoices: adminProcedure.query(async ({ ctx }) => {
 		const user = await findUserById(ctx.user.ownerId);
-		const stripeCustomerId = user.stripeCustomerId;
-
-		if (!stripeCustomerId) {
-			return [];
-		}
-
-		const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-			apiVersion: "2024-09-30.acacia",
-		});
 
 		try {
-			const invoices = await stripe.invoices.list({
-				customer: stripeCustomerId,
-				limit: 100,
-			});
+			const data = await commerceGet(`/invoices?customerId=${encodeURIComponent(user.id)}`);
+			if (!data?.invoices) return [];
 
-			return invoices.data.map((invoice) => ({
+			return data.invoices.map((invoice: any) => ({
 				id: invoice.id,
 				number: invoice.number,
 				status: invoice.status,
-				amountDue: invoice.amount_due,
-				amountPaid: invoice.amount_paid,
-				currency: invoice.currency,
+				amountDue: invoice.amountDue,
+				amountPaid: invoice.amountPaid,
+				currency: invoice.currency || "usd",
 				created: invoice.created,
-				dueDate: invoice.due_date,
-				hostedInvoiceUrl: invoice.hosted_invoice_url,
-				invoicePdf: invoice.invoice_pdf,
+				dueDate: invoice.dueDate,
+				hostedInvoiceUrl: invoice.hostedInvoiceUrl,
+				invoicePdf: invoice.invoicePdf,
 			}));
-		} catch (_) {
+		} catch {
 			return [];
 		}
 	}),

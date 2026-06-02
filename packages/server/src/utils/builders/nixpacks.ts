@@ -1,5 +1,5 @@
 import path from "node:path";
-import { getStaticCommand } from "@hanzo/platform-server/utils/builders/static";
+import { getStaticCommand } from "@dokploy/server/utils/builders/static";
 import { nanoid } from "nanoid";
 import { prepareEnvironmentVariablesForShell } from "../docker/utils";
 import { getBuildAppDirectory } from "../filesystem/directory";
@@ -27,7 +27,7 @@ export const getNixpacksCommand = (application: ApplicationNested) => {
 	}
 
 	if (publishDirectory) {
-		/* No need for any start command, static files served by busybox httpd */
+		/* No need for any start command, since we'll use nginx later on */
 		args.push("--no-error-without-start");
 	}
 	const command = `nixpacks ${args.join(" ")}`;

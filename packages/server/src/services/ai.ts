@@ -1,6 +1,6 @@
-import { db } from "@hanzo/platform-server/db";
-import { ai } from "@hanzo/platform-server/db/schema";
-import { selectAIProvider } from "@hanzo/platform-server/utils/ai/select-ai-provider";
+import { db } from "@dokploy/server/db";
+import { ai } from "@dokploy/server/db/schema";
+import { selectAIProvider } from "@dokploy/server/utils/ai/select-ai-provider";
 import { TRPCError } from "@trpc/server";
 import { generateText, Output } from "ai";
 import { desc, eq } from "drizzle-orm";
@@ -136,7 +136,7 @@ export const suggestVariants = async ({
 		    Strategy B - If the user describes a GENERAL NEED or USE CASE (e.g., "personal blog", "project management tool", "chat application"):
 		    - Suggest different open source projects that fulfill that need
 		    - Each suggestion should be a different tool/platform that solves the same problem
-		    - Example: For "personal blog" → "WordPress", "Ghost", "Hugo"
+		    - Example: For "personal blog" → "WordPress", "Ghost", "Hugo with Nginx"
 		    - The name should be the actual project name
 
 		    Return your response as a JSON object with the following structure:
