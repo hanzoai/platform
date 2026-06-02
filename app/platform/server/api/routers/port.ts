@@ -7,6 +7,7 @@ import {
 } from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { audit } from "@/server/api/utils/audit";
 import {
 	apiCreatePort,
 	apiFindOnePort,
@@ -47,15 +48,11 @@ export const portRouter = createTRPCRouter({
 		.query(async ({ input, ctx }) => {
 			try {
 				const port = await finPortById(input.portId);
-				if (
-					port.application.environment.project.organizationId !==
-					ctx.session.activeOrganizationId
-				) {
-					throw new TRPCError({
-						code: "UNAUTHORIZED",
-						message: "You are not authorized to access this port",
-					});
-				}
+				await checkServicePermissionAndAccess(
+					ctx,
+					port.application.applicationId,
+					{ service: ["read"] },
+				);
 				return port;
 			} catch (error) {
 				throw new TRPCError({
@@ -69,17 +66,20 @@ export const portRouter = createTRPCRouter({
 		.input(apiFindOnePort)
 		.mutation(async ({ input, ctx }) => {
 			const port = await finPortById(input.portId);
-			if (
-				port.application.environment.project.organizationId !==
-				ctx.session.activeOrganizationId
-			) {
-				throw new TRPCError({
-					code: "UNAUTHORIZED",
-					message: "You are not authorized to delete this port",
-				});
-			}
+			await checkServicePermissionAndAccess(
+				ctx,
+				port.application.applicationId,
+				{ service: ["delete"] },
+			);
 			try {
-				return await removePortById(input.portId);
+				const result = await removePortById(input.portId);
+				await audit(ctx, {
+					action: "delete",
+					resourceType: "port",
+					resourceId: port.portId,
+					resourceName: `${port.publishedPort}:${port.targetPort}`,
+				});
+				return result;
 			} catch (error) {
 				const message =
 					error instanceof Error ? error.message : "Error input: Deleting port";
@@ -93,17 +93,20 @@ export const portRouter = createTRPCRouter({
 		.input(apiUpdatePort)
 		.mutation(async ({ input, ctx }) => {
 			const port = await finPortById(input.portId);
-			if (
-				port.application.environment.project.organizationId !==
-				ctx.session.activeOrganizationId
-			) {
-				throw new TRPCError({
-					code: "UNAUTHORIZED",
-					message: "You are not authorized to update this port",
-				});
-			}
+			await checkServicePermissionAndAccess(
+				ctx,
+				port.application.applicationId,
+				{ service: ["create"] },
+			);
 			try {
-				return await updatePortById(input.portId, input);
+				const result = await updatePortById(input.portId, input);
+				await audit(ctx, {
+					action: "update",
+					resourceType: "port",
+					resourceId: port.portId,
+					resourceName: `${port.publishedPort}:${port.targetPort}`,
+				});
+				return result;
 			} catch (error) {
 				const message =
 					error instanceof Error ? error.message : "Error updating the port";
