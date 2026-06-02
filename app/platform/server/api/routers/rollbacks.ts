@@ -4,8 +4,9 @@ import {
 	rollback,
 } from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { audit } from "@/server/api/utils/audit";
 import { apiFindOneRollback } from "@/server/db/schema";
+import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const rollbackRouter = createTRPCRouter({
 	delete: protectedProcedure
@@ -41,17 +42,20 @@ export const rollbackRouter = createTRPCRouter({
 		.input(apiFindOneRollback)
 		.mutation(async ({ input, ctx }) => {
 			try {
-				const currentRollback = await findRollbackById(input.rollbackId);
-				if (
-					currentRollback?.deployment?.application?.environment?.project
-						.organizationId !== ctx.session.activeOrganizationId
-				) {
-					throw new TRPCError({
-						code: "UNAUTHORIZED",
-						message: "You are not authorized to rollback this deployment",
+				const rb = await findRollbackById(input.rollbackId);
+				const serviceId = rb.deployment.applicationId;
+				if (serviceId) {
+					await checkServicePermissionAndAccess(ctx, serviceId, {
+						deployment: ["create"],
 					});
 				}
-				return await rollback(input.rollbackId);
+				const result = await rollback(input.rollbackId);
+				await audit(ctx, {
+					action: "restore",
+					resourceType: "deployment",
+					resourceId: input.rollbackId,
+				});
+				return result;
 			} catch (error) {
 				console.error(error);
 				throw new TRPCError({
