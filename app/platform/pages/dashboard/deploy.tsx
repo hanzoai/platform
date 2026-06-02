@@ -307,3 +307,7 @@ export default DeployPage;
 DeployPage.getLayout = (page: ReactElement) => {
   return <DashboardLayout metaName="Deploy">{page}</DashboardLayout>;
 };
+
+export async function getServerSideProps() {
+  return { props: {} };
+}

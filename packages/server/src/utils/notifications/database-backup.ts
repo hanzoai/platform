@@ -1,7 +1,7 @@
-import { db } from "@hanzo/platform-server/db";
-import { notifications } from "@hanzo/platform-server/db/schema";
-import DatabaseBackupEmail from "@hanzo/platform-server/emails/emails/database-backup";
-import { render } from "@react-email/components";
+import { db } from "@dokploy/server/db";
+import { notifications } from "@dokploy/server/db/schema";
+import DatabaseBackupEmail from "@dokploy/server/emails/emails/database-backup";
+import { renderAsync } from "@react-email/components";
 import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";
 import {
@@ -73,7 +73,7 @@ export const sendDatabaseBackupNotifications = async ({
 		} = notification;
 		try {
 			if (email || resend) {
-				const template = await render(
+				const template = await renderAsync(
 					DatabaseBackupEmail({
 						projectName,
 						applicationName,
@@ -82,12 +82,12 @@ export const sendDatabaseBackupNotifications = async ({
 						errorMessage,
 						date: date.toLocaleString(),
 					}),
-				);
+				).catch();
 
 				if (email) {
 					await sendEmailNotification(
 						email,
-						"Database backup for platform",
+						"Database backup for dokploy",
 						template,
 					);
 				}
@@ -95,7 +95,7 @@ export const sendDatabaseBackupNotifications = async ({
 				if (resend) {
 					await sendResendNotification(
 						resend,
-						"Database backup for platform",
+						"Database backup for dokploy",
 						template,
 					);
 				}
@@ -160,7 +160,7 @@ export const sendDatabaseBackupNotifications = async ({
 					],
 					timestamp: date.toISOString(),
 					footer: {
-						text: "Hanzo Platform Database Backup Notification",
+						text: "Dokploy Database Backup Notification",
 					},
 				});
 			}

@@ -1,10 +1,10 @@
-import { db } from "@hanzo/platform-server/db";
+import { db } from "@dokploy/server/db";
 import {
 	invitation,
 	member,
 	organization,
 	user,
-} from "@hanzo/platform-server/db/schema";
+} from "@dokploy/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { IS_CLOUD } from "../constants";
@@ -104,9 +104,9 @@ export const removeUserById = async (userId: string) => {
 		.then((res) => res[0]);
 };
 
-export const getHanzoUrl = async () => {
+export const getDokployUrl = async () => {
 	if (IS_CLOUD) {
-		return "https://app.hanzo.ai";
+		return "https://app.dokploy.com";
 	}
 	const settings = await getWebServerSettings();
 
