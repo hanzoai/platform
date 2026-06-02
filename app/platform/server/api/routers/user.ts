@@ -1,15 +1,13 @@
 import {
 	createApiKey,
+	findAdmin,
 	findNotificationById,
 	findOrganizationById,
 	findUserById,
-	getHanzoUrl,
 	getUserByToken,
-	getWebServerSettings,
 	IS_CLOUD,
 	removeUserById,
 	sendEmailNotification,
-	sendResendNotification,
 	updateUser,
 } from "@hanzo/platform";
 import { db } from "@hanzo/platform/db";
@@ -88,11 +86,7 @@ export const userRouter = createTRPCRouter({
 			// Allow access if:
 			// 1. User is requesting their own information
 			// 2. User has owner role (admin permissions) AND user is in the same organization
-			if (
-				memberResult.userId !== ctx.user.id &&
-				ctx.user.role !== "owner" &&
-				ctx.user.role !== "admin"
-			) {
+			if (memberResult.userId !== ctx.user.id && ctx.user.role !== "owner") {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "You are not authorized to access this user",
@@ -101,19 +95,6 @@ export const userRouter = createTRPCRouter({
 
 			return memberResult;
 		}),
-	session: publicProcedure.query(async ({ ctx }) => {
-		if (!ctx.user || !ctx.session || !ctx.session.activeOrganizationId) {
-			return null;
-		}
-		return {
-			user: {
-				id: ctx.user.id,
-			},
-			session: {
-				activeOrganizationId: ctx.session.activeOrganizationId,
-			},
-		};
-	}),
 	get: protectedProcedure.query(async ({ ctx }) => {
 		const memberResult = await db.query.member.findFirst({
 			where: and(
@@ -208,12 +189,12 @@ export const userRouter = createTRPCRouter({
 					.update(account)
 					.set({
 						password: bcrypt.hashSync(input.password, 10),
-					})
+					} as any)
 					.where(eq(account.userId, ctx.user.id));
 			}
 
 			try {
-				return await updateUser(ctx.user.id, input);
+				return await updateUser(ctx.user.id, input as any);
 			} catch (error) {
 				throw new TRPCError({
 					code: "BAD_REQUEST",
@@ -229,11 +210,10 @@ export const userRouter = createTRPCRouter({
 		}),
 	getMetricsToken: protectedProcedure.query(async ({ ctx }) => {
 		const user = await findUserById(ctx.user.ownerId);
-		const settings = await getWebServerSettings();
 		return {
-			serverIp: settings?.serverIp,
+			serverIp: user.serverIp,
 			enabledFeatures: user.enablePaidFeatures,
-			metricsConfig: settings?.metricsConfig,
+			metricsConfig: user?.metricsConfig,
 		};
 	}),
 	remove: protectedProcedure
@@ -246,57 +226,26 @@ export const userRouter = createTRPCRouter({
 			if (IS_CLOUD) {
 				return true;
 			}
-
-			// Ensure the acting user has admin privileges in the active organization
-			if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
+			// Only owners can remove users, and only members of their own org
+			if (ctx.user.role !== "owner") {
 				throw new TRPCError({
-					code: "FORBIDDEN",
-					message: "Only owners or admins can delete users",
+					code: "UNAUTHORIZED",
+					message: "Only owners can remove users",
 				});
 			}
-
-			// Fetch target member within the active organization
+			// Verify the target user belongs to the caller's org
 			const targetMember = await db.query.member.findFirst({
 				where: and(
 					eq(member.userId, input.userId),
-					eq(member.organizationId, ctx.session?.activeOrganizationId || ""),
+					eq(member.organizationId, ctx.session.activeOrganizationId),
 				),
 			});
-
 			if (!targetMember) {
 				throw new TRPCError({
 					code: "NOT_FOUND",
-					message: "Target user is not a member of this organization",
+					message: "User not found in this organization",
 				});
 			}
-
-			// Never allow deleting the organization owner via this endpoint
-			if (targetMember.role === "owner") {
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message: "You cannot delete the organization owner",
-				});
-			}
-
-			// Admin self-protection: an admin cannot delete themselves
-			if (targetMember.role === "admin" && input.userId === ctx.user.id) {
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message:
-						"Admins cannot delete themselves. Ask the owner or another admin.",
-				});
-			}
-
-			// Only owners can delete admins
-			// Admins can only delete members
-			if (ctx.user.role === "admin" && targetMember.role === "admin") {
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message:
-						"Only the organization owner can delete admins. Admins can only delete members.",
-				});
-			}
-
 			return await removeUserById(input.userId);
 		}),
 	assignPermissions: adminProcedure
@@ -320,7 +269,7 @@ export const userRouter = createTRPCRouter({
 					.update(member)
 					.set({
 						...rest,
-					})
+					} as any)
 					.where(
 						and(
 							eq(member.userId, input.id),
@@ -446,24 +395,7 @@ export const userRouter = createTRPCRouter({
 	createApiKey: protectedProcedure
 		.input(apiCreateApiKey)
 		.mutation(async ({ input, ctx }) => {
-			// Verify user is a member of the organization specified in metadata
-			if (input.metadata?.organizationId) {
-				const userMember = await db.query.member.findFirst({
-					where: and(
-						eq(member.organizationId, input.metadata.organizationId),
-						eq(member.userId, ctx.user.id),
-					),
-				});
-
-				if (!userMember) {
-					throw new TRPCError({
-						code: "FORBIDDEN",
-						message: "You are not a member of this organization",
-					});
-				}
-			}
-
-			const apiKey = await createApiKey(ctx.user.id, input);
+			const apiKey = await createApiKey(ctx.user.id, input as any);
 			return apiKey;
 		}),
 
@@ -474,34 +406,19 @@ export const userRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			// Users can check their own organizations
-			// Admins and owners can check organizations of members in their active organization
-			if (input.userId !== ctx.user.id) {
-				// Verify the target user is a member of the active organization
-				const targetMember = await db.query.member.findFirst({
-					where: and(
-						eq(member.userId, input.userId),
-						eq(member.organizationId, ctx.session?.activeOrganizationId || ""),
-					),
+			// Only allow checking org count for users in the caller's org
+			const targetMember = await db.query.member.findFirst({
+				where: and(
+					eq(member.userId, input.userId),
+					eq(member.organizationId, ctx.session.activeOrganizationId),
+				),
+			});
+			if (!targetMember) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "User not found in this organization",
 				});
-
-				if (!targetMember) {
-					throw new TRPCError({
-						code: "FORBIDDEN",
-						message: "User is not a member of your active organization",
-					});
-				}
-
-				// Only admins and owners can check other users' organizations
-				if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
-					throw new TRPCError({
-						code: "FORBIDDEN",
-						message:
-							"Only admins and owners can check other users' organizations",
-					});
-				}
 			}
-
 			const organizations = await db.query.member.findMany({
 				where: eq(member.userId, input.userId),
 			});
@@ -523,23 +440,23 @@ export const userRouter = createTRPCRouter({
 			const notification = await findNotificationById(input.notificationId);
 
 			const email = notification.email;
-			const resend = notification.resend;
 
 			const currentInvitation = await db.query.invitation.findFirst({
 				where: eq(invitation.id, input.invitationId),
 			});
 
-			if (!email && !resend) {
+			if (!email) {
 				throw new TRPCError({
 					code: "NOT_FOUND",
-					message: "Email provider not found",
+					message: "Email notification not found",
 				});
 			}
 
+			const admin = await findAdmin();
 			const host =
 				process.env.NODE_ENV === "development"
 					? "http://localhost:3000"
-					: await getHanzoUrl();
+					: admin.user.host;
 			const inviteLink = `${host}/invitation?token=${input.invitationId}`;
 
 			const organization = await findOrganizationById(
@@ -547,29 +464,16 @@ export const userRouter = createTRPCRouter({
 			);
 
 			try {
-				const htmlContent = `
-\t\t\t\t<p>You are invited to join ${organization?.name || "organization"} on Hanzo Platform. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
-\t\t\t\t`;
-
-				if (email) {
-					await sendEmailNotification(
-						{
-							...email,
-							toAddresses: [currentInvitation?.email || ""],
-						},
-						"Invitation to join organization",
-						htmlContent,
-					);
-				} else if (resend) {
-					await sendResendNotification(
-						{
-							...resend,
-							toAddresses: [currentInvitation?.email || ""],
-						},
-						"Invitation to join organization",
-						htmlContent,
-					);
-				}
+				await sendEmailNotification(
+					{
+						...email,
+						toAddresses: [currentInvitation?.email || ""],
+					},
+					"Invitation to join organization",
+					`
+				<p>You are invited to join ${organization?.name || "organization"} on Hanzo. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
+					`,
+				);
 			} catch (error) {
 				console.log(error);
 				throw error;
