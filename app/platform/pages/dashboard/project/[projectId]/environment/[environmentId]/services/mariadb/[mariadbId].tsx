@@ -66,8 +66,6 @@ const Mariadb = (
 	const { data: environments } = api.environment.byProjectId.useQuery({
 		projectId: data?.environment?.projectId || "",
 	});
-	const { config: whitelabeling } = useWhitelabeling();
-	const appName = whitelabeling?.appName || "Hanzo Platform";
 	const environmentDropdownItems =
 		environments?.map((env) => ({
 			name: env.name,
@@ -97,7 +95,7 @@ const Mariadb = (
 				<Head>
 					<title>
 						Database: {data?.name} - {data?.environment?.project?.name} |
-						{appName}
+						Hanzo
 					</title>
 				</Head>
 				<Card className="h-full bg-sidebar  p-2.5 rounded-xl w-full">
@@ -133,7 +131,7 @@ const Mariadb = (
 													: "destructive"
 										}
 									>
-										{data?.server?.name || "Hanzo Platform Server"}
+										{data?.server?.name || "Hanzo Server"}
 									</Badge>
 									{data?.server?.serverStatus === "inactive" && (
 										<TooltipProvider delayDuration={0}>
