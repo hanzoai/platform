@@ -9,7 +9,7 @@ const nextConfig = {
 	typescript: {
 		ignoreBuildErrors: true,
 	},
-	transpilePackages: ["@hanzo/platform"],
+	transpilePackages: ["@hanzo/platform", "@hanzo/ui"],
 	// In frontend-only mode, proxy API calls to production platform
 	async rewrites() {
 		if (process.env.SKIP_ENV_VALIDATION !== "1") return [];

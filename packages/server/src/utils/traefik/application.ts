@@ -1,8 +1,8 @@
 import fs, { createReadStream, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
-import { paths } from "@hanzo/platform-server/constants";
-import type { Domain } from "@hanzo/platform-server/services/domain";
+import { paths } from "@dokploy/server/constants";
+import type { Domain } from "@dokploy/server/services/domain";
 import { parse, stringify } from "yaml";
 import { encodeBase64 } from "../docker/utils";
 import { execAsyncRemote } from "../process/execAsync";
@@ -162,8 +162,8 @@ export const readMonitoringConfig = async (readAll = false) => {
 						trimmed.endsWith("}")
 					) {
 						const log = JSON.parse(trimmed);
-						// Exclude Hanzo Platform service app and Dashboard requests
-						if (log.ServiceName !== "platform-service-app@file") {
+						// Exclude Dokploy service app and Dashboard requests
+						if (log.ServiceName !== "dokploy-service-app@file") {
 							content += `${line}\n`;
 							validCount++;
 							if (validCount >= 500) {
