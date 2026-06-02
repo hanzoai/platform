@@ -30,8 +30,9 @@ import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { audit } from "@/server/api/utils/audit";
 import { removeJob, schedule, updateJob } from "@/server/utils/backup";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { createTRPCRouter, protectedProcedure, withPermission } from "../trpc";
 
 /**
  * Resolve the organizationId for a volume backup by looking up its parent service.
@@ -147,6 +148,7 @@ export const volumeBackupsRouter = createTRPCRouter({
 					"mongo",
 					"redis",
 					"compose",
+					"libsql",
 				]),
 			}),
 		)
@@ -165,6 +167,7 @@ export const volumeBackupsRouter = createTRPCRouter({
 					mongo: true,
 					redis: true,
 					compose: true,
+					libsql: true,
 				},
 				orderBy: [desc(volumeBackups.createdAt)],
 			});
@@ -199,6 +202,11 @@ export const volumeBackupsRouter = createTRPCRouter({
 					await scheduleVolumeBackup(newVolumeBackup.volumeBackupId);
 				}
 			}
+			await audit(ctx, {
+				action: "create",
+				resourceType: "volumeBackup",
+				resourceId: newVolumeBackup?.volumeBackupId,
+			});
 			return newVolumeBackup;
 		}),
 	one: protectedProcedure
@@ -267,6 +275,11 @@ export const volumeBackupsRouter = createTRPCRouter({
 					removeVolumeBackupJob(updatedVolumeBackup.volumeBackupId);
 				}
 			}
+			await audit(ctx, {
+				action: "update",
+				resourceType: "volumeBackup",
+				resourceId: updatedVolumeBackup.volumeBackupId,
+			});
 			return updatedVolumeBackup;
 		}),
 
@@ -278,13 +291,19 @@ export const volumeBackupsRouter = createTRPCRouter({
 			assertVbOrgMatch(orgId, ctx.session.activeOrganizationId);
 
 			try {
-				return await runVolumeBackup(input.volumeBackupId);
+				const result = await runVolumeBackup(input.volumeBackupId);
+				await audit(ctx, {
+					action: "run",
+					resourceType: "volumeBackup",
+					resourceId: input.volumeBackupId,
+				});
+				return result;
 			} catch (error) {
 				console.error(error);
 				return false;
 			}
 		}),
-	restoreVolumeBackupWithLogs: protectedProcedure
+	restoreVolumeBackupWithLogs: withPermission("volumeBackup", "restore")
 		.meta({
 			openapi: {
 				enabled: false,
