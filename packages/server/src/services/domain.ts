@@ -1,9 +1,9 @@
 import dns from "node:dns";
 import { promisify } from "node:util";
-import { db } from "@hanzo/platform-server/db";
-import { getWebServerSettings } from "@hanzo/platform-server/services/web-server-settings";
-import { generateRandomDomain } from "@hanzo/platform-server/templates";
-import { manageDomain } from "@hanzo/platform-server/utils/traefik/domain";
+import { db } from "@dokploy/server/db";
+import { getWebServerSettings } from "@dokploy/server/services/web-server-settings";
+import { generateRandomDomain } from "@dokploy/server/templates";
+import { manageDomain } from "@dokploy/server/utils/traefik/domain";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";

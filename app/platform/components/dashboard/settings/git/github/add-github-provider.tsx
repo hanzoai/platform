@@ -52,7 +52,7 @@ export const AddGithubProvider = () => {
 		);
 
 		setManifest(manifest);
-	}, [activeOrganization?.id, session?.user?.id]);
+	}, [data?.id, activeOrganization?.id, session?.user?.id]);
 
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -131,7 +131,11 @@ export const AddGithubProvider = () => {
 										Unsure if you already have an app?
 									</a>
 									<Button
-										disabled={isOrganization && organizationName.length < 1}
+										disabled={
+											(isOrganization && organizationName.length < 1) ||
+											!activeOrganization?.id ||
+											!session?.user?.id
+										}
 										type="submit"
 										className="self-end"
 									>

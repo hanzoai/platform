@@ -1,6 +1,6 @@
-import { findAllDeploymentsByApplicationId } from "@hanzo/platform-server/services/deployment";
-import type { Registry } from "@hanzo/platform-server/services/registry";
-import { createRollback } from "@hanzo/platform-server/services/rollbacks";
+import { findAllDeploymentsByApplicationId } from "@dokploy/server/services/deployment";
+import type { Registry } from "@dokploy/server/services/registry";
+import { createRollback } from "@dokploy/server/services/rollbacks";
 import type { ApplicationNested } from "../builders";
 
 export const uploadImageRemoteCommand = async (
@@ -77,8 +77,8 @@ export const uploadImageRemoteCommand = async (
 /**
  * Extract the repository name from imageName by taking the last part after '/'
  * Examples:
- * - "busybox" -> "busybox"
- * - "busybox:latest" -> "busybox:latest"
+ * - "nginx" -> "nginx"
+ * - "nginx:latest" -> "nginx:latest"
  * - "myuser/myrepo" -> "myrepo"
  * - "myuser/myrepo:tag" -> "myrepo:tag"
  * - "docker.io/myuser/myrepo" -> "myrepo"

@@ -65,10 +65,17 @@ export const apiRemoveSshKey = createSchema
 	})
 	.required();
 
-export const apiUpdateSshKey = z
-	.object({
-		name: z.string().optional(),
-		description: z.string().optional(),
-		lastUsedAt: z.string().optional(),
-		sshKeyId: z.string().min(1),
-	});
+export const apiUpdateSshKey = createSchema
+	.pick({
+		name: true,
+		description: true,
+		lastUsedAt: true,
+	})
+	.partial()
+	.merge(
+		createSchema
+			.pick({
+				sshKeyId: true,
+			})
+			.required(),
+	);

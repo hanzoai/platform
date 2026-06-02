@@ -98,7 +98,6 @@ import {
 import { cn } from "@/lib/utils";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
-import { useWhitelabeling } from "@/utils/hooks/use-whitelabeling";
 
 export type Services = {
 	serverId?: string | null;
@@ -372,7 +371,7 @@ const EnvironmentPage = (
 			{ enabled: !!selectedTargetProject },
 		);
 	const { config: whitelabeling } = useWhitelabeling();
-	const appName = whitelabeling?.appName || "Hanzo Platform";
+	const appName = whitelabeling?.appName || "Dokploy";
 
 	const emptyServices =
 		!currentEnvironment ||
@@ -590,6 +589,7 @@ const EnvironmentPage = (
 				const service = filteredServices.find((s) => s.id === serviceId);
 				if (!service) continue;
 
+				// TODO: Update move APIs to use targetEnvironmentId instead of targetProjectId
 				switch (service.type) {
 					case "application":
 						await applicationActions.move.mutateAsync({
@@ -825,7 +825,7 @@ const EnvironmentPage = (
 				(selectedTypes.length === 0 || selectedTypes.includes(service.type)) &&
 				(selectedServerId === "" ||
 					selectedServerId === "all" ||
-					(selectedServerId === "dokploy-server" && !service.serverId) ||
+					(selectedServerId === "hanzo-platform" && !service.serverId) ||
 					service.serverId === selectedServerId),
 		);
 		return sortServices(filtered);
@@ -873,8 +873,7 @@ const EnvironmentPage = (
 			/>
 			<Head>
 				<title>
-					Environment: {currentEnvironment.name} | {projectData?.name} |{" "}
-					{appName}
+					Environment: {currentEnvironment.name} | {projectData?.name} | Hanzo Platform
 				</title>
 			</Head>
 			<div className="w-full">
@@ -1420,7 +1419,7 @@ const EnvironmentPage = (
 												<SelectContent>
 													<SelectItem value="all">All servers</SelectItem>
 													{hasServicesWithoutServer && (
-														<SelectItem value="dokploy-server">
+														<SelectItem value="hanzo-platform">
 															<div className="flex items-center gap-2">
 																<ServerIcon className="size-4" />
 																<span>Hanzo Platform server</span>

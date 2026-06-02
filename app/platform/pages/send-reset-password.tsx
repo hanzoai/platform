@@ -83,14 +83,8 @@ export default function Home() {
 		<div className="flex w-full items-center justify-center ">
 			<div className="flex flex-col items-center gap-4 w-full">
 				<Link href="/" className="flex flex-row items-center gap-2">
-					<Logo
-						logoUrl={
-							whitelabeling?.loginLogoUrl || whitelabeling?.logoUrl || undefined
-						}
-					/>
-					<span className="font-medium text-sm">
-						{whitelabeling?.appName || "Hanzo Platform"}
-					</span>
+					<Logo />
+					<span className="font-medium text-sm">Hanzo Platform</span>
 				</Link>
 				<CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
 				<CardDescription>
