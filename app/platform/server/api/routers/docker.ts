@@ -1,5 +1,9 @@
 import {
+	containerKill,
+	containerRemove,
 	containerRestart,
+	containerStart,
+	containerStop,
 	findServerById,
 	getConfig,
 	getContainers,
@@ -10,12 +14,14 @@ import {
 } from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { audit } from "@/server/api/utils/audit";
+import { uploadFileToContainerSchema } from "@/utils/schema";
+import { createTRPCRouter, withPermission } from "../trpc";
 
 export const containerIdRegex = /^[a-zA-Z0-9.\-_]+$/;
 
 export const dockerRouter = createTRPCRouter({
-	getContainers: protectedProcedure
+	getContainers: withPermission("docker", "read")
 		.input(
 			z.object({
 				serverId: z.string().optional(),
@@ -31,7 +37,7 @@ export const dockerRouter = createTRPCRouter({
 			return await getContainers(input.serverId);
 		}),
 
-	restartContainer: protectedProcedure
+	restartContainer: withPermission("service", "read")
 		.input(
 			z.object({
 				containerId: z
@@ -52,7 +58,111 @@ export const dockerRouter = createTRPCRouter({
 			return await containerRestart(input.containerId);
 		}),
 
-	getConfig: protectedProcedure
+	startContainer: withPermission("service", "read")
+		.input(
+			z.object({
+				containerId: z
+					.string()
+					.min(1)
+					.regex(containerIdRegex, "Invalid container id."),
+				serverId: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ input, ctx }) => {
+			if (input.serverId) {
+				const server = await findServerById(input.serverId);
+				if (server.organizationId !== ctx.session?.activeOrganizationId) {
+					throw new TRPCError({ code: "UNAUTHORIZED" });
+				}
+			}
+			await containerStart(input.containerId, input.serverId);
+			await audit(ctx, {
+				action: "start",
+				resourceType: "docker",
+				resourceId: input.containerId,
+				resourceName: input.containerId,
+			});
+		}),
+
+	stopContainer: withPermission("service", "read")
+		.input(
+			z.object({
+				containerId: z
+					.string()
+					.min(1)
+					.regex(containerIdRegex, "Invalid container id."),
+				serverId: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ input, ctx }) => {
+			if (input.serverId) {
+				const server = await findServerById(input.serverId);
+				if (server.organizationId !== ctx.session?.activeOrganizationId) {
+					throw new TRPCError({ code: "UNAUTHORIZED" });
+				}
+			}
+			await containerStop(input.containerId, input.serverId);
+			await audit(ctx, {
+				action: "stop",
+				resourceType: "docker",
+				resourceId: input.containerId,
+				resourceName: input.containerId,
+			});
+		}),
+
+	killContainer: withPermission("service", "read")
+		.input(
+			z.object({
+				containerId: z
+					.string()
+					.min(1)
+					.regex(containerIdRegex, "Invalid container id."),
+				serverId: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ input, ctx }) => {
+			if (input.serverId) {
+				const server = await findServerById(input.serverId);
+				if (server.organizationId !== ctx.session?.activeOrganizationId) {
+					throw new TRPCError({ code: "UNAUTHORIZED" });
+				}
+			}
+			await containerKill(input.containerId, input.serverId);
+			await audit(ctx, {
+				action: "stop",
+				resourceType: "docker",
+				resourceId: input.containerId,
+				resourceName: input.containerId,
+			});
+		}),
+
+	removeContainer: withPermission("docker", "read")
+		.input(
+			z.object({
+				containerId: z
+					.string()
+					.min(1)
+					.regex(containerIdRegex, "Invalid container id."),
+				serverId: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ input, ctx }) => {
+			if (input.serverId) {
+				const server = await findServerById(input.serverId);
+				if (server.organizationId !== ctx.session?.activeOrganizationId) {
+					throw new TRPCError({ code: "UNAUTHORIZED" });
+				}
+			}
+			await containerRemove(input.containerId, input.serverId);
+			await audit(ctx, {
+				action: "delete",
+				resourceType: "docker",
+				resourceId: input.containerId,
+				resourceName: input.containerId,
+			});
+		}),
+
+	getConfig: withPermission("docker", "read")
 		.input(
 			z.object({
 				containerId: z
@@ -72,7 +182,7 @@ export const dockerRouter = createTRPCRouter({
 			return await getConfig(input.containerId, input.serverId);
 		}),
 
-	getContainersByAppNameMatch: protectedProcedure
+	getContainersByAppNameMatch: withPermission("service", "read")
 		.input(
 			z.object({
 				appType: z.enum(["stack", "docker-compose"]).optional(),
@@ -94,7 +204,7 @@ export const dockerRouter = createTRPCRouter({
 			);
 		}),
 
-	getContainersByAppLabel: protectedProcedure
+	getContainersByAppLabel: withPermission("docker", "read")
 		.input(
 			z.object({
 				appName: z.string().min(1).regex(containerIdRegex, "Invalid app name."),
@@ -116,7 +226,7 @@ export const dockerRouter = createTRPCRouter({
 			);
 		}),
 
-	getStackContainersByAppName: protectedProcedure
+	getStackContainersByAppName: withPermission("docker", "read")
 		.input(
 			z.object({
 				appName: z.string().min(1).regex(containerIdRegex, "Invalid app name."),
@@ -133,7 +243,7 @@ export const dockerRouter = createTRPCRouter({
 			return await getStackContainersByAppName(input.appName, input.serverId);
 		}),
 
-	getServiceContainersByAppName: protectedProcedure
+	getServiceContainersByAppName: withPermission("docker", "read")
 		.input(
 			z.object({
 				appName: z.string().min(1).regex(containerIdRegex, "Invalid app name."),
@@ -148,5 +258,38 @@ export const dockerRouter = createTRPCRouter({
 				}
 			}
 			return await getServiceContainersByAppName(input.appName, input.serverId);
+		}),
+
+	uploadFileToContainer: withPermission("docker", "read")
+		.input(uploadFileToContainerSchema)
+		.mutation(async ({ input, ctx }) => {
+			if (input.serverId) {
+				const server = await findServerById(input.serverId);
+				if (server.organizationId !== ctx.session?.activeOrganizationId) {
+					throw new TRPCError({ code: "UNAUTHORIZED" });
+				}
+			}
+
+			const file = input.file;
+			if (!(file instanceof File)) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Invalid file provided",
+				});
+			}
+
+			// Convert File to Buffer
+			const arrayBuffer = await file.arrayBuffer();
+			const fileBuffer = Buffer.from(arrayBuffer);
+
+			await uploadFileToContainer(
+				input.containerId,
+				fileBuffer,
+				file.name,
+				input.destinationPath,
+				input.serverId || null,
+			);
+
+			return { success: true, message: "File uploaded successfully" };
 		}),
 });
