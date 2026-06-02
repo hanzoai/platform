@@ -9,6 +9,9 @@ import { clusterRouter } from "./routers/cluster";
 import { composeRouter } from "./routers/compose";
 import { deploymentRouter } from "./routers/deployment";
 import { destinationRouter } from "./routers/destination";
+import { dnsRouter } from "./routers/dns";
+import { digitaloceanRouter } from "./routers/digitalocean";
+import { gatewayRouter } from "./routers/gateway";
 import { dockerRouter } from "./routers/docker";
 import { doksRouter } from "./routers/doks";
 import { domainRouter } from "./routers/domain";
@@ -17,7 +20,6 @@ import { gitProviderRouter } from "./routers/git-provider";
 import { giteaRouter } from "./routers/gitea";
 import { githubRouter } from "./routers/github";
 import { gitlabRouter } from "./routers/gitlab";
-import { k8sRouter } from "./routers/k8s";
 import { mariadbRouter } from "./routers/mariadb";
 import { mongoRouter } from "./routers/mongo";
 import { mountRouter } from "./routers/mount";
@@ -25,9 +27,6 @@ import { mysqlRouter } from "./routers/mysql";
 import { notificationRouter } from "./routers/notification";
 import { organizationRouter } from "./routers/organization";
 import { patchRouter } from "./routers/patch";
-import { licenseKeyRouter } from "./routers/proprietary/license-key";
-import { ssoRouter } from "./routers/proprietary/sso";
-import { whitelabelingRouter } from "./routers/proprietary/whitelabeling";
 import { portRouter } from "./routers/port";
 import { postgresRouter } from "./routers/postgres";
 import { previewDeploymentRouter } from "./routers/preview-deployment";
@@ -42,9 +41,9 @@ import { serverRouter } from "./routers/server";
 import { settingsRouter } from "./routers/settings";
 import { sshRouter } from "./routers/ssh-key";
 import { stripeRouter } from "./routers/stripe";
+import { billingRouter } from "./routers/billing";
 import { swarmRouter } from "./routers/swarm";
 import { userRouter } from "./routers/user";
-import { visorRouter } from "./routers/visor";
 import { volumeBackupsRouter } from "./routers/volume-backups";
 /**
  * This is the primary router for your server.
@@ -54,6 +53,9 @@ import { volumeBackupsRouter } from "./routers/volume-backups";
 
 export const appRouter = createTRPCRouter({
 	admin: adminRouter,
+	dns: dnsRouter,
+	digitalocean: digitaloceanRouter,
+	gateway: gatewayRouter,
 	docker: dockerRouter,
 	doks: doksRouter,
 	project: projectRouter,
@@ -87,6 +89,7 @@ export const appRouter = createTRPCRouter({
 	github: githubRouter,
 	server: serverRouter,
 	stripe: stripeRouter,
+	billing: billingRouter,
 	swarm: swarmRouter,
 	ai: aiRouter,
 	organization: organizationRouter,
@@ -95,11 +98,9 @@ export const appRouter = createTRPCRouter({
 	whitelabeling: whitelabelingRouter,
 	schedule: scheduleRouter,
 	rollback: rollbackRouter,
-	visor: visorRouter,
 	volumeBackups: volumeBackupsRouter,
 	environment: environmentRouter,
 	patch: patchRouter,
-	k8s: k8sRouter,
 });
 
 // export type definition of API

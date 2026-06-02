@@ -1,6 +1,6 @@
 import { dirname, join } from "node:path";
-import { paths } from "@hanzo/platform-server/constants";
-import type { InferResultType } from "@hanzo/platform-server/types/with";
+import { paths } from "@dokploy/server/constants";
+import type { InferResultType } from "@dokploy/server/types/with";
 import boxen from "boxen";
 import { quote } from "shell-quote";
 import { writeDomainsToCompose } from "../docker/domain";
@@ -55,7 +55,7 @@ Compose Type: ${composeType} ✅`;
 
 		${compose.isolatedDeployment ? `docker network inspect ${compose.appName} >/dev/null 2>&1 || docker network create ${compose.composeType === "stack" ? "--driver overlay" : ""} --attachable ${compose.appName}` : ""}
 		env -i PATH="$PATH" ${exportEnvCommand} docker ${command.split(" ").join(" ")} 2>&1 || { echo "Error: ❌ Docker command failed"; exit 1; }
-		${compose.isolatedDeployment ? `docker network connect ${compose.appName} $(docker ps --filter "name=platform-traefik" -q) >/dev/null 2>&1` : ""}
+		${compose.isolatedDeployment ? `docker network connect ${compose.appName} $(docker ps --filter "name=dokploy-traefik" -q) >/dev/null 2>&1` : ""}
 	
 		echo "Docker Compose Deployed: ✅";
 	} || {

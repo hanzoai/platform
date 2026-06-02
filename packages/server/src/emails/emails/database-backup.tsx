@@ -21,7 +21,7 @@ export type TemplateProps = {
 };
 
 export const DatabaseBackupEmail = ({
-	projectName = "hanzo",
+	projectName = "dokploy",
 	applicationName = "frontend",
 	databaseType = "postgres",
 	type = "success",
@@ -41,7 +41,7 @@ export const DatabaseBackupEmail = ({
 							},
 						},
 					},
-				} as any}
+				}}
 			>
 				<Head />
 
@@ -50,11 +50,11 @@ export const DatabaseBackupEmail = ({
 						<Section className="mt-[32px]">
 							<Img
 								src={
-									"https://raw.githubusercontent.com/Hanzo Platform/hanzo/refs/heads/canary/apps/hanzo/logo.png"
+									"https://raw.githubusercontent.com/Dokploy/dokploy/refs/heads/canary/apps/dokploy/logo.png"
 								}
 								width="100"
 								height="50"
-								alt="Hanzo Platform"
+								alt="Dokploy"
 								className="my-0 mx-auto"
 							/>
 						</Section>
