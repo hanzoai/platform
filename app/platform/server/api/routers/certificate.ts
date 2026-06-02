@@ -7,15 +7,17 @@ import {
 import { db } from "@hanzo/platform/db";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
-import { adminProcedure, createTRPCRouter } from "@/server/api/trpc";
+import { createTRPCRouter, withPermission } from "@/server/api/trpc";
+import { audit } from "@/server/api/utils/audit";
 import {
 	apiCreateCertificate,
 	apiFindCertificate,
+	apiUpdateCertificate,
 	certificates,
 } from "@/server/db/schema";
 
 export const certificateRouter = createTRPCRouter({
-	create: adminProcedure
+	create: withPermission("certificate", "create")
 		.input(apiCreateCertificate)
 		.mutation(async ({ input, ctx }) => {
 			if (IS_CLOUD && !input.serverId) {
@@ -24,10 +26,20 @@ export const certificateRouter = createTRPCRouter({
 					message: "Please set a server to create a certificate",
 				});
 			}
-			return await createCertificate(input, ctx.session.activeOrganizationId);
+			const cert = await createCertificate(
+				input,
+				ctx.session.activeOrganizationId,
+			);
+			await audit(ctx, {
+				action: "create",
+				resourceType: "certificate",
+				resourceId: cert.certificateId,
+				resourceName: cert.name,
+			});
+			return cert;
 		}),
 
-	one: adminProcedure
+	one: withPermission("certificate", "read")
 		.input(apiFindCertificate)
 		.query(async ({ input, ctx }) => {
 			const certificates = await findCertificateById(input.certificateId);
@@ -39,7 +51,7 @@ export const certificateRouter = createTRPCRouter({
 			}
 			return certificates;
 		}),
-	remove: adminProcedure
+	remove: withPermission("certificate", "delete")
 		.input(apiFindCertificate)
 		.mutation(async ({ input, ctx }) => {
 			const certificates = await findCertificateById(input.certificateId);
@@ -49,12 +61,37 @@ export const certificateRouter = createTRPCRouter({
 					message: "You are not allowed to delete this certificate",
 				});
 			}
+			await audit(ctx, {
+				action: "delete",
+				resourceType: "certificate",
+				resourceId: certificates.certificateId,
+				resourceName: certificates.name,
+			});
 			await removeCertificateById(input.certificateId);
 			return true;
 		}),
-	all: adminProcedure.query(async ({ ctx }) => {
+	all: withPermission("certificate", "read").query(async ({ ctx }) => {
 		return await db.query.certificates.findMany({
 			where: eq(certificates.organizationId, ctx.session.activeOrganizationId),
+			with: {
+				server: true,
+			},
 		});
 	}),
+	update: withPermission("certificate", "update")
+		.input(apiUpdateCertificate)
+		.mutation(async ({ input, ctx }) => {
+			const certificate = await findCertificateById(input.certificateId);
+			if (certificate.organizationId !== ctx.session.activeOrganizationId) {
+				throw new TRPCError({
+					code: "UNAUTHORIZED",
+					message: "You are not allowed to update this certificate",
+				});
+			}
+			return await updateCertificate(input.certificateId, {
+				name: input.name,
+				certificateData: input.certificateData,
+				privateKey: input.privateKey,
+			});
+		}),
 });
