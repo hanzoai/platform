@@ -9,28 +9,22 @@ import {
 	BotIcon,
 	Boxes,
 	ChevronRight,
-	ChevronsUpDown,
 	CircleHelp,
 	Clock,
+	Cloud,
 	CreditCard,
 	Database,
 	Folder,
 	Forward,
 	GalleryVerticalEnd,
 	GitBranch,
-	Key,
+	HeartIcon,
 	KeyRound,
-	Loader2,
-	LogIn,
 	type LucideIcon,
 	Package,
-	Palette,
 	PieChart,
-	Rocket,
 	Server,
 	ShieldCheck,
-	Star,
-	Trash2,
 	User,
 	Users,
 } from "lucide-react";
@@ -54,7 +48,6 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuLabel,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
@@ -82,11 +75,12 @@ import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import type { AppRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
-import { AddOrganization } from "../dashboard/organization/handle-organization";
+import { EnvironmentSwitcher } from "../dashboard/environment-switcher";
+import { OrgSwitcher } from "../dashboard/org-switcher";
+import { ProjectSwitcher } from "../dashboard/project-switcher";
 import { DialogAction } from "../shared/dialog-action";
-import { Logo } from "../shared/logo";
 import { Button } from "../ui/button";
-import { TimeBadge } from "../ui/time-badge";
+import { ProjectContextProvider } from "@/hooks/use-project-context";
 import { UpdateServerButton } from "./update-server";
 import { UserNav } from "./user-nav";
 
@@ -149,15 +143,11 @@ const MENU: Menu = {
 		},
 		{
 			isSingle: true,
-			title: "Deployments",
-			url: "/dashboard/deployments",
-			icon: Rocket,
-		},
-		{
-			isSingle: true,
 			title: "Monitoring",
 			url: "/dashboard/monitoring",
 			icon: BarChartHorizontalBigIcon,
+			// Only enabled in non-cloud environments
+			isEnabled: ({ isCloud }) => !isCloud,
 		},
 		{
 			isSingle: true,
@@ -165,8 +155,7 @@ const MENU: Menu = {
 			url: "/dashboard/schedules",
 			icon: Clock,
 			// Only enabled in non-cloud environments
-			isEnabled: ({ isCloud, auth }) =>
-				!isCloud && (auth?.role === "owner" || auth?.role === "admin"),
+			isEnabled: ({ isCloud, auth }) => !isCloud && auth?.role === "owner",
 		},
 		{
 			isSingle: true,
@@ -176,9 +165,7 @@ const MENU: Menu = {
 			// Only enabled for admins and users with access to Traefik files in non-cloud environments
 			isEnabled: ({ auth, isCloud }) =>
 				!!(
-					(auth?.role === "owner" ||
-						auth?.role === "admin" ||
-						auth?.canAccessToTraefikFiles) &&
+					(auth?.role === "owner" || auth?.canAccessToTraefikFiles) &&
 					!isCloud
 				),
 		},
@@ -189,12 +176,7 @@ const MENU: Menu = {
 			icon: BlocksIcon,
 			// Only enabled for admins and users with access to Docker in non-cloud environments
 			isEnabled: ({ auth, isCloud }) =>
-				!!(
-					(auth?.role === "owner" ||
-						auth?.role === "admin" ||
-						auth?.canAccessToDocker) &&
-					!isCloud
-				),
+				!!((auth?.role === "owner" || auth?.canAccessToDocker) && !isCloud),
 		},
 		{
 			isSingle: true,
@@ -203,12 +185,7 @@ const MENU: Menu = {
 			icon: PieChart,
 			// Only enabled for admins and users with access to Docker in non-cloud environments
 			isEnabled: ({ auth, isCloud }) =>
-				!!(
-					(auth?.role === "owner" ||
-						auth?.role === "admin" ||
-						auth?.canAccessToDocker) &&
-					!isCloud
-				),
+				!!((auth?.role === "owner" || auth?.canAccessToDocker) && !isCloud),
 		},
 		{
 			isSingle: true,
@@ -217,12 +194,7 @@ const MENU: Menu = {
 			icon: Forward,
 			// Only enabled for admins and users with access to Docker in non-cloud environments
 			isEnabled: ({ auth, isCloud }) =>
-				!!(
-					(auth?.role === "owner" ||
-						auth?.role === "admin" ||
-						auth?.canAccessToDocker) &&
-					!isCloud
-				),
+				!!((auth?.role === "owner" || auth?.canAccessToDocker) && !isCloud),
 		},
 
 		// Legacy unused menu, adjusted to the new structure
@@ -289,8 +261,7 @@ const MENU: Menu = {
 			url: "/dashboard/settings/server",
 			icon: Activity,
 			// Only enabled for admins in non-cloud environments
-			isEnabled: ({ auth, isCloud }) =>
-				!!((auth?.role === "owner" || auth?.role === "admin") && !isCloud),
+			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && !isCloud),
 		},
 		{
 			isSingle: true,
@@ -304,8 +275,7 @@ const MENU: Menu = {
 			url: "/dashboard/settings/servers",
 			icon: Server,
 			// Only enabled for admins
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.role === "admin"),
+			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 		},
 		{
 			isSingle: true,
@@ -313,8 +283,7 @@ const MENU: Menu = {
 			icon: Users,
 			url: "/dashboard/settings/users",
 			// Only enabled for admins
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.role === "admin"),
+			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 		},
 		{
 			isSingle: true,
@@ -323,19 +292,14 @@ const MENU: Menu = {
 			url: "/dashboard/settings/ssh-keys",
 			// Only enabled for admins and users with access to SSH keys
 			isEnabled: ({ auth }) =>
-				!!(
-					auth?.role === "owner" ||
-					auth?.canAccessToSSHKeys ||
-					auth?.role === "admin"
-				),
+				!!(auth?.role === "owner" || auth?.canAccessToSSHKeys),
 		},
 		{
 			title: "AI",
 			icon: BotIcon,
 			url: "/dashboard/settings/ai",
 			isSingle: true,
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.role === "admin"),
+			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 		},
 		{
 			isSingle: true,
@@ -344,11 +308,7 @@ const MENU: Menu = {
 			icon: GitBranch,
 			// Only enabled for admins and users with access to Git providers
 			isEnabled: ({ auth }) =>
-				!!(
-					auth?.role === "owner" ||
-					auth?.canAccessToGitProviders ||
-					auth?.role === "admin"
-				),
+				!!(auth?.role === "owner" || auth?.canAccessToGitProviders),
 		},
 		{
 			isSingle: true,
@@ -356,8 +316,7 @@ const MENU: Menu = {
 			url: "/dashboard/settings/registry",
 			icon: Package,
 			// Only enabled for admins
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.role === "admin"),
+			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 		},
 		{
 			isSingle: true,
@@ -365,8 +324,7 @@ const MENU: Menu = {
 			url: "/dashboard/settings/destinations",
 			icon: Database,
 			// Only enabled for admins
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.role === "admin"),
+			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 		},
 
 		{
@@ -375,8 +333,7 @@ const MENU: Menu = {
 			url: "/dashboard/settings/certificates",
 			icon: ShieldCheck,
 			// Only enabled for admins
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.role === "admin"),
+			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 		},
 		{
 			isSingle: true,
@@ -384,8 +341,15 @@ const MENU: Menu = {
 			url: "/dashboard/settings/cluster",
 			icon: Boxes,
 			// Only enabled for admins in non-cloud environments
-			isEnabled: ({ auth, isCloud }) =>
-				!!((auth?.role === "owner" || auth?.role === "admin") && !isCloud),
+			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && !isCloud),
+		},
+		{
+			isSingle: true,
+			title: "DOKS Clusters",
+			url: "/dashboard/settings/doks",
+			icon: Cloud,
+			// Only enabled for admins/owners in cloud environments
+			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && isCloud),
 		},
 		{
 			isSingle: true,
@@ -393,8 +357,7 @@ const MENU: Menu = {
 			url: "/dashboard/settings/notifications",
 			icon: Bell,
 			// Only enabled for admins
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.role === "admin"),
+			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
 		},
 		{
 			isSingle: true,
@@ -403,31 +366,6 @@ const MENU: Menu = {
 			icon: CreditCard,
 			// Only enabled for admins in cloud environments
 			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && isCloud),
-		},
-		{
-			isSingle: true,
-			title: "License",
-			url: "/dashboard/settings/license",
-			icon: Key,
-			// Only enabled for admins in non-cloud environments
-			isEnabled: ({ auth }) => !!(auth?.role === "owner"),
-		},
-		{
-			isSingle: true,
-			title: "SSO",
-			url: "/dashboard/settings/sso",
-			icon: LogIn,
-			// Enabled for admins in both cloud and self-hosted (enterprise)
-			isEnabled: ({ auth }) =>
-				!!(auth?.role === "owner" || auth?.role === "admin"),
-		},
-		{
-			isSingle: true,
-			title: "Whitelabeling",
-			url: "/dashboard/settings/whitelabeling",
-			icon: Palette,
-			// Only enabled for owners in non-cloud environments (enterprise)
-			isEnabled: ({ auth, isCloud }) => !!(auth?.role === "owner" && !isCloud),
 		},
 	],
 
@@ -442,6 +380,18 @@ const MENU: Menu = {
 			url: "https://discord.gg/2tBnJ3jDJc",
 			icon: CircleHelp,
 		},
+		{
+			name: "Sponsor",
+			url: "https://opencollective.com/platform",
+			icon: ({ className }) => (
+				<HeartIcon
+					className={cn(
+						"text-red-500 fill-red-600 animate-heartbeat",
+						className,
+					)}
+				/>
+			),
+		},
 	],
 } as const;
 
@@ -452,39 +402,38 @@ const MENU: Menu = {
 function createMenuForAuthUser(opts: {
 	auth?: AuthQueryOutput;
 	isCloud: boolean;
-	whitelabeling?: {
-		docsUrl?: string | null;
-		supportUrl?: string | null;
-	} | null;
 }): Menu {
-	const filterEnabled = <
-		T extends {
-			isEnabled?: (o: { auth?: AuthQueryOutput; isCloud: boolean }) => boolean;
-		},
-	>(
-		items: readonly T[],
-	): T[] =>
-		items.filter((item) =>
+	return {
+		// Filter the home items based on the user's role and permissions
+		// Calls the `isEnabled` function if it exists to determine if the item should be displayed
+		home: MENU.home.filter((item) =>
 			!item.isEnabled
 				? true
-				: item.isEnabled({ auth: opts.auth, isCloud: opts.isCloud }),
-		) as T[];
-
-	// Apply whitelabeling URL overrides to help items
-	const helpItems = filterEnabled(MENU.help).map((item) => {
-		if (opts.whitelabeling?.docsUrl && item.name === "Documentation") {
-			return { ...item, url: opts.whitelabeling.docsUrl };
-		}
-		if (opts.whitelabeling?.supportUrl && item.name === "Support") {
-			return { ...item, url: opts.whitelabeling.supportUrl };
-		}
-		return item;
-	});
-
-	return {
-		home: filterEnabled(MENU.home),
-		settings: filterEnabled(MENU.settings),
-		help: helpItems,
+				: item.isEnabled({
+						auth: opts.auth,
+						isCloud: opts.isCloud,
+					}),
+		),
+		// Filter the settings items based on the user's role and permissions
+		// Calls the `isEnabled` function if it exists to determine if the item should be displayed
+		settings: MENU.settings.filter((item) =>
+			!item.isEnabled
+				? true
+				: item.isEnabled({
+						auth: opts.auth,
+						isCloud: opts.isCloud,
+					}),
+		),
+		// Filter the help items based on the user's role and permissions
+		// Calls the `isEnabled` function if it exists to determine if the item should be displayed
+		help: MENU.help.filter((item) =>
+			!item.isEnabled
+				? true
+				: item.isEnabled({
+						auth: opts.auth,
+						isCloud: opts.isCloud,
+					}),
+		),
 	};
 }
 
@@ -546,332 +495,115 @@ interface Props {
 	children: React.ReactNode;
 }
 
-function LogoWrapper() {
-	return <SidebarLogo />;
-}
-
-function SidebarLogo() {
+function SidebarHeader_() {
 	const { state } = useSidebar();
-	const { data: isCloud } = api.settings.isCloud.useQuery();
-	const { data: user } = api.user.get.useQuery();
-	const { data: session } = api.user.session.useQuery();
-	const {
-		data: organizations,
-		refetch,
-		isLoading,
-	} = api.organization.all.useQuery();
-	const { mutateAsync: deleteOrganization, isPending: isRemoving } =
-		api.organization.delete.useMutation();
-	const { mutateAsync: setDefaultOrganization, isPending: isSettingDefault } =
-		api.organization.setDefault.useMutation();
-	const { isMobile } = useSidebar();
-	const isCollapsed = state === "collapsed" && !isMobile;
-	const { data: activeOrganization } = api.organization.active.useQuery();
+	const collapsed = state === "collapsed";
 
 	const { data: invitations, refetch: refetchInvitations } =
 		api.user.getInvitations.useQuery();
-
-	const [_activeTeam, setActiveTeam] = useState<
-		typeof activeOrganization | null
-	>(null);
-
-	useEffect(() => {
-		if (activeOrganization) {
-			setActiveTeam(activeOrganization);
-		}
-	}, [activeOrganization]);
+	const { refetch } = api.organization.all.useQuery();
 
 	return (
-		<>
-			{isLoading ? (
-				<div className="flex flex-row gap-2 items-center justify-center text-sm text-muted-foreground min-h-[5vh] pt-4">
-					<Loader2 className="animate-spin size-4" />
-				</div>
-			) : (
-				<SidebarMenu
+		<SidebarMenu className="flex flex-col gap-1">
+			{/* Organization Switcher */}
+			<SidebarMenuItem>
+				<div
 					className={cn(
-						"flex gap-2",
-						isCollapsed
-							? "flex-col"
-							: "flex-row justify-between items-center",
+						"flex items-center",
+						collapsed ? "flex-col gap-1" : "flex-row justify-between",
 					)}
 				>
-					{/* Organization Logo and Selector */}
-					<SidebarMenuItem className={"w-full"}>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<SidebarMenuButton
-									size={isCollapsed ? "sm" : "lg"}
-									className={cn(
-										"data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
-										isCollapsed &&
-											"flex justify-center items-center p-2 h-10 w-10 mx-auto",
-									)}
-								>
-									<div
-										className={cn(
-											"flex items-center gap-2",
-											isCollapsed && "justify-center",
-										)}
-									>
-										<div
-											className={cn(
-												"flex items-center justify-center rounded-sm border",
-												"size-6",
-											)}
-										>
-											<Logo
-												className={cn(
-													"transition-all",
-													isCollapsed ? "size-4" : "size-5",
-												)}
-												logoUrl={activeOrganization?.logo || undefined}
-											/>
-										</div>
-										<div
-											className={cn(
-												"flex flex-col items-start",
-												isCollapsed && "hidden",
-											)}
-										>
-											<p className="text-sm font-medium leading-none">
-												{activeOrganization?.name ?? "Select Organization"}
-											</p>
-										</div>
-									</div>
-									<ChevronsUpDown
-										className={cn("ml-auto", isCollapsed && "hidden")}
-									/>
-								</SidebarMenuButton>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								className="rounded-lg max-h-[min(70vh,28rem)] flex flex-col"
-								align="start"
-								side={isMobile ? "bottom" : "right"}
-								sideOffset={4}
-							>
-								<DropdownMenuLabel className="text-xs text-muted-foreground shrink-0">
-									Organizations
-								</DropdownMenuLabel>
-								<div className="overflow-y-auto overflow-x-hidden min-h-0 -mx-1 px-1">
-									{organizations?.map((org) => {
-										const isDefault = org.members?.[0]?.isDefault ?? false;
-										return (
-											<div
-												className="flex flex-row justify-between"
-												key={org.name}
-											>
-												<DropdownMenuItem
-													onClick={async () => {
-														await authClient.organization.setActive({
-															organizationId: org.id,
-														});
-														window.location.reload();
-													}}
-													className="w-full gap-2 p-2"
-												>
-													<div className="flex flex-col gap-1">
-														<div className="flex items-center gap-2">
-															{org.name}
-														</div>
-													</div>
-													<div className="flex size-6 items-center justify-center rounded-sm border">
-														<Logo
-															className={cn(
-																"transition-all",
-																state === "collapsed" ? "size-6" : "size-10",
-															)}
-															logoUrl={org.logo ?? undefined}
-														/>
-													</div>
-												</DropdownMenuItem>
-
-												<div className="flex items-center gap-2">
-													<Button
-														variant="ghost"
-														size="icon"
-														className={cn(
-															"group",
-															isDefault
-																? "hover:bg-yellow-500/10"
-																: "hover:bg-blue-500/10",
-														)}
-														isLoading={isSettingDefault && !isDefault}
-														disabled={isDefault}
-														onClick={async (e) => {
-															if (isDefault) return;
-															e.stopPropagation();
-															await setDefaultOrganization({
-																organizationId: org.id,
-															})
-																.then(() => {
-																	refetch();
-																	toast.success("Default organization updated");
-																})
-																.catch((error) => {
-																	toast.error(
-																		error?.message ||
-																			"Error setting default organization",
-																	);
-																});
-														}}
-														title={
-															isDefault
-																? "Default organization"
-																: "Set as default"
-														}
-													>
-														{isDefault ? (
-															<Star
-																fill="#eab308"
-																stroke="#eab308"
-																className="size-4 text-yellow-500"
-															/>
-														) : (
-															<Star
-																fill="none"
-																stroke="currentColor"
-																className="size-4 text-gray-400 group-hover:text-blue-500 transition-colors"
-															/>
-														)}
-													</Button>
-													{org.ownerId === session?.user?.id && (
-														<>
-															<AddOrganization organizationId={org.id} />
-															<DialogAction
-																title="Delete Organization"
-																description="Are you sure you want to delete this organization?"
-																type="destructive"
-																onClick={async () => {
-																	await deleteOrganization({
-																		organizationId: org.id,
-																	})
-																		.then(() => {
-																			refetch();
-																			toast.success(
-																				"Organization deleted successfully",
-																			);
-																		})
-																		.catch((error) => {
-																			toast.error(
-																				error?.message ||
-																					"Error deleting organization",
-																			);
-																		});
-																}}
-															>
-																<Button
-																	variant="ghost"
-																	size="icon"
-																	className="group hover:bg-red-500/10"
-																	isLoading={isRemoving}
-																>
-																	<Trash2 className="size-4 text-primary group-hover:text-red-500" />
-																</Button>
-															</DialogAction>
-														</>
-													)}
-												</div>
-											</div>
-										);
-									})}
-								</div>
-								{(user?.role === "owner" ||
-									user?.role === "admin" ||
-									isCloud) && (
-									<>
-										<DropdownMenuSeparator />
-										<AddOrganization />
-									</>
-								)}
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</SidebarMenuItem>
-
+					<div className="flex-1 min-w-0">
+						<OrgSwitcher collapsed={collapsed} />
+					</div>
 					{/* Notification Bell */}
-					<SidebarMenuItem className={cn(isCollapsed && "mt-2")}>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button
-									variant="ghost"
-									size="icon"
-									className={cn(
-										"relative",
-										isCollapsed && "h-8 w-8 p-1.5 mx-auto",
-									)}
-								>
-									<Bell className="size-4" />
-									{invitations && invitations.length > 0 && (
-										<span className="absolute -top-0 -right-0 flex size-4 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
-											{invitations.length}
-										</span>
-									)}
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								align="start"
-								side={"right"}
-								className="w-80"
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								variant="ghost"
+								size="icon"
+								className={cn(
+									"relative shrink-0",
+									collapsed ? "h-8 w-8 p-1.5 mx-auto" : "h-8 w-8",
+								)}
 							>
-								<DropdownMenuLabel>Pending Invitations</DropdownMenuLabel>
-								<div className="flex flex-col gap-2">
-									{invitations && invitations.length > 0 ? (
-										invitations.map((invitation) => (
-											<div key={invitation.id} className="flex flex-col gap-2">
-												<DropdownMenuItem
-													className="flex flex-col items-start gap-1 p-3"
-													onSelect={(e) => e.preventDefault()}
-												>
-													<div className="font-medium">
-														{invitation?.organization?.name}
-													</div>
-													<div className="text-xs text-muted-foreground">
-														Expires:{" "}
-														{new Date(invitation.expiresAt).toLocaleString()}
-													</div>
-													<div className="text-xs text-muted-foreground">
-														Role: {invitation.role}
-													</div>
-												</DropdownMenuItem>
-												<DialogAction
-													title="Accept Invitation"
-													description="Are you sure you want to accept this invitation?"
-													type="default"
-													onClick={async () => {
-														const { error } =
-															await authClient.organization.acceptInvitation({
-																invitationId: invitation.id,
-															});
+								<Bell className="size-4" />
+								{invitations && invitations.length > 0 && (
+									<span className="absolute -top-0 -right-0 flex size-4 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
+										{invitations.length}
+									</span>
+								)}
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="start" side="right" className="w-80">
+							<DropdownMenuLabel>Pending Invitations</DropdownMenuLabel>
+							<div className="flex flex-col gap-2">
+								{invitations && invitations.length > 0 ? (
+									invitations.map((invitation) => (
+										<div key={invitation.id} className="flex flex-col gap-2">
+											<DropdownMenuItem
+												className="flex flex-col items-start gap-1 p-3"
+												onSelect={(e) => e.preventDefault()}
+											>
+												<div className="font-medium">
+													{invitation?.organization?.name}
+												</div>
+												<div className="text-xs text-muted-foreground">
+													Expires:{" "}
+													{new Date(invitation.expiresAt).toLocaleString()}
+												</div>
+												<div className="text-xs text-muted-foreground">
+													Role: {invitation.role}
+												</div>
+											</DropdownMenuItem>
+											<DialogAction
+												title="Accept Invitation"
+												description="Are you sure you want to accept this invitation?"
+												type="default"
+												onClick={async () => {
+													const { error } =
+														await authClient.organization.acceptInvitation({
+															invitationId: invitation.id,
+														});
 
-														if (error) {
-															toast.error(
-																error.message || "Error accepting invitation",
-															);
-														} else {
-															toast.success("Invitation accepted successfully");
-															await refetchInvitations();
-															await refetch();
-														}
-													}}
-												>
-													<Button size="sm" variant="secondary">
-														Accept Invitation
-													</Button>
-												</DialogAction>
-											</div>
-										))
-									) : (
-										<DropdownMenuItem disabled>
-											No pending invitations
-										</DropdownMenuItem>
-									)}
-								</div>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</SidebarMenuItem>
-				</SidebarMenu>
-			)}
-		</>
+													if (error) {
+														toast.error(
+															error.message || "Error accepting invitation",
+														);
+													} else {
+														toast.success("Invitation accepted successfully");
+														await refetchInvitations();
+														await refetch();
+													}
+												}}
+											>
+												<Button size="sm" variant="secondary">
+													Accept Invitation
+												</Button>
+											</DialogAction>
+										</div>
+									))
+								) : (
+									<DropdownMenuItem disabled>
+										No pending invitations
+									</DropdownMenuItem>
+								)}
+							</div>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
+			</SidebarMenuItem>
+
+			{/* Project Switcher */}
+			<SidebarMenuItem>
+				<ProjectSwitcher collapsed={collapsed} />
+			</SidebarMenuItem>
+
+			{/* Environment Switcher */}
+			<SidebarMenuItem>
+				<EnvironmentSwitcher collapsed={collapsed} />
+			</SidebarMenuItem>
+		</SidebarMenu>
 	);
 }
 
@@ -893,11 +625,7 @@ export default function Page({ children }: Props) {
 
 	const pathname = usePathname();
 	const { data: auth } = api.user.get.useQuery();
-	const { data: dokployVersion } = api.settings.getHanzoVersion.useQuery();
-	const { data: whitelabeling } = api.whitelabeling.get.useQuery(undefined, {
-		staleTime: 5 * 60 * 1000,
-		refetchOnWindowFocus: false,
-	});
+	const { data: platformVersion } = api.settings.getHanzoVersion.useQuery();
 
 	const includesProjects = pathname?.includes("/dashboard/project");
 	const { data: isCloud } = api.settings.isCloud.useQuery();
@@ -906,7 +634,7 @@ export default function Page({ children }: Props) {
 		home: filteredHome,
 		settings: filteredSettings,
 		help,
-	} = createMenuForAuthUser({ auth, isCloud: !!isCloud, whitelabeling });
+	} = createMenuForAuthUser({ auth, isCloud: !!isCloud });
 
 	const activeItem = findActiveNavItem(
 		[...filteredHome, ...filteredSettings],
@@ -914,10 +642,11 @@ export default function Page({ children }: Props) {
 	);
 
 	if (!isLoaded) {
-		return <div className="w-full h-screen bg-background" />; // Placeholder mientras se carga
+		return <div className="w-full h-screen bg-background" />;
 	}
 
 	return (
+		<ProjectContextProvider>
 		<SidebarProvider
 			defaultOpen={defaultOpen}
 			open={defaultOpen}
@@ -935,12 +664,7 @@ export default function Page({ children }: Props) {
 		>
 			<Sidebar collapsible="icon" variant="floating">
 				<SidebarHeader>
-					{/* <SidebarMenuButton
-						className="group-data-[collapsible=icon]:!p-0"
-						size="lg"
-					> */}
-					<LogoWrapper />
-					{/* </SidebarMenuButton> */}
+					<SidebarHeader_ />
 				</SidebarHeader>
 				<SidebarContent>
 					<SidebarGroup>
@@ -1146,7 +870,7 @@ export default function Page({ children }: Props) {
 				</SidebarContent>
 				<SidebarFooter>
 					<SidebarMenu className="flex flex-col gap-2">
-						{!isCloud && (auth?.role === "owner" || auth?.role === "admin") && (
+						{!isCloud && auth?.role === "owner" && (
 							<SidebarMenuItem>
 								<UpdateServerButton />
 							</SidebarMenuItem>
@@ -1154,15 +878,15 @@ export default function Page({ children }: Props) {
 						<SidebarMenuItem>
 							<UserNav />
 						</SidebarMenuItem>
-						{whitelabeling?.footerText && (
-							<div className="px-3 text-xs text-muted-foreground text-center group-data-[collapsible=icon]:hidden">
-								{whitelabeling.footerText}
-							</div>
-						)}
-						{dokployVersion && (
-							<div className="px-3 text-xs text-muted-foreground text-center group-data-[collapsible=icon]:hidden">
-								Version {dokployVersion}
-							</div>
+						{platformVersion && (
+							<>
+								<div className="px-3 text-xs text-muted-foreground text-center group-data-[collapsible=icon]:hidden">
+									Version {platformVersion}
+								</div>
+								<div className="hidden text-xs text-muted-foreground text-center group-data-[collapsible=icon]:block">
+									{platformVersion}
+								</div>
+							</>
 						)}
 					</SidebarMenu>
 				</SidebarFooter>
@@ -1190,7 +914,6 @@ export default function Page({ children }: Props) {
 									</BreadcrumbList>
 								</Breadcrumb>
 							</div>
-							{!isCloud && <TimeBadge />}
 						</div>
 					</header>
 				)}
@@ -1198,5 +921,6 @@ export default function Page({ children }: Props) {
 				<div className="flex flex-col w-full p-4 pt-0">{children}</div>
 			</SidebarInset>
 		</SidebarProvider>
+		</ProjectContextProvider>
 	);
 }
