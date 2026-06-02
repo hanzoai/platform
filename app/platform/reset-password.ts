@@ -13,7 +13,7 @@ import { eq } from "drizzle-orm";
 			.update(account)
 			.set({
 				password: randomPassword.hashedPassword,
-			})
+			} as any)
 			.where(eq(account.userId, result.userId));
 
 		if (update) {
