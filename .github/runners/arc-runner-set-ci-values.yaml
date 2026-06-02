@@ -2,15 +2,15 @@
 # Create with: kubectl -n actions-runner-system create secret generic hanzo-k8s-gha-rs-github-secret --from-literal=github_token=<PAT>
 githubConfigSecret: hanzo-k8s-gha-rs-github-secret
 githubConfigUrl: https://github.com/hanzoai
-maxRunners: 40
-minRunners: 2
-runnerScaleSetName: hanzo-deploy-linux-amd64
+maxRunners: 20
+minRunners: 1
+runnerScaleSetName: hanzo-k8s
 template:
   spec:
     containers:
     - command:
       - /home/runner/run.sh
-      image: ghcr.io/hanzoai/runner:0.1.1
+      image: ghcr.io/actions/actions-runner:latest
       name: runner
       resources:
         limits:
