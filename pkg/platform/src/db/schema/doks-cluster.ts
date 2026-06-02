@@ -102,7 +102,7 @@ export const apiProvisionDoksCluster = createClusterSchema
 		region: true,
 		ha: true,
 	})
-	.partial({ organizationId: true })
+	.required({ organizationId: true })
 	.extend({
 		nodeSize: z.string().optional(),
 		nodeCount: z.number().int().min(1).optional(),

@@ -109,7 +109,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 	}, [form, form.reset, form.formState.isSubmitSuccessful, destination]);
 
 	const onSubmit = async (data: AddDestination) => {
-		await mutateAsync({
+		await (mutateAsync as any)({
 			provider: data.provider || "",
 			accessKey: data.accessKeyId,
 			bucket: data.bucket,
