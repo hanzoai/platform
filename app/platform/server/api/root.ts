@@ -20,6 +20,7 @@ import { gitProviderRouter } from "./routers/git-provider";
 import { giteaRouter } from "./routers/gitea";
 import { githubRouter } from "./routers/github";
 import { gitlabRouter } from "./routers/gitlab";
+import { libsqlRouter } from "./routers/libsql";
 import { mariadbRouter } from "./routers/mariadb";
 import { mongoRouter } from "./routers/mongo";
 import { mountRouter } from "./routers/mount";
@@ -31,6 +32,11 @@ import { portRouter } from "./routers/port";
 import { postgresRouter } from "./routers/postgres";
 import { previewDeploymentRouter } from "./routers/preview-deployment";
 import { projectRouter } from "./routers/project";
+import { auditLogRouter } from "./routers/proprietary/audit-log";
+import { customRoleRouter } from "./routers/proprietary/custom-role";
+import { licenseKeyRouter } from "./routers/proprietary/license-key";
+import { ssoRouter } from "./routers/proprietary/sso";
+import { whitelabelingRouter } from "./routers/proprietary/whitelabeling";
 import { redirectsRouter } from "./routers/redirects";
 import { redisRouter } from "./routers/redis";
 import { registryRouter } from "./routers/registry";
@@ -43,6 +49,7 @@ import { sshRouter } from "./routers/ssh-key";
 import { stripeRouter } from "./routers/stripe";
 import { billingRouter } from "./routers/billing";
 import { swarmRouter } from "./routers/swarm";
+import { tagRouter } from "./routers/tag";
 import { userRouter } from "./routers/user";
 import { volumeBackupsRouter } from "./routers/volume-backups";
 /**
@@ -60,46 +67,52 @@ export const appRouter = createTRPCRouter({
 	doks: doksRouter,
 	project: projectRouter,
 	application: applicationRouter,
-	mysql: mysqlRouter,
-	postgres: postgresRouter,
-	redis: redisRouter,
-	mongo: mongoRouter,
-	mariadb: mariadbRouter,
-	compose: composeRouter,
-	user: userRouter,
-	domain: domainRouter,
-	destination: destinationRouter,
 	backup: backupRouter,
-	deployment: deploymentRouter,
-	previewDeployment: previewDeploymentRouter,
-	mounts: mountRouter,
-	certificates: certificateRouter,
-	settings: settingsRouter,
-	security: securityRouter,
-	redirects: redirectsRouter,
-	port: portRouter,
-	registry: registryRouter,
-	cluster: clusterRouter,
-	notification: notificationRouter,
-	sshKey: sshRouter,
-	gitProvider: gitProviderRouter,
-	gitea: giteaRouter,
 	bitbucket: bitbucketRouter,
-	gitlab: gitlabRouter,
+	certificates: certificateRouter,
+	cluster: clusterRouter,
+	compose: composeRouter,
+	deployment: deploymentRouter,
+	destination: destinationRouter,
+	docker: dockerRouter,
+	domain: domainRouter,
+	gitea: giteaRouter,
+	gitProvider: gitProviderRouter,
 	github: githubRouter,
+	gitlab: gitlabRouter,
+	libsql: libsqlRouter,
+	mariadb: mariadbRouter,
+	mongo: mongoRouter,
+	mounts: mountRouter,
+	mysql: mysqlRouter,
+	notification: notificationRouter,
+	port: portRouter,
+	postgres: postgresRouter,
+	previewDeployment: previewDeploymentRouter,
+	project: projectRouter,
+	redirects: redirectsRouter,
+	redis: redisRouter,
+	registry: registryRouter,
+	security: securityRouter,
 	server: serverRouter,
+	settings: settingsRouter,
+	sshKey: sshRouter,
 	stripe: stripeRouter,
 	billing: billingRouter,
 	swarm: swarmRouter,
+	user: userRouter,
 	ai: aiRouter,
 	organization: organizationRouter,
 	licenseKey: licenseKeyRouter,
 	sso: ssoRouter,
 	whitelabeling: whitelabelingRouter,
+	customRole: customRoleRouter,
+	auditLog: auditLogRouter,
 	schedule: scheduleRouter,
 	rollback: rollbackRouter,
 	volumeBackups: volumeBackupsRouter,
 	environment: environmentRouter,
+	tag: tagRouter,
 	patch: patchRouter,
 });
 

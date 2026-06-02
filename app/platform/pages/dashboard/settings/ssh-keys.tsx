@@ -27,7 +27,7 @@ export async function getServerSideProps(
 	if (!user) {
 		return {
 			redirect: {
-				permanent: true,
+				permanent: false,
 				destination: "/",
 			},
 		};
@@ -49,19 +49,15 @@ export async function getServerSideProps(
 		await helpers.project.all.prefetch();
 		await helpers.settings.isCloud.prefetch();
 
-		if (user.role === "member") {
-			const userR = await helpers.user.one.fetch({
-				userId: user.id,
-			});
+		const userPermissions = await helpers.user.getPermissions.fetch();
 
-			if (!userR?.canAccessToSSHKeys) {
-				return {
-					redirect: {
-						permanent: true,
-						destination: "/",
-					},
-				};
-			}
+		if (!userPermissions?.sshKeys.read) {
+			return {
+				redirect: {
+					permanent: false,
+					destination: "/",
+				},
+			};
 		}
 		return {
 			props: {
