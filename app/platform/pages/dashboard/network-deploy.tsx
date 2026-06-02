@@ -20,7 +20,7 @@ const NetworkDeployPage = () => {
   const [deploying, setDeploying] = useState(false);
   const [deploymentId, setDeploymentId] = useState<string | null>(null);
   const { toast } = useToast();
-  const [specs] = useState<ComposeSpec[] | undefined>(undefined);
+  const specs: ComposeSpec[] | undefined = undefined; // TODO: implement api.compose.list
 
   const handleDeploy = async (spec: ComposeSpec) => {
     setDeploying(true);
@@ -115,7 +115,3 @@ export default NetworkDeployPage;
 NetworkDeployPage.getLayout = (page: ReactElement) => {
   return <DashboardLayout metaName="Network Deploy">{page}</DashboardLayout>;
 };
-
-export async function getServerSideProps() {
-  return { props: {} };
-}
