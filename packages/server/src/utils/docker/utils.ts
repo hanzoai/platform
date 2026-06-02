@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Readable } from "node:stream";
-import { docker, paths } from "@hanzo/platform-server/constants";
-import type { Compose } from "@hanzo/platform-server/services/compose";
+import { docker, paths } from "@dokploy/server/constants";
+import type { Compose } from "@dokploy/server/services/compose";
 import type { ContainerInfo, ResourceRequirements } from "dockerode";
 import { parse } from "dotenv";
 import { quote } from "shell-quote";
@@ -148,7 +148,7 @@ export const getContainerByName = (name: string): Promise<ContainerInfo> => {
 /**
  * Docker commands sent using this method are held in a hold when Docker is busy.
  *
- * https://github.com/hanzoai/platform/pull/3064
+ * https://github.com/Dokploy/dokploy/pull/3064
  */
 export const dockerSafeExec = (exec: string) => `
 CHECK_INTERVAL=10
@@ -261,7 +261,7 @@ export const cleanupSystem = async (serverId?: string) => {
 /**
  * Volume cleanup should always be performed manually by the user. The reason is that during automatic cleanup, a volume may be deleted due to a stopped container, which is a dangerous situation.
  *
- * https://github.com/hanzoai/platform/pull/3267
+ * https://github.com/Dokploy/dokploy/pull/3267
  */
 const excludedCleanupAllCommands: (keyof typeof cleanupCommands)[] = [
 	"volumes",
@@ -571,7 +571,7 @@ export const generateConfigContainer = (
 					Networks: networkSwarm,
 				}
 			: {
-					Networks: [{ Target: "platform-network" }],
+					Networks: [{ Target: "dokploy-network" }],
 				}),
 		...(endpointSpecSwarm && {
 			EndpointSpec: {

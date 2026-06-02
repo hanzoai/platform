@@ -1,7 +1,8 @@
 packages:
   - "app/api"
   - "app/platform"
+  - "app/monitoring"
   - "app/schedules"
-  - "packages/server"
   - "pkg/platform"
   - "pkg/mcp"
+  - "pkg/zap"

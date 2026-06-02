@@ -1,41 +1,41 @@
 import { join } from "node:path";
-import { paths } from "@hanzo/platform-server/constants";
-import { db } from "@hanzo/platform-server/db";
+import { paths } from "@dokploy/server/constants";
+import { db } from "@dokploy/server/db";
 import {
 	type apiCreateCompose,
 	buildAppName,
 	cleanAppName,
 	compose,
-} from "@hanzo/platform-server/db/schema";
-import { getBuildComposeCommand } from "@hanzo/platform-server/utils/builders/compose";
-import { randomizeSpecificationFile } from "@hanzo/platform-server/utils/docker/compose";
+} from "@dokploy/server/db/schema";
+import { getBuildComposeCommand } from "@dokploy/server/utils/builders/compose";
+import { randomizeSpecificationFile } from "@dokploy/server/utils/docker/compose";
 import {
 	cloneCompose,
 	loadDockerCompose,
 	loadDockerComposeRemote,
-} from "@hanzo/platform-server/utils/docker/domain";
-import type { ComposeSpecification } from "@hanzo/platform-server/utils/docker/types";
-import { sendBuildErrorNotifications } from "@hanzo/platform-server/utils/notifications/build-error";
-import { sendBuildSuccessNotifications } from "@hanzo/platform-server/utils/notifications/build-success";
+} from "@dokploy/server/utils/docker/domain";
+import type { ComposeSpecification } from "@dokploy/server/utils/docker/types";
+import { sendBuildErrorNotifications } from "@dokploy/server/utils/notifications/build-error";
+import { sendBuildSuccessNotifications } from "@dokploy/server/utils/notifications/build-success";
 import {
 	ExecError,
 	execAsync,
 	execAsyncRemote,
-} from "@hanzo/platform-server/utils/process/execAsync";
-import { cloneBitbucketRepository } from "@hanzo/platform-server/utils/providers/bitbucket";
+} from "@dokploy/server/utils/process/execAsync";
+import { cloneBitbucketRepository } from "@dokploy/server/utils/providers/bitbucket";
 import {
 	cloneGitRepository,
 	getGitCommitInfo,
-} from "@hanzo/platform-server/utils/providers/git";
-import { cloneGiteaRepository } from "@hanzo/platform-server/utils/providers/gitea";
-import { cloneGithubRepository } from "@hanzo/platform-server/utils/providers/github";
-import { cloneGitlabRepository } from "@hanzo/platform-server/utils/providers/gitlab";
-import { getCreateComposeFileCommand } from "@hanzo/platform-server/utils/providers/raw";
+} from "@dokploy/server/utils/providers/git";
+import { cloneGiteaRepository } from "@dokploy/server/utils/providers/gitea";
+import { cloneGithubRepository } from "@dokploy/server/utils/providers/github";
+import { cloneGitlabRepository } from "@dokploy/server/utils/providers/gitlab";
+import { getCreateComposeFileCommand } from "@dokploy/server/utils/providers/raw";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
 import { encodeBase64 } from "../utils/docker/utils";
-import { getHanzoUrl } from "./admin";
+import { getDokployUrl } from "./admin";
 import {
 	createDeploymentCompose,
 	updateDeployment,
@@ -216,7 +216,7 @@ export const deployCompose = async ({
 }) => {
 	const compose = await findComposeById(composeId);
 
-	const buildLink = `${await getHanzoUrl()}/dashboard/project/${
+	const buildLink = `${await getDokployUrl()}/dashboard/project/${
 		compose.environment.projectId
 	}/environment/${compose.environmentId}/services/compose/${compose.composeId}?tab=deployments`;
 	const deployment = await createDeploymentCompose({
@@ -405,7 +405,7 @@ export const removeCompose = async (
 
 		if (compose.composeType === "stack") {
 			const command = `
-			docker network disconnect ${compose.appName} platform-traefik;
+			docker network disconnect ${compose.appName} dokploy-traefik;
 			docker stack rm ${compose.appName};
 			rm -rf ${projectPath}`;
 
@@ -416,7 +416,7 @@ export const removeCompose = async (
 			}
 		} else {
 			const command = `
-			 docker network disconnect ${compose.appName} platform-traefik;
+			 docker network disconnect ${compose.appName} dokploy-traefik;
 			cd ${projectPath} && env -i PATH="$PATH" docker compose -p ${compose.appName} down ${
 				deleteVolumes ? "--volumes" : ""
 			} && rm -rf ${projectPath}`;
