@@ -1,20 +1,15 @@
 export * from "./account";
 export * from "./ai";
 export * from "./application";
-export * from "./billing";
-
-export * from "./cloud-provider";
-export * from "./compute-pool";
-export * from "./compute-offer";
 export * from "./backups";
 export * from "./bitbucket";
 export * from "./certificate";
 export * from "./compose";
 export * from "./deployment";
 export * from "./destination";
-export * from "./doks-cluster";
 export * from "./domain";
 export * from "./environment";
+export * from "./gateway";
 export * from "./git-provider";
 export * from "./gitea";
 export * from "./github";
@@ -24,6 +19,7 @@ export * from "./mongo";
 export * from "./mount";
 export * from "./mysql";
 export * from "./notification";
+export * from "./patch";
 export * from "./port";
 export * from "./postgres";
 export * from "./preview-deployments";
@@ -38,7 +34,16 @@ export * from "./server";
 export * from "./session";
 export * from "./shared";
 export * from "./ssh-key";
+export * from "./sso";
 export * from "./user";
 export * from "./utils";
 export * from "./volume-backups";
+export * from "./web-server-settings";
+
+// Hanzo-specific schemas
+export * from "./billing";
 export * from "./wallet";
+export * from "./cloud-provider";
+export * from "./compute-offer";
+export * from "./compute-pool";
+export * from "./doks-cluster";

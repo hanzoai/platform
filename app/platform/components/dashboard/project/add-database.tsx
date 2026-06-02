@@ -55,11 +55,11 @@ import { api } from "@/utils/api";
 type DbType = z.infer<typeof mySchema>["type"];
 
 const dockerImageDefaultPlaceholder: Record<DbType, string> = {
-	mongo: "mongo:7",
-	mariadb: "mariadb:11",
-	mysql: "mysql:8",
-	postgres: "postgres:18",
-	redis: "redis:7",
+	mongo: "ghcr.io/hanzoai/docdb:latest",
+	mariadb: "ghcr.io/hanzoai/sql-maria:11",
+	mysql: "ghcr.io/hanzoai/sql-mysql:8",
+	postgres: "ghcr.io/hanzoai/sql:18",
+	redis: "ghcr.io/hanzoai/kv:8",
 };
 
 const databasesUserDefaultPlaceholder: Record<
@@ -131,7 +131,7 @@ const mySchema = z.discriminatedUnion("type", [
 	z
 		.object({
 			type: z.literal("mariadb"),
-			dockerImage: z.string().default("mariadb:4"),
+			dockerImage: z.string().default("ghcr.io/hanzoai/sql-maria:11"),
 			databaseRootPassword: z
 				.string()
 				.regex(/^[a-zA-Z0-9@#%^&*()_+\-=[\]{}|;:,.<>?~`]*$/, {
@@ -192,8 +192,8 @@ export const AddDatabase = ({ environmentId, projectName }: Props) => {
 
 	const hasServers = servers && servers.length > 0;
 	// Show dropdown logic based on cloud environment
-	// Cloud: show only if there are remote servers (no Hanzo Platform option)
-	// Self-hosted: show only if there are remote servers (Hanzo Platform is default, hide if no remote servers)
+	// Cloud: show only if there are remote servers (no Hanzo option)
+	// Self-hosted: show only if there are remote servers (Hanzo is default, hide if no remote servers)
 	const shouldShowServerDropdown = hasServers;
 
 	const form = useForm({
@@ -228,7 +228,7 @@ export const AddDatabase = ({ environmentId, projectName }: Props) => {
 			name: data.name,
 			appName: data.appName,
 			dockerImage: defaultDockerImage,
-			serverId: data.serverId === "hanzo" ? undefined : data.serverId,
+			serverId: data.serverId === "platform" ? undefined : data.serverId,
 			environmentId,
 			description: data.description,
 		};
@@ -241,7 +241,7 @@ export const AddDatabase = ({ environmentId, projectName }: Props) => {
 
 				databaseUser:
 					data.databaseUser || databasesUserDefaultPlaceholder[data.type],
-				serverId: data.serverId === "hanzo" ? null : data.serverId,
+				serverId: data.serverId === "platform" ? null : data.serverId,
 			});
 		} else if (data.type === "mongo") {
 			promise = mongoMutation.mutateAsync({
@@ -249,14 +249,14 @@ export const AddDatabase = ({ environmentId, projectName }: Props) => {
 				databasePassword: data.databasePassword,
 				databaseUser:
 					data.databaseUser || databasesUserDefaultPlaceholder[data.type],
-				serverId: data.serverId === "hanzo" ? null : data.serverId,
+				serverId: data.serverId === "platform" ? null : data.serverId,
 				replicaSets: data.replicaSets,
 			});
 		} else if (data.type === "redis") {
 			promise = redisMutation.mutateAsync({
 				...commonParams,
 				databasePassword: data.databasePassword,
-				serverId: data.serverId === "hanzo" ? null : data.serverId,
+				serverId: data.serverId === "platform" ? null : data.serverId,
 			});
 		} else if (data.type === "mariadb") {
 			promise = mariadbMutation.mutateAsync({
@@ -266,7 +266,7 @@ export const AddDatabase = ({ environmentId, projectName }: Props) => {
 				databaseName: data.databaseName || "mariadb",
 				databaseUser:
 					data.databaseUser || databasesUserDefaultPlaceholder[data.type],
-				serverId: data.serverId === "hanzo" ? null : data.serverId,
+				serverId: data.serverId === "platform" ? null : data.serverId,
 			});
 		} else if (data.type === "mysql") {
 			promise = mysqlMutation.mutateAsync({
@@ -275,7 +275,7 @@ export const AddDatabase = ({ environmentId, projectName }: Props) => {
 				databaseName: data.databaseName || "mysql",
 				databaseUser:
 					data.databaseUser || databasesUserDefaultPlaceholder[data.type],
-				serverId: data.serverId === "hanzo" ? null : data.serverId,
+				serverId: data.serverId === "platform" ? null : data.serverId,
 				databaseRootPassword: data.databaseRootPassword || "",
 			});
 		}
@@ -417,22 +417,22 @@ export const AddDatabase = ({ environmentId, projectName }: Props) => {
 												<Select
 													onValueChange={field.onChange}
 													defaultValue={
-														field.value || (!isCloud ? "hanzo" : undefined)
+														field.value || (!isCloud ? "platform" : undefined)
 													}
 												>
 													<SelectTrigger>
 														<SelectValue
 															placeholder={
-																!isCloud ? "Hanzo Platform" : "Select a Server"
+																!isCloud ? "Hanzo" : "Select a Server"
 															}
 														/>
 													</SelectTrigger>
 													<SelectContent>
 														<SelectGroup>
 															{!isCloud && (
-																<SelectItem value="hanzo">
+																<SelectItem value="platform">
 																	<span className="flex items-center gap-2 justify-between w-full">
-																		<span>Hanzo Platform</span>
+																		<span>Hanzo</span>
 																		<span className="text-muted-foreground text-xs self-center">
 																			Default
 																		</span>

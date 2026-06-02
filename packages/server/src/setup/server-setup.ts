@@ -1,14 +1,14 @@
 import path from "node:path";
-import { IS_CLOUD, paths } from "@hanzo/platform-server/constants";
-import { getHanzoUrl } from "@hanzo/platform-server/services/admin";
+import { IS_CLOUD, paths } from "@dokploy/server/constants";
+import { getDokployUrl } from "@dokploy/server/services/admin";
 import {
 	createServerDeployment,
 	updateDeploymentStatus,
-} from "@hanzo/platform-server/services/deployment";
+} from "@dokploy/server/services/deployment";
 import {
 	findServerById,
 	updateServerById,
-} from "@hanzo/platform-server/services/server";
+} from "@dokploy/server/services/server";
 import {
 	getDefaultMiddlewares,
 	getDefaultServerTraefikConfig,
@@ -16,7 +16,7 @@ import {
 	TRAEFIK_PORT,
 	TRAEFIK_SSL_PORT,
 	TRAEFIK_VERSION,
-} from "@hanzo/platform-server/setup/traefik-setup";
+} from "@dokploy/server/setup/traefik-setup";
 import slug from "slugify";
 import { Client } from "ssh2";
 import { recreateDirectory } from "../utils/filesystem/directory";
@@ -75,7 +75,7 @@ export const serverSetup = async (
 		if (IS_CLOUD) {
 			onData?.("\nConfiguring Monitoring: 🔄\n");
 
-			const baseUrl = await getHanzoUrl();
+			const baseUrl = await getDokployUrl();
 			const token = generateToken();
 			const urlCallback = `${baseUrl}/api/trpc/notification.receiveNotification`;
 
@@ -291,8 +291,8 @@ const installRequirements = async (
 						`Technical details: ${technicalDetail}`,
 						"",
 						"💡 Hints:",
-						"  • Check that the SSH key you added in Hanzo Platform is the same one installed on the server (e.g. in ~/.ssh/authorized_keys).",
-						"  • Try generating a new SSH key in Hanzo Platform and add only the public key to the server, then try again.",
+						"  • Check that the SSH key you added in Dokploy is the same one installed on the server (e.g. in ~/.ssh/authorized_keys).",
+						"  • Try generating a new SSH key in Dokploy and add only the public key to the server, then try again.",
 						"  • Make sure to follow the instructions on the Setup Server Button on the SSH Keys tab",
 					].join("\n");
 					onData?.(friendlyMessage);
@@ -313,7 +313,7 @@ const installRequirements = async (
 						"",
 						"💡 Hints:",
 						"  • Check that the server IP address and SSH port are correct and the server is powered on.",
-						"  • If the server is in a private network, ensure Hanzo Platform can reach it (VPN, firewall rules, or correct security groups).",
+						"  • If the server is in a private network, ensure Dokploy can reach it (VPN, firewall rules, or correct security groups).",
 						"  • Make sure the SSH port (usually 22) is open and the SSH service is running on the server.",
 					].join("\n");
 					onData?.(friendlyMessage);
@@ -347,15 +347,15 @@ const setupDirectories = () => {
 };
 
 const setupMainDirectory = () => `
-	# Check if the /etc/hanzo directory exists
-	if [ -d /etc/hanzo ]; then
-		echo "/etc/hanzo already exists ✅"
+	# Check if the /etc/dokploy directory exists
+	if [ -d /etc/dokploy ]; then
+		echo "/etc/dokploy already exists ✅"
 	else
-		# Create the /etc/hanzo directory
-		mkdir -p /etc/hanzo
-		chmod 777 /etc/hanzo
+		# Create the /etc/dokploy directory
+		mkdir -p /etc/dokploy
+		chmod 777 /etc/dokploy
 
-		echo "Directory /etc/hanzo created ✅"
+		echo "Directory /etc/dokploy created ✅"
 	fi
 `;
 
@@ -417,15 +417,15 @@ export const setupSwarm = () => `
 	`;
 
 const setupNetwork = () => `
-	# Check if the platform-network already exists
-	if docker network ls | grep -q 'platform-network'; then
-		echo "Network platform-network already exists ✅"
+	# Check if the dokploy-network already exists
+	if docker network ls | grep -q 'dokploy-network'; then
+		echo "Network dokploy-network already exists ✅"
 	else
-		# Create the platform-network if it doesn't exist
-		if docker network create --driver overlay --attachable platform-network; then
+		# Create the dokploy-network if it doesn't exist
+		if docker network create --driver overlay --attachable dokploy-network; then
 			echo "Network created ✅"
 		else
-			echo "Failed to create platform-network ❌" >&2
+			echo "Failed to create dokploy-network ❌" >&2
 			exit 1
 		fi
 	fi
@@ -489,7 +489,7 @@ if [ -x "$(command -v snap)" ]; then
     SNAP_DOCKER_INSTALLED=$(snap list docker >/dev/null 2>&1 && echo "true" || echo "false")
     if [ "$SNAP_DOCKER_INSTALLED" = "true" ]; then
         echo " - Docker is installed via snap."
-        echo "   Please note that Hanzo Platform does not support Docker installed via snap."
+        echo "   Please note that Dokploy does not support Docker installed via snap."
         echo "   Please remove Docker with snap (snap remove docker) and reexecute this script."
         exit 1
     fi
@@ -618,13 +618,13 @@ const createTraefikConfig = () => {
 	const config = getDefaultServerTraefikConfig();
 
 	const command = `
-	if [ -f "/etc/hanzo/traefik/dynamic/acme.json" ]; then
-		chmod 600 "/etc/hanzo/traefik/dynamic/acme.json"
+	if [ -f "/etc/dokploy/traefik/dynamic/acme.json" ]; then
+		chmod 600 "/etc/dokploy/traefik/dynamic/acme.json"
 	fi
-	if [ -f "/etc/hanzo/traefik/traefik.yml" ]; then
+	if [ -f "/etc/dokploy/traefik/traefik.yml" ]; then
 		echo "Traefik config already exists ✅"
 	else
-		echo "${config}" > /etc/hanzo/traefik/traefik.yml
+		echo "${config}" > /etc/dokploy/traefik/traefik.yml
 	fi
 	`;
 
@@ -634,10 +634,10 @@ const createTraefikConfig = () => {
 const createDefaultMiddlewares = () => {
 	const config = getDefaultMiddlewares();
 	const command = `
-	if [ -f "/etc/hanzo/traefik/dynamic/middlewares.yml" ]; then
+	if [ -f "/etc/dokploy/traefik/dynamic/middlewares.yml" ]; then
 		echo "Middlewares config already exists ✅"
 	else
-		echo "${config}" > /etc/hanzo/traefik/dynamic/middlewares.yml
+		echo "${config}" > /etc/dokploy/traefik/dynamic/middlewares.yml
 	fi
 	`;
 	return command;
@@ -656,30 +656,30 @@ export const installRClone = () => `
 export const createTraefikInstance = () => {
 	const command = `
 	    # Check if dokpyloy-traefik exists
-		if docker service inspect platform-traefik > /dev/null 2>&1; then
+		if docker service inspect dokploy-traefik > /dev/null 2>&1; then
 			echo "Migrating Traefik to Standalone..."
-			docker service rm platform-traefik
+			docker service rm dokploy-traefik
 			sleep 8
 			echo "Traefik migrated to Standalone ✅"
 		fi
 
-		if docker inspect platform-traefik > /dev/null 2>&1; then
+		if docker inspect dokploy-traefik > /dev/null 2>&1; then
 			echo "Traefik already exists ✅"
 		else
-			# Create the platform-traefik container
+			# Create the dokploy-traefik container
 			TRAEFIK_VERSION=${TRAEFIK_VERSION}
 			docker run -d \
-				--name platform-traefik \
+				--name dokploy-traefik \
 				--restart always \
-				-v /etc/hanzo/traefik/traefik.yml:/etc/traefik/traefik.yml \
-				-v /etc/hanzo/traefik/dynamic:/etc/hanzo/traefik/dynamic \
+				-v /etc/dokploy/traefik/traefik.yml:/etc/traefik/traefik.yml \
+				-v /etc/dokploy/traefik/dynamic:/etc/dokploy/traefik/dynamic \
 				-v /var/run/docker.sock:/var/run/docker.sock \
 				-p ${TRAEFIK_SSL_PORT}:${TRAEFIK_SSL_PORT} \
 				-p ${TRAEFIK_PORT}:${TRAEFIK_PORT} \
 				-p ${TRAEFIK_HTTP3_PORT}:${TRAEFIK_HTTP3_PORT}/udp \
 				traefik:v$TRAEFIK_VERSION
 
-			docker network connect platform-network platform-traefik;
+			docker network connect dokploy-network dokploy-traefik;
 			echo "Traefik version $TRAEFIK_VERSION installed ✅"
 		fi
 	`;

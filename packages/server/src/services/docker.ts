@@ -1,7 +1,7 @@
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@hanzo/platform-server/utils/process/execAsync";
+} from "@dokploy/server/utils/process/execAsync";
 
 export const getContainers = async (serverId?: string | null) => {
 	try {
@@ -60,8 +60,8 @@ export const getContainers = async (serverId?: string | null) => {
 			})
 			.filter(
 				(container) =>
-					!container.name.includes("hanzo") ||
-					container.name.includes("hanzo-monitoring"),
+					!container.name.includes("dokploy") ||
+					container.name.includes("dokploy-monitoring"),
 			);
 
 		return containers;
@@ -452,7 +452,7 @@ export const getNodeApplications = async (serverId?: string) => {
 			.trim()
 			.split("\n")
 			.map((line) => JSON.parse(line))
-			.filter((service) => !service.Name.startsWith("hanzo-"));
+			.filter((service) => !service.Name.startsWith("dokploy-"));
 
 		return appArray;
 	} catch {}
