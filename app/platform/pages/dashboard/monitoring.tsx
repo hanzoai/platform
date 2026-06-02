@@ -95,8 +95,25 @@ export async function getServerSideProps(
 	if (!user) {
 		return {
 			redirect: {
-				permanent: true,
+				permanent: false,
 				destination: "/",
+			},
+		};
+	}
+
+	const canView = await hasPermission(
+		{
+			user: { id: user.id },
+			session: { activeOrganizationId: session?.activeOrganizationId || "" },
+		},
+		{ monitoring: ["read"] },
+	);
+
+	if (!canView) {
+		return {
+			redirect: {
+				permanent: false,
+				destination: "/dashboard/home",
 			},
 		};
 	}
