@@ -65,7 +65,13 @@ import { ScheduleFormField } from "../../application/schedules/handle-schedules"
 
 type CacheType = "cache" | "fetch";
 
-type DatabaseType = "postgres" | "mariadb" | "mysql" | "mongo" | "web-server";
+type DatabaseType =
+	| "postgres"
+	| "mariadb"
+	| "mysql"
+	| "mongo"
+	| "web-server"
+	| "libsql";
 
 const Schema = z
 	.object({
@@ -77,7 +83,7 @@ const Schema = z
 		keepLatestCount: z.coerce.number().optional(),
 		serviceName: z.string().nullable(),
 		databaseType: z
-			.enum(["postgres", "mariadb", "mysql", "mongo", "web-server"])
+			.enum(["postgres", "mariadb", "mysql", "mongo", "web-server", "libsql"])
 			.optional(),
 		backupType: z.enum(["database", "compose"]),
 		metadata: z
@@ -281,11 +287,15 @@ export const HandleBackup = ({
 								? {
 										mongoId: id,
 									}
-								: databaseType === "web-server"
+								: databaseType === "libsql"
 									? {
-											userId: id,
+											libsqlId: id,
 										}
-									: undefined;
+									: databaseType === "web-server"
+										? {
+												userId: id,
+											}
+										: undefined;
 
 		await createBackup({
 			destinationId: data.destinationId,
