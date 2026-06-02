@@ -39,8 +39,9 @@ COPY examples/ ./examples/
 RUN touch src/main.rs src/lib.rs && \
     cargo build --release --bin platform-zap
 
-# Runtime stage - using distroless for minimal attack surface
-FROM gcr.io/distroless/cc-debian12
+# Runtime stage — hanzo-mirrored cc-debian12 (distroless equivalent).
+# Rust binary needs libc/libgcc_s so we cannot drop to scratch.
+FROM ghcr.io/hanzoai/debian12:cc-nonroot
 
 # Copy the binary
 COPY --from=builder /build/target/release/platform-zap /usr/local/bin/
@@ -58,3 +59,7 @@ USER nonroot:nonroot
 
 # Entry point - uses Config::from_env() by default (no -c flag)
 ENTRYPOINT ["/usr/local/bin/platform-zap"]
+
+# TODO(ghcr-auth): CI workflows building this image must `docker login`
+# to ghcr.io/hanzoai with a PAT (secret: GHCR_PULL_TOKEN) — the default
+# GITHUB_TOKEN scopes to the repo's own package only.
