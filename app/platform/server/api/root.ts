@@ -25,6 +25,7 @@ import { mongoRouter } from "./routers/mongo";
 import { mountRouter } from "./routers/mount";
 import { mysqlRouter } from "./routers/mysql";
 import { notificationRouter } from "./routers/notification";
+import { notifyProviderRouter } from "./routers/notify-provider";
 import { organizationRouter } from "./routers/organization";
 import { patchRouter } from "./routers/patch";
 import { portRouter } from "./routers/port";
@@ -81,6 +82,7 @@ export const appRouter = createTRPCRouter({
 	registry: registryRouter,
 	cluster: clusterRouter,
 	notification: notificationRouter,
+	notifyProvider: notifyProviderRouter,
 	sshKey: sshRouter,
 	gitProvider: gitProviderRouter,
 	gitea: giteaRouter,
