@@ -6,11 +6,10 @@
 /** @type {import("next").NextConfig} */
 const nextConfig = {
 	reactStrictMode: true,
-	serverExternalPackages: ["ssh2", "node-pty", "cpu-features", "bcrypt"],
 	typescript: {
 		ignoreBuildErrors: true,
 	},
-	transpilePackages: ["@hanzo/platform", "@hanzo/ui"],
+	transpilePackages: ["@hanzo/platform"],
 	// In frontend-only mode, proxy API calls to production platform
 	async rewrites() {
 		if (process.env.SKIP_ENV_VALIDATION !== "1") return [];
@@ -45,15 +44,6 @@ const nextConfig = {
 			},
 		];
 	},
-};
-
-// Exclude native modules from webpack bundling
-nextConfig.webpack = (config, { isServer }) => {
-	if (isServer) {
-		config.externals = config.externals || [];
-		config.externals.push("ssh2", "node-pty", "cpu-features", "bcrypt");
-	}
-	return config;
 };
 
 export default nextConfig;

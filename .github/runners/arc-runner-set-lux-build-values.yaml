@@ -19,7 +19,7 @@ template:
       env:
       - name: DOCKER_HOST
         value: tcp://localhost:2375
-      image: ghcr.io/hanzoai/runner:0.1.1
+      image: ghcr.io/actions/actions-runner:latest
       name: runner
       resources:
         limits:
@@ -57,7 +57,7 @@ template:
       - -v
       - /home/runner/externals/.
       - /home/runner/tmpDir/
-      image: ghcr.io/hanzoai/runner:0.1.1
+      image: ghcr.io/actions/actions-runner:latest
       name: init-dind-externals
       volumeMounts:
       - mountPath: /home/runner/tmpDir
