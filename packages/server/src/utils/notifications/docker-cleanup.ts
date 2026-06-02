@@ -1,7 +1,7 @@
-import { db } from "@hanzo/platform-server/db";
-import { notifications } from "@hanzo/platform-server/db/schema";
-import DockerCleanupEmail from "@hanzo/platform-server/emails/emails/docker-cleanup";
-import { render } from "@react-email/components";
+import { db } from "@dokploy/server/db";
+import { notifications } from "@dokploy/server/db/schema";
+import DockerCleanupEmail from "@dokploy/server/emails/emails/docker-cleanup";
+import { renderAsync } from "@react-email/components";
 import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";
 import {
@@ -20,7 +20,7 @@ import {
 
 export const sendDockerCleanupNotifications = async (
 	organizationId: string,
-	message = "Docker cleanup for platform",
+	message = "Docker cleanup for dokploy",
 ) => {
 	const date = new Date();
 	const unixDate = ~~(Number(date) / 1000);
@@ -60,14 +60,14 @@ export const sendDockerCleanupNotifications = async (
 		} = notification;
 		try {
 			if (email || resend) {
-				const template = await render(
+				const template = await renderAsync(
 					DockerCleanupEmail({ message, date: date.toLocaleString() }),
-				);
+				).catch();
 
 				if (email) {
 					await sendEmailNotification(
 						email,
-						"Docker cleanup for platform",
+						"Docker cleanup for dokploy",
 						template,
 					);
 				}
@@ -75,7 +75,7 @@ export const sendDockerCleanupNotifications = async (
 				if (resend) {
 					await sendResendNotification(
 						resend,
-						"Docker cleanup for platform",
+						"Docker cleanup for dokploy",
 						template,
 					);
 				}
@@ -111,7 +111,7 @@ export const sendDockerCleanupNotifications = async (
 					],
 					timestamp: date.toISOString(),
 					footer: {
-						text: "Hanzo Platform Docker Cleanup Notification",
+						text: "Dokploy Docker Cleanup Notification",
 					},
 				});
 			}

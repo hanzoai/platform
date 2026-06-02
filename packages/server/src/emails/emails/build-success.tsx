@@ -23,10 +23,10 @@ export type TemplateProps = {
 };
 
 export const BuildSuccessEmail = ({
-	projectName = "hanzo",
+	projectName = "dokploy",
 	applicationName = "frontend",
 	applicationType = "application",
-	buildLink = "https://hanzo.com/projects/hanzo-test/applications/hanzo-test",
+	buildLink = "https://dokploy.com/projects/dokploy-test/applications/dokploy-test",
 	date = "2023-05-01T00:00:00.000Z",
 	environmentName = "production",
 }: TemplateProps) => {
@@ -44,18 +44,18 @@ export const BuildSuccessEmail = ({
 							},
 						},
 					},
-				} as any}
+				}}
 			>
 				<Body className="bg-white my-auto mx-auto font-sans px-2">
 					<Container className="border border-solid border-[#eaeaea] rounded-lg my-[40px] mx-auto p-[20px] max-w-[465px]">
 						<Section className="mt-[32px]">
 							<Img
 								src={
-									"https://raw.githubusercontent.com/Hanzo Platform/hanzo/refs/heads/canary/apps/hanzo/logo.png"
+									"https://raw.githubusercontent.com/Dokploy/dokploy/refs/heads/canary/apps/dokploy/logo.png"
 								}
 								width="100"
 								height="50"
-								alt="Hanzo Platform"
+								alt="Dokploy"
 								className="my-0 mx-auto"
 							/>
 						</Section>
