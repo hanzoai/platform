@@ -39,7 +39,7 @@ export const initializeStandaloneTraefik = async ({
 }: TraefikOptions = {}) => {
 	const { MAIN_TRAEFIK_PATH, DYNAMIC_TRAEFIK_PATH } = paths(!!serverId);
 	const imageName = `traefik:v${TRAEFIK_VERSION}`;
-	const containerName = "hanzo-traefik";
+	const containerName = "dokploy-traefik";
 
 	const exposedPorts: Record<string, {}> = {
 		[`${TRAEFIK_PORT}/tcp`]: {},
@@ -75,7 +75,7 @@ export const initializeStandaloneTraefik = async ({
 		Image: imageName,
 		NetworkingConfig: {
 			EndpointsConfig: {
-				"hanzo-network": {},
+				"dokploy-network": {},
 			},
 		},
 		ExposedPorts: exposedPorts,
@@ -85,7 +85,7 @@ export const initializeStandaloneTraefik = async ({
 			},
 			Binds: [
 				`${MAIN_TRAEFIK_PATH}/traefik.yml:/etc/traefik/traefik.yml`,
-				`${DYNAMIC_TRAEFIK_PATH}:/etc/hanzo/traefik/dynamic`,
+				`${DYNAMIC_TRAEFIK_PATH}:/etc/dokploy/traefik/dynamic`,
 				"/var/run/docker.sock:/var/run/docker.sock",
 			],
 			PortBindings: portBindings,
@@ -124,7 +124,7 @@ export const initializeTraefikService = async ({
 }: TraefikOptions) => {
 	const { MAIN_TRAEFIK_PATH, DYNAMIC_TRAEFIK_PATH } = paths(!!serverId);
 	const imageName = `traefik:v${TRAEFIK_VERSION}`;
-	const appName = "hanzo-traefik";
+	const appName = "dokploy-traefik";
 
 	const settings: CreateServiceOptions = {
 		Name: appName,
@@ -141,7 +141,7 @@ export const initializeTraefikService = async ({
 					{
 						Type: "bind",
 						Source: DYNAMIC_TRAEFIK_PATH,
-						Target: "/etc/hanzo/traefik/dynamic",
+						Target: "/etc/dokploy/traefik/dynamic",
 					},
 					{
 						Type: "bind",
@@ -150,7 +150,7 @@ export const initializeTraefikService = async ({
 					},
 				],
 			},
-			Networks: [{ Target: "hanzo-network" }],
+			Networks: [{ Target: "dokploy-network" }],
 			Placement: {
 				Constraints: ["node.role==manager"],
 			},
@@ -212,14 +212,14 @@ export const initializeTraefikService = async ({
 
 export const createDefaultServerTraefikConfig = () => {
 	const { DYNAMIC_TRAEFIK_PATH } = paths();
-	const configFilePath = path.join(DYNAMIC_TRAEFIK_PATH, "hanzo.yml");
+	const configFilePath = path.join(DYNAMIC_TRAEFIK_PATH, "dokploy.yml");
 
 	if (existsSync(configFilePath)) {
 		console.log("Default traefik config already exists");
 		return;
 	}
 
-	const appName = "hanzo";
+	const appName = "dokploy";
 	const serviceURLDefault = `http://${appName}:${process.env.PORT || 3000}`;
 	const config: FileConfig = {
 		http: {
@@ -271,11 +271,11 @@ export const getDefaultTraefikConfig = () => {
 						docker: {
 							exposedByDefault: false,
 							watch: true,
-							network: "hanzo-network",
+							network: "dokploy-network",
 						},
 					}),
 			file: {
-				directory: "/etc/hanzo/traefik/dynamic",
+				directory: "/etc/dokploy/traefik/dynamic",
 				watch: true,
 			},
 		},
@@ -305,7 +305,7 @@ export const getDefaultTraefikConfig = () => {
 				letsencrypt: {
 					acme: {
 						email: "test@localhost.com",
-						storage: "/etc/hanzo/traefik/dynamic/acme.json",
+						storage: "/etc/dokploy/traefik/dynamic/acme.json",
 						httpChallenge: {
 							entryPoint: "web",
 						},
@@ -330,10 +330,10 @@ export const getDefaultServerTraefikConfig = () => {
 			docker: {
 				exposedByDefault: false,
 				watch: true,
-				network: "hanzo-network",
+				network: "dokploy-network",
 			},
 			file: {
-				directory: "/etc/hanzo/traefik/dynamic",
+				directory: "/etc/dokploy/traefik/dynamic",
 				watch: true,
 			},
 		},
@@ -360,7 +360,7 @@ export const getDefaultServerTraefikConfig = () => {
 			letsencrypt: {
 				acme: {
 					email: "test@localhost.com",
-					storage: "/etc/hanzo/traefik/dynamic/acme.json",
+					storage: "/etc/dokploy/traefik/dynamic/acme.json",
 					httpChallenge: {
 						entryPoint: "web",
 					},

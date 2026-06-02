@@ -32,6 +32,7 @@ const IAM_CLIENT_SECRET =
 	process.env.HANZO_CLIENT_SECRET;
 
 const { handler, api } = betterAuth({
+	baseURL: process.env.BETTER_AUTH_URL || "https://platform.hanzo.ai",
 	database: drizzleAdapter(db, {
 		provider: "pg",
 		schema: schema,
