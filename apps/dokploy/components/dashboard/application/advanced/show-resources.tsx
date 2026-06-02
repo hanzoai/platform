@@ -89,12 +89,13 @@ const ULIMIT_PRESETS = [
 ];
 
 export type ServiceType =
-	| "postgres"
-	| "mongo"
-	| "redis"
-	| "mysql"
+	| "application"
+	| "libsql"
 	| "mariadb"
-	| "application";
+	| "mongo"
+	| "mysql"
+	| "postgres"
+	| "redis";
 
 interface Props {
 	id: string;
@@ -105,27 +106,29 @@ type AddResources = z.infer<typeof addResourcesSchema>;
 
 export const ShowResources = ({ id, type }: Props) => {
 	const queryMap = {
+		application: () =>
+			api.application.one.useQuery({ applicationId: id }, { enabled: !!id }),
+		libsql: () => api.libsql.one.useQuery({ libsqlId: id }, { enabled: !!id }),
+		mariadb: () =>
+			api.mariadb.one.useQuery({ mariadbId: id }, { enabled: !!id }),
+		mongo: () => api.mongo.one.useQuery({ mongoId: id }, { enabled: !!id }),
+		mysql: () => api.mysql.one.useQuery({ mysqlId: id }, { enabled: !!id }),
 		postgres: () =>
 			api.postgres.one.useQuery({ postgresId: id }, { enabled: !!id }),
 		redis: () => api.redis.one.useQuery({ redisId: id }, { enabled: !!id }),
-		mysql: () => api.mysql.one.useQuery({ mysqlId: id }, { enabled: !!id }),
-		mariadb: () =>
-			api.mariadb.one.useQuery({ mariadbId: id }, { enabled: !!id }),
-		application: () =>
-			api.application.one.useQuery({ applicationId: id }, { enabled: !!id }),
-		mongo: () => api.mongo.one.useQuery({ mongoId: id }, { enabled: !!id }),
 	};
 	const { data, refetch } = queryMap[type]
 		? queryMap[type]()
 		: api.mongo.one.useQuery({ mongoId: id }, { enabled: !!id });
 
 	const mutationMap = {
+		application: () => api.application.update.useMutation(),
+		libsql: () => api.libsql.update.useMutation(),
+		mariadb: () => api.mariadb.update.useMutation(),
+		mongo: () => api.mongo.update.useMutation(),
+		mysql: () => api.mysql.update.useMutation(),
 		postgres: () => api.postgres.update.useMutation(),
 		redis: () => api.redis.update.useMutation(),
-		mysql: () => api.mysql.update.useMutation(),
-		mariadb: () => api.mariadb.update.useMutation(),
-		application: () => api.application.update.useMutation(),
-		mongo: () => api.mongo.update.useMutation(),
 	};
 
 	const { mutateAsync, isPending } = mutationMap[type]
@@ -155,19 +158,20 @@ export const ShowResources = ({ id, type }: Props) => {
 				cpuReservation: data?.cpuReservation || undefined,
 				memoryLimit: data?.memoryLimit || undefined,
 				memoryReservation: data?.memoryReservation || undefined,
-				ulimitsSwarm: data?.ulimitsSwarm || [],
+				ulimitsSwarm: (data as any)?.ulimitsSwarm || [],
 			});
 		}
 	}, [data, form, form.reset]);
 
 	const onSubmit = async (formData: AddResources) => {
 		await mutateAsync({
+			applicationId: id || "",
+			libsqlId: id || "",
+			mariadbId: id || "",
 			mongoId: id || "",
+			mysqlId: id || "",
 			postgresId: id || "",
 			redisId: id || "",
-			mysqlId: id || "",
-			mariadbId: id || "",
-			applicationId: id || "",
 			cpuLimit: formData.cpuLimit || null,
 			cpuReservation: formData.cpuReservation || null,
 			memoryLimit: formData.memoryLimit || null,
@@ -220,7 +224,7 @@ export const ShowResources = ({ id, type }: Props) => {
 												<FormLabel>Memory Limit</FormLabel>
 												<TooltipProvider>
 													<Tooltip delayDuration={0}>
-														<TooltipTrigger>
+														<TooltipTrigger type="button">
 															<InfoIcon className="h-4 w-4 text-muted-foreground" />
 														</TooltipTrigger>
 														<TooltipContent>
@@ -259,7 +263,7 @@ export const ShowResources = ({ id, type }: Props) => {
 											<FormLabel>Memory Reservation</FormLabel>
 											<TooltipProvider>
 												<Tooltip delayDuration={0}>
-													<TooltipTrigger>
+													<TooltipTrigger type="button">
 														<InfoIcon className="h-4 w-4 text-muted-foreground" />
 													</TooltipTrigger>
 													<TooltipContent>
@@ -299,7 +303,7 @@ export const ShowResources = ({ id, type }: Props) => {
 												<FormLabel>CPU Limit</FormLabel>
 												<TooltipProvider>
 													<Tooltip delayDuration={0}>
-														<TooltipTrigger>
+														<TooltipTrigger type="button">
 															<InfoIcon className="h-4 w-4 text-muted-foreground" />
 														</TooltipTrigger>
 														<TooltipContent>
@@ -339,7 +343,7 @@ export const ShowResources = ({ id, type }: Props) => {
 												<FormLabel>CPU Reservation</FormLabel>
 												<TooltipProvider>
 													<Tooltip delayDuration={0}>
-														<TooltipTrigger>
+														<TooltipTrigger type="button">
 															<InfoIcon className="h-4 w-4 text-muted-foreground" />
 														</TooltipTrigger>
 														<TooltipContent>
@@ -375,7 +379,7 @@ export const ShowResources = ({ id, type }: Props) => {
 									<FormLabel className="text-base">Ulimits</FormLabel>
 									<TooltipProvider>
 										<Tooltip delayDuration={0}>
-											<TooltipTrigger>
+											<TooltipTrigger type="button">
 												<InfoIcon className="h-4 w-4 text-muted-foreground" />
 											</TooltipTrigger>
 											<TooltipContent className="max-w-xs">
