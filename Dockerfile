@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 #
 # Platform — uses pre-built base image for sub-2-minute builds.
-# System tools are in ghcr.io/hanzoai/platform:base (see Dockerfile.base).
+# System tools are in ghcr.io/hanzoai/platform-base:latest (see Dockerfile.base).
 #
-ARG PLATFORM_BASE_IMAGE=ghcr.io/hanzoai/platform:base
+ARG PLATFORM_BASE_IMAGE=ghcr.io/hanzoai/platform-base:latest
 
 FROM node:24.4.0-slim AS base
 ENV PNPM_HOME="/pnpm"
@@ -24,7 +24,6 @@ COPY app/api/package.json ./app/api/
 COPY app/platform/package.json ./app/platform/
 COPY app/schedules/package.json ./app/schedules/
 COPY pkg/platform/package.json ./pkg/platform/
-COPY packages/server/package.json ./packages/server/
 COPY pkg/mcp/package.json ./pkg/mcp/
 
 # Install dependencies (cached unless package.json or lockfile changes)
@@ -36,7 +35,6 @@ COPY . .
 # Build platform
 ENV NODE_ENV=production
 RUN pnpm --filter=@hanzo/platform build
-RUN pnpm --filter=@hanzo/platform-server build
 RUN pnpm --filter=./app/platform run build
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=./app/platform --prod deploy --legacy /prod/platform
