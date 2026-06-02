@@ -1,8 +1,8 @@
 import { join } from "node:path";
-import { paths } from "@hanzo/platform-server/constants";
-import type { apiFindGithubBranches } from "@hanzo/platform-server/db/schema";
-import { findGithubById, type Github } from "@hanzo/platform-server/services/github";
-import type { InferResultType } from "@hanzo/platform-server/types/with";
+import { paths } from "@dokploy/server/constants";
+import type { apiFindGithubBranches } from "@dokploy/server/db/schema";
+import { findGithubById, type Github } from "@dokploy/server/services/github";
+import type { InferResultType } from "@dokploy/server/types/with";
 import { createAppAuth } from "@octokit/auth-app";
 import { TRPCError } from "@trpc/server";
 import type { z } from "zod";

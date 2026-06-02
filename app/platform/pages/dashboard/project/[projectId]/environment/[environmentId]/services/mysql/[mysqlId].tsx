@@ -64,8 +64,6 @@ const MySql = (
 	const { data: environments } = api.environment.byProjectId.useQuery({
 		projectId: data?.environment?.projectId || "",
 	});
-	const { config: whitelabeling } = useWhitelabeling();
-	const appName = whitelabeling?.appName || "Hanzo Platform";
 	const environmentDropdownItems =
 		environments?.map((env) => ({
 			name: env.name,
@@ -95,7 +93,7 @@ const MySql = (
 				<Head>
 					<title>
 						Database: {data?.name} - {data?.environment?.project?.name} |
-						{appName}
+						Hanzo
 					</title>
 				</Head>
 				<div className="w-full">
@@ -132,7 +130,7 @@ const MySql = (
 														: "destructive"
 											}
 										>
-											{data?.server?.name || "Hanzo Platform Server"}
+											{data?.server?.name || "Hanzo Server"}
 										</Badge>
 										{data?.server?.serverStatus === "inactive" && (
 											<TooltipProvider delayDuration={0}>

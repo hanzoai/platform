@@ -4,7 +4,7 @@ import { pullImage } from "../utils/docker/utils";
 
 export const initializeRedis = async () => {
 	const imageName = "redis:7";
-	const containerName = "hanzo-redis";
+	const containerName = "dokploy-redis";
 
 	const settings: CreateServiceOptions = {
 		Name: containerName,
@@ -14,12 +14,12 @@ export const initializeRedis = async () => {
 				Mounts: [
 					{
 						Type: "volume",
-						Source: "hanzo-redis",
+						Source: "dokploy-redis",
 						Target: "/data",
 					},
 				],
 			},
-			Networks: [{ Target: "platform-network" }],
+			Networks: [{ Target: "dokploy-network" }],
 			Placement: {
 				Constraints: ["node.role==manager"],
 			},

@@ -1,10 +1,10 @@
-import { db } from "@hanzo/platform-server/db";
+import { db } from "@dokploy/server/db";
 import {
 	type apiCreatePreviewDeployment,
 	deployments,
 	organization,
 	previewDeployments,
-} from "@hanzo/platform-server/db/schema";
+} from "@dokploy/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import type { z } from "zod";
@@ -158,7 +158,7 @@ export const createPreviewDeployment = async (
 		owner: application?.owner || "",
 		repo: application?.repository || "",
 		issue_number: Number.parseInt(schema.pullRequestNumber),
-		body: `### Hanzo Preview Deployment\n\n${runningComment}`,
+		body: `### Dokploy Preview Deployment\n\n${runningComment}`,
 	});
 
 	const previewDeployment = await db
