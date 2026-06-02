@@ -28,8 +28,8 @@ const DeployPage = () => {
   const [deployments, setDeployments] = useState<Map<string, string>>(new Map());
   const { toast } = useToast();
 
-  // Compose files loaded from current repo
-  const [repoFiles] = useState<string[] | undefined>(undefined);
+  // Load compose files from current repo
+  const repoFiles: string[] | undefined = undefined; // TODO: implement api.repo.listComposeFiles
 
   // Parse YAML to Compose Spec
   const parseYaml = (content: string) => {
@@ -307,7 +307,3 @@ export default DeployPage;
 DeployPage.getLayout = (page: ReactElement) => {
   return <DashboardLayout metaName="Deploy">{page}</DashboardLayout>;
 };
-
-export async function getServerSideProps() {
-  return { props: {} };
-}

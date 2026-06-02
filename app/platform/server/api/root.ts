@@ -10,6 +10,7 @@ import { composeRouter } from "./routers/compose";
 import { deploymentRouter } from "./routers/deployment";
 import { destinationRouter } from "./routers/destination";
 import { dockerRouter } from "./routers/docker";
+import { doksRouter } from "./routers/doks";
 import { domainRouter } from "./routers/domain";
 import { environmentRouter } from "./routers/environment";
 import { gitProviderRouter } from "./routers/git-provider";
@@ -54,6 +55,7 @@ import { volumeBackupsRouter } from "./routers/volume-backups";
 export const appRouter = createTRPCRouter({
 	admin: adminRouter,
 	docker: dockerRouter,
+	doks: doksRouter,
 	project: projectRouter,
 	application: applicationRouter,
 	mysql: mysqlRouter,
