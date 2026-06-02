@@ -1,18 +1,18 @@
-import { findOwner } from "@hanzo/platform";
+import { findAdmin } from "@hanzo/platform";
 import { db } from "@hanzo/platform/db";
-import { user } from "@hanzo/platform/db/schema";
+import { users_temp } from "@hanzo/platform/db/schema";
 import { eq } from "drizzle-orm";
 
 (async () => {
 	try {
-		const result = await findOwner();
+		const result = await findAdmin();
 
 		const update = await db
-			.update(user)
+			.update(users_temp)
 			.set({
 				twoFactorEnabled: false,
-			})
-			.where(eq(user.id, result.userId));
+			} as any)
+			.where(eq(users_temp.id, result.userId));
 
 		if (update) {
 			console.log("2FA reset successful");
