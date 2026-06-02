@@ -1,5 +1,5 @@
-import { db } from "@hanzo/platform-server/db";
-import { type apiCreateBackup, backups } from "@hanzo/platform-server/db/schema";
+import { db } from "@dokploy/server/db";
+import { type apiCreateBackup, backups } from "@dokploy/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";

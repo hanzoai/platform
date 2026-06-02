@@ -145,9 +145,9 @@ export const ValidateServer = ({ serverId }: Props) => {
 												/>
 												<StatusRow
 													label="Hanzo Platform Network Created"
-													isEnabled={data?.isPlatformNetworkInstalled}
+													isEnabled={data?.isHanzoPlatformNetworkInstalled}
 													description={
-														data?.isPlatformNetworkInstalled
+														data?.isHanzoPlatformNetworkInstalled
 															? "Created"
 															: "Not Created"
 													}

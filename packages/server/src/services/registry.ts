@@ -1,9 +1,9 @@
-import { db } from "@hanzo/platform-server/db";
-import { type apiCreateRegistry, registry } from "@hanzo/platform-server/db/schema";
+import { db } from "@dokploy/server/db";
+import { type apiCreateRegistry, registry } from "@dokploy/server/db/schema";
 import {
 	execAsync,
 	execAsyncRemote,
-} from "@hanzo/platform-server/utils/process/execAsync";
+} from "@dokploy/server/utils/process/execAsync";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
