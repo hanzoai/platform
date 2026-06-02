@@ -10,7 +10,7 @@ import {
 	initializeNetwork,
 	initSchedules,
 	initVolumeBackupsCronJobs,
-	sendPlatformRestartNotifications,
+	sendHanzoPlatformRestartNotifications,
 	setupDirectories,
 } from "@hanzo/platform";
 import { createPlatformZapServer } from "@hanzo/platform/services/zap-bridge";
@@ -43,7 +43,7 @@ const app = next({ dev, turbopack: process.env.TURBOPACK === "1" });
 const handle = app.getRequestHandler();
 void app.prepare().then(async () => {
 	try {
-		console.log("Running PlatformVersion: ", packageInfo.version);
+		console.log("Running Hanzo Platform Version: ", packageInfo.version);
 		const server = http.createServer((req, res) => {
 			handle(req, res);
 		});
@@ -65,7 +65,26 @@ void app.prepare().then(async () => {
 			await initSchedules();
 			await initCancelDeployments();
 			await initVolumeBackupsCronJobs();
-			await sendPlatformRestartNotifications();
+			await sendHanzoPlatformRestartNotifications();
+		}
+
+		if (IS_CLOUD && process.env.NODE_ENV === "production") {
+			await migration();
+
+			// Initialize billing jobs
+			console.log("Starting billing jobs...");
+			const { startUsageCollectionSchedule } = await import("@hanzo/platform/billing/usage-tracker");
+			const { startBillingSchedule } = await import("@hanzo/platform/billing/billing-job");
+			const { startBillingCycleScheduler } = await import("@hanzo/platform/billing/billing-cycle");
+			startUsageCollectionSchedule();
+			startBillingSchedule();
+			startBillingCycleScheduler();
+			console.log("Billing jobs started");
+		}
+
+		// Start ZAP bridge for AI agent/MCP access
+		if (process.env.ZAP_ENABLED !== "false") {
+			createPlatformZapServer();
 		}
 
 		server.listen(PORT, HOST);

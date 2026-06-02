@@ -1,11 +1,11 @@
-import type { BackupSchedule } from "@hanzo/platform-server/services/backup";
-import type { Compose } from "@hanzo/platform-server/services/compose";
+import type { BackupSchedule } from "@dokploy/server/services/backup";
+import type { Compose } from "@dokploy/server/services/compose";
 import {
 	createDeploymentBackup,
 	updateDeploymentStatus,
-} from "@hanzo/platform-server/services/deployment";
-import { findEnvironmentById } from "@hanzo/platform-server/services/environment";
-import { findProjectById } from "@hanzo/platform-server/services/project";
+} from "@dokploy/server/services/deployment";
+import { findEnvironmentById } from "@dokploy/server/services/environment";
+import { findProjectById } from "@dokploy/server/services/project";
 import { sendDatabaseBackupNotifications } from "../notifications/database-backup";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
 import { getBackupCommand, getS3Credentials, normalizeS3Path } from "./utils";

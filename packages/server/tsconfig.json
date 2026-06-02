@@ -23,7 +23,7 @@
 		/* Path Aliases */
 		"baseUrl": ".",
 		"paths": {
-			"@hanzo/platform-server/*": ["./src/*"]
+			"@dokploy/server/*": ["./src/*"]
 		}
 	},
 	"include": ["next-env.d.ts", "./src/**/*.ts"],
@@ -31,7 +31,7 @@
 	"exclude": [
 		"tsup.ts",
 		"node_modules",
-		"legacy",
+		"dokploy",
 		"config",
 		"dist",
 		".next",

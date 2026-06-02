@@ -65,8 +65,6 @@ const Mongo = (
 	const { data: environments } = api.environment.byProjectId.useQuery({
 		projectId: data?.environment?.projectId || "",
 	});
-	const { config: whitelabeling } = useWhitelabeling();
-	const appName = whitelabeling?.appName || "Hanzo Platform";
 	const environmentDropdownItems =
 		environments?.map((env) => ({
 			name: env.name,
@@ -94,8 +92,7 @@ const Mongo = (
 			/>
 			<Head>
 				<title>
-					Database: {data?.name} - {data?.environment?.project?.name} |{" "}
-					{appName}
+					Database: {data?.name} - {data?.environment?.project?.name} | Hanzo
 				</title>
 			</Head>
 			<div className="w-full">
@@ -132,7 +129,7 @@ const Mongo = (
 													: "destructive"
 										}
 									>
-										{data?.server?.name || "Hanzo Platform Server"}
+										{data?.server?.name || "Hanzo Server"}
 									</Badge>
 									{data?.server?.serverStatus === "inactive" && (
 										<TooltipProvider delayDuration={0}>
