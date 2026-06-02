@@ -13,9 +13,11 @@ import {
 	sendPlatformRestartNotifications,
 	setupDirectories,
 } from "@hanzo/platform";
+import { createPlatformZapServer } from "@hanzo/platform/services/zap-bridge";
 import { config } from "dotenv";
 import next from "next";
 import packageInfo from "../package.json";
+import { migration } from "./db/migration";
 import { setupDockerContainerLogsWebSocketServer } from "./wss/docker-container-logs";
 import { setupDockerContainerTerminalWebSocketServer } from "./wss/docker-container-terminal";
 import { setupDockerStatsMonitoringSocketServer } from "./wss/docker-stats";
