@@ -68,7 +68,22 @@ async function getServiceOrganizationId(
 export const mountRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(apiCreateMount)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
+			// Verify the target service belongs to the caller's org
+			// by resolving serviceId through findMountOrganizationId-compatible lookup.
+			// The mount hasn't been created yet, so we check the target serviceId directly.
+			if (input.serviceType === "application") {
+				const app = await findApplicationById(input.serviceId);
+				if (
+					app.environment.project.organizationId !==
+					ctx.session.activeOrganizationId
+				) {
+					throw new TRPCError({
+						code: "UNAUTHORIZED",
+						message: "You are not authorized to create mounts on this service",
+					});
+				}
+			}
 			await createMount(input);
 			return true;
 		}),
@@ -111,8 +126,17 @@ export const mountRouter = createTRPCRouter({
 		}),
 	allNamedByApplicationId: protectedProcedure
 		.input(z.object({ applicationId: z.string().min(1) }))
-		.query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
 			const app = await findApplicationById(input.applicationId);
+			if (
+				app.environment.project.organizationId !==
+				ctx.session.activeOrganizationId
+			) {
+				throw new TRPCError({
+					code: "UNAUTHORIZED",
+					message: "You are not authorized to access this application",
+				});
+			}
 			const container = await getServiceContainer(app.appName, app.serverId);
 			const mounts = container?.Mounts.filter(
 				(mount: any) => mount.Type === "volume" && mount.Source !== "",

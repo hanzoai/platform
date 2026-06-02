@@ -398,7 +398,7 @@ export const mongoRouter = createTRPCRouter({
 			}
 			const service = await updateMongoById(mongoId, {
 				...rest,
-			});
+			} as any);
 
 			if (!service) {
 				throw new TRPCError({
