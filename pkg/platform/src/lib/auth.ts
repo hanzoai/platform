@@ -5,8 +5,7 @@ import * as bcrypt from "bcrypt";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { apiKey } from "@better-auth/api-key";
-import { admin, organization, twoFactor } from "better-auth/plugins";
+import { admin, apiKey, organization, twoFactor } from "better-auth/plugins";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { and, desc, eq } from "drizzle-orm";
 import { BETTER_AUTH_SECRET, IS_CLOUD } from "../constants";
@@ -26,11 +25,24 @@ import { sendEmail } from "../verification/send-verification-email";
 import { getPublicIpWithFallback } from "../wss/utils";
 
 // Hanzo IAM OIDC provider via @hanzo/iam
-const IAM_SERVER_URL = process.env.IAM_ENDPOINT || "https://hanzo.id";
+const IAM_SERVER_URL =
+	process.env.HANZO_IAM_URL ||
+	process.env.HANZO_IAM_ENDPOINT ||
+	process.env.HANZO_IAM_SERVER_URL ||
+	process.env.IAM_ENDPOINT ||
+	"https://hanzo.id";
 
-const IAM_CLIENT_ID = process.env.IAM_CLIENT_ID || "";
+const IAM_CLIENT_ID =
+	process.env.HANZO_IAM_CLIENT_ID ||
+	process.env.HANZO_CLIENT_ID ||
+	process.env.IAM_CLIENT_ID ||
+	"";
 
-const IAM_CLIENT_SECRET = process.env.IAM_CLIENT_SECRET || "";
+const IAM_CLIENT_SECRET =
+	process.env.HANZO_IAM_CLIENT_SECRET ||
+	process.env.HANZO_CLIENT_SECRET ||
+	process.env.IAM_CLIENT_SECRET ||
+	"";
 
 const iam = iamProvider({
 	serverUrl: IAM_SERVER_URL,
@@ -39,7 +51,6 @@ const iam = iamProvider({
 });
 
 const { handler, api } = betterAuth({
-	baseURL: process.env.BETTER_AUTH_URL || "https://platform.hanzo.ai",
 	database: drizzleAdapter(db, {
 		provider: "pg",
 		schema: schema,
@@ -77,22 +88,14 @@ const { handler, api } = betterAuth({
 	},
 	appName: "Hanzo Platform",
 	socialProviders: {
-		...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
-			? {
-					github: {
-						clientId: process.env.GITHUB_CLIENT_ID,
-						clientSecret: process.env.GITHUB_CLIENT_SECRET,
-					},
-				}
-			: {}),
-		...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-			? {
-					google: {
-						clientId: process.env.GOOGLE_CLIENT_ID,
-						clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-					},
-				}
-			: {}),
+		github: {
+			clientId: process.env.GITHUB_CLIENT_ID as string,
+			clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+		},
+		google: {
+			clientId: process.env.GOOGLE_CLIENT_ID as string,
+			clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+		},
 	},
 	logger: {
 		disabled: process.env.NODE_ENV === "production",
@@ -163,7 +166,7 @@ const { handler, api } = betterAuth({
 				before: async (_user, context) => {
 					if (!IS_CLOUD) {
 						const xHanzoPlatformToken =
-							context?.request?.headers?.get("x-iam-token");
+							context?.request?.headers?.get("x-hanzo-token");
 						if (xHanzoPlatformToken) {
 							const user = await getUserByToken(xHanzoPlatformToken);
 							if (!user) {
