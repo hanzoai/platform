@@ -4,35 +4,34 @@
 
 @layer base {
 	:root {
-		/* Hanzo dark palette */
 		--terminal-paste: rgba(255, 255, 255, 0.2);
-		--background: 222 47% 5%;
-		--foreground: 0 0% 95%;
+		--background: 0 0% 0%;
+		--foreground: 0 0% 98%;
 
-		--card: 222 47% 7%;
-		--card-foreground: 0 0% 95%;
+		--card: 0 0% 5%;
+		--card-foreground: 0 0% 98%;
 
-		--popover: 222 47% 7%;
-		--popover-foreground: 0 0% 95%;
+		--popover: 0 0% 5%;
+		--popover-foreground: 0 0% 98%;
 
-		--primary: 0 0% 95%;
-		--primary-foreground: 222 47% 9%;
+		--primary: 0 0% 98%;
+		--primary-foreground: 0 0% 0%;
 
-		--secondary: 222 30% 18%;
-		--secondary-foreground: 0 0% 95%;
+		--secondary: 0 0% 15%;
+		--secondary-foreground: 0 0% 98%;
 
-		--muted: 222 30% 12%;
-		--muted-foreground: 215 16% 56%;
+		--muted: 0 0% 15%;
+		--muted-foreground: 0 0% 65%;
 
-		--accent: 222 30% 18%;
-		--accent-foreground: 0 0% 95%;
+		--accent: 0 0% 15%;
+		--accent-foreground: 0 0% 98%;
 
-		--destructive: 0 72% 51%;
-		--destructive-foreground: 0 0% 100%;
+		--destructive: 0 98% 63%;
+		--destructive-foreground: 0 0% 98%;
 
-		--border: 222 30% 18%;
-		--input: 222 30% 18%;
-		--ring: 215 16% 56%;
+		--border: 0 0% 20%;
+		--input: 0 0% 15%;
+		--ring: 0 0% 30%;
 
 		--radius: 0.5rem;
 		--overlay: rgba(0, 0, 0, 0.5);
@@ -42,46 +41,45 @@
 		--chart-3: 0 0% 40%;
 		--chart-4: 0 0% 80%;
 		--chart-5: 0 0% 20%;
-		--sidebar-background: 222 47% 5%;
-		--sidebar-foreground: 0 0% 95%;
-		--sidebar-primary: 222 47% 9%;
-		--sidebar-primary-foreground: 0 0% 95%;
-		--sidebar-accent: 222 30% 18%;
-		--sidebar-accent-foreground: 0 0% 95%;
-		--sidebar-border: 222 30% 18%;
-		--sidebar-ring: 215 16% 56%;
+		--sidebar-background: 0 0% 0%;
+		--sidebar-foreground: 0 0% 98%;
+		--sidebar-primary: 0 0% 10%;
+		--sidebar-primary-foreground: 0 0% 98%;
+		--sidebar-accent: 0 0% 15%;
+		--sidebar-accent-foreground: 0 0% 98%;
+		--sidebar-border: 0 0% 20%;
+		--sidebar-ring: 0 0% 40%;
 	}
 
 	.dark {
-		/* Hanzo dark palette */
 		--terminal-paste: rgba(255, 255, 255, 0.2);
-		--background: 222 47% 5%;
-		--foreground: 0 0% 95%;
+		--background: 0 0% 0%;
+		--foreground: 0 0% 98%;
 
-		--card: 222 47% 7%;
-		--card-foreground: 0 0% 95%;
+		--card: 0 0% 5%;
+		--card-foreground: 0 0% 98%;
 
-		--popover: 222 47% 7%;
-		--popover-foreground: 0 0% 95%;
+		--popover: 0 0% 5%;
+		--popover-foreground: 0 0% 98%;
 
-		--primary: 0 0% 95%;
-		--primary-foreground: 222 47% 9%;
+		--primary: 0 0% 98%;
+		--primary-foreground: 0 0% 0%;
 
-		--secondary: 222 30% 18%;
-		--secondary-foreground: 0 0% 95%;
+		--secondary: 0 0% 15%;
+		--secondary-foreground: 0 0% 98%;
 
-		--muted: 222 30% 12%;
-		--muted-foreground: 215 16% 56%;
+		--muted: 0 0% 10%;
+		--muted-foreground: 0 0% 65%;
 
-		--accent: 222 30% 18%;
-		--accent-foreground: 0 0% 95%;
+		--accent: 0 0% 15%;
+		--accent-foreground: 0 0% 98%;
 
-		--destructive: 0 72% 51%;
-		--destructive-foreground: 0 0% 100%;
+		--destructive: 0 98% 63%;
+		--destructive-foreground: 0 0% 98%;
 
-		--border: 222 30% 18%;
-		--input: 222 30% 18%;
-		--ring: 215 16% 56%;
+		--border: 0 0% 15%;
+		--input: 0 0% 10%;
+		--ring: 0 0% 84%;
 
 		--overlay: rgba(0, 0, 0, 0.5);
 
@@ -90,14 +88,14 @@
 		--chart-3: 0 0% 40%;
 		--chart-4: 0 0% 80%;
 		--chart-5: 0 0% 20%;
-		--sidebar-background: 222 47% 5%;
-		--sidebar-foreground: 0 0% 95%;
-		--sidebar-primary: 222 47% 9%;
-		--sidebar-primary-foreground: 0 0% 95%;
-		--sidebar-accent: 222 30% 18%;
-		--sidebar-accent-foreground: 0 0% 95%;
-		--sidebar-border: 222 30% 18%;
-		--sidebar-ring: 215 16% 56%;
+		--sidebar-background: 0 0% 0%;
+		--sidebar-foreground: 0 0% 98%;
+		--sidebar-primary: 0 98% 63%;
+		--sidebar-primary-foreground: 0 0% 100%;
+		--sidebar-accent: 0 0% 15%;
+		--sidebar-accent-foreground: 0 0% 98%;
+		--sidebar-border: 0 0% 20%;
+		--sidebar-ring: 0 0% 40%;
 	}
 }
 
@@ -248,19 +246,4 @@
 .cm-content,
 .cm-lineWrapping {
 	@apply font-mono;
-}
-
-/* HubSpot Widget - Force light color-scheme to prevent white background */
-#hubspot-messages-iframe-container,
-#hubspot-messages-iframe-container * {
-	background-color: transparent !important;
-	color-scheme: light !important;
-}
-
-#hubspot-messages-iframe-container .hs-shadow-container {
-	display: none !important;
-}
-
-#hubspot-conversations-iframe {
-	color-scheme: light !important;
 }
