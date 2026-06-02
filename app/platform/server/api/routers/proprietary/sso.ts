@@ -43,6 +43,13 @@ export const ssoRouter = createTRPCRouter({
 			owner.user.enableEnterpriseFeatures && owner.user.isValidEnterpriseLicense
 		);
 	}),
+	enforceSSO: publicProcedure.query(async () => {
+		if (IS_CLOUD) {
+			return false;
+		}
+		const settings = await getWebServerSettings();
+		return settings?.enforceSSO ?? false;
+	}),
 	listProviders: enterpriseProcedure.query(async ({ ctx }) => {
 		const providers = await db.query.ssoProvider.findMany({
 			where: and(

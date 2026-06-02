@@ -17,6 +17,9 @@ import type { Session, User } from "better-auth";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
+type Resource = keyof typeof statements;
+type ActionOf<R extends Resource> = (typeof statements)[R][number];
+
 /**
  * 1. CONTEXT
  *
@@ -98,7 +101,7 @@ export const createTRPCContext = async (opts: CreateNextContextOptions) => {
  * 2. INITIALIZATION
  *
  * This is where the tRPC API is initialized, connecting the context and transformer. We also parse
- * ZodErrors so that you get typesafety on the frontend if your procedure fails due to validation
+ * ZodErrors so that you get type safety on the frontend if your procedure fails due to validation
  * errors on the backend.
  */
 

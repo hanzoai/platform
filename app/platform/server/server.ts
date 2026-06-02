@@ -58,6 +58,8 @@ void app.prepare().then(async () => {
 			setupDockerStatsMonitoringSocketServer(server);
 		}
 
+		server.listen(PORT, HOST);
+		console.log(`Server Started on: http://${HOST}:${PORT}`);
 		if (process.env.NODE_ENV === "production" && !IS_CLOUD) {
 			createDefaultMiddlewares();
 			await initializeNetwork();
@@ -86,9 +88,6 @@ void app.prepare().then(async () => {
 		if (process.env.ZAP_ENABLED !== "false") {
 			createPlatformZapServer();
 		}
-
-		server.listen(PORT, HOST);
-		console.log(`Server Started on: http://${HOST}:${PORT}`);
 		await initEnterpriseBackupCronJobs();
 
 		if (!IS_CLOUD) {
