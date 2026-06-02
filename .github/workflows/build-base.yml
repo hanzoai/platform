@@ -9,12 +9,10 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write
 jobs:
   docker:
     uses: hanzoai/.github/.github/workflows/docker-build.yml@main
     with:
       image: ghcr.io/hanzoai/platform-base
       dockerfile: Dockerfile.base
-      platforms: "linux/amd64"
     secrets: inherit
