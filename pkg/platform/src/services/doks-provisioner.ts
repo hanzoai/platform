@@ -9,6 +9,61 @@ import {
 } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
+import { recordUsageEvent } from "./billing";
+
+// DigitalOcean droplet pricing in cents-per-hour. Source: DO public
+// pricing as of 2026-06. Used by the usage-event callbacks below so
+// commerce can debit the customer's Hanzo balance for the actual DO
+// compute cost without surprising them with raw DO invoices. Update
+// this map whenever DO publishes new sizes — the cost lookup falls back
+// to 0 (free) for unknown sizes so a missing entry never silently
+// charges the wrong amount.
+const DO_NODE_SIZE_CENTS_PER_HOUR: Record<string, number> = {
+	"s-1vcpu-2gb": 3,
+	"s-2vcpu-2gb": 4,
+	"s-2vcpu-4gb": 5,
+	"s-4vcpu-8gb": 9,
+	"s-8vcpu-16gb": 17,
+	"s-2vcpu-8gb-amd": 7,
+	"s-4vcpu-16gb-amd": 14,
+	"s-8vcpu-32gb-amd": 28,
+	"c-2": 9,
+	"c-4": 18,
+	"c-8": 36,
+	"g-2vcpu-8gb": 8,
+	"g-4vcpu-16gb": 16,
+	"g-8vcpu-32gb": 32,
+	"m-2vcpu-16gb": 16,
+	"m-4vcpu-32gb": 32,
+};
+
+function nodeHourlyCents(size: string): number {
+	return DO_NODE_SIZE_CENTS_PER_HOUR[size] ?? 0;
+}
+
+async function reportClusterUsage(
+	organizationId: string,
+	event:
+		| "doks_provision"
+		| "doks_destroy"
+		| "doks_pool_add"
+		| "doks_pool_remove"
+		| "doks_pool_scale",
+	properties: Record<string, unknown>,
+) {
+	try {
+		await recordUsageEvent(organizationId, {
+			subevent: event,
+			provider: "digitalocean",
+			...properties,
+		});
+	} catch (err) {
+		console.warn(
+			`recordUsageEvent failed (${event}, org ${organizationId}):`,
+			(err as Error).message,
+		);
+	}
+}
 
 const DO_API = "https://api.digitalocean.com/v2";
 const DO_TOKEN = process.env.PAAS_DO_API_TOKEN;
@@ -145,6 +200,22 @@ export const provisionDoksCluster = async (
 		await db.insert(doksNodePool).values(poolData);
 	}
 
+	// Tell commerce a cluster came online so the per-droplet-hour cost
+	// can flow against the customer's Hanzo balance / welcome credit.
+	// We send the first node pool's size + count + hourly cents so
+	// commerce can amortize it across the billing period without
+	// re-querying DO.
+	await reportClusterUsage(input.organizationId, "doks_provision", {
+		doks_cluster_id: newCluster.doksClusterId,
+		do_cluster_id: doCluster.id,
+		region,
+		ha: input.ha || false,
+		node_size: nodeSize,
+		node_count: nodeCount,
+		hourly_cents: nodeHourlyCents(nodeSize) * nodeCount,
+		k8s_version: DEFAULT_K8S_VERSION,
+	});
+
 	return newCluster;
 };
 
@@ -239,6 +310,13 @@ export const deleteDoksCluster = async (doksClusterId: string) => {
 		.update(doksCluster)
 		.set(setData)
 		.where(eq(doksCluster.doksClusterId, doksClusterId));
+
+	// Stop the meter. Commerce uses this to close any open
+	// per-droplet-hour billing rows for this cluster.
+	await reportClusterUsage(cluster.organizationId, "doks_destroy", {
+		doks_cluster_id: doksClusterId,
+		do_cluster_id: cluster.doClusterId,
+	});
 };
 
 // --- Node pool operations ---
@@ -300,6 +378,14 @@ export const addNodePool = async (
 		});
 	}
 
+	await reportClusterUsage(cluster.organizationId, "doks_pool_add", {
+		doks_cluster_id: input.doksClusterId,
+		do_pool_id: doPool.id,
+		node_size: size,
+		node_count: count,
+		hourly_cents: nodeHourlyCents(size) * count,
+	});
+
 	return newPool;
 };
 
@@ -341,6 +427,16 @@ export const updateNodePool = async (
 		.where(eq(doksNodePool.poolId, input.poolId))
 		.returning()
 		.then((v) => v[0]);
+
+	if (updated) {
+		await reportClusterUsage(cluster.organizationId, "doks_pool_scale", {
+			doks_cluster_id: input.doksClusterId,
+			do_pool_id: pool.doPoolId,
+			node_size: updated.size,
+			node_count: updated.count,
+			hourly_cents: nodeHourlyCents(String(updated.size)) * Number(updated.count || 0),
+		});
+	}
 
 	return updated;
 };
