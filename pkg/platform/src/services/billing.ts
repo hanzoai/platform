@@ -188,17 +188,43 @@ export const recordBillingSnapshot = async (organizationId: string) => {
 	return record;
 };
 
+// recordUsageEvent posts a meter-event to commerce so the customer's
+// Hanzo balance is debited for whatever infrastructure cost we just
+// took on their behalf (DOKS provision/scale/destroy is the primary
+// caller; future callers can drop other compute/storage/network
+// events through the same path).
+//
+// Endpoint defaults to commerce's canonical
+// /v1/billing/meter-events in-cluster. Override via PAAS_USAGE_ENDPOINT
+// to point at a sandbox commerce or to disable (set to empty string).
+//
+// The auth model is gateway-trust: the platform's service identity is
+// forwarded as X-Org-Id + X-User-Id headers; the live commerce binary
+// (v1.42.21+) lifts those into the org claim. PAAS_USAGE_BEARER may
+// optionally carry a service-account JWT for tighter auditing.
 export const recordUsageEvent = async (
 	organizationId: string,
 	eventData: Record<string, any>,
 ) => {
-	const endpoint = process.env.PAAS_USAGE_ENDPOINT;
+	const endpoint =
+		process.env.PAAS_USAGE_ENDPOINT ??
+		"http://commerce.hanzo.svc.cluster.local:8001/v1/billing/meter-events";
 	if (!endpoint) return;
+
+	const headers: Record<string, string> = {
+		"Content-Type": "application/json",
+		"X-Org-Id": organizationId,
+		"X-User-Id": process.env.PAAS_USAGE_USER_ID ?? "platform-paas",
+		"X-User-Email": process.env.PAAS_USAGE_USER_EMAIL ?? "platform@hanzo.ai",
+	};
+	if (process.env.PAAS_USAGE_BEARER) {
+		headers.Authorization = `Bearer ${process.env.PAAS_USAGE_BEARER}`;
+	}
 
 	try {
 		await fetch(endpoint, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers,
 			body: JSON.stringify({
 				organization_id: organizationId,
 				event: "infrastructure_usage",
