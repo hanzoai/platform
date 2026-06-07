@@ -50,7 +50,7 @@ jobs:
 
   notify-universe:
     needs: [docker]
-    runs-on: hanzo-deploy-linux-amd64
+    runs-on: evo
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Dispatch image update to universe
