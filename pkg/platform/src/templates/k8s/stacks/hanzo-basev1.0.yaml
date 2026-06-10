@@ -221,9 +221,9 @@ spec:
     - port: 443
       protocol: TCP
   # KMS ZAP listener — kms-fetch init container + in-process ZAP clients
-  # talk to  over TCP 9999 (binary protocol, X25519+ML-KEM-768
-  # PQ handshake). Required for kms-fetch (task #29) and the broader
-  # k8s-Secrets → KMS-ZAP migration (task #33). Without this rule, any
+  # talk to hanzo-kms over TCP 9999 (binary protocol, X25519+ML-KEM-768
+  # PQ handshake). Required for kms-fetch and the broader
+  # k8s-Secrets → KMS-ZAP migration. Without this rule, any
   # service whose Pod is gated by this NetworkPolicy cannot reach KMS
   # for secret fetch and panics on boot with "connection refused".
   - to:
