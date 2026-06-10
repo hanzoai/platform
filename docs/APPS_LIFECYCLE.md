@@ -1,6 +1,6 @@
 # Apps Lifecycle
 
-Single canonical lifecycle for every app the Hanzo / Lux / Zoo / Liquidity orgs
+Single canonical lifecycle for every app the Hanzo / Lux / Zoo orgs
 build and run. One source of truth per dimension. Semver-only end to end. No
 floating tags, no parallel pipelines, no drift unaccounted for.
 
@@ -233,9 +233,9 @@ Each PR is independently shippable and produces measurable value:
 ## Open questions
 
 - Where does the `apps` table actually live for multi-org installs? Today
-  `platform.hanzo.ai` is Hanzo-tenant; Liquidity has its own `platform`.
-  Either each org runs its own apps table (simpler, current direction), or
-  there's a federation read-side. Defer to PR 3 review.
+  `platform.hanzo.ai` is Hanzo-tenant; downstream tenants run their own
+  `platform`. Either each org runs its own apps table (simpler, current
+  direction), or there's a federation read-side. Defer to PR 3 review.
 - The `verify` step in PR 4 needs a "release artifact contract" per repo
   (Go binary count, npm dist count, etc.). Suggest a `release.contract.json`
   at repo root.
