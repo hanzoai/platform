@@ -20,8 +20,7 @@ These are non-negotiable. Every piece below derives from them.
 2. **One workflow per repo.** A repo emits artifacts through exactly one
    CI workflow file. No parallel `build.yml` + `docker-deploy.yml`. The
    workflow calls the shared `hanzoai/.github/.github/workflows/docker-build.yml@main`
-   reusable workflow (or its org-local equivalent for luxfi / zooai /
-   ).
+   reusable workflow (or its org-local equivalent for luxfi / zooai).
 3. **Declared state is the source of truth.** What is *supposed* to be
    running in a given env is a row in the `apps` table that points to a
    `vX.Y.Z` git tag. Manifests, kustomizations, helm values, KMSSecrets,
