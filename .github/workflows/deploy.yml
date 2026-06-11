@@ -55,7 +55,7 @@ jobs:
   # ── Build platform ──────────────────────────────────────────
   platform:
     needs: [quality]
-    runs-on: hanzo-build
+    runs-on: [self-hosted, linux, amd64]
     permissions:
       contents: read
       packages: write
@@ -92,7 +92,7 @@ jobs:
   # ── Build platform-cloud ───────────────────────────────────
   platform-cloud:
     needs: [quality]
-    runs-on: hanzo-build
+    runs-on: [self-hosted, linux, amd64]
     permissions:
       contents: read
       packages: write
@@ -129,7 +129,7 @@ jobs:
   # ── Build schedule + server ────────────────────────────────
   schedule:
     needs: [quality]
-    runs-on: hanzo-build
+    runs-on: [self-hosted, linux, amd64]
     permissions:
       contents: read
       packages: write
@@ -161,7 +161,7 @@ jobs:
 
   server:
     needs: [quality]
-    runs-on: hanzo-build
+    runs-on: [self-hosted, linux, amd64]
     permissions:
       contents: read
       packages: write
