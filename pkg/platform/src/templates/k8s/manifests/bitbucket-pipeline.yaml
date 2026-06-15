@@ -436,9 +436,6 @@ metadata:
   namespace: tekton-builds
   annotations:
     kubernetes.io/ingress.class: ingress
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls: 'true'
-    traefik.ingress.kubernetes.io/router.middlewares: hanzo-security-headers@kubernetescrd,tekton-bitbucket-stripprefix@kubernetescrd
 spec:
   rules:
     - http:
