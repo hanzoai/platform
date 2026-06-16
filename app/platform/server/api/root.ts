@@ -16,7 +16,7 @@ import { dockerRouter } from "./routers/docker";
 // doksRouter migrated to native @zap-proto/web (server/zap/doks-cap.ts).
 import { domainRouter } from "./routers/domain";
 import { environmentRouter } from "./routers/environment";
-import { gatewayRouter } from "./routers/gateway";
+// gatewayRouter migrated to native @zap-proto/web (server/zap/gateway-cap.ts).
 import { gitProviderRouter } from "./routers/git-provider";
 import { giteaRouter } from "./routers/gitea";
 import { githubRouter } from "./routers/github";
@@ -62,7 +62,8 @@ export const appRouter = createTRPCRouter({
 	admin: adminRouter,
 	dns: dnsRouter,
 	digitalocean: digitaloceanRouter,
-	gateway: gatewayRouter,
+	// gateway: migrated to native @zap-proto/web — see utils/zap-gateway.ts
+	// (browser) and server/zap/gateway-cap.ts (server). No tRPC gateway router.
 	docker: dockerRouter,
 	// doks: migrated to native @zap-proto/web — see utils/zap.ts (browser) and
 	// server/zap/doks-cap.ts (server). No tRPC doks router remains.

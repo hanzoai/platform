@@ -40,7 +40,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/utils/api";
+import { gateway } from "@/utils/zap-gateway";
 
 const rateLimitScopes = ["global", "org", "user", "api-key"] as const;
 
@@ -68,12 +68,12 @@ const RateLimitDialog = ({
 	defaultValues,
 	mode,
 }: RateLimitDialogProps) => {
-	const utils = api.useUtils();
+	const utils = gateway.useUtils();
 
 	const { mutateAsync: createMutation, isPending: isCreating } =
-		api.gateway.createRateLimit.useMutation();
+		gateway.createRateLimit.useMutation();
 	const { mutateAsync: updateMutation, isPending: isUpdating } =
-		api.gateway.updateRateLimit.useMutation();
+		gateway.updateRateLimit.useMutation();
 
 	const isSubmitting = isCreating || isUpdating;
 
@@ -119,7 +119,7 @@ const RateLimitDialog = ({
 			})
 				.then(async () => {
 					toast.success("Rate limit rule updated");
-					await utils.gateway.listRateLimits.invalidate();
+					await utils.listRateLimits.invalidate();
 					onOpenChange(false);
 				})
 				.catch(() => {
@@ -129,7 +129,7 @@ const RateLimitDialog = ({
 			await createMutation(payload)
 				.then(async () => {
 					toast.success("Rate limit rule created");
-					await utils.gateway.listRateLimits.invalidate();
+					await utils.listRateLimits.invalidate();
 					onOpenChange(false);
 				})
 				.catch(() => {
@@ -300,11 +300,11 @@ export const RateLimitTable = () => {
 	>(undefined);
 
 	const { data: rateLimits, isLoading } =
-		api.gateway.listRateLimits.useQuery();
-	const utils = api.useUtils();
+		gateway.listRateLimits.useQuery();
+	const utils = gateway.useUtils();
 
 	const { mutateAsync: deleteMutation, isPending: isDeleting } =
-		api.gateway.deleteRateLimit.useMutation();
+		gateway.deleteRateLimit.useMutation();
 
 	const handleEdit = (rule: NonNullable<typeof rateLimits>[number]) => {
 		setEditingRule({
@@ -328,7 +328,7 @@ export const RateLimitTable = () => {
 		await deleteMutation({ rateLimitRuleId })
 			.then(async () => {
 				toast.success("Rate limit rule deleted");
-				await utils.gateway.listRateLimits.invalidate();
+				await utils.listRateLimits.invalidate();
 			})
 			.catch(() => {
 				toast.error("Failed to delete rate limit rule");
