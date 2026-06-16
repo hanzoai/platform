@@ -25,6 +25,7 @@ import { setupDockerStatsMonitoringSocketServer } from "./wss/docker-stats";
 import { setupDrawerLogsWebSocketServer } from "./wss/drawer-logs";
 import { setupDeploymentLogsWebSocketServer } from "./wss/listen-deployment";
 import { setupTerminalWebSocketServer } from "./wss/terminal";
+import { adminMintCap, adminRootCap } from "./zap/admin-cap";
 import { aiMintCap, aiRootCap } from "./zap/ai-cap";
 import { backupMintCap, backupRootCap } from "./zap/backup-cap";
 import { billingMintCap, billingRootCap } from "./zap/billing-cap";
@@ -32,6 +33,10 @@ import {
 	bitbucketMintCap,
 	bitbucketRootCap,
 } from "./zap/bitbucket-cap";
+import {
+	certificateMintCap,
+	certificateRootCap,
+} from "./zap/certificate-cap";
 import { clusterMintCap, clusterRootCap } from "./zap/cluster-cap";
 import {
 	deployProviderMintCap,
@@ -50,6 +55,7 @@ import {
 	digitaloceanRootCap,
 } from "./zap/digitalocean-cap";
 import { dnsMintCap, dnsRootCap } from "./zap/dns-cap";
+import { dockerMintCap, dockerRootCap } from "./zap/docker-cap";
 import { doksMintCap, doksRootCap } from "./zap/doks-cap";
 import { domainMintCap, domainRootCap } from "./zap/domain-cap";
 import {
@@ -69,6 +75,7 @@ import { mariadbMintCap, mariadbRootCap } from "./zap/mariadb-cap";
 import { mongoMintCap, mongoRootCap } from "./zap/mongo-cap";
 import { mountMintCap, mountRootCap } from "./zap/mount-cap";
 import { mysqlMintCap, mysqlRootCap } from "./zap/mysql-cap";
+import { patchMintCap, patchRootCap } from "./zap/patch-cap";
 import {
 	notificationMintCap,
 	notificationRootCap,
@@ -96,7 +103,10 @@ import {
 } from "./zap/schedule-cap";
 import { securityMintCap, securityRootCap } from "./zap/security-cap";
 import { sshKeyMintCap, sshKeyRootCap } from "./zap/ssh-key-cap";
+import { stripeMintCap, stripeRootCap } from "./zap/stripe-cap";
+import { swarmMintCap, swarmRootCap } from "./zap/swarm-cap";
 import { userMintCap, userRootCap } from "./zap/user-cap";
+import { visorMintCap, visorRootCap } from "./zap/visor-cap";
 import {
 	volumeBackupsMintCap,
 	volumeBackupsRootCap,
@@ -396,6 +406,55 @@ void app.prepare().then(async () => {
 			mintCap: userMintCap,
 			rootCap: userRootCap,
 			onError: (err) => console.error("[zap/user]", err),
+		});
+		// Stripe billing capability — replaces the tRPC stripeRouter.
+		serve(server, {
+			path: "/zap/stripe",
+			mintCap: stripeMintCap,
+			rootCap: stripeRootCap,
+			onError: (err) => console.error("[zap/stripe]", err),
+		});
+		// Patch capability — replaces the tRPC patchRouter.
+		serve(server, {
+			path: "/zap/patch",
+			mintCap: patchMintCap,
+			rootCap: patchRootCap,
+			onError: (err) => console.error("[zap/patch]", err),
+		});
+		// Visor capability — replaces the tRPC visorRouter.
+		serve(server, {
+			path: "/zap/visor",
+			mintCap: visorMintCap,
+			rootCap: visorRootCap,
+			onError: (err) => console.error("[zap/visor]", err),
+		});
+		// Docker capability — replaces the tRPC dockerRouter.
+		serve(server, {
+			path: "/zap/docker",
+			mintCap: dockerMintCap,
+			rootCap: dockerRootCap,
+			onError: (err) => console.error("[zap/docker]", err),
+		});
+		// Swarm capability — replaces the tRPC swarmRouter.
+		serve(server, {
+			path: "/zap/swarm",
+			mintCap: swarmMintCap,
+			rootCap: swarmRootCap,
+			onError: (err) => console.error("[zap/swarm]", err),
+		});
+		// Certificate capability — replaces the tRPC certificateRouter.
+		serve(server, {
+			path: "/zap/certificate",
+			mintCap: certificateMintCap,
+			rootCap: certificateRootCap,
+			onError: (err) => console.error("[zap/certificate]", err),
+		});
+		// Admin capability — replaces the tRPC adminRouter.
+		serve(server, {
+			path: "/zap/admin",
+			mintCap: adminMintCap,
+			rootCap: adminRootCap,
+			onError: (err) => console.error("[zap/admin]", err),
 		});
 
 		server.listen(PORT, HOST);
