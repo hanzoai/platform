@@ -27,6 +27,10 @@ import { setupDeploymentLogsWebSocketServer } from "./wss/listen-deployment";
 import { setupTerminalWebSocketServer } from "./wss/terminal";
 import { adminMintCap, adminRootCap } from "./zap/admin-cap";
 import { aiMintCap, aiRootCap } from "./zap/ai-cap";
+import {
+	applicationMintCap,
+	applicationRootCap,
+} from "./zap/application-cap";
 import { auditLogMintCap, auditLogRootCap } from "./zap/audit-log-cap";
 import { backupMintCap, backupRootCap } from "./zap/backup-cap";
 import { billingMintCap, billingRootCap } from "./zap/billing-cap";
@@ -39,6 +43,7 @@ import {
 	certificateRootCap,
 } from "./zap/certificate-cap";
 import { clusterMintCap, clusterRootCap } from "./zap/cluster-cap";
+import { composeMintCap, composeRootCap } from "./zap/compose-cap";
 import {
 	customRoleMintCap,
 	customRoleRootCap,
@@ -112,6 +117,7 @@ import {
 	scheduleRootCap,
 } from "./zap/schedule-cap";
 import { securityMintCap, securityRootCap } from "./zap/security-cap";
+import { settingsMintCap, settingsRootCap } from "./zap/settings-cap";
 import { ssoMintCap, ssoRootCap } from "./zap/sso-cap";
 import { sshKeyMintCap, sshKeyRootCap } from "./zap/ssh-key-cap";
 import { stripeMintCap, stripeRootCap } from "./zap/stripe-cap";
@@ -512,6 +518,27 @@ void app.prepare().then(async () => {
 			mintCap: auditLogMintCap,
 			rootCap: auditLogRootCap,
 			onError: (err) => console.error("[zap/audit-log]", err),
+		});
+		// Application capability — replaces the tRPC applicationRouter.
+		serve(server, {
+			path: "/zap/application",
+			mintCap: applicationMintCap,
+			rootCap: applicationRootCap,
+			onError: (err) => console.error("[zap/application]", err),
+		});
+		// Compose capability — replaces the tRPC composeRouter.
+		serve(server, {
+			path: "/zap/compose",
+			mintCap: composeMintCap,
+			rootCap: composeRootCap,
+			onError: (err) => console.error("[zap/compose]", err),
+		});
+		// Settings capability — replaces the tRPC settingsRouter.
+		serve(server, {
+			path: "/zap/settings",
+			mintCap: settingsMintCap,
+			rootCap: settingsRootCap,
+			onError: (err) => console.error("[zap/settings]", err),
 		});
 
 		server.listen(PORT, HOST);
