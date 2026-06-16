@@ -29,6 +29,14 @@ import { aiMintCap, aiRootCap } from "./zap/ai-cap";
 import { billingMintCap, billingRootCap } from "./zap/billing-cap";
 import { clusterMintCap, clusterRootCap } from "./zap/cluster-cap";
 import {
+	deployProviderMintCap,
+	deployProviderRootCap,
+} from "./zap/deploy-provider-cap";
+import {
+	deploymentMintCap,
+	deploymentRootCap,
+} from "./zap/deployment-cap";
+import {
 	destinationMintCap,
 	destinationRootCap,
 } from "./zap/destination-cap";
@@ -55,12 +63,25 @@ import {
 	organizationRootCap,
 } from "./zap/organization-cap";
 import { portMintCap, portRootCap } from "./zap/port-cap";
+import {
+	previewDeploymentMintCap,
+	previewDeploymentRootCap,
+} from "./zap/preview-deployment-cap";
 import { projectMintCap, projectRootCap } from "./zap/project-cap";
 import {
 	redirectsMintCap,
 	redirectsRootCap,
 } from "./zap/redirects-cap";
 import { registryMintCap, registryRootCap } from "./zap/registry-cap";
+import {
+	scheduleMintCap,
+	scheduleRootCap,
+} from "./zap/schedule-cap";
+import { securityMintCap, securityRootCap } from "./zap/security-cap";
+import {
+	volumeBackupsMintCap,
+	volumeBackupsRootCap,
+} from "./zap/volume-backups-cap";
 
 config({ path: ".env" });
 const PORT = Number.parseInt(process.env.PORT || "3000", 10);
@@ -223,6 +244,48 @@ void app.prepare().then(async () => {
 			mintCap: redirectsMintCap,
 			rootCap: redirectsRootCap,
 			onError: (err) => console.error("[zap/redirects]", err),
+		});
+		// Deployment capability — replaces the tRPC deploymentRouter.
+		serve(server, {
+			path: "/zap/deployment",
+			mintCap: deploymentMintCap,
+			rootCap: deploymentRootCap,
+			onError: (err) => console.error("[zap/deployment]", err),
+		});
+		// Deploy-provider capability — replaces the tRPC deployProviderRouter.
+		serve(server, {
+			path: "/zap/deploy-provider",
+			mintCap: deployProviderMintCap,
+			rootCap: deployProviderRootCap,
+			onError: (err) => console.error("[zap/deploy-provider]", err),
+		});
+		// Preview-deployment capability — replaces the tRPC previewDeploymentRouter.
+		serve(server, {
+			path: "/zap/preview-deployment",
+			mintCap: previewDeploymentMintCap,
+			rootCap: previewDeploymentRootCap,
+			onError: (err) => console.error("[zap/preview-deployment]", err),
+		});
+		// Schedule capability — replaces the tRPC scheduleRouter.
+		serve(server, {
+			path: "/zap/schedule",
+			mintCap: scheduleMintCap,
+			rootCap: scheduleRootCap,
+			onError: (err) => console.error("[zap/schedule]", err),
+		});
+		// Security capability — replaces the tRPC securityRouter.
+		serve(server, {
+			path: "/zap/security",
+			mintCap: securityMintCap,
+			rootCap: securityRootCap,
+			onError: (err) => console.error("[zap/security]", err),
+		});
+		// Volume-backups capability — replaces the tRPC volumeBackupsRouter.
+		serve(server, {
+			path: "/zap/volume-backups",
+			mintCap: volumeBackupsMintCap,
+			rootCap: volumeBackupsRootCap,
+			onError: (err) => console.error("[zap/volume-backups]", err),
 		});
 
 		server.listen(PORT, HOST);
