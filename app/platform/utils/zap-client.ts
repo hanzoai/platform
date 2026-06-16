@@ -19,6 +19,7 @@ import {
 	type UseQueryOptions,
 	useMutation,
 	useQuery,
+	useQueryClient,
 } from "@tanstack/react-query";
 import { type Connection, connect } from "@zap-proto/web/client";
 import { type Conn, Status } from "@zap-proto/zap";
@@ -70,6 +71,32 @@ export type ZapValue = any;
 /** A builder maps a params object to the ZAP-encoded payload for one method. */
 export type Encode<TArgs> = (args: TArgs) => Uint8Array;
 
+/** A query method's react-query key prefix — used by useUtils invalidation. */
+const queryKeyOf = (path: string, key: string, args?: unknown) =>
+	args === undefined
+		? (["zap", path, key] as const)
+		: (["zap", path, key, args] as const);
+
+/** A query method handle: hook + raw call + its key (for invalidation). */
+export interface ZapQuery<TArgs, TOut> {
+	call(args: TArgs): Promise<TOut>;
+	useQuery(
+		args?: TArgs,
+		options?: Omit<UseQueryOptions<TOut, Error>, "queryKey" | "queryFn">,
+	): ReturnType<typeof useQuery<TOut, Error>>;
+	/** The react-query key for this method (optionally narrowed by args). */
+	queryKey(args?: TArgs): readonly unknown[];
+	readonly _key: string;
+}
+
+/** A mutation method handle: hook + raw call. */
+export interface ZapMutation<TArgs, TOut> {
+	call(args: TArgs): Promise<TOut>;
+	useMutation(
+		options?: Omit<UseMutationOptions<TOut, Error, TArgs>, "mutationFn">,
+	): ReturnType<typeof useMutation<TOut, Error, TArgs>>;
+}
+
 /**
  * makeRpc builds the per-router hook factory bound to one endpoint path. A
  * router client calls `const rpc = makeRpc("/zap/<router>")` then declares each
@@ -81,18 +108,15 @@ export function makeRpc(path: string) {
 			method: number,
 			key: string,
 			encode: Encode<TArgs>,
-		) {
+		): ZapQuery<TArgs, TOut> {
 			return {
 				call: (args: TArgs) => invoke<TOut>(path, method, encode(args)),
-				useQuery: (
-					args?: TArgs,
-					options?: Omit<
-						UseQueryOptions<TOut, Error>,
-						"queryKey" | "queryFn"
-					>,
-				) =>
+				queryKey: (args?: TArgs) =>
+					queryKeyOf(path, key, args ?? null),
+				_key: key,
+				useQuery: (args?, options?) =>
 					useQuery<TOut, Error>({
-						queryKey: ["zap", path, key, args ?? null],
+						queryKey: queryKeyOf(path, key, args ?? null),
 						queryFn: () =>
 							invoke<TOut>(path, method, encode((args ?? {}) as TArgs)),
 						...options,
@@ -102,17 +126,49 @@ export function makeRpc(path: string) {
 		mutation<
 			TArgs extends Record<string, unknown> = Record<string, unknown>,
 			TOut = ZapValue,
-		>(method: number, encode: Encode<TArgs>) {
+		>(method: number, encode: Encode<TArgs>): ZapMutation<TArgs, TOut> {
 			return {
 				call: (args: TArgs) => invoke<TOut>(path, method, encode(args)),
-				useMutation: (
-					options?: Omit<UseMutationOptions<TOut, Error, TArgs>, "mutationFn">,
-				) =>
+				useMutation: (options?) =>
 					useMutation<TOut, Error, TArgs>({
 						mutationFn: (args) => invoke<TOut>(path, method, encode(args)),
 						...options,
 					}),
 			};
 		},
+	};
+}
+
+/**
+ * makeUseUtils builds a router-scoped `useUtils()` hook from the router's query
+ * handles, exposing `utils.<method>.invalidate(args?)` keyed by the same
+ * react-query key the query hook uses — the ZAP equivalent of tRPC's
+ * `api.useUtils()`. Mutations have no cache entry, so only queries appear here.
+ */
+export function makeUseUtils<Q extends Record<string, ZapQuery<any, any>>>(
+	queries: Q,
+) {
+	return function useUtils() {
+		const qc = useQueryClient();
+		const out = {} as {
+			[K in keyof Q]: {
+				invalidate(args?: Parameters<Q[K]["queryKey"]>[0]): Promise<void>;
+				refetch(args?: Parameters<Q[K]["queryKey"]>[0]): Promise<void>;
+			};
+		};
+		for (const name of Object.keys(queries) as (keyof Q)[]) {
+			const q = queries[name];
+			out[name] = {
+				invalidate: (args?) =>
+					qc.invalidateQueries({
+						queryKey: args === undefined ? q.queryKey() : q.queryKey(args),
+					}),
+				refetch: (args?) =>
+					qc.refetchQueries({
+						queryKey: args === undefined ? q.queryKey() : q.queryKey(args),
+					}),
+			};
+		}
+		return out;
 	};
 }
