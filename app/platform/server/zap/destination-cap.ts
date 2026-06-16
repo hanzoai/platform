@@ -18,7 +18,7 @@
 
 import type { IncomingMessage } from "node:http";
 import {
-	createDestination,
+	createDestintation,
 	execAsync,
 	execAsyncRemote,
 	findDestinationById,
@@ -119,7 +119,7 @@ async function dispatch(ctx: DestinationCtx, call: Call): Promise<unknown> {
 				// biome-ignore lint/suspicious/noExplicitAny: apiCreateDestination input, ported verbatim
 			}>(call.payload) as any;
 			try {
-				const result = await createDestination(input, ctx.organizationId);
+				const result = await createDestintation(input, ctx.organizationId);
 				console.info("[audit] destination.create", {
 					action: "create",
 					resourceType: "destination",

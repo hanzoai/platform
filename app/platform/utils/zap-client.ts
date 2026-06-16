@@ -21,8 +21,9 @@ import {
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
+import { type Conn } from "@zap-proto/web";
 import { type Connection, connect } from "@zap-proto/web/client";
-import { type Conn, Status } from "@zap-proto/zap";
+import { Status } from "@zap-proto/zap";
 import { decodeResult } from "@/server/zap/result";
 
 function wsUrl(path: string): string {
@@ -158,6 +159,7 @@ export function makeUseUtils<Q extends Record<string, ZapQuery<any, any>>>(
 		};
 		for (const name of Object.keys(queries) as (keyof Q)[]) {
 			const q = queries[name];
+			if (!q) continue;
 			out[name] = {
 				invalidate: (args?) =>
 					qc.invalidateQueries({

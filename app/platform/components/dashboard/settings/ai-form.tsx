@@ -50,7 +50,12 @@ export const AiForm = () => {
 									</div>
 								) : (
 									<div className="flex flex-col gap-4 rounded-lg min-h-[25vh]">
-										{aiConfigs?.map((config) => (
+										{aiConfigs?.map(
+											(config: {
+												aiId: string;
+												name: string;
+												model: string;
+											}) => (
 											<div
 												key={config.aiId}
 												className="flex items-center justify-between bg-sidebar p-1 w-full rounded-lg"
@@ -93,7 +98,8 @@ export const AiForm = () => {
 													</div>
 												</div>
 											</div>
-										))}
+										),
+										)}
 									</div>
 								)}
 							</>

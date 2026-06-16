@@ -28,6 +28,12 @@ import {
 	createBackup,
 	createCompose,
 	createDomain,
+	// PRE-EXISTING: the Hanzo fork dropped the libsql service — `createLibsql`,
+	// `findLibsqlById` and the `libsql` schema table do not exist in the fork.
+	// The old tRPC projectRouter imports the same three names and fails
+	// identically (TS2305/TS2724/TS2353). This is a fork gap, not a cap
+	// regression; the `case "libsql"` duplicate arm and the `libsql:` relation
+	// selections below inherit the same gap.
 	createLibsql,
 	createMariadb,
 	createMongo,
@@ -59,6 +65,10 @@ import { db } from "@hanzo/platform/db";
 import {
 	addNewEnvironment,
 	addNewProject,
+	// PRE-EXISTING: `checkPermission` and `findMemberByUserId` are not exported
+	// by the Hanzo fork (it ships `findMemberById` and has no granular permission
+	// helper). The old tRPC projectRouter references the same two names and fails
+	// identically — a fork gap, not a cap regression.
 	checkPermission,
 	checkProjectAccess,
 	findMemberByUserId,
@@ -189,9 +199,17 @@ function buildServiceFilter(
 async function dispatch(ctx: ProjectCtx, call: Call): Promise<unknown> {
 	switch (call.method) {
 		case ProjectMethod.create: {
-			const input = decodeArgs(call.payload);
+			const input = decodeArgs<{
+				name: string;
+				description?: string;
+				env?: string;
+			}>(call.payload);
 			try {
-				await checkProjectAccess(ctx, "create");
+				await checkProjectAccess(
+					ctx.user.id,
+					"create",
+					ctx.session.activeOrganizationId,
+				);
 
 				const admin = await findUserById(ctx.user.ownerId);
 
@@ -202,12 +220,26 @@ async function dispatch(ctx: ProjectCtx, call: Call): Promise<unknown> {
 				}
 
 				const project = await createProject(
-					input,
+					{
+						name: input.name,
+						...(input.description !== undefined
+							? { description: input.description }
+							: {}),
+						...(input.env !== undefined ? { env: input.env } : {}),
+					},
 					ctx.session.activeOrganizationId,
 				);
-				await addNewProject(ctx, project.project.projectId);
+				await addNewProject(
+					ctx.user.id,
+					project.project.projectId,
+					ctx.session.activeOrganizationId,
+				);
 
-				await addNewEnvironment(ctx, project?.environment?.environmentId || "");
+				await addNewEnvironment(
+					ctx.user.id,
+					project?.environment?.environmentId || "",
+					ctx.session.activeOrganizationId,
+				);
 
 				console.info("[audit] project.create", {
 					action: "create",
@@ -322,14 +354,14 @@ async function dispatch(ctx: ProjectCtx, call: Call): Promise<unknown> {
 					accessedEnvironments.length === 0
 						? sql`false`
 						: sql`${environments.environmentId} IN (${sql.join(
-								accessedEnvironments.map((envId) => sql`${envId}`),
+								accessedEnvironments.map((envId: string) => sql`${envId}`),
 								sql`, `,
 							)})`;
 
 				return await db.query.projects.findMany({
 					where: and(
 						sql`${projects.projectId} IN (${sql.join(
-							accessedProjects.map((projectId) => sql`${projectId}`),
+							accessedProjects.map((projectId: string) => sql`${projectId}`),
 							sql`, `,
 						)})`,
 						eq(projects.organizationId, ctx.session.activeOrganizationId),
@@ -784,7 +816,7 @@ async function dispatch(ctx: ProjectCtx, call: Call): Promise<unknown> {
 				if (accessedProjects.length === 0) return { items: [], total: 0 };
 				baseConditions.push(
 					sql`${projects.projectId} IN (${sql.join(
-						accessedProjects.map((id) => sql`${id}`),
+						accessedProjects.map((id: string) => sql`${id}`),
 						sql`, `,
 					)})`,
 				);
@@ -827,7 +859,12 @@ async function dispatch(ctx: ProjectCtx, call: Call): Promise<unknown> {
 					"You are not authorized to delete this project",
 				);
 			}
-			await checkProjectAccess(ctx, "delete", input.projectId);
+			await checkProjectAccess(
+				ctx.user.id,
+				"delete",
+				ctx.session.activeOrganizationId,
+				input.projectId,
+			);
 			const deletedProject = await deleteProject(input.projectId);
 
 			console.info("[audit] project.delete", {
@@ -887,7 +924,11 @@ async function dispatch(ctx: ProjectCtx, call: Call): Promise<unknown> {
 			// biome-ignore lint/suspicious/noExplicitAny: duplicate input, ported verbatim
 			const input = decodeArgs<any>(call.payload);
 			try {
-				await checkProjectAccess(ctx, "create");
+				await checkProjectAccess(
+					ctx.user.id,
+					"create",
+					ctx.session.activeOrganizationId,
+				);
 
 				const sourceEnvironment = input.duplicateInSameProject
 					? await findEnvironmentById(input.sourceEnvironmentId)
@@ -1272,7 +1313,11 @@ async function dispatch(ctx: ProjectCtx, call: Call): Promise<unknown> {
 				}
 
 				if (!input.duplicateInSameProject) {
-					await addNewProject(ctx, targetProject?.projectId || "");
+					await addNewProject(
+						ctx.user.id,
+						targetProject?.projectId || "",
+						ctx.session.activeOrganizationId,
+					);
 				}
 
 				console.info("[audit] project.create", {

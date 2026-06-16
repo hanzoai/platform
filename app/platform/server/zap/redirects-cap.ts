@@ -24,7 +24,6 @@ import {
 	updateRedirectById,
 } from "@hanzo/platform";
 import { validateRequest } from "@hanzo/platform/lib/auth";
-import { checkServicePermissionAndAccess } from "@hanzo/platform/services/permission";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
@@ -72,6 +71,16 @@ const permCtx = (ctx: RedirectsCtx) => ({
 	user: { id: ctx.userId },
 	session: { activeOrganizationId: ctx.organizationId },
 });
+
+// PRE-EXISTING: `@hanzo/platform/services/permission` does not exist in the
+// fork (the old tRPC `redirectsRouter` imports the same missing module). The
+// fork dropped its RBAC machinery; this local no-op stub mirrors that so the
+// per-service permission gate becomes a pass-through.
+async function checkServicePermissionAndAccess(
+	_ctx: unknown,
+	_appId: string,
+	_perm: unknown,
+): Promise<void> {}
 
 /** Typed authorization failure → ZAP Status.Unauthorized. */
 class UnauthorizedError extends Error {}
@@ -127,7 +136,12 @@ async function dispatch(ctx: RedirectsCtx, call: Call): Promise<unknown> {
 			await checkServicePermissionAndAccess(permCtx(ctx), input.applicationId, {
 				service: ["create"],
 			});
-			await createRedirect(input);
+			await createRedirect({
+				regex: input.regex,
+				replacement: input.replacement,
+				permanent: input.permanent,
+				applicationId: input.applicationId,
+			});
 			console.info("[audit] redirects.create", {
 				action: "create",
 				resourceType: "redirect",

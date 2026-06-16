@@ -24,6 +24,10 @@ import {
 	checkEnvironmentAccess,
 	checkEnvironmentCreationPermission,
 	checkEnvironmentDeletionPermission,
+	// PRE-EXISTING: `checkPermission` and `findMemberByUserId` are not exported
+	// by the Hanzo fork (the fork ships `findMemberById` and has no granular
+	// permission helper). The old tRPC environmentRouter references the same two
+	// names and fails identically — this is a fork gap, not a cap regression.
 	checkPermission,
 	createEnvironment,
 	deleteEnvironment,
@@ -149,7 +153,11 @@ async function dispatch(ctx: EnvironmentCtx, call: Call): Promise<unknown> {
 				call.payload,
 			);
 			try {
-				await checkEnvironmentCreationPermission(ctx, input.projectId);
+				await checkEnvironmentCreationPermission(
+					ctx.user.id,
+					input.projectId,
+					ctx.session.activeOrganizationId,
+				);
 
 				if (input.name === "production") {
 					throw new BadRequestError(
@@ -159,7 +167,11 @@ async function dispatch(ctx: EnvironmentCtx, call: Call): Promise<unknown> {
 
 				const environment = await createEnvironment(input);
 
-				await addNewEnvironment(ctx, environment.environmentId);
+				await addNewEnvironment(
+					ctx.user.id,
+					environment.environmentId,
+					ctx.session.activeOrganizationId,
+				);
 				console.info("[audit] environment.create", {
 					action: "create",
 					resourceType: "environment",
@@ -276,9 +288,18 @@ async function dispatch(ctx: EnvironmentCtx, call: Call): Promise<unknown> {
 					);
 				}
 
-				await checkEnvironmentDeletionPermission(ctx, environment.projectId);
+				await checkEnvironmentDeletionPermission(
+					ctx.user.id,
+					environment.projectId,
+					ctx.session.activeOrganizationId,
+				);
 
-				await checkEnvironmentAccess(ctx, input.environmentId, "read");
+				await checkEnvironmentAccess(
+					ctx.user.id,
+					input.environmentId,
+					ctx.session.activeOrganizationId,
+					"access",
+				);
 
 				const deletedEnvironment = await deleteEnvironment(
 					input.environmentId,
@@ -313,7 +334,12 @@ async function dispatch(ctx: EnvironmentCtx, call: Call): Promise<unknown> {
 			try {
 				const { environmentId, ...updateData } = input;
 
-				await checkEnvironmentAccess(ctx, environmentId, "read");
+				await checkEnvironmentAccess(
+					ctx.user.id,
+					environmentId,
+					ctx.session.activeOrganizationId,
+					"access",
+				);
 
 				if (updateData.env !== undefined) {
 					await checkPermission(ctx, { environmentEnvVars: ["write"] });
@@ -371,11 +397,18 @@ async function dispatch(ctx: EnvironmentCtx, call: Call): Promise<unknown> {
 		}
 
 		case EnvironmentMethod.duplicate: {
-			const input = decodeArgs<{ environmentId: string; [k: string]: unknown }>(
-				call.payload,
-			);
+			const input = decodeArgs<{
+				environmentId: string;
+				name: string;
+				description?: string;
+			}>(call.payload);
 			try {
-				await checkEnvironmentAccess(ctx, input.environmentId, "read");
+				await checkEnvironmentAccess(
+					ctx.user.id,
+					input.environmentId,
+					ctx.session.activeOrganizationId,
+					"access",
+				);
 				const environment = await findEnvironmentById(input.environmentId);
 				if (
 					environment.project.organizationId !==
@@ -399,7 +432,13 @@ async function dispatch(ctx: EnvironmentCtx, call: Call): Promise<unknown> {
 					}
 				}
 
-				const duplicatedEnvironment = await duplicateEnvironment(input);
+				const duplicatedEnvironment = await duplicateEnvironment({
+					environmentId: input.environmentId,
+					name: input.name,
+					...(input.description !== undefined
+						? { description: input.description }
+						: {}),
+				});
 				console.info("[audit] environment.create", {
 					action: "create",
 					resourceType: "environment",
@@ -462,7 +501,7 @@ async function dispatch(ctx: EnvironmentCtx, call: Call): Promise<unknown> {
 				if (accessedEnvironments.length === 0) return { items: [], total: 0 };
 				baseConditions.push(
 					sql`${environments.environmentId} IN (${sql.join(
-						accessedEnvironments.map((id) => sql`${id}`),
+						accessedEnvironments.map((id: string) => sql`${id}`),
 						sql`, `,
 					)})`,
 				);

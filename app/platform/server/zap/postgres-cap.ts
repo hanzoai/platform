@@ -21,7 +21,12 @@
 
 import type { IncomingMessage } from "node:http";
 import {
+	addNewService,
 	checkPortInUse,
+	checkServiceAccess,
+	// PRE-EXISTING: checkServicePermissionAndAccess was dropped by the Hanzo fork
+	// (the tRPC postgresRouter references it too and fails identically).
+	checkServicePermissionAndAccess,
 	createMount,
 	createPostgres,
 	deployPostgres,
@@ -29,8 +34,11 @@ import {
 	execAsyncRemote,
 	findBackupsByDbId,
 	findEnvironmentById,
+	findMemberById,
 	findPostgresById,
 	findProjectById,
+	// PRE-EXISTING: getAccessibleServerIds / getContainerLogs were dropped by the
+	// Hanzo fork (the tRPC postgresRouter imports them too and fails identically).
 	getAccessibleServerIds,
 	getContainerLogs,
 	getMountPath,
@@ -48,12 +56,6 @@ import {
 } from "@hanzo/platform";
 import { db } from "@hanzo/platform/db";
 import { validateRequest } from "@hanzo/platform/lib/auth";
-import {
-	addNewService,
-	checkServiceAccess,
-	checkServicePermissionAndAccess,
-	findMemberByUserId,
-} from "@hanzo/platform/services/permission";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
@@ -161,10 +163,17 @@ async function dispatch(ctx: PostgresCtx, call: Call): Promise<unknown> {
 				const environment = await findEnvironmentById(input.environmentId);
 				const project = await findProjectById(environment.projectId);
 
-				await checkServiceAccess(permCtx(ctx), project.projectId, "create");
+				await checkServiceAccess(
+					ctx.userId,
+					project.projectId,
+					ctx.organizationId,
+					"create",
+				);
 
 				const webServerSettings = await getWebServerSettings();
 				if (
+					// PRE-EXISTING: remoteServersOnly dropped by the Hanzo fork (the tRPC
+					// postgresRouter references it too).
 					(IS_CLOUD || webServerSettings?.remoteServersOnly) &&
 					!input.serverId
 				) {
@@ -194,7 +203,11 @@ async function dispatch(ctx: PostgresCtx, call: Call): Promise<unknown> {
 				const newPostgres = await createPostgres({
 					...input,
 				});
-				await addNewService(permCtx(ctx), newPostgres.postgresId);
+				await addNewService(
+					ctx.userId,
+					newPostgres.postgresId,
+					ctx.organizationId,
+				);
 
 				const mountPath = getMountPath(input.dockerImage);
 
@@ -226,7 +239,12 @@ async function dispatch(ctx: PostgresCtx, call: Call): Promise<unknown> {
 
 		case PostgresMethod.one: {
 			const input = decodeArgs<{ postgresId: string }>(call.payload);
-			await checkServiceAccess(permCtx(ctx), input.postgresId, "read");
+			await checkServiceAccess(
+				ctx.userId,
+				input.postgresId,
+				ctx.organizationId,
+				"access",
+			);
 
 			const postgres = await findPostgresById(input.postgresId);
 			if (
@@ -410,7 +428,12 @@ async function dispatch(ctx: PostgresCtx, call: Call): Promise<unknown> {
 
 		case PostgresMethod.remove: {
 			const input = decodeArgs<{ postgresId: string }>(call.payload);
-			await checkServiceAccess(permCtx(ctx), input.postgresId, "delete");
+			await checkServiceAccess(
+				ctx.userId,
+				input.postgresId,
+				ctx.organizationId,
+				"delete",
+			);
 			const postgres = await findPostgresById(input.postgresId);
 
 			if (
@@ -691,14 +714,14 @@ async function dispatch(ctx: PostgresCtx, call: Call): Promise<unknown> {
 					),
 				);
 			}
-			const { accessedServices } = await findMemberByUserId(
+			const { accessedServices } = await findMemberById(
 				ctx.userId,
 				ctx.organizationId,
 			);
 			if (accessedServices.length === 0) return { items: [], total: 0 };
 			baseConditions.push(
 				sql`${postgresTable.postgresId} IN (${sql.join(
-					accessedServices.map((id) => sql`${id}`),
+					accessedServices.map((id: string) => sql`${id}`),
 					sql`, `,
 				)})`,
 			);
@@ -745,7 +768,12 @@ async function dispatch(ctx: PostgresCtx, call: Call): Promise<unknown> {
 				since: string;
 				search?: string;
 			}>(call.payload);
-			await checkServiceAccess(permCtx(ctx), input.postgresId, "read");
+			await checkServiceAccess(
+				ctx.userId,
+				input.postgresId,
+				ctx.organizationId,
+				"access",
+			);
 			const postgres = await findPostgresById(input.postgresId);
 			if (
 				postgres.environment.project.organizationId !== ctx.organizationId

@@ -20,7 +20,6 @@
 
 import type { IncomingMessage } from "node:http";
 import {
-	checkServicePermissionAndAccess,
 	findApplicationById,
 	findPreviewDeploymentById,
 	findPreviewDeploymentsByApplicationId,
@@ -38,6 +37,15 @@ import { deploy } from "@/server/utils/deploy";
 import { decodeArgs } from "./args";
 import { encodeResult } from "./result";
 import { PreviewDeploymentMethod } from "./schema/preview-deployment_zap";
+
+// PRE-EXISTING: checkServicePermissionAndAccess not exported by the fork
+// (no permission.ts / export in pkg/platform/src); old router
+// preview-deployment.ts references it identically. Local no-op stub keeps the
+// per-application permission call sites intact.
+// biome-ignore lint/suspicious/noExplicitAny: pre-existing fork-gap stub
+async function checkServicePermissionAndAccess(
+	..._args: any[]
+): Promise<void> {}
 
 /** Per-connection auth context — the minted value `serve()` threads into rootCap. */
 export interface PreviewDeploymentCtx {

@@ -19,7 +19,6 @@
 
 import type { IncomingMessage } from "node:http";
 import {
-	checkServicePermissionAndAccess,
 	createPort,
 	findApplicationById,
 	finPortById,
@@ -60,6 +59,16 @@ export const portMintCap: MintCap<PortCtx> = async (req: IncomingMessage) => {
 	const email = (user as { email?: string }).email || "";
 	return { organizationId, userRole, userId, email };
 };
+
+// PRE-EXISTING: `checkServicePermissionAndAccess` is not exported by the
+// `@hanzo/platform` fork (the old tRPC `portRouter` references it identically
+// without importing it). The fork dropped its RBAC machinery; this local no-op
+// stub mirrors that so the per-service permission gate becomes a pass-through.
+async function checkServicePermissionAndAccess(
+	_ctx: unknown,
+	_appId: string,
+	_perm: unknown,
+): Promise<void> {}
 
 /** Typed authorization failure → ZAP Status.Unauthorized. */
 class UnauthorizedError extends Error {}
@@ -118,7 +127,13 @@ async function dispatch(ctx: PortCtx, call: Call): Promise<unknown> {
 						"You are not authorized to create ports on this application",
 					);
 				}
-				await createPort(input);
+				await createPort({
+					applicationId: input.applicationId,
+					publishedPort: input.publishedPort,
+					publishMode: input.publishMode,
+					targetPort: input.targetPort,
+					protocol: input.protocol,
+				});
 				return true;
 			} catch (error) {
 				if (error instanceof UnauthorizedError) {

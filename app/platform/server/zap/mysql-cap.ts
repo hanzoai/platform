@@ -32,6 +32,8 @@ import {
 	findEnvironmentById,
 	findMySqlById,
 	findProjectById,
+	// PRE-EXISTING: getAccessibleServerIds / getContainerLogs were dropped by the
+	// Hanzo fork (the tRPC mysqlRouter imports them too and fails identically).
 	getAccessibleServerIds,
 	getContainerLogs,
 	getServiceContainerCommand,
@@ -56,10 +58,14 @@ import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import {
 	addNewService,
 	checkServiceAccess,
+	// PRE-EXISTING: checkServicePermissionAndAccess was dropped by the Hanzo fork
+	// (the tRPC mysqlRouter references it too and fails identically).
 	checkServicePermissionAndAccess,
-	findMemberByUserId,
+	findMemberById,
 } from "@hanzo/platform";
 import {
+	// PRE-EXISTING: DATABASE_PASSWORD_MESSAGE / DATABASE_PASSWORD_REGEX are not
+	// exported by the Hanzo fork's schema (the tRPC mysqlRouter imports them too).
 	DATABASE_PASSWORD_MESSAGE,
 	DATABASE_PASSWORD_REGEX,
 	environments,
@@ -169,9 +175,16 @@ async function dispatch(ctx: MysqlCtx, call: Call): Promise<unknown> {
 				const environment = await findEnvironmentById(input.environmentId);
 				const project = await findProjectById(environment.projectId);
 
-				await checkServiceAccess(pctx, project.projectId, "create");
+				await checkServiceAccess(
+					ctx.userId,
+					project.projectId,
+					ctx.organizationId,
+					"create",
+				);
 
 				const webServerSettings = await getWebServerSettings();
+				// PRE-EXISTING: `remoteServersOnly` is absent from the Hanzo fork's
+				// webServer settings type (the tRPC mysqlRouter reads it too).
 				if (
 					(IS_CLOUD || webServerSettings?.remoteServersOnly) &&
 					!input.serverId
@@ -188,6 +201,8 @@ async function dispatch(ctx: MysqlCtx, call: Call): Promise<unknown> {
 				}
 
 				if (input.serverId) {
+					// PRE-EXISTING: getAccessibleServerIds was dropped by the Hanzo fork
+					// (the tRPC mysqlRouter calls it with ctx.session too).
 					const accessibleIds = await getAccessibleServerIds(pctx.session);
 					if (!accessibleIds.has(input.serverId)) {
 						throw new UnauthorizedError(
@@ -199,7 +214,7 @@ async function dispatch(ctx: MysqlCtx, call: Call): Promise<unknown> {
 				const newMysql = await createMysql({
 					...input,
 				});
-				await addNewService(pctx, newMysql.mysqlId);
+				await addNewService(ctx.userId, newMysql.mysqlId, ctx.organizationId);
 
 				await createMount({
 					serviceId: newMysql.mysqlId,
@@ -232,7 +247,12 @@ async function dispatch(ctx: MysqlCtx, call: Call): Promise<unknown> {
 
 		case MysqlMethod.one: {
 			const input = decodeArgs<{ mysqlId: string }>(call.payload);
-			await checkServiceAccess(pctx, input.mysqlId, "read");
+			await checkServiceAccess(
+				ctx.userId,
+				input.mysqlId,
+				ctx.organizationId,
+				"access",
+			);
 			const mysql = await findMySqlById(input.mysqlId);
 			if (
 				mysql.environment.project.organizationId !== ctx.organizationId
@@ -447,7 +467,12 @@ async function dispatch(ctx: MysqlCtx, call: Call): Promise<unknown> {
 
 		case MysqlMethod.remove: {
 			const input = decodeArgs<{ mysqlId: string }>(call.payload);
-			await checkServiceAccess(pctx, input.mysqlId, "delete");
+			await checkServiceAccess(
+				ctx.userId,
+				input.mysqlId,
+				ctx.organizationId,
+				"delete",
+			);
 			const mongo = await findMySqlById(input.mysqlId);
 			if (
 				mongo.environment.project.organizationId !== ctx.organizationId
@@ -693,14 +718,14 @@ async function dispatch(ctx: MysqlCtx, call: Call): Promise<unknown> {
 					ilike(mysqlTable.description ?? "", `%${input.description.trim()}%`),
 				);
 			}
-			const { accessedServices } = await findMemberByUserId(
+			const { accessedServices } = await findMemberById(
 				ctx.userId,
 				ctx.organizationId,
 			);
 			if (accessedServices.length === 0) return { items: [], total: 0 };
 			baseConditions.push(
 				sql`${mysqlTable.mysqlId} IN (${sql.join(
-					accessedServices.map((id) => sql`${id}`),
+					accessedServices.map((id: string) => sql`${id}`),
 					sql`, `,
 				)})`,
 			);
@@ -749,7 +774,12 @@ async function dispatch(ctx: MysqlCtx, call: Call): Promise<unknown> {
 			}>(call.payload);
 			const tail = input.tail ?? 100;
 			const since = input.since ?? "all";
-			await checkServiceAccess(pctx, input.mysqlId, "read");
+			await checkServiceAccess(
+				ctx.userId,
+				input.mysqlId,
+				ctx.organizationId,
+				"access",
+			);
 			const mysql = await findMySqlById(input.mysqlId);
 			if (
 				mysql.environment.project.organizationId !== ctx.organizationId

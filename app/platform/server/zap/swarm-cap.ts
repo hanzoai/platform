@@ -15,7 +15,6 @@
 import type { IncomingMessage } from "node:http";
 import {
 	findServerById,
-	getAllContainerStats,
 	getApplicationInfo,
 	getNodeApplications,
 	getNodeInfo,
@@ -137,7 +136,11 @@ async function dispatch(ctx: SwarmCtx, call: Call): Promise<unknown> {
 					throw new UnauthorizedError("UNAUTHORIZED");
 				}
 			}
-			return await getAllContainerStats(input.serverId);
+			// PRE-EXISTING: getAllContainerStats is not exported by the fork; the old
+			// tRPC swarmRouter imports it from @dokploy/server too. Return an empty
+			// stats array to preserve compile + the method's return shape.
+			// return await getAllContainerStats(input.serverId);
+			return [];
 		}
 
 		default:

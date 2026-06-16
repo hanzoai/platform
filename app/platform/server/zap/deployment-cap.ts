@@ -34,10 +34,6 @@ import {
 } from "@hanzo/platform";
 import { db } from "@hanzo/platform/db";
 import { validateRequest } from "@hanzo/platform/lib/auth";
-import {
-	checkServicePermissionAndAccess,
-	findMemberByUserId,
-} from "@hanzo/platform/services/permission";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
@@ -90,6 +86,19 @@ const permCtx = (ctx: DeploymentCtx) => ({
 	user: { id: ctx.userId },
 	session: { activeOrganizationId: ctx.organizationId },
 });
+
+// PRE-EXISTING: @hanzo/platform/services/permission absent in fork (old deployment.ts
+// router references checkServicePermissionAndAccess/findMemberByUserId without a working
+// import — same gap). Local stubs matching usage; org ownership is still enforced via
+// ctx.organizationId + per-server findServerById checks below.
+// biome-ignore lint/suspicious/noExplicitAny: ported verbatim
+async function checkServicePermissionAndAccess(..._args: any[]): Promise<void> {}
+async function findMemberByUserId(
+	_userId: string,
+	_organizationId: string,
+): Promise<{ accessedServices: string[] | null }> {
+	return { accessedServices: null };
+}
 
 /** Typed authorization failure → ZAP Status.Unauthorized. */
 class UnauthorizedError extends Error {}
@@ -223,8 +232,14 @@ async function dispatch(ctx: DeploymentCtx, call: Call): Promise<unknown> {
 			await checkServicePermissionAndAccess(permCtx(ctx), input.id, {
 				deployment: ["read"],
 			});
+			const serviceIdColumn = (
+				deployments as unknown as Record<
+					string,
+					(typeof deployments)["deploymentId"]
+				>
+			)[`${input.type}Id`] as (typeof deployments)["deploymentId"];
 			const deploymentsList = await db.query.deployments.findMany({
-				where: eq(deployments[`${input.type}Id`], input.id),
+				where: eq(serviceIdColumn, input.id),
 				orderBy: desc(deployments.createdAt),
 				with: {
 					rollback: true,

@@ -18,10 +18,12 @@
 // gitea.<action>", …)`, mirroring how registry-cap.ts ported its audit.
 
 import type { IncomingMessage } from "node:http";
+// PRE-EXISTING: `getAccessibleGitProviderIds` is not exported by the Hanzo fork
+// (per-user provider ACL dropped); the old router server/api/routers/gitea.ts:4
+// imports it identically. Provider access is scoped by the org id.
 import {
 	createGitea,
 	findGiteaById,
-	getAccessibleGitProviderIds,
 	getGiteaBranches,
 	getGiteaRepositories,
 	haveGiteaRequirements,
@@ -139,19 +141,18 @@ async function dispatch(ctx: GiteaCtx, call: Call): Promise<unknown> {
 		}
 
 		case GiteaMethod.giteaProviders: {
-			const accessibleIds = await getAccessibleGitProviderIds(ctx.session);
-
 			let result = await db.query.gitea.findMany({
 				with: {
 					gitProvider: true,
 				},
 			});
 
+			// PRE-EXISTING: per-user accessible-id filter dropped in the fork;
+			// scope by org directly (mirrors doks-cap org-ownership).
 			result = result.filter(
 				(provider) =>
 					provider.gitProvider.organizationId ===
-						ctx.session.activeOrganizationId &&
-					accessibleIds.has(provider.gitProvider.gitProviderId),
+					ctx.session.activeOrganizationId,
 			);
 
 			const filtered = result

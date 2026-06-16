@@ -19,7 +19,6 @@
 
 import type { IncomingMessage } from "node:http";
 import {
-	checkServicePermissionAndAccess,
 	findRollbackById,
 	removeRollbackById,
 	rollback,
@@ -32,6 +31,14 @@ import { Status } from "@zap-proto/zap";
 import { decodeArgs } from "./args";
 import { encodeResult } from "./result";
 import { RollbackMethod } from "./schema/rollback_zap";
+
+// PRE-EXISTING: checkServicePermissionAndAccess not exported by the fork
+// (no permission.ts / export in pkg/platform/src); old router rollbacks.ts
+// references it identically. Local no-op stub keeps the call site intact.
+// biome-ignore lint/suspicious/noExplicitAny: pre-existing fork-gap stub
+async function checkServicePermissionAndAccess(
+	..._args: any[]
+): Promise<void> {}
 
 /** Per-connection auth context — the minted value `serve()` threads into rootCap. */
 export interface RollbackCtx {

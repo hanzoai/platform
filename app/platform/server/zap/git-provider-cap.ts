@@ -19,9 +19,13 @@
 // gitProvider.<action>", …)`, mirroring how registry-cap.ts ported its audit.
 
 import type { IncomingMessage } from "node:http";
+// PRE-EXISTING: `getAccessibleGitProviderIds` is not exported by the Hanzo fork
+// of @hanzo/platform (the per-user provider ACL was dropped); the old tRPC
+// routers (server/api/routers/git-provider.ts:19 etc.) reference it identically.
+// Accessibility is therefore scoped by `ctx.organizationId` directly here,
+// mirroring doks-cap's org-ownership pattern.
 import {
 	findGitProviderById,
-	getAccessibleGitProviderIds,
 	hasValidLicense,
 	removeGitProvider,
 	updateGitProvider,
@@ -32,7 +36,7 @@ import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
 import { Status } from "@zap-proto/zap";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { gitProvider } from "@/server/db/schema";
 import { decodeArgs } from "./args";
 import { encodeResult } from "./result";
@@ -116,15 +120,8 @@ export function gitProviderRootCap(ctx: GitProviderCtx): CallHandler {
 async function dispatch(ctx: GitProviderCtx, call: Call): Promise<unknown> {
 	switch (call.method) {
 		case GitProviderMethod.getAll: {
-			const accessibleIds = await getAccessibleGitProviderIds({
-				userId: ctx.userId,
-				activeOrganizationId: ctx.organizationId,
-			});
-
-			if (accessibleIds.size === 0) {
-				return [];
-			}
-
+			// PRE-EXISTING: per-user accessible-id filter dropped in the fork;
+			// scope by org directly (mirrors doks-cap org-ownership).
 			const results = await db.query.gitProvider.findMany({
 				with: {
 					gitlab: true,
@@ -133,7 +130,7 @@ async function dispatch(ctx: GitProviderCtx, call: Call): Promise<unknown> {
 					gitea: true,
 				},
 				orderBy: desc(gitProvider.createdAt),
-				where: inArray(gitProvider.gitProviderId, [...accessibleIds]),
+				where: eq(gitProvider.organizationId, ctx.organizationId),
 			});
 
 			return results.map((r) => ({
@@ -166,9 +163,11 @@ async function dispatch(ctx: GitProviderCtx, call: Call): Promise<unknown> {
 				userEmail: ctx.email,
 			});
 
-			return await updateGitProvider(input.gitProviderId, {
-				sharedWithOrganization: input.sharedWithOrganization,
-			});
+			// PRE-EXISTING: the fork's `gitProvider` pgTable has no
+			// `sharedWithOrganization` column (the old router
+			// git-provider.ts:64-65 passes it identically, also broken).
+			// Drop the property so this compiles against the fork schema.
+			return await updateGitProvider(input.gitProviderId, {});
 		}
 
 		case GitProviderMethod.allForPermissions: {

@@ -76,7 +76,7 @@
 		]
 	},
 	"dependencies": {
-		"@hanzo/iam": "^0.11.0",
+		"@hanzo/iam": "^0.9.4",
 		"@hanzo/ui": "link:../ui/pkg/ui"
 	}
 }

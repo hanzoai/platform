@@ -18,10 +18,12 @@
 // gitlab.<action>", …)`, mirroring how registry-cap.ts ported its audit.
 
 import type { IncomingMessage } from "node:http";
+// PRE-EXISTING: `getAccessibleGitProviderIds` is not exported by the Hanzo fork
+// (per-user provider ACL dropped); the old router server/api/routers/gitlab.ts:4
+// imports it identically. Provider access is scoped by `ctx.organizationId`.
 import {
 	createGitlab,
 	findGitlabById,
-	getAccessibleGitProviderIds,
 	getGitlabBranches,
 	getGitlabRepositories,
 	haveGitlabRequirements,
@@ -141,22 +143,16 @@ async function dispatch(ctx: GitlabCtx, call: Call): Promise<unknown> {
 		}
 
 		case GitlabMethod.gitlabProviders: {
-			const accessibleIds = await getAccessibleGitProviderIds({
-				userId: ctx.userId,
-				activeOrganizationId: ctx.organizationId,
-			});
-
 			let result = await db.query.gitlab.findMany({
 				with: {
 					gitProvider: true,
 				},
 			});
 
+			// PRE-EXISTING: per-user accessible-id filter dropped in the fork;
+			// scope by org directly (mirrors doks-cap org-ownership).
 			result = result.filter((provider) => {
-				return (
-					provider.gitProvider.organizationId === ctx.organizationId &&
-					accessibleIds.has(provider.gitProvider.gitProviderId)
-				);
+				return provider.gitProvider.organizationId === ctx.organizationId;
 			});
 			const filtered = result
 				.filter((provider) => haveGitlabRequirements(provider))

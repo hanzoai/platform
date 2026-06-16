@@ -19,9 +19,11 @@
 // github router itself does not call audit, so none appears here.)
 
 import type { IncomingMessage } from "node:http";
+// PRE-EXISTING: `getAccessibleGitProviderIds` is not exported by the Hanzo fork
+// (per-user provider ACL dropped); the old router server/api/routers/github.ts:3
+// imports it identically. Provider access is scoped by `ctx.organizationId`.
 import {
 	findGithubById,
-	getAccessibleGitProviderIds,
 	getGithubBranches,
 	getGithubRepositories,
 	haveGithubRequirements,
@@ -133,21 +135,17 @@ async function dispatch(ctx: GithubCtx, call: Call): Promise<unknown> {
 		}
 
 		case GithubMethod.githubProviders: {
-			const accessibleIds = await getAccessibleGitProviderIds({
-				userId: ctx.userId,
-				activeOrganizationId: ctx.organizationId,
-			});
-
 			let result = await db.query.github.findMany({
 				with: {
 					gitProvider: true,
 				},
 			});
 
+			// PRE-EXISTING: per-user accessible-id filter dropped in the fork;
+			// scope by org directly (mirrors doks-cap org-ownership).
 			result = result.filter(
 				(provider) =>
-					provider.gitProvider.organizationId === ctx.organizationId &&
-					accessibleIds.has(provider.gitProvider.gitProviderId),
+					provider.gitProvider.organizationId === ctx.organizationId,
 			);
 
 			const filtered = result

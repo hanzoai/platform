@@ -500,7 +500,7 @@ async function dispatch(ctx: DigitalOceanCtx, call: Call): Promise<unknown> {
 			// Note: This doesn't use ctx.session because it's called by the node
 			// with a registration token, not a user session
 			await registerNode(input.nodeId, input.registrationToken, {
-				publicIp: input.publicIp,
+				publicIp: input.publicIp ?? "",
 				privateIp: input.privateIp,
 				hostname: input.hostname,
 				dockerNodeId: input.dockerNodeId,

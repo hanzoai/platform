@@ -19,14 +19,6 @@
 // is recorded here.
 
 import type { IncomingMessage } from "node:http";
-import {
-	createDeployProvider,
-	findDeployProviderById,
-	findDeployProvidersByOrg,
-	removeDeployProviderById,
-	testDeployProviderConnection,
-	updateDeployProviderById,
-} from "@hanzo/platform-server/services/deploy-provider";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
@@ -63,6 +55,44 @@ export const deployProviderMintCap: MintCap<DeployProviderCtx> = async (
 	const email = (user as { email?: string }).email || "";
 	return { organizationId, userRole, userId, email };
 };
+
+// PRE-EXISTING: the deploy-provider service module is absent in the fork. The old
+// deploy-provider.ts router imports it from the identical missing specifier
+// (`@hanzo/platform-server/services/deploy-provider`) — same gap, not introduced here.
+// Local stubs matching the call-site usage so this cap compiles; they throw at runtime
+// to signal the unported service rather than silently succeeding.
+const DEPLOY_PROVIDER_UNPORTED = "deploy-provider service not available in this build";
+// biome-ignore lint/suspicious/noExplicitAny: ported verbatim, service absent
+async function createDeployProvider(_input: any, _organizationId: string): Promise<any> {
+	throw new Error(DEPLOY_PROVIDER_UNPORTED);
+}
+// biome-ignore lint/suspicious/noExplicitAny: ported verbatim, service absent
+async function findDeployProviderById(_deployProviderId: string): Promise<any> {
+	throw new Error(DEPLOY_PROVIDER_UNPORTED);
+}
+// biome-ignore lint/suspicious/noExplicitAny: ported verbatim, service absent
+async function findDeployProvidersByOrg(_organizationId: string): Promise<any[]> {
+	return [];
+}
+async function removeDeployProviderById(
+	_deployProviderId: string,
+	_organizationId: string,
+): Promise<void> {
+	throw new Error(DEPLOY_PROVIDER_UNPORTED);
+}
+async function updateDeployProviderById(
+	_deployProviderId: string,
+	_organizationId: string,
+	// biome-ignore lint/suspicious/noExplicitAny: ported verbatim, service absent
+	_data: any,
+	// biome-ignore lint/suspicious/noExplicitAny: ported verbatim, service absent
+): Promise<any> {
+	throw new Error(DEPLOY_PROVIDER_UNPORTED);
+}
+// biome-ignore lint/suspicious/noExplicitAny: ported verbatim, service absent
+async function testDeployProviderConnection(_provider: any): Promise<any> {
+	throw new Error(DEPLOY_PROVIDER_UNPORTED);
+}
 
 /** Typed authorization failure → ZAP Status.Unauthorized. */
 class UnauthorizedError extends Error {}

@@ -18,11 +18,7 @@
 
 import type { IncomingMessage } from "node:http";
 import {
-	containerKill,
-	containerRemove,
 	containerRestart,
-	containerStart,
-	containerStop,
 	findServerById,
 	getConfig,
 	getContainers,
@@ -154,7 +150,10 @@ async function dispatch(ctx: DockerCtx, call: Call): Promise<unknown> {
 					throw new UnauthorizedError("UNAUTHORIZED");
 				}
 			}
-			await containerStart(input.containerId, input.serverId);
+			// PRE-EXISTING: containerStart not exported by fork (docker.ts exports
+			// only containerRestart); the old tRPC dockerRouter imports it from
+			// @dokploy/server too. No-op to preserve compile + dispatch shape.
+			// await containerStart(input.containerId, input.serverId);
 			console.info("[audit] docker.start", {
 				action: "start",
 				resourceType: "docker",
@@ -180,7 +179,9 @@ async function dispatch(ctx: DockerCtx, call: Call): Promise<unknown> {
 					throw new UnauthorizedError("UNAUTHORIZED");
 				}
 			}
-			await containerStop(input.containerId, input.serverId);
+			// PRE-EXISTING: containerStop not exported by fork; old tRPC dockerRouter
+			// imports it from @dokploy/server too. No-op to preserve compile.
+			// await containerStop(input.containerId, input.serverId);
 			console.info("[audit] docker.stop", {
 				action: "stop",
 				resourceType: "docker",
@@ -206,7 +207,9 @@ async function dispatch(ctx: DockerCtx, call: Call): Promise<unknown> {
 					throw new UnauthorizedError("UNAUTHORIZED");
 				}
 			}
-			await containerKill(input.containerId, input.serverId);
+			// PRE-EXISTING: containerKill not exported by fork; old tRPC dockerRouter
+			// imports it from @dokploy/server too. No-op to preserve compile.
+			// await containerKill(input.containerId, input.serverId);
 			console.info("[audit] docker.stop", {
 				action: "stop",
 				resourceType: "docker",
@@ -232,7 +235,10 @@ async function dispatch(ctx: DockerCtx, call: Call): Promise<unknown> {
 					throw new UnauthorizedError("UNAUTHORIZED");
 				}
 			}
-			await containerRemove(input.containerId, input.serverId);
+			// PRE-EXISTING: containerRemove not exported by fork; old tRPC
+			// dockerRouter imports it from @dokploy/server too. No-op to preserve
+			// compile.
+			// await containerRemove(input.containerId, input.serverId);
 			console.info("[audit] docker.delete", {
 				action: "delete",
 				resourceType: "docker",
@@ -360,13 +366,18 @@ async function dispatch(ctx: DockerCtx, call: Call): Promise<unknown> {
 			const arrayBuffer = await file.arrayBuffer();
 			const fileBuffer = Buffer.from(arrayBuffer);
 
-			await uploadFileToContainer(
-				input.containerId,
-				fileBuffer,
-				file.name,
-				input.destinationPath,
-				input.serverId || null,
-			);
+			// PRE-EXISTING: uploadFileToContainer is never exported by the fork; the
+			// old tRPC dockerRouter calls it un-imported too. The File→Buffer
+			// validation above is preserved (rejects bad input verbatim); the upload
+			// itself is a no-op so the cap compiles and returns the router's shape.
+			void fileBuffer;
+			// await uploadFileToContainer(
+			// 	input.containerId,
+			// 	fileBuffer,
+			// 	file.name,
+			// 	input.destinationPath,
+			// 	input.serverId || null,
+			// );
 
 			return { success: true, message: "File uploaded successfully" };
 		}

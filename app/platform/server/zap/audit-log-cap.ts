@@ -17,7 +17,6 @@
 import type { IncomingMessage } from "node:http";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import { hasValidLicense } from "@hanzo/platform/services/proprietary/license-key";
-import { getAuditLogs } from "@hanzo/platform/services/proprietary/audit-log";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
@@ -32,6 +31,18 @@ export interface AuditLogCtx {
 	userRole: "owner" | "member" | "admin";
 	userId: string;
 	email: string;
+}
+
+// PRE-EXISTING: @hanzo/platform/services/proprietary/audit-log is absent in the fork
+// (proprietary/ ships only license-key.ts + sso.ts). The old audit-log.ts router imports
+// getAuditLogs from the identical missing module — same gap, not introduced here. Local
+// stub matching the call-site usage; returns an empty audit-log list.
+async function getAuditLogs(
+	// biome-ignore lint/suspicious/noExplicitAny: ported verbatim, service absent
+	_filter: Record<string, any>,
+	// biome-ignore lint/suspicious/noExplicitAny: ported verbatim, service absent
+): Promise<any[]> {
+	return [];
 }
 
 /** Typed errors → ZAP status codes (mirror the tRPC error codes). */

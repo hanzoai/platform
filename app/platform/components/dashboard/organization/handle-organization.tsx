@@ -1,7 +1,7 @@
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { PenBoxIcon, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { type ControllerRenderProps, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -42,8 +42,8 @@ interface Props {
 
 export function AddOrganization({ organizationId }: Props) {
 	const [open, setOpen] = useState(false);
-	const utils = api.useUtils();
-	const { data: organization } = api.organization.one.useQuery(
+	const utils = organizationClient.useUtils();
+	const { data: organization } = organizationClient.one.useQuery(
 		{
 			organizationId: organizationId ?? "",
 		},
@@ -52,8 +52,8 @@ export function AddOrganization({ organizationId }: Props) {
 		},
 	);
 	const { mutateAsync, isPending } = organizationId
-		? api.organization.update.useMutation()
-		: api.organization.create.useMutation();
+		? organizationClient.update.useMutation()
+		: organizationClient.create.useMutation();
 
 	const form = useForm<OrganizationFormValues>({
 		resolver: zodResolver(organizationSchema),
@@ -83,14 +83,13 @@ export function AddOrganization({ organizationId }: Props) {
 				toast.success(
 					`Organization ${organizationId ? "updated" : "created"} successfully`,
 				);
-				utils.organization.all.invalidate();
+				utils.all.invalidate();
 				if (organizationId) {
-					utils.organization.one.invalidate({ organizationId });
-					utils.organization.active.invalidate();
+					utils.one.invalidate({ organizationId });
 				}
 				setOpen(false);
 			})
-			.catch((error) => {
+			.catch((error: unknown) => {
 				console.error(error);
 				toast.error(
 					`Failed to ${organizationId ? "update" : "create"} organization`,
@@ -141,7 +140,11 @@ export function AddOrganization({ organizationId }: Props) {
 						<FormField
 							control={form.control}
 							name="name"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<OrganizationFormValues, "name">;
+							}) => (
 								<FormItem className="tems-center gap-4">
 									<FormLabel className="text-right">Name</FormLabel>
 									<FormControl>
@@ -158,7 +161,11 @@ export function AddOrganization({ organizationId }: Props) {
 						<FormField
 							control={form.control}
 							name="logo"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<OrganizationFormValues, "logo">;
+							}) => (
 								<FormItem className="gap-4">
 									<FormLabel className="text-right">Logo URL</FormLabel>
 									<FormControl>

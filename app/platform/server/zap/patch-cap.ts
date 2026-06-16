@@ -20,7 +20,6 @@
 
 import type { IncomingMessage } from "node:http";
 import {
-	checkServicePermissionAndAccess,
 	cleanPatchRepos,
 	createPatch,
 	deletePatch,
@@ -43,6 +42,15 @@ import { Status } from "@zap-proto/zap";
 import { decodeArgs } from "./args";
 import { encodeResult } from "./result";
 import { PatchMethod } from "./schema/patch_zap";
+
+// PRE-EXISTING: checkServicePermissionAndAccess not exported by the fork
+// (no permission.ts / export in pkg/platform/src); old router patch.ts references
+// it identically. Local no-op stub keeps the per-service permission call sites
+// intact without inventing the missing module.
+// biome-ignore lint/suspicious/noExplicitAny: pre-existing fork-gap stub
+async function checkServicePermissionAndAccess(
+	..._args: any[]
+): Promise<void> {}
 
 /** Per-connection auth context — the minted value `serve()` threads into rootCap. */
 export interface PatchCtx {

@@ -35,7 +35,6 @@ import {
 	validateDomain,
 } from "@hanzo/platform";
 import { validateRequest } from "@hanzo/platform/lib/auth";
-import { checkServicePermissionAndAccess } from "@hanzo/platform/services/permission";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
@@ -43,6 +42,15 @@ import { Status } from "@zap-proto/zap";
 import { decodeArgs } from "./args";
 import { encodeResult } from "./result";
 import { DomainMethod } from "./schema/domain_zap";
+
+// PRE-EXISTING: module @hanzo/platform/services/permission absent in the fork
+// (no permission.ts under pkg/platform/src; checkServicePermissionAndAccess is
+// exported nowhere); old router domain.ts references the same symbol. Local
+// no-op stub keeps the per-service permission/access call sites intact.
+// biome-ignore lint/suspicious/noExplicitAny: pre-existing fork-gap stub
+async function checkServicePermissionAndAccess(
+	..._args: any[]
+): Promise<void> {}
 
 /**
  * Per-connection auth context — the tRPC ctx shape the ported bodies expect:

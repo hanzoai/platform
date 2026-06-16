@@ -188,30 +188,11 @@ async function dispatch(ctx: AiCtx, call: Call): Promise<unknown> {
 								owned_by: "perplexity",
 							},
 						] as Model[];
-					case "zai":
-						return [
-							{
-								id: "glm-5",
-								object: "model",
-								created: Date.now(),
-								owned_by: "zai",
-							},
-							{
-								id: "glm-4.7",
-								object: "model",
-								created: Date.now(),
-								owned_by: "zai",
-							},
-						] as Model[];
-					case "minimax":
-						return [
-							{
-								id: "MiniMax-M2.7",
-								object: "model",
-								created: Date.now(),
-								owned_by: "minimax",
-							},
-						] as Model[];
+					// PRE-EXISTING: the fork's getProviderName union has no
+					// "zai"/"minimax" arms (select-ai-provider.ts only knows the
+					// upstream providers), so those template branches are dropped —
+					// they fall through to the default /models fetch like any
+					// unrecognized custom endpoint.
 					default:
 						if (!input.apiKey)
 							throw new BadRequestError(
@@ -404,7 +385,12 @@ ${input.logs}`,
 			const input = decodeArgs<any>(call.payload);
 			const environment = await findEnvironmentById(input.environmentId);
 			const project = await findProjectById(environment.projectId);
-			await checkServiceAccess(ctx, environment.projectId, "create");
+			await checkServiceAccess(
+				ctx.user.id,
+				environment.projectId,
+				ctx.session.activeOrganizationId,
+				"create",
+			);
 
 			if (IS_CLOUD && !input.serverId) {
 				throw new UnauthorizedError(
@@ -450,7 +436,11 @@ ${input.logs}`,
 				}
 			}
 
-			await addNewService(ctx, compose.composeId);
+			await addNewService(
+			ctx.user.id,
+			compose.composeId,
+			ctx.session.activeOrganizationId,
+		);
 
 			return null;
 		}

@@ -95,6 +95,13 @@ interface Props {
 	projectName?: string;
 }
 
+type AiProvider = {
+	aiId: string;
+	name: string;
+	model: string;
+	isEnabled?: boolean;
+};
+
 export const TemplateGenerator = ({ environmentId }: Props) => {
 	const [open, setOpen] = useState(false);
 	const stepper = useStepper();
@@ -105,7 +112,7 @@ export const TemplateGenerator = ({ environmentId }: Props) => {
 	const utils = api.useUtils();
 
 	const haveAtleasOneProviderEnabled = aiSettings?.some(
-		(ai) => ai.isEnabled === true,
+		(ai: AiProvider) => ai.isEnabled === true,
 	);
 
 	const isDisabled = () => {
@@ -262,7 +269,7 @@ export const TemplateGenerator = ({ environmentId }: Props) => {
 															<SelectValue placeholder="Select an AI provider" />
 														</SelectTrigger>
 														<SelectContent>
-															{aiSettings.map((ai) => (
+															{aiSettings.map((ai: AiProvider) => (
 																<SelectItem key={ai.aiId} value={ai.aiId}>
 																	{ai.name} ({ai.model})
 																</SelectItem>
