@@ -26,6 +26,7 @@ import { setupDrawerLogsWebSocketServer } from "./wss/drawer-logs";
 import { setupDeploymentLogsWebSocketServer } from "./wss/listen-deployment";
 import { setupTerminalWebSocketServer } from "./wss/terminal";
 import { doksMintCap, doksRootCap } from "./zap/doks-cap";
+import { gatewayMintCap, gatewayRootCap } from "./zap/gateway-cap";
 
 config({ path: ".env" });
 const PORT = Number.parseInt(process.env.PORT || "3000", 10);
@@ -68,6 +69,13 @@ void app.prepare().then(async () => {
 			mintCap: doksMintCap,
 			rootCap: doksRootCap,
 			onError: (err) => console.error("[zap/doks]", err),
+		});
+		// Gateway capability (admin) — replaces the tRPC gatewayRouter.
+		serve(server, {
+			path: "/zap/gateway",
+			mintCap: gatewayMintCap,
+			rootCap: gatewayRootCap,
+			onError: (err) => console.error("[zap/gateway]", err),
 		});
 
 		server.listen(PORT, HOST);

@@ -34,7 +34,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/utils/api";
+import { gateway } from "@/utils/zap-gateway";
 
 const routingFormSchema = z.object({
 	name: z.string().min(1, "Name is required"),
@@ -61,12 +61,12 @@ const RoutingDialog = ({
 	defaultValues,
 	mode,
 }: RoutingDialogProps) => {
-	const utils = api.useUtils();
+	const utils = gateway.useUtils();
 
 	const { mutateAsync: createMutation, isPending: isCreating } =
-		api.gateway.createRoute.useMutation();
+		gateway.createRoute.useMutation();
 	const { mutateAsync: updateMutation, isPending: isUpdating } =
-		api.gateway.updateRoute.useMutation();
+		gateway.updateRoute.useMutation();
 
 	const isSubmitting = isCreating || isUpdating;
 
@@ -124,7 +124,7 @@ const RoutingDialog = ({
 			})
 				.then(async () => {
 					toast.success("Route updated");
-					await utils.gateway.listRoutes.invalidate();
+					await utils.listRoutes.invalidate();
 					onOpenChange(false);
 				})
 				.catch(() => {
@@ -134,7 +134,7 @@ const RoutingDialog = ({
 			await createMutation(payload)
 				.then(async () => {
 					toast.success("Route created");
-					await utils.gateway.listRoutes.invalidate();
+					await utils.listRoutes.invalidate();
 					onOpenChange(false);
 				})
 				.catch(() => {
@@ -298,11 +298,11 @@ export const RoutingTable = () => {
 		(RoutingFormValues & { routingRuleId: string }) | undefined
 	>(undefined);
 
-	const { data: routes, isLoading } = api.gateway.listRoutes.useQuery();
-	const utils = api.useUtils();
+	const { data: routes, isLoading } = gateway.listRoutes.useQuery();
+	const utils = gateway.useUtils();
 
 	const { mutateAsync: deleteMutation, isPending: isDeleting } =
-		api.gateway.deleteRoute.useMutation();
+		gateway.deleteRoute.useMutation();
 
 	const handleEdit = (rule: NonNullable<typeof routes>[number]) => {
 		setEditingRule({
@@ -329,7 +329,7 @@ export const RoutingTable = () => {
 		await deleteMutation({ routingRuleId })
 			.then(async () => {
 				toast.success("Route deleted");
-				await utils.gateway.listRoutes.invalidate();
+				await utils.listRoutes.invalidate();
 			})
 			.catch(() => {
 				toast.error("Failed to delete route");
