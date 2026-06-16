@@ -21,7 +21,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { api } from "@/utils/api";
+import { doks } from "@/utils/zap";
 
 interface Props {
 	onSuccess: () => void;
@@ -35,12 +35,12 @@ export const ProvisionCluster = ({ onSuccess }: Props) => {
 	const [ha, setHa] = useState(false);
 
 	const { data: regions, isLoading: regionsLoading } =
-		api.doks.listRegions.useQuery(undefined, { enabled: open });
+		doks.listRegions.useQuery(undefined, { enabled: open });
 	const { data: nodeSizes, isLoading: sizesLoading } =
-		api.doks.listNodeSizes.useQuery(undefined, { enabled: open });
+		doks.listNodeSizes.useQuery(undefined, { enabled: open });
 
-	const { mutateAsync: provision, isLoading: provisioning } =
-		api.doks.provision.useMutation();
+	const { mutateAsync: provision, isPending: provisioning } =
+		doks.provision.useMutation();
 
 	const handleProvision = async () => {
 		try {
@@ -120,7 +120,8 @@ export const ProvisionCluster = ({ onSuccess }: Props) => {
 								<SelectContent>
 									{nodeSizes?.map((s: any) => (
 										<SelectItem key={s.slug} value={s.slug}>
-											{s.slug} - {s.vcpus} vCPU / {s.memory}MB / ${s.price_monthly}/mo
+											{s.slug} - {s.vcpus} vCPU / {s.memory}MB / $
+											{s.price_monthly}/mo
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -147,11 +148,7 @@ export const ProvisionCluster = ({ onSuccess }: Props) => {
 								HA control plane with multiple master nodes
 							</span>
 						</div>
-						<Switch
-							id="ha"
-							checked={ha}
-							onCheckedChange={setHa}
-						/>
+						<Switch id="ha" checked={ha} onCheckedChange={setHa} />
 					</div>
 				</div>
 				<DialogFooter>

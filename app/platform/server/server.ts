@@ -14,6 +14,7 @@ import {
 	setupDirectories,
 } from "@hanzo/platform";
 import { createPlatformZapServer } from "@hanzo/platform/services/zap-bridge";
+import { serve } from "@zap-proto/web/server";
 import { config } from "dotenv";
 import next from "next";
 import packageInfo from "../package.json";
@@ -24,6 +25,7 @@ import { setupDockerStatsMonitoringSocketServer } from "./wss/docker-stats";
 import { setupDrawerLogsWebSocketServer } from "./wss/drawer-logs";
 import { setupDeploymentLogsWebSocketServer } from "./wss/listen-deployment";
 import { setupTerminalWebSocketServer } from "./wss/terminal";
+import { doksMintCap, doksRootCap } from "./zap/doks-cap";
 
 config({ path: ".env" });
 const PORT = Number.parseInt(process.env.PORT || "3000", 10);
@@ -58,6 +60,16 @@ void app.prepare().then(async () => {
 			setupDockerStatsMonitoringSocketServer(server);
 		}
 
+		// Native ZAP RPC (browser frontend) — replaces the tRPC doksRouter.
+		// Binary ZAP envelopes over the WS upgrade at /zap/doks; auth is
+		// minted at the upgrade boundary (doksMintCap → HTTP 401 on null).
+		serve(server, {
+			path: "/zap/doks",
+			mintCap: doksMintCap,
+			rootCap: doksRootCap,
+			onError: (err) => console.error("[zap/doks]", err),
+		});
+
 		server.listen(PORT, HOST);
 		console.log(`Server Started on: http://${HOST}:${PORT}`);
 		if (process.env.NODE_ENV === "production" && !IS_CLOUD) {
@@ -75,9 +87,15 @@ void app.prepare().then(async () => {
 
 			// Initialize billing jobs
 			console.log("Starting billing jobs...");
-			const { startUsageCollectionSchedule } = await import("@hanzo/platform/billing/usage-tracker");
-			const { startBillingSchedule } = await import("@hanzo/platform/billing/billing-job");
-			const { startBillingCycleScheduler } = await import("@hanzo/platform/billing/billing-cycle");
+			const { startUsageCollectionSchedule } = await import(
+				"@hanzo/platform/billing/usage-tracker"
+			);
+			const { startBillingSchedule } = await import(
+				"@hanzo/platform/billing/billing-job"
+			);
+			const { startBillingCycleScheduler } = await import(
+				"@hanzo/platform/billing/billing-cycle"
+			);
 			startUsageCollectionSchedule();
 			startBillingSchedule();
 			startBillingCycleScheduler();
