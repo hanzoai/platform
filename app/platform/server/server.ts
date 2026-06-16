@@ -25,8 +25,12 @@ import { setupDockerStatsMonitoringSocketServer } from "./wss/docker-stats";
 import { setupDrawerLogsWebSocketServer } from "./wss/drawer-logs";
 import { setupDeploymentLogsWebSocketServer } from "./wss/listen-deployment";
 import { setupTerminalWebSocketServer } from "./wss/terminal";
+import { aiMintCap, aiRootCap } from "./zap/ai-cap";
+import { clusterMintCap, clusterRootCap } from "./zap/cluster-cap";
+import { dnsMintCap, dnsRootCap } from "./zap/dns-cap";
 import { doksMintCap, doksRootCap } from "./zap/doks-cap";
 import { gatewayMintCap, gatewayRootCap } from "./zap/gateway-cap";
+import { k8sMintCap, k8sRootCap } from "./zap/k8s-cap";
 
 config({ path: ".env" });
 const PORT = Number.parseInt(process.env.PORT || "3000", 10);
@@ -76,6 +80,35 @@ void app.prepare().then(async () => {
 			mintCap: gatewayMintCap,
 			rootCap: gatewayRootCap,
 			onError: (err) => console.error("[zap/gateway]", err),
+		});
+		// Cluster capability (Docker Swarm) — replaces the tRPC clusterRouter.
+		serve(server, {
+			path: "/zap/cluster",
+			mintCap: clusterMintCap,
+			rootCap: clusterRootCap,
+			onError: (err) => console.error("[zap/cluster]", err),
+		});
+		// K8s deploy capability — replaces the tRPC k8sRouter.
+		serve(server, {
+			path: "/zap/k8s",
+			mintCap: k8sMintCap,
+			rootCap: k8sRootCap,
+			onError: (err) => console.error("[zap/k8s]", err),
+		});
+		// DNS capability — replaces the tRPC dnsRouter.
+		serve(server, {
+			path: "/zap/dns",
+			mintCap: dnsMintCap,
+			rootCap: dnsRootCap,
+			onError: (err) => console.error("[zap/dns]", err),
+		});
+		// AI capability — replaces the tRPC aiRouter. Admin methods gated
+		// per-call inside aiRootCap.
+		serve(server, {
+			path: "/zap/ai",
+			mintCap: aiMintCap,
+			rootCap: aiRootCap,
+			onError: (err) => console.error("[zap/ai]", err),
 		});
 
 		server.listen(PORT, HOST);

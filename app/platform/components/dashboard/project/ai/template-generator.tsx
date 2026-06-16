@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/utils/api";
+import { ai } from "@/utils/zap-ai";
 import { StepOne } from "./step-one";
 import { StepThree } from "./step-three";
 import { StepTwo } from "./step-two";
@@ -97,8 +98,8 @@ interface Props {
 export const TemplateGenerator = ({ environmentId }: Props) => {
 	const [open, setOpen] = useState(false);
 	const stepper = useStepper();
-	const { data: aiSettings } = api.ai.getAll.useQuery();
-	const { mutateAsync } = api.ai.deploy.useMutation();
+	const { data: aiSettings } = ai.getAll.useQuery();
+	const { mutateAsync } = ai.deploy.useMutation();
 	const [templateInfo, setTemplateInfo] =
 		useState<TemplateInfo>(defaultTemplateInfo);
 	const utils = api.useUtils();

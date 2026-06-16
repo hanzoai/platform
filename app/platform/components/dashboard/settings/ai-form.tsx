@@ -11,12 +11,12 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { api } from "@/utils/api";
+import { ai } from "@/utils/zap-ai";
 import { HandleAi } from "./handle-ai";
 
 export const AiForm = () => {
-	const { data: aiConfigs, refetch, isPending } = api.ai.getAll.useQuery();
-	const { mutateAsync, isPending: isRemoving } = api.ai.delete.useMutation();
+	const { data: aiConfigs, refetch, isPending } = ai.getAll.useQuery();
+	const { mutateAsync, isPending: isRemoving } = ai.delete.useMutation();
 
 	return (
 		<div className="w-full">
