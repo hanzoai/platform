@@ -106,7 +106,13 @@ export function OrgSwitcher({ collapsed }: { collapsed?: boolean }) {
 					<CommandList>
 						<CommandEmpty>No organizations found.</CommandEmpty>
 						<CommandGroup heading="Organizations">
-							{organizations?.map((org) => (
+							{organizations?.map(
+								(org: {
+									id: string;
+									name: string;
+									logo?: string | null;
+									ownerId?: string;
+								}) => (
 								<CommandItem
 									key={org.id}
 									value={org.name}

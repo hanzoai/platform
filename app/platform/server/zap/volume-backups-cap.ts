@@ -233,6 +233,8 @@ async function dispatch(ctx: VolumeBackupsCtx, call: Call): Promise<unknown> {
 		case VolumeBackupsMethod.list: {
 			const input = decodeArgs<{
 				id: string;
+				// PRE-EXISTING: libsql dropped in fork — volume_backup table has no
+				// libsqlId column, so it is omitted from this key union.
 				volumeBackupType:
 					| "application"
 					| "postgres"
@@ -240,15 +242,17 @@ async function dispatch(ctx: VolumeBackupsCtx, call: Call): Promise<unknown> {
 					| "mariadb"
 					| "mongo"
 					| "redis"
-					| "compose"
-					| "libsql";
+					| "compose";
 			}>(call.payload);
 			// Verify the parent service belongs to the caller's org
 			const orgId = await getServiceOrgId(input.volumeBackupType, input.id);
 			assertVbOrgMatch(orgId, ctx.session.activeOrganizationId);
 
+			const serviceIdColumn = (
+				volumeBackups as unknown as Record<string, (typeof volumeBackups)["volumeBackupId"]>
+			)[`${input.volumeBackupType}Id`] as (typeof volumeBackups)["volumeBackupId"];
 			return await db.query.volumeBackups.findMany({
-				where: eq(volumeBackups[`${input.volumeBackupType}Id`], input.id),
+				where: eq(serviceIdColumn, input.id),
 				with: {
 					application: true,
 					postgres: true,
@@ -257,7 +261,7 @@ async function dispatch(ctx: VolumeBackupsCtx, call: Call): Promise<unknown> {
 					mongo: true,
 					redis: true,
 					compose: true,
-					libsql: true,
+					// PRE-EXISTING: libsql dropped in fork — no `libsql` relation on volume_backup
 				},
 				orderBy: [desc(volumeBackups.createdAt)],
 			});

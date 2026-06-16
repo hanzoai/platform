@@ -26,6 +26,8 @@ import {
 	addNewService,
 	checkPortInUse,
 	checkServiceAccess,
+	// PRE-EXISTING: checkServicePermissionAndAccess was dropped by the Hanzo fork
+	// (the tRPC redisRouter references it too and fails identically).
 	checkServicePermissionAndAccess,
 	createMount,
 	createRedis,
@@ -33,9 +35,11 @@ import {
 	execAsync,
 	execAsyncRemote,
 	findEnvironmentById,
-	findMemberByUserId,
+	findMemberById,
 	findProjectById,
 	findRedisById,
+	// PRE-EXISTING: getAccessibleServerIds / getContainerLogs were dropped by the
+	// Hanzo fork (the tRPC redisRouter imports them too and fails identically).
 	getAccessibleServerIds,
 	getContainerLogs,
 	getServiceContainerCommand,
@@ -58,6 +62,8 @@ import type { Call, Response } from "@zap-proto/zap";
 import { Status } from "@zap-proto/zap";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import {
+	// PRE-EXISTING: DATABASE_PASSWORD_MESSAGE / DATABASE_PASSWORD_REGEX are not
+	// exported by the Hanzo fork's schema (the tRPC redisRouter imports them too).
 	DATABASE_PASSWORD_MESSAGE,
 	DATABASE_PASSWORD_REGEX,
 	environments,
@@ -145,9 +151,16 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 			const environment = await findEnvironmentById(input.environmentId);
 			const project = await findProjectById(environment.projectId);
 
-			await checkServiceAccess(ctx, project.projectId, "create");
+			await checkServiceAccess(
+				ctx.userId,
+				project.projectId,
+				ctx.organizationId,
+				"create",
+			);
 
 			const webServerSettings = await getWebServerSettings();
+			// PRE-EXISTING: `remoteServersOnly` is absent from the Hanzo fork's
+			// webServer settings type (the tRPC redisRouter reads it too).
 			if (
 				(IS_CLOUD || webServerSettings?.remoteServersOnly) &&
 				!input.serverId
@@ -162,6 +175,8 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 			}
 
 			if (input.serverId) {
+				// PRE-EXISTING: getAccessibleServerIds was dropped by the Hanzo fork
+				// (the tRPC redisRouter calls it with ctx.session too).
 				const accessibleIds = await getAccessibleServerIds(ctx.session);
 				if (!accessibleIds.has(input.serverId)) {
 					throw new UnauthorizedError(
@@ -173,7 +188,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 			const newRedis = await createRedis({
 				...input,
 			});
-			await addNewService(ctx, newRedis.redisId);
+			await addNewService(ctx.userId, newRedis.redisId, ctx.organizationId);
 
 			await createMount({
 				serviceId: newRedis.redisId,
@@ -197,7 +212,12 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 
 		case RedisMethod.one: {
 			const input = decodeArgs<{ redisId: string }>(call.payload);
-			await checkServiceAccess(ctx, input.redisId, "read");
+			await checkServiceAccess(
+				ctx.userId,
+				input.redisId,
+				ctx.organizationId,
+				"access",
+			);
 
 			const redis = await findRedisById(input.redisId);
 			if (redis.environment.project.organizationId !== ctx.organizationId) {
@@ -401,7 +421,12 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 
 		case RedisMethod.remove: {
 			const input = decodeArgs<{ redisId: string }>(call.payload);
-			await checkServiceAccess(ctx, input.redisId, "delete");
+			await checkServiceAccess(
+				ctx.userId,
+				input.redisId,
+				ctx.organizationId,
+				"delete",
+			);
 
 			const redis = await findRedisById(input.redisId);
 
@@ -644,14 +669,14 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 					ilike(redisTable.description ?? "", `%${input.description.trim()}%`),
 				);
 			}
-			const { accessedServices } = await findMemberByUserId(
+			const { accessedServices } = await findMemberById(
 				ctx.userId,
 				ctx.organizationId,
 			);
 			if (accessedServices.length === 0) return { items: [], total: 0 };
 			baseConditions.push(
 				sql`${redisTable.redisId} IN (${sql.join(
-					accessedServices.map((id) => sql`${id}`),
+					accessedServices.map((id: string) => sql`${id}`),
 					sql`, `,
 				)})`,
 			);
@@ -698,7 +723,12 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 				since?: string;
 				search?: string;
 			}>(call.payload);
-			await checkServiceAccess(ctx, input.redisId, "read");
+			await checkServiceAccess(
+				ctx.userId,
+				input.redisId,
+				ctx.organizationId,
+				"access",
+			);
 			const redis = await findRedisById(input.redisId);
 			if (redis.environment.project.organizationId !== ctx.organizationId) {
 				throw new UnauthorizedError(

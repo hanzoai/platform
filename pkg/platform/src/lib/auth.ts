@@ -252,11 +252,14 @@ const { handler, api } = betterAuth({
 			? [
 					genericOAuth({
 						config: [
-							iamProvider({
-								serverUrl: IAM_URL,
-								clientId: IAM_CLIENT_ID as string,
-								clientSecret: IAM_CLIENT_SECRET as string,
-							}),
+							(() => {
+								const p = iamProvider({
+									serverUrl: IAM_URL,
+									clientId: IAM_CLIENT_ID as string,
+									clientSecret: IAM_CLIENT_SECRET as string,
+								});
+								return { ...p, providerId: p.id };
+							})(),
 						],
 					}),
 				]

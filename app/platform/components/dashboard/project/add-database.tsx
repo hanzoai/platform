@@ -173,29 +173,11 @@ const mySchema = z
 					code: z.ZodIssueCode.custom,
 					path: ["sqldPrimaryUrl"],
 					message:
-						"Password contains invalid characters. Please avoid: $ ! ' \" \\ / and space characters for database compatibility",
-				})
-				.optional(),
-			databaseUser: z.string().default("mysql"),
-			databaseName: z.string().default("mysql"),
-		})
-		.merge(baseDatabaseSchema),
-	z
-		.object({
-			type: z.literal("mariadb"),
-			dockerImage: z.string().default("ghcr.io/hanzoai/sql-maria:11"),
-			databaseRootPassword: z
-				.string()
-				.regex(/^[a-zA-Z0-9@#%^&*()_+\-=[\]{}|;:,.<>?~`]*$/, {
-					message:
-						"Password contains invalid characters. Please avoid: $ ! ' \" \\ / and space characters for database compatibility",
-				})
-				.optional(),
-			databaseUser: z.string().default("mariadb"),
-			databaseName: z.string().default("mariadb"),
-		})
-		.merge(baseDatabaseSchema),
-]);
+						"sqldPrimaryUrl is only allowed when sqldNode is 'replica'.",
+				});
+			}
+		}
+	});
 
 const databasesMap = {
 	postgres: {

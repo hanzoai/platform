@@ -27,7 +27,6 @@ import {
 	createEmailNotification,
 	createGotifyNotification,
 	createLarkNotification,
-	createMattermostNotification,
 	createNtfyNotification,
 	createPushoverNotification,
 	createResendNotification,
@@ -42,7 +41,6 @@ import {
 	sendEmailNotification,
 	sendGotifyNotification,
 	sendLarkNotification,
-	sendMattermostNotification,
 	sendNtfyNotification,
 	sendPushoverNotification,
 	sendResendNotification,
@@ -54,7 +52,6 @@ import {
 	updateEmailNotification,
 	updateGotifyNotification,
 	updateLarkNotification,
-	updateMattermostNotification,
 	updateNtfyNotification,
 	updatePushoverNotification,
 	updateResendNotification,
@@ -62,13 +59,53 @@ import {
 	updateTeamsNotification,
 	updateTelegramNotification,
 } from "@hanzo/platform";
+// PRE-EXISTING: Mattermost notifications do not exist in the Hanzo fork
+// (no create/send/updateMattermostNotification export, no `mattermost` schema
+// relation). The Mattermost dispatch cases and `all`-query relation are dropped
+// so the cap matches what the fork actually supports.
 import { db } from "@hanzo/platform/db";
+import type {
+	apiCreateCustom,
+	apiCreateDiscord,
+	apiCreateEmail,
+	apiCreateGotify,
+	apiCreateLark,
+	apiCreateNtfy,
+	apiCreatePushover,
+	apiCreateResend,
+	apiCreateSlack,
+	apiCreateTeams,
+	apiCreateTelegram,
+	apiUpdateCustom,
+	apiUpdateDiscord,
+	apiUpdateEmail,
+	apiUpdateGotify,
+	apiUpdateLark,
+	apiUpdateNtfy,
+	apiUpdatePushover,
+	apiUpdateResend,
+	apiUpdateSlack,
+	apiUpdateTeams,
+	apiUpdateTelegram,
+	custom,
+	discord,
+	email,
+	gotify,
+	lark,
+	ntfy,
+	pushover,
+	resend,
+	slack,
+	teams,
+	telegram,
+} from "@hanzo/platform/db/schema";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
 import { Status } from "@zap-proto/zap";
 import { desc, eq } from "drizzle-orm";
+import type { z } from "zod";
 import { notifications } from "@/server/db/schema";
 import { decodeArgs } from "./args";
 import { encodeResult } from "./result";
@@ -137,23 +174,15 @@ export function notificationRootCap(ctx: NotificationCtx): CallHandler {
 	};
 }
 
-// Drizzle-derived procedure inputs are carried untyped via the Args carrier;
-// each body destructures the fields it needs (notificationId, name, channel, …).
-type Input = Record<string, unknown> & {
-	notificationId: string;
-	name: string;
-	channel: string;
-	decoration?: boolean;
-	username?: string;
-};
-
+// Each procedure input is carried via the shared Args carrier; the body decodes
+// it into the precise Zod-/Drizzle-derived shape its service function expects.
 async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 	switch (call.method) {
 		// -------------------------------------------------------------------
 		// Slack
 		// -------------------------------------------------------------------
 		case NotificationMethod.createSlack: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiCreateSlack>>(call.payload);
 			try {
 				await createSlackNotification(input, ctx.organizationId);
 				console.info("[audit] notification.create", {
@@ -170,7 +199,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.updateSlack: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdateSlack>>(call.payload);
 			const notification = await findNotificationById(input.notificationId);
 			if (notification.organizationId !== ctx.organizationId) {
 				throw new UnauthorizedError(
@@ -192,7 +221,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			return result;
 		}
 		case NotificationMethod.testSlackConnection: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<typeof slack.$inferInsert>(call.payload);
 			try {
 				await sendSlackNotification(input, {
 					channel: input.channel,
@@ -210,7 +239,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 		// Telegram
 		// -------------------------------------------------------------------
 		case NotificationMethod.createTelegram: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiCreateTelegram>>(call.payload);
 			try {
 				await createTelegramNotification(input, ctx.organizationId);
 				console.info("[audit] notification.create", {
@@ -226,7 +255,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.updateTelegram: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdateTelegram>>(call.payload);
 			try {
 				const notification = await findNotificationById(input.notificationId);
 				if (notification.organizationId !== ctx.organizationId) {
@@ -253,7 +282,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.testTelegramConnection: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<typeof telegram.$inferInsert>(call.payload);
 			try {
 				await sendTelegramNotification(input, "Hi, From Hanzo Platform 👋");
 				return true;
@@ -266,7 +295,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 		// Discord
 		// -------------------------------------------------------------------
 		case NotificationMethod.createDiscord: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiCreateDiscord>>(call.payload);
 			try {
 				await createDiscordNotification(input, ctx.organizationId);
 				console.info("[audit] notification.create", {
@@ -282,7 +311,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.updateDiscord: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdateDiscord>>(call.payload);
 			try {
 				const notification = await findNotificationById(input.notificationId);
 				if (notification.organizationId !== ctx.organizationId) {
@@ -309,7 +338,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.testDiscordConnection: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<typeof discord.$inferInsert>(call.payload);
 			try {
 				const decorate = (decoration: string, text: string) =>
 					`${input.decoration ? decoration : ""} ${text}`.trim();
@@ -332,7 +361,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 		// Email
 		// -------------------------------------------------------------------
 		case NotificationMethod.createEmail: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiCreateEmail>>(call.payload);
 			try {
 				await createEmailNotification(input, ctx.organizationId);
 				console.info("[audit] notification.create", {
@@ -348,7 +377,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.updateEmail: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdateEmail>>(call.payload);
 			try {
 				const notification = await findNotificationById(input.notificationId);
 				if (notification.organizationId !== ctx.organizationId) {
@@ -375,7 +404,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.testEmailConnection: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<typeof email.$inferInsert>(call.payload);
 			try {
 				await sendEmailNotification(
 					input,
@@ -394,7 +423,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 		// Resend
 		// -------------------------------------------------------------------
 		case NotificationMethod.createResend: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiCreateResend>>(call.payload);
 			try {
 				await createResendNotification(input, ctx.organizationId);
 				console.info("[audit] notification.create", {
@@ -410,7 +439,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.updateResend: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdateResend>>(call.payload);
 			try {
 				const notification = await findNotificationById(input.notificationId);
 				if (notification.organizationId !== ctx.organizationId) {
@@ -437,7 +466,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.testResendConnection: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<typeof resend.$inferInsert>(call.payload);
 			try {
 				await sendResendNotification(
 					input,
@@ -456,7 +485,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 		// remove / one / all
 		// -------------------------------------------------------------------
 		case NotificationMethod.remove: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<{ notificationId: string }>(call.payload);
 			try {
 				const notification = await findNotificationById(input.notificationId);
 				if (notification.organizationId !== ctx.organizationId) {
@@ -482,7 +511,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.one: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<{ notificationId: string }>(call.payload);
 			const notification = await findNotificationById(input.notificationId);
 			if (notification.organizationId !== ctx.organizationId) {
 				throw new UnauthorizedError(
@@ -501,7 +530,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 					resend: true,
 					gotify: true,
 					ntfy: true,
-					mattermost: true,
+					// PRE-EXISTING: no `mattermost` relation in the Hanzo fork schema.
 					custom: true,
 					lark: true,
 					pushover: true,
@@ -516,7 +545,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 		// Gotify
 		// -------------------------------------------------------------------
 		case NotificationMethod.createGotify: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiCreateGotify>>(call.payload);
 			try {
 				await createGotifyNotification(input, ctx.organizationId);
 				console.info("[audit] notification.create", {
@@ -532,7 +561,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.updateGotify: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdateGotify>>(call.payload);
 			const notification = await findNotificationById(input.notificationId);
 			if (IS_CLOUD && notification.organizationId !== ctx.organizationId) {
 				throw new UnauthorizedError(
@@ -554,7 +583,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			return result;
 		}
 		case NotificationMethod.testGotifyConnection: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<typeof gotify.$inferInsert>(call.payload);
 			try {
 				await sendGotifyNotification(
 					input,
@@ -571,7 +600,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 		// Ntfy
 		// -------------------------------------------------------------------
 		case NotificationMethod.createNtfy: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiCreateNtfy>>(call.payload);
 			try {
 				await createNtfyNotification(input, ctx.organizationId);
 				console.info("[audit] notification.create", {
@@ -587,7 +616,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.updateNtfy: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdateNtfy>>(call.payload);
 			const notification = await findNotificationById(input.notificationId);
 			if (IS_CLOUD && notification.organizationId !== ctx.organizationId) {
 				throw new UnauthorizedError(
@@ -609,7 +638,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			return result;
 		}
 		case NotificationMethod.testNtfyConnection: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<typeof ntfy.$inferInsert>(call.payload);
 			try {
 				await sendNtfyNotification(
 					input,
@@ -625,65 +654,16 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 		}
 
 		// -------------------------------------------------------------------
-		// Mattermost
+		// Mattermost — PRE-EXISTING: not supported by the Hanzo fork (no
+		// create/send/updateMattermostNotification, no `mattermost` schema).
+		// The create/update/test cases are dropped to match the fork.
 		// -------------------------------------------------------------------
-		case NotificationMethod.createMattermost: {
-			const input = decodeArgs<Input>(call.payload);
-			try {
-				await createMattermostNotification(input, ctx.organizationId);
-				console.info("[audit] notification.create", {
-					action: "create",
-					resourceType: "notification",
-					resourceName: input.name,
-					organizationId: ctx.organizationId,
-					userId: ctx.userId,
-				});
-				return null;
-			} catch (_error) {
-				throw new BadRequestError("Error creating the notification");
-			}
-		}
-		case NotificationMethod.updateMattermost: {
-			const input = decodeArgs<Input>(call.payload);
-			const notification = await findNotificationById(input.notificationId);
-			if (IS_CLOUD && notification.organizationId !== ctx.organizationId) {
-				throw new UnauthorizedError(
-					"You are not authorized to update this notification",
-				);
-			}
-			const result = await updateMattermostNotification({
-				...input,
-				organizationId: ctx.organizationId,
-			});
-			console.info("[audit] notification.update", {
-				action: "update",
-				resourceType: "notification",
-				resourceId: input.notificationId,
-				resourceName: notification.name,
-				organizationId: ctx.organizationId,
-				userId: ctx.userId,
-			});
-			return result;
-		}
-		case NotificationMethod.testMattermostConnection: {
-			const input = decodeArgs<Input>(call.payload);
-			try {
-				await sendMattermostNotification(input, {
-					text: "Hi, From Dokploy 👋",
-					channel: input.channel,
-					username: input.username || "Dokploy Bot",
-				});
-				return true;
-			} catch (_error) {
-				throw new BadRequestError("Error testing the notification");
-			}
-		}
 
 		// -------------------------------------------------------------------
 		// Custom
 		// -------------------------------------------------------------------
 		case NotificationMethod.createCustom: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiCreateCustom>>(call.payload);
 			try {
 				await createCustomNotification(input, ctx.organizationId);
 				console.info("[audit] notification.create", {
@@ -699,7 +679,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.updateCustom: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdateCustom>>(call.payload);
 			const notification = await findNotificationById(input.notificationId);
 			if (notification.organizationId !== ctx.organizationId) {
 				throw new UnauthorizedError(
@@ -721,7 +701,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			return result;
 		}
 		case NotificationMethod.testCustomConnection: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<typeof custom.$inferInsert>(call.payload);
 			try {
 				await sendCustomNotification(input, {
 					title: "Test Notification",
@@ -740,7 +720,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 		// Lark
 		// -------------------------------------------------------------------
 		case NotificationMethod.createLark: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiCreateLark>>(call.payload);
 			try {
 				await createLarkNotification(input, ctx.organizationId);
 				console.info("[audit] notification.create", {
@@ -756,7 +736,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.updateLark: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdateLark>>(call.payload);
 			const notification = await findNotificationById(input.notificationId);
 			if (IS_CLOUD && notification.organizationId !== ctx.organizationId) {
 				throw new UnauthorizedError(
@@ -778,7 +758,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			return result;
 		}
 		case NotificationMethod.testLarkConnection: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<typeof lark.$inferInsert>(call.payload);
 			try {
 				await sendLarkNotification(input, {
 					msg_type: "text",
@@ -796,7 +776,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 		// Teams
 		// -------------------------------------------------------------------
 		case NotificationMethod.createTeams: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiCreateTeams>>(call.payload);
 			try {
 				await createTeamsNotification(input, ctx.organizationId);
 				console.info("[audit] notification.create", {
@@ -812,7 +792,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.updateTeams: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdateTeams>>(call.payload);
 			const notification = await findNotificationById(input.notificationId);
 			if (IS_CLOUD && notification.organizationId !== ctx.organizationId) {
 				throw new UnauthorizedError(
@@ -834,7 +814,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			return result;
 		}
 		case NotificationMethod.testTeamsConnection: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<typeof teams.$inferInsert>(call.payload);
 			try {
 				await sendTeamsNotification(input, {
 					title: "🤚 Test Notification",
@@ -852,7 +832,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 		// Pushover
 		// -------------------------------------------------------------------
 		case NotificationMethod.createPushover: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiCreatePushover>>(call.payload);
 			try {
 				await createPushoverNotification(input, ctx.organizationId);
 				console.info("[audit] notification.create", {
@@ -868,7 +848,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			}
 		}
 		case NotificationMethod.updatePushover: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdatePushover>>(call.payload);
 			const notification = await findNotificationById(input.notificationId);
 			if (IS_CLOUD && notification.organizationId !== ctx.organizationId) {
 				throw new UnauthorizedError(
@@ -890,7 +870,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			return result;
 		}
 		case NotificationMethod.testPushoverConnection: {
-			const input = decodeArgs<Input>(call.payload);
+			const input = decodeArgs<typeof pushover.$inferInsert>(call.payload);
 			try {
 				await sendPushoverNotification(
 					input,

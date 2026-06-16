@@ -9,7 +9,7 @@ import {
 	PlusIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { type ControllerRenderProps, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AlertBlock } from "@/components/shared/alert-block";
@@ -81,6 +81,8 @@ const Schema = z.object({
 });
 
 type Schema = z.infer<typeof Schema>;
+
+type AiModel = { id: string };
 
 interface Props {
 	aiId?: string;
@@ -234,7 +236,11 @@ export const HandleAi = ({ aiId }: Props) => {
 						<FormField
 							control={form.control}
 							name="name"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<Schema, "name">;
+							}) => (
 								<FormItem>
 									<FormLabel>Name</FormLabel>
 									<FormControl>
@@ -251,7 +257,11 @@ export const HandleAi = ({ aiId }: Props) => {
 						<FormField
 							control={form.control}
 							name="apiUrl"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<Schema, "apiUrl">;
+							}) => (
 								<FormItem>
 									<FormLabel>API URL</FormLabel>
 									<FormControl>
@@ -279,7 +289,11 @@ export const HandleAi = ({ aiId }: Props) => {
 							<FormField
 								control={form.control}
 								name="apiKey"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<Schema, "apiKey">;
+								}) => (
 									<FormItem>
 										<FormLabel>API Key</FormLabel>
 										<FormControl>
@@ -315,17 +329,26 @@ export const HandleAi = ({ aiId }: Props) => {
 						<FormField
 							control={form.control}
 							name="model"
-							render={({ field }) => {
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<Schema, "model">;
+							}) => {
 								const hasModels =
 									!isLoadingServerModels && models && models.length > 0;
-								const selectedModel = models?.find((m) => m.id === field.value);
-								const filteredModels = (models ?? []).filter((model) =>
-									model.id.toLowerCase().includes(modelSearch.toLowerCase()),
+								const selectedModel = models?.find(
+									(m: AiModel) => m.id === field.value,
+								);
+								const filteredModels = ((models ?? []) as AiModel[]).filter(
+									(model: AiModel) =>
+										model.id
+											.toLowerCase()
+											.includes(modelSearch.toLowerCase()),
 								);
 
 								const displayModels =
 									field.value &&
-									!filteredModels.find((m) => m.id === field.value) &&
+									!filteredModels.find((m: AiModel) => m.id === field.value) &&
 									selectedModel
 										? [selectedModel, ...filteredModels]
 										: filteredModels;
@@ -384,7 +407,7 @@ export const HandleAi = ({ aiId }: Props) => {
 																			"No models found."
 																		)}
 																	</CommandEmpty>
-																	{displayModels.map((model) => {
+																	{displayModels.map((model: AiModel) => {
 																		const isSelected = field.value === model.id;
 																		return (
 																			<CommandItem
@@ -439,7 +462,11 @@ export const HandleAi = ({ aiId }: Props) => {
 						<FormField
 							control={form.control}
 							name="isEnabled"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<Schema, "isEnabled">;
+							}) => (
 								<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
 									<div className="space-y-0.5">
 										<FormLabel className="text-base">

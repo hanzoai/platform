@@ -9,6 +9,7 @@ import {
 } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
+import type { z } from "zod";
 import { recordUsageEvent } from "./billing";
 
 // DigitalOcean droplet pricing in cents-per-hour. Source: DO public
@@ -110,7 +111,7 @@ async function doFetch<T>(
 // --- Cluster operations ---
 
 export const provisionDoksCluster = async (
-	input: typeof apiProvisionDoksCluster._type,
+	input: z.infer<typeof apiProvisionDoksCluster>,
 ) => {
 	const org = await db.query.organization.findFirst({
 		where: eq(organization.id, input.organizationId),
@@ -322,7 +323,7 @@ export const deleteDoksCluster = async (doksClusterId: string) => {
 // --- Node pool operations ---
 
 export const addNodePool = async (
-	input: typeof apiAddNodePool._type,
+	input: z.infer<typeof apiAddNodePool>,
 ) => {
 	const cluster = await findDoksClusterById(input.doksClusterId);
 	if (!cluster.doClusterId) {
@@ -390,7 +391,7 @@ export const addNodePool = async (
 };
 
 export const updateNodePool = async (
-	input: typeof apiUpdateNodePool._type,
+	input: z.infer<typeof apiUpdateNodePool>,
 ) => {
 	const cluster = await findDoksClusterById(input.doksClusterId);
 	const pool = await db.query.doksNodePool.findFirst({

@@ -29,6 +29,7 @@ import type { IncomingMessage } from "node:http";
 import {
 	checkPortInUse,
 	checkServiceAccess,
+	// PRE-EXISTING: checkServicePermissionAndAccess dropped by the Hanzo fork (the tRPC mariadbRouter references it too)
 	checkServicePermissionAndAccess,
 	createMariadb,
 	createMount,
@@ -38,9 +39,11 @@ import {
 	findBackupsByDbId,
 	findEnvironmentById,
 	findMariadbById,
-	findMemberByUserId,
+	findMemberById,
 	findProjectById,
+	// PRE-EXISTING: getAccessibleServerIds dropped by the Hanzo fork (the tRPC mariadbRouter references it too)
 	getAccessibleServerIds,
+	// PRE-EXISTING: getContainerLogs dropped by the Hanzo fork (the tRPC mariadbRouter references it too)
 	getContainerLogs,
 	getServiceContainerCommand,
 	getWebServerSettings,
@@ -157,10 +160,16 @@ async function dispatch(ctx: MariadbCtx, call: Call): Promise<unknown> {
 				const environment = await findEnvironmentById(input.environmentId);
 				const project = await findProjectById(environment.projectId);
 
-				await checkServiceAccess(ctx, project.projectId, "create");
+				await checkServiceAccess(
+					ctx.user.id,
+					project.projectId,
+					ctx.session.activeOrganizationId,
+					"create",
+				);
 
 				const webServerSettings = await getWebServerSettings();
 				if (
+					// PRE-EXISTING: remoteServersOnly dropped by the Hanzo fork (the tRPC mariadbRouter references it too)
 					(IS_CLOUD || webServerSettings?.remoteServersOnly) &&
 					!input.serverId
 				) {
@@ -187,7 +196,11 @@ async function dispatch(ctx: MariadbCtx, call: Call): Promise<unknown> {
 				const newMariadb = await createMariadb({
 					...input,
 				});
-				await addNewService(ctx, newMariadb.mariadbId);
+				await addNewService(
+					ctx.user.id,
+					newMariadb.mariadbId,
+					ctx.session.activeOrganizationId,
+				);
 
 				await createMount({
 					serviceId: newMariadb.mariadbId,
@@ -217,7 +230,12 @@ async function dispatch(ctx: MariadbCtx, call: Call): Promise<unknown> {
 
 		case MariadbMethod.one: {
 			const input = decodeArgs<{ mariadbId: string }>(call.payload);
-			await checkServiceAccess(ctx, input.mariadbId, "read");
+			await checkServiceAccess(
+				ctx.user.id,
+				input.mariadbId,
+				ctx.session.activeOrganizationId,
+				"access",
+			);
 			const mariadb = await findMariadbById(input.mariadbId);
 			if (
 				mariadb.environment.project.organizationId !==
@@ -387,7 +405,12 @@ async function dispatch(ctx: MariadbCtx, call: Call): Promise<unknown> {
 
 		case MariadbMethod.remove: {
 			const input = decodeArgs<{ mariadbId: string }>(call.payload);
-			await checkServiceAccess(ctx, input.mariadbId, "delete");
+			await checkServiceAccess(
+				ctx.user.id,
+				input.mariadbId,
+				ctx.session.activeOrganizationId,
+				"delete",
+			);
 
 			const mongo = await findMariadbById(input.mariadbId);
 			if (
@@ -672,14 +695,14 @@ async function dispatch(ctx: MariadbCtx, call: Call): Promise<unknown> {
 					),
 				);
 			}
-			const { accessedServices } = await findMemberByUserId(
+			const { accessedServices } = await findMemberById(
 				ctx.user.id,
 				ctx.session.activeOrganizationId,
 			);
 			if (accessedServices.length === 0) return { items: [], total: 0 };
 			baseConditions.push(
 				sql`${mariadbTable.mariadbId} IN (${sql.join(
-					accessedServices.map((id) => sql`${id}`),
+					accessedServices.map((id: string) => sql`${id}`),
 					sql`, `,
 				)})`,
 			);
@@ -726,7 +749,12 @@ async function dispatch(ctx: MariadbCtx, call: Call): Promise<unknown> {
 				since: string;
 				search?: string;
 			}>(call.payload);
-			await checkServiceAccess(ctx, input.mariadbId, "read");
+			await checkServiceAccess(
+				ctx.user.id,
+				input.mariadbId,
+				ctx.session.activeOrganizationId,
+				"access",
+			);
 			const mariadb = await findMariadbById(input.mariadbId);
 			if (
 				mariadb.environment.project.organizationId !==

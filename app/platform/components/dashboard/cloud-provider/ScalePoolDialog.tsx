@@ -7,7 +7,7 @@
  */
 
 import { useState, type ReactNode } from "react";
-import { useForm } from "react-hook-form";
+import { type ControllerRenderProps, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Minus, Loader2, Server, AlertTriangle } from "lucide-react";
@@ -71,6 +71,15 @@ const scaleSchema = z
 	);
 
 type ScaleInput = z.infer<typeof scaleSchema>;
+
+type DropletSize = {
+	slug: string;
+	price_monthly: number;
+	vcpus: number;
+	memory: number;
+};
+
+type DropletRegion = { slug: string; name: string };
 
 // ============================================================================
 // Component
@@ -177,7 +186,9 @@ export function ScalePoolDialog({
 	}
 
 	// Calculate estimated monthly cost
-	const selectedSize = sizes?.find((s) => s.slug === form.watch("size"));
+	const selectedSize = sizes?.find(
+		(s: DropletSize) => s.slug === form.watch("size"),
+	);
 	const estimatedMonthlyCost = selectedSize
 		? selectedSize.price_monthly * count
 		: 0;
@@ -204,7 +215,11 @@ export function ScalePoolDialog({
 						<FormField
 							control={form.control}
 							name="direction"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<ScaleInput, "direction">;
+							}) => (
 								<FormItem>
 									<FormLabel>Direction</FormLabel>
 									<div className="flex gap-2">
@@ -236,7 +251,11 @@ export function ScalePoolDialog({
 						<FormField
 							control={form.control}
 							name="count"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<ScaleInput, "count">;
+							}) => (
 								<FormItem>
 									<FormLabel>
 										Number of Nodes
@@ -270,7 +289,11 @@ export function ScalePoolDialog({
 								<FormField
 									control={form.control}
 									name="size"
-									render={({ field }) => (
+									render={({
+										field,
+									}: {
+										field: ControllerRenderProps<ScaleInput, "size">;
+									}) => (
 										<FormItem>
 											<FormLabel>Instance Size</FormLabel>
 											<Select
@@ -284,7 +307,7 @@ export function ScalePoolDialog({
 													</SelectTrigger>
 												</FormControl>
 												<SelectContent>
-													{sizes?.map((size) => (
+													{sizes?.map((size: DropletSize) => (
 														<SelectItem key={size.slug} value={size.slug}>
 															<div className="flex items-center justify-between w-full">
 																<span>{size.slug}</span>
@@ -306,7 +329,11 @@ export function ScalePoolDialog({
 								<FormField
 									control={form.control}
 									name="region"
-									render={({ field }) => (
+									render={({
+										field,
+									}: {
+										field: ControllerRenderProps<ScaleInput, "region">;
+									}) => (
 										<FormItem>
 											<FormLabel>Region</FormLabel>
 											<Select
@@ -320,7 +347,7 @@ export function ScalePoolDialog({
 													</SelectTrigger>
 												</FormControl>
 												<SelectContent>
-													{regions?.map((region) => (
+													{regions?.map((region: DropletRegion) => (
 														<SelectItem key={region.slug} value={region.slug}>
 															{region.name} ({region.slug})
 														</SelectItem>
@@ -336,7 +363,11 @@ export function ScalePoolDialog({
 								<FormField
 									control={form.control}
 									name="nodeType"
-									render={({ field }) => (
+									render={({
+										field,
+									}: {
+										field: ControllerRenderProps<ScaleInput, "nodeType">;
+									}) => (
 										<FormItem>
 											<FormLabel>Node Type</FormLabel>
 											<Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -405,7 +436,11 @@ export function ScalePoolDialog({
 								<FormField
 									control={form.control}
 									name="strategy"
-									render={({ field }) => (
+									render={({
+										field,
+									}: {
+										field: ControllerRenderProps<ScaleInput, "strategy">;
+									}) => (
 										<FormItem>
 											<FormLabel>Removal Strategy</FormLabel>
 											<Select onValueChange={field.onChange} defaultValue={field.value}>

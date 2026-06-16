@@ -131,11 +131,13 @@ export function AnalyzeLogs({ logs, context }: Props) {
 										<SelectValue placeholder="Select AI provider..." />
 									</SelectTrigger>
 									<SelectContent>
-										{providers?.map((p) => (
-											<SelectItem key={p.aiId} value={p.aiId}>
-												{p.name} ({p.model})
-											</SelectItem>
-										))}
+										{providers?.map(
+											(p: { aiId: string; name: string; model: string }) => (
+												<SelectItem key={p.aiId} value={p.aiId}>
+													{p.name} ({p.model})
+												</SelectItem>
+											),
+										)}
 									</SelectContent>
 								</Select>
 								<Button
