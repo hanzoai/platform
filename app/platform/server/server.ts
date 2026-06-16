@@ -65,7 +65,10 @@ import {
 } from "./zap/git-provider-cap";
 import { gitlabMintCap, gitlabRootCap } from "./zap/gitlab-cap";
 import { k8sMintCap, k8sRootCap } from "./zap/k8s-cap";
+import { mariadbMintCap, mariadbRootCap } from "./zap/mariadb-cap";
+import { mongoMintCap, mongoRootCap } from "./zap/mongo-cap";
 import { mountMintCap, mountRootCap } from "./zap/mount-cap";
+import { mysqlMintCap, mysqlRootCap } from "./zap/mysql-cap";
 import {
 	notificationMintCap,
 	notificationRootCap,
@@ -75,6 +78,7 @@ import {
 	organizationRootCap,
 } from "./zap/organization-cap";
 import { portMintCap, portRootCap } from "./zap/port-cap";
+import { postgresMintCap, postgresRootCap } from "./zap/postgres-cap";
 import {
 	previewDeploymentMintCap,
 	previewDeploymentRootCap,
@@ -84,6 +88,7 @@ import {
 	redirectsMintCap,
 	redirectsRootCap,
 } from "./zap/redirects-cap";
+import { redisMintCap, redisRootCap } from "./zap/redis-cap";
 import { registryMintCap, registryRootCap } from "./zap/registry-cap";
 import {
 	scheduleMintCap,
@@ -91,6 +96,7 @@ import {
 } from "./zap/schedule-cap";
 import { securityMintCap, securityRootCap } from "./zap/security-cap";
 import { sshKeyMintCap, sshKeyRootCap } from "./zap/ssh-key-cap";
+import { userMintCap, userRootCap } from "./zap/user-cap";
 import {
 	volumeBackupsMintCap,
 	volumeBackupsRootCap,
@@ -348,6 +354,48 @@ void app.prepare().then(async () => {
 			mintCap: sshKeyMintCap,
 			rootCap: sshKeyRootCap,
 			onError: (err) => console.error("[zap/ssh-key]", err),
+		});
+		// Postgres database capability — replaces the tRPC postgresRouter.
+		serve(server, {
+			path: "/zap/postgres",
+			mintCap: postgresMintCap,
+			rootCap: postgresRootCap,
+			onError: (err) => console.error("[zap/postgres]", err),
+		});
+		// MySQL database capability — replaces the tRPC mysqlRouter.
+		serve(server, {
+			path: "/zap/mysql",
+			mintCap: mysqlMintCap,
+			rootCap: mysqlRootCap,
+			onError: (err) => console.error("[zap/mysql]", err),
+		});
+		// MariaDB database capability — replaces the tRPC mariadbRouter.
+		serve(server, {
+			path: "/zap/mariadb",
+			mintCap: mariadbMintCap,
+			rootCap: mariadbRootCap,
+			onError: (err) => console.error("[zap/mariadb]", err),
+		});
+		// MongoDB database capability — replaces the tRPC mongoRouter.
+		serve(server, {
+			path: "/zap/mongo",
+			mintCap: mongoMintCap,
+			rootCap: mongoRootCap,
+			onError: (err) => console.error("[zap/mongo]", err),
+		});
+		// Redis database capability — replaces the tRPC redisRouter.
+		serve(server, {
+			path: "/zap/redis",
+			mintCap: redisMintCap,
+			rootCap: redisRootCap,
+			onError: (err) => console.error("[zap/redis]", err),
+		});
+		// User capability — replaces the tRPC userRouter.
+		serve(server, {
+			path: "/zap/user",
+			mintCap: userMintCap,
+			rootCap: userRootCap,
+			onError: (err) => console.error("[zap/user]", err),
 		});
 
 		server.listen(PORT, HOST);
