@@ -30,6 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/utils/api";
+import { project } from "@/utils/zap-project";
 
 const AddProjectSchema = z.object({
 	name: z
@@ -61,15 +62,15 @@ interface Props {
 }
 
 export const HandleProject = ({ projectId }: Props) => {
-	const utils = api.useUtils();
+	const projectUtils = project.useUtils();
 	const [isOpen, setIsOpen] = useState(false);
 	const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
 	const { mutateAsync, error, isError } = projectId
-		? api.project.update.useMutation()
-		: api.project.create.useMutation();
+		? project.update.useMutation()
+		: project.create.useMutation();
 
-	const { data, refetch } = api.project.one.useQuery(
+	const { data, refetch } = project.one.useQuery(
 		{
 			projectId: projectId || "",
 		},
@@ -127,7 +128,7 @@ export const HandleProject = ({ projectId }: Props) => {
 					}
 				}
 
-				await utils.project.all.invalidate();
+				await projectUtils.all.invalidate();
 				toast.success(projectId ? "Project Updated" : "Project Created");
 				setIsOpen(false);
 				if (!projectId) {

@@ -55,7 +55,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { api } from "@/utils/api";
+import { digitalocean } from "@/utils/zap-digitalocean";
 
 // ============================================================================
 // Types
@@ -100,19 +100,19 @@ export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps)
 	const [selectedDroplet, setSelectedDroplet] = useState<PoolDroplet | null>(null);
 	const [isDraining, setIsDraining] = useState<string | null>(null);
 
-	const utils = api.useUtils();
+	const utils = digitalocean.useUtils();
 
 	// Fetch droplets with polling
-	const { data: droplets, isLoading, isRefetching } = api.digitalocean.listPoolDroplets.useQuery(
+	const { data: droplets, isLoading, isRefetching } = digitalocean.listPoolInstances.useQuery(
 		{ poolId },
 		{ refetchInterval: 10000 } // Poll every 10 seconds
 	);
 
 	// Drain mutation
-	const drainMutation = api.digitalocean.drainNode.useMutation({
+	const drainMutation = digitalocean.drainNode.useMutation({
 		onSuccess: () => {
 			toast.success("Node drain started");
-			utils.digitalocean.listPoolDroplets.invalidate({ poolId });
+			utils.listPoolInstances.invalidate({ poolId });
 		},
 		onError: (error) => {
 			toast.error(`Failed to drain node: ${error.message}`);
@@ -123,10 +123,10 @@ export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps)
 	});
 
 	// Remove mutation
-	const removeMutation = api.digitalocean.removeDroplet.useMutation({
+	const removeMutation = digitalocean.removeInstance.useMutation({
 		onSuccess: () => {
 			toast.success("Node removal started");
-			utils.digitalocean.listPoolDroplets.invalidate({ poolId });
+			utils.listPoolInstances.invalidate({ poolId });
 			setDeleteDialogOpen(false);
 			setSelectedDroplet(null);
 		},
@@ -148,7 +148,7 @@ export function NodeStatusMonitor({ poolId, className }: NodeStatusMonitorProps)
 
 	const confirmRemove = () => {
 		if (selectedDroplet) {
-			removeMutation.mutate({ dropletId: selectedDroplet.dropletId, force: false });
+			removeMutation.mutate({ instanceId: selectedDroplet.dropletId, force: false });
 		}
 	};
 
