@@ -33,6 +33,18 @@ type SearchServices = Services & {
 	environmentName: string;
 };
 
+type SearchEnvironment = {
+	environmentId: string;
+	name: string;
+	isDefault?: boolean;
+};
+
+type SearchProject = {
+	projectId: string;
+	name: string;
+	environments: SearchEnvironment[];
+};
+
 const extractAllServicesFromProject = (project: any): SearchServices[] => {
 	const allServices: SearchServices[] = [];
 
@@ -88,11 +100,12 @@ export const SearchCommand = () => {
 					</CommandEmpty>
 					<CommandGroup heading={"Projects"}>
 						<CommandList>
-							{data?.map((project) => {
+							{data?.map((project: SearchProject) => {
 								// Find default environment from accessible environments, or fall back to first accessible environment
 								const defaultEnvironment =
 									project.environments.find(
-										(environment) => environment.isDefault,
+										(environment: SearchEnvironment) =>
+											environment.isDefault,
 									) || project?.environments?.[0];
 
 								if (!defaultEnvironment) return null;
@@ -117,7 +130,7 @@ export const SearchCommand = () => {
 					<CommandSeparator />
 					<CommandGroup heading={"Services"}>
 						<CommandList>
-							{data?.map((project) => {
+							{data?.map((project: SearchProject) => {
 								const applications: SearchServices[] =
 									extractAllServicesFromProject(project);
 								return applications.map((application) => (

@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { type ControllerRenderProps, useForm } from "react-hook-form";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { Cloud, CheckCircle, XCircle, Loader2, Eye, EyeOff, Trash2 } from "lucide-react";
@@ -217,7 +217,11 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 							<FormField
 								control={form.control}
 								name="name"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<ConfigureProviderInput, "name">;
+								}) => (
 									<FormItem>
 										<FormLabel>Provider Name</FormLabel>
 										<FormControl>
@@ -234,7 +238,11 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 							<FormField
 								control={form.control}
 								name="slug"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<ConfigureProviderInput, "slug">;
+								}) => (
 									<FormItem>
 										<FormLabel>Slug</FormLabel>
 										<FormControl>
@@ -256,7 +264,11 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 						<FormField
 							control={form.control}
 							name="apiToken"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<ConfigureProviderInput, "apiToken">;
+							}) => (
 								<FormItem>
 									<FormLabel>
 										API Token {providerId && "(leave blank to keep existing)"}
@@ -302,7 +314,11 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 						<FormField
 							control={form.control}
 							name="defaultRegion"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<ConfigureProviderInput, "defaultRegion">;
+							}) => (
 								<FormItem>
 									<FormLabel>Default Region</FormLabel>
 									<Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -312,7 +328,9 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent>
-											{(regions || DEFAULT_REGIONS).map((region) => (
+											{((regions || DEFAULT_REGIONS) as Array<
+											string | { slug: string; name: string }
+										>).map((region) => (
 												<SelectItem
 													key={typeof region === "string" ? region : region.slug}
 													value={typeof region === "string" ? region : region.slug}

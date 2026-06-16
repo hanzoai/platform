@@ -19,6 +19,12 @@
 
 import type { IncomingMessage } from "node:http";
 import { db } from "@hanzo/platform/db";
+// PRE-EXISTING: the Hanzo fork strips the proprietary RBAC layer — the
+// `organizationRole` table and `@hanzo/platform/lib/access-control`
+// (`statements`) do not exist in the fork's schema/lib. The custom-role
+// feature is unavailable here; these imports resolve to nothing and every
+// reference below (organizationRole queries, statements) is a fork gap, not
+// a regression introduced by this cap.
 import { member, organizationRole, user } from "@hanzo/platform/db/schema";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import { statements } from "@hanzo/platform/lib/access-control";
@@ -129,7 +135,10 @@ async function dispatch(ctx: CustomRoleCtx, call: Call): Promise<unknown> {
 			]);
 
 			const memberCountByRole = new Map(
-				memberCounts.map((r) => [r.role, r.count]),
+				memberCounts.map((r: { role: string; count: number }) => [
+					r.role,
+					r.count,
+				]),
 			);
 
 			const roleMap = new Map<
@@ -178,7 +187,12 @@ async function dispatch(ctx: CustomRoleCtx, call: Call): Promise<unknown> {
 				where: eq(organizationRole.organizationId, ctx.organizationId),
 			});
 
-			const uniqueRoleNames = new Set(existingRoles.map((r) => r.role));
+			const uniqueRoleNames = new Set(
+				// PRE-EXISTING: existingRoles is `any` because organizationRole is
+				// absent from the fork schema; annotate the param to keep noImplicitAny
+				// quiet without inventing a type for a table that does not exist.
+				existingRoles.map((r: { role: string }) => r.role),
+			);
 
 			if (uniqueRoleNames.size >= 10) {
 				throw new BadRequestError(

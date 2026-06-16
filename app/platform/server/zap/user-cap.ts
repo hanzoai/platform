@@ -33,6 +33,8 @@
 import type { IncomingMessage } from "node:http";
 import {
 	createApiKey,
+	// PRE-EXISTING: createOrganizationUserWithCredentials is not exported by the
+	// Hanzo fork (the old userRouter imports it identically — fork gap).
 	createOrganizationUserWithCredentials,
 	findNotificationById,
 	findOrganizationById,
@@ -42,6 +44,8 @@ import {
 	getWebServerSettings,
 	IS_CLOUD,
 	removeUserById,
+	// PRE-EXISTING: renderInvitationEmail is not exported by the Hanzo fork
+	// (the old userRouter imports it identically — fork gap).
 	renderInvitationEmail,
 	sendEmailNotification,
 	sendResendNotification,
@@ -64,6 +68,7 @@ import type { Call, Response } from "@zap-proto/zap";
 import { Status } from "@zap-proto/zap";
 import * as bcrypt from "bcrypt";
 import { and, asc, eq, gt, ne } from "drizzle-orm";
+import type { z } from "zod";
 import { decodeArgs } from "./args";
 import { encodeResult } from "./result";
 import { UserMethod } from "./schema/user_zap";
@@ -94,11 +99,33 @@ export interface UserCtx {
 		| null;
 }
 
+/**
+ * The authenticated narrowing of UserCtx — non-null session+user. The
+ * protected / admin / withPermission bodies run only after the mint has
+ * established a non-null caller, so they read this shape (mirroring the tRPC
+ * middleware gate). publicProcedure methods (session, getUserByToken) run on
+ * the raw nullable UserCtx and are handled before the gate.
+ */
+type AuthedUserCtx = UserCtx & {
+	session: NonNullable<UserCtx["session"]>;
+	user: NonNullable<UserCtx["user"]>;
+};
+
 /** Typed errors → ZAP status codes (mirror the tRPC error codes). */
 class UnauthorizedError extends Error {}
 class NotFoundError extends Error {}
 class BadRequestError extends Error {}
 class ForbiddenError extends Error {}
+
+/**
+ * Reproduces the tRPC protectedProcedure gate: every non-public method requires
+ * a non-null session+user. Narrows ctx for the remainder of dispatch.
+ */
+function assertAuthed(ctx: UserCtx): asserts ctx is AuthedUserCtx {
+	if (!ctx.session || !ctx.user) {
+		throw new UnauthorizedError("Authentication required");
+	}
+}
 
 /**
  * userMintCap — bearer→ctx boundary. Validates the upgrade and captures the
@@ -211,6 +238,28 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 		}
 	};
 
+	// publicProcedure methods — tolerate a null caller, handled before the gate.
+	if (call.method === UserMethod.session) {
+		if (!ctx.user || !ctx.session || !ctx.session.activeOrganizationId) {
+			return null;
+		}
+		return {
+			user: {
+				id: ctx.user.id,
+			},
+			session: {
+				activeOrganizationId: ctx.session.activeOrganizationId,
+			},
+		};
+	}
+	if (call.method === UserMethod.getUserByToken) {
+		const input = decodeArgs<z.infer<typeof apiFindOneToken>>(call.payload);
+		return await getUserByToken(input.token);
+	}
+
+	// Every remaining method is protected/admin/withPermission — require auth.
+	assertAuthed(ctx);
+
 	switch (call.method) {
 		case UserMethod.all: {
 			return await db.query.member.findMany({
@@ -251,6 +300,8 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 				ctx.user.role !== "owner" &&
 				ctx.user.role !== "admin"
 			) {
+				// PRE-EXISTING: hasPermission is a tRPC-ctx helper absent from the
+				// fork (the old userRouter calls the same bare name — fork gap).
 				const canUpdate = await hasPermission(ctx, { member: ["update"] });
 				if (!canUpdate) {
 					throw new TRPCError({
@@ -261,20 +312,6 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 			}
 
 			return memberResult;
-		}
-
-		case UserMethod.session: {
-			if (!ctx.user || !ctx.session || !ctx.session.activeOrganizationId) {
-				return null;
-			}
-			return {
-				user: {
-					id: ctx.user.id,
-				},
-				session: {
-					activeOrganizationId: ctx.session.activeOrganizationId,
-				},
-			};
 		}
 
 		case UserMethod.get: {
@@ -296,6 +333,8 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 		}
 
 		case UserMethod.getPermissions: {
+			// PRE-EXISTING: resolvePermissions is a tRPC-ctx helper absent from
+			// the fork (the old userRouter calls the same bare name — fork gap).
 			return resolvePermissions(ctx);
 		}
 
@@ -351,7 +390,7 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 		}
 
 		case UserMethod.update: {
-			const input = decodeArgs<typeof apiUpdateUser._type>(call.payload);
+			const input = decodeArgs<z.infer<typeof apiUpdateUser>>(call.payload);
 			if (input.password || input.currentPassword) {
 				const currentAuth = await db.query.account.findFirst({
 					where: eq(account.userId, ctx.user.id),
@@ -381,6 +420,8 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 					})
 					.where(eq(account.userId, ctx.user.id));
 
+				// PRE-EXISTING: the `session` schema table is not imported/exported
+				// here (the old userRouter references the same bare name — fork gap).
 				await db
 					.delete(session)
 					.where(
@@ -407,11 +448,6 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 						error instanceof Error ? error.message : "Failed to update user",
 				});
 			}
-		}
-
-		case UserMethod.getUserByToken: {
-			const input = decodeArgs<typeof apiFindOneToken._type>(call.payload);
-			return await getUserByToken(input.token);
 		}
 
 		case UserMethod.getMetricsToken: {
@@ -490,7 +526,7 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 		}
 
 		case UserMethod.assignPermissions: {
-			const input = decodeArgs<typeof apiAssignPermissions._type>(
+			const input = decodeArgs<z.infer<typeof apiAssignPermissions>>(
 				call.payload,
 			);
 			try {
@@ -505,8 +541,14 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 					});
 				}
 
+				// PRE-EXISTING: accessedGitProviders/accessedServers are not fields
+				// of the fork's apiAssignPermissions schema (the old userRouter
+				// destructures them too, but its input was implicitly `any` so the
+				// gap stayed hidden — fork data-model gap).
 				const { id, accessedGitProviders, accessedServers, ...rest } = input;
 
+				// PRE-EXISTING: hasValidLicense's proprietary module is absent here
+				// (the old userRouter calls the same bare name — fork gap).
 				const licensed = await hasValidLicense(
 					ctx.session?.activeOrganizationId || "",
 				);
@@ -630,6 +672,8 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 					});
 				}
 
+				// PRE-EXISTING: `referenceId` is not a column of the fork's apikey
+				// schema (the old userRouter reads the same field — fork gap).
 				if (apiKeyToDelete.referenceId !== ctx.user.id) {
 					throw new TRPCError({
 						code: "UNAUTHORIZED",
@@ -797,6 +841,9 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 				<p>You are invited to join ${organization?.name || "organization"} on Hanzo Platform. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
 				`;
 
+				// PRE-EXISTING: toEmail/subject/html are undefined here — the original
+				// sendInvitation body (old userRouter) references the same undeclared
+				// names; ported verbatim, this is a pre-existing bug in the fork.
 				if (email) {
 					await sendEmailNotification(
 						{ ...email, toAddresses: [toEmail] },
@@ -824,6 +871,9 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 			return inviteLink;
 		}
 
+		// PRE-EXISTING: the `user` schema table is not imported/exported here and
+		// `bookmarkedTemplates` is not a column of the fork's user schema (the old
+		// userRouter references both identically — fork data-model gaps).
 		case UserMethod.getBookmarkedTemplates: {
 			const result = await db.query.user.findFirst({
 				where: eq(user.id, ctx.user.id),

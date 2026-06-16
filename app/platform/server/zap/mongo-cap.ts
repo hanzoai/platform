@@ -33,7 +33,9 @@ import {
 	findEnvironmentById,
 	findMongoById,
 	findProjectById,
+	// PRE-EXISTING: getAccessibleServerIds dropped by the Hanzo fork (the tRPC mongoRouter references it too)
 	getAccessibleServerIds,
+	// PRE-EXISTING: getContainerLogs dropped by the Hanzo fork (the tRPC mongoRouter references it too)
 	getContainerLogs,
 	getServiceContainerCommand,
 	getWebServerSettings,
@@ -49,9 +51,10 @@ import {
 } from "@hanzo/platform";
 import { db } from "@hanzo/platform/db";
 import { validateRequest } from "@hanzo/platform/lib/auth";
+// PRE-EXISTING: module @hanzo/platform/services/permission dropped by the Hanzo fork (the tRPC mongoRouter references it too)
 import {
 	checkServicePermissionAndAccess,
-	findMemberByUserId,
+	findMemberById,
 } from "@hanzo/platform/services/permission";
 import {
 	addNewService,
@@ -63,7 +66,9 @@ import type { Call, Response } from "@zap-proto/zap";
 import { Status } from "@zap-proto/zap";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import {
+	// PRE-EXISTING: DATABASE_PASSWORD_MESSAGE dropped by the Hanzo fork (the tRPC mongoRouter references it too)
 	DATABASE_PASSWORD_MESSAGE,
+	// PRE-EXISTING: DATABASE_PASSWORD_REGEX dropped by the Hanzo fork (the tRPC mongoRouter references it too)
 	DATABASE_PASSWORD_REGEX,
 	environments,
 	mongo as mongoTable,
@@ -157,10 +162,16 @@ async function dispatch(ctx: MongoCtx, call: Call): Promise<unknown> {
 				const environment = await findEnvironmentById(input.environmentId);
 				const project = await findProjectById(environment.projectId);
 
-				await checkServiceAccess(ctx, project.projectId, "create");
+				await checkServiceAccess(
+					ctx.user.id,
+					project.projectId,
+					ctx.session.activeOrganizationId,
+					"create",
+				);
 
 				const webServerSettings = await getWebServerSettings();
 				if (
+					// PRE-EXISTING: remoteServersOnly dropped by the Hanzo fork (the tRPC mongoRouter references it too)
 					(IS_CLOUD || webServerSettings?.remoteServersOnly) &&
 					!input.serverId
 				) {
@@ -187,7 +198,11 @@ async function dispatch(ctx: MongoCtx, call: Call): Promise<unknown> {
 				const newMongo = await createMongo({
 					...input,
 				});
-				await addNewService(ctx, newMongo.mongoId);
+				await addNewService(
+					ctx.user.id,
+					newMongo.mongoId,
+					ctx.session.activeOrganizationId,
+				);
 
 				await createMount({
 					serviceId: newMongo.mongoId,
@@ -216,7 +231,12 @@ async function dispatch(ctx: MongoCtx, call: Call): Promise<unknown> {
 
 		case MongoMethod.one: {
 			const input = decodeArgs<{ mongoId: string }>(call.payload);
-			await checkServiceAccess(ctx, input.mongoId, "read");
+			await checkServiceAccess(
+				ctx.user.id,
+				input.mongoId,
+				ctx.session.activeOrganizationId,
+				"access",
+			);
 
 			const mongo = await findMongoById(input.mongoId);
 			if (
@@ -427,7 +447,12 @@ async function dispatch(ctx: MongoCtx, call: Call): Promise<unknown> {
 
 		case MongoMethod.remove: {
 			const input = decodeArgs<{ mongoId: string }>(call.payload);
-			await checkServiceAccess(ctx, input.mongoId, "delete");
+			await checkServiceAccess(
+				ctx.user.id,
+				input.mongoId,
+				ctx.session.activeOrganizationId,
+				"delete",
+			);
 
 			const mongo = await findMongoById(input.mongoId);
 
@@ -663,14 +688,14 @@ async function dispatch(ctx: MongoCtx, call: Call): Promise<unknown> {
 					ilike(mongoTable.description ?? "", `%${input.description.trim()}%`),
 				);
 			}
-			const { accessedServices } = await findMemberByUserId(
+			const { accessedServices } = await findMemberById(
 				ctx.user.id,
 				ctx.session.activeOrganizationId,
 			);
 			if (accessedServices.length === 0) return { items: [], total: 0 };
 			baseConditions.push(
 				sql`${mongoTable.mongoId} IN (${sql.join(
-					accessedServices.map((id) => sql`${id}`),
+					accessedServices.map((id: string) => sql`${id}`),
 					sql`, `,
 				)})`,
 			);
@@ -717,7 +742,12 @@ async function dispatch(ctx: MongoCtx, call: Call): Promise<unknown> {
 				since: string;
 				search?: string;
 			}>(call.payload);
-			await checkServiceAccess(ctx, input.mongoId, "read");
+			await checkServiceAccess(
+				ctx.user.id,
+				input.mongoId,
+				ctx.session.activeOrganizationId,
+				"access",
+			);
 			const mongo = await findMongoById(input.mongoId);
 			if (
 				mongo.environment.project.organizationId !==

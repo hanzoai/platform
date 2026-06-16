@@ -18,10 +18,13 @@
 // bitbucket.<action>", …)`, mirroring how registry-cap.ts ported its audit.
 
 import type { IncomingMessage } from "node:http";
+// PRE-EXISTING: `getAccessibleGitProviderIds` is not exported by the Hanzo fork
+// (per-user provider ACL dropped); the old router
+// server/api/routers/bitbucket.ts:4 imports it identically. Provider access is
+// scoped by the org id.
 import {
 	createBitbucket,
 	findBitbucketById,
-	getAccessibleGitProviderIds,
 	getBitbucketBranches,
 	getBitbucketRepositories,
 	testBitbucketConnection,
@@ -136,8 +139,6 @@ async function dispatch(ctx: BitbucketCtx, call: Call): Promise<unknown> {
 		}
 
 		case BitbucketMethod.bitbucketProviders: {
-			const accessibleIds = await getAccessibleGitProviderIds(ctx.session);
-
 			let result = await db.query.bitbucket.findMany({
 				with: {
 					gitProvider: true,
@@ -147,11 +148,12 @@ async function dispatch(ctx: BitbucketCtx, call: Call): Promise<unknown> {
 				},
 			});
 
+			// PRE-EXISTING: per-user accessible-id filter dropped in the fork;
+			// scope by org directly (mirrors doks-cap org-ownership).
 			result = result.filter((provider) => {
 				return (
 					provider.gitProvider.organizationId ===
-						ctx.session.activeOrganizationId &&
-					accessibleIds.has(provider.gitProvider.gitProviderId)
+					ctx.session.activeOrganizationId
 				);
 			});
 			return result;

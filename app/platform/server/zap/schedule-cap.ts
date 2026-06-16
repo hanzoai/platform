@@ -157,6 +157,9 @@ async function dispatch(ctx: ScheduleCtx, call: Call): Promise<unknown> {
 			// biome-ignore lint/suspicious/noExplicitAny: createScheduleSchema input, ported verbatim
 			const input = decodeArgs<any>(call.payload);
 			const newSchedule = await createSchedule(input);
+				if (!newSchedule) {
+					throw new BadRequestError("Error creating schedule");
+				}
 
 			// Verify org ownership on the newly created schedule
 			await assertScheduleOrgAccess(newSchedule, ctx.organizationId);

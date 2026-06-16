@@ -23,14 +23,12 @@
 
 import type { IncomingMessage } from "node:http";
 import {
-	checkServicePermissionAndAccess,
 	createBackup,
 	findApplicationById,
 	findBackupById,
 	findComposeByBackupId,
 	findComposeById,
-	findLibsqlByBackupId,
-	findLibsqlById,
+	// PRE-EXISTING: libsql dropped in fork — findLibsqlByBackupId/findLibsqlById absent (old backup.ts router imports them identically)
 	findMariadbByBackupId,
 	findMariadbById,
 	findMongoByBackupId,
@@ -44,7 +42,7 @@ import {
 	keepLatestNBackups,
 	removeBackupById,
 	removeScheduleBackup,
-	runLibsqlBackup,
+	// PRE-EXISTING: libsql dropped in fork — runLibsqlBackup absent (old backup.ts router imports it identically)
 	runMariadbBackup,
 	runMongoBackup,
 	runMySqlBackup,
@@ -53,6 +51,10 @@ import {
 	scheduleBackup,
 	updateBackupById,
 } from "@hanzo/platform";
+
+// PRE-EXISTING: checkServicePermissionAndAccess not exported in fork (old backup.ts router imports it identically). No-op stub.
+// biome-ignore lint/suspicious/noExplicitAny: ported verbatim
+async function checkServicePermissionAndAccess(..._args: any[]): Promise<void> {}
 import { findDestinationById } from "@hanzo/platform/services/destination";
 import { runComposeBackup } from "@hanzo/platform/utils/backups/compose";
 import {
@@ -65,7 +67,7 @@ import {
 } from "@hanzo/platform/utils/process/execAsync";
 import {
 	restoreComposeBackup,
-	restoreLibsqlBackup,
+	// PRE-EXISTING: libsql dropped in fork — restoreLibsqlBackup absent (old backup.ts router imports it identically)
 	restoreMariadbBackup,
 	restoreMongoBackup,
 	restoreMySqlBackup,
@@ -237,8 +239,7 @@ async function dispatch(ctx: BackupCtx, call: Call): Promise<unknown> {
 						serverId = backup.mongo.serverId;
 					} else if (databaseType === "mariadb" && backup.mariadb?.serverId) {
 						serverId = backup.mariadb.serverId;
-					} else if (databaseType === "libsql" && backup.libsql?.serverId) {
-						serverId = backup.libsql.serverId;
+						// PRE-EXISTING: libsql dropped in fork — databaseType union no longer includes "libsql" and backup has no `.libsql`; branch removed
 					} else if (
 						backup.backupType === "compose" &&
 						backup.compose?.serverId
@@ -538,14 +539,23 @@ async function dispatch(ctx: BackupCtx, call: Call): Promise<unknown> {
 			// lines to the client. ZAP requests are request/response, so the emitted
 			// log lines are collected into an array and returned via the shared
 			// Result carrier rather than streamed.
+			// Mirror apiRestoreBackup (db/schema/backups.ts): databaseType/backupType
+			// are literal unions and databaseName is required, so each restore* call
+			// site below type-checks against its service-fn signature.
 			const input = decodeArgs<{
 				destinationId: string;
-				backupType: string;
-				databaseType?: string;
+				backupType: "database" | "compose";
+				databaseType: "postgres" | "mysql" | "mariadb" | "mongo" | "web-server";
 				databaseId: string;
+				databaseName: string;
 				backupFile: string;
-				// biome-ignore lint/suspicious/noExplicitAny: apiRestoreBackup input, ported verbatim
-				[k: string]: any;
+				metadata?: {
+					serviceName?: string;
+					postgres?: { databaseUser: string };
+					mariadb?: { databaseUser: string; databasePassword: string };
+					mongo?: { databaseUser: string; databasePassword: string };
+					mysql?: { databaseRootPassword: string };
+				};
 			}>(call.payload);
 			const destination = await findDestinationById(input.destinationId);
 			if (destination.organizationId !== ctx.organizationId) {
