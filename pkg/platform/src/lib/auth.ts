@@ -4,6 +4,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { admin, apiKey, organization, genericOAuth } from "better-auth/plugins";
+import { iamProvider } from "@hanzo/iam/betterauth";
 import { and, desc, eq } from "drizzle-orm";
 import { IS_CLOUD } from "../constants";
 import { db } from "../db";
@@ -20,7 +21,7 @@ const IAM_URL = (
 	process.env.HANZO_IAM_URL ||
 	process.env.HANZO_IAM_ENDPOINT ||
 	process.env.HANZO_IAM_SERVER_URL ||
-	"https://hanzo.id"
+	"https://iam.hanzo.ai"
 ).replace(/\/$/, "");
 const IAM_CLIENT_ID =
 	process.env.IAM_CLIENT_ID ||
@@ -251,14 +252,11 @@ const { handler, api } = betterAuth({
 			? [
 					genericOAuth({
 						config: [
-							{
-								providerId: "hanzo",
-								discoveryUrl: `${IAM_URL}/.well-known/openid-configuration`,
+							iamProvider({
+								serverUrl: IAM_URL,
 								clientId: IAM_CLIENT_ID as string,
 								clientSecret: IAM_CLIENT_SECRET as string,
-								scopes: ["openid", "profile", "email"],
-								pkce: true,
-							},
+							}),
 						],
 					}),
 				]
