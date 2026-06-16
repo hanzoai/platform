@@ -26,6 +26,7 @@ import { setupDrawerLogsWebSocketServer } from "./wss/drawer-logs";
 import { setupDeploymentLogsWebSocketServer } from "./wss/listen-deployment";
 import { setupTerminalWebSocketServer } from "./wss/terminal";
 import { aiMintCap, aiRootCap } from "./zap/ai-cap";
+import { billingMintCap, billingRootCap } from "./zap/billing-cap";
 import { clusterMintCap, clusterRootCap } from "./zap/cluster-cap";
 import {
 	destinationMintCap,
@@ -37,12 +38,14 @@ import {
 } from "./zap/digitalocean-cap";
 import { dnsMintCap, dnsRootCap } from "./zap/dns-cap";
 import { doksMintCap, doksRootCap } from "./zap/doks-cap";
+import { domainMintCap, domainRootCap } from "./zap/domain-cap";
 import {
 	environmentMintCap,
 	environmentRootCap,
 } from "./zap/environment-cap";
 import { gatewayMintCap, gatewayRootCap } from "./zap/gateway-cap";
 import { k8sMintCap, k8sRootCap } from "./zap/k8s-cap";
+import { mountMintCap, mountRootCap } from "./zap/mount-cap";
 import {
 	notificationMintCap,
 	notificationRootCap,
@@ -51,7 +54,12 @@ import {
 	organizationMintCap,
 	organizationRootCap,
 } from "./zap/organization-cap";
+import { portMintCap, portRootCap } from "./zap/port-cap";
 import { projectMintCap, projectRootCap } from "./zap/project-cap";
+import {
+	redirectsMintCap,
+	redirectsRootCap,
+} from "./zap/redirects-cap";
 import { registryMintCap, registryRootCap } from "./zap/registry-cap";
 
 config({ path: ".env" });
@@ -180,6 +188,41 @@ void app.prepare().then(async () => {
 			mintCap: digitaloceanMintCap,
 			rootCap: digitaloceanRootCap,
 			onError: (err) => console.error("[zap/digitalocean]", err),
+		});
+		// Billing capability — replaces the tRPC billingRouter.
+		serve(server, {
+			path: "/zap/billing",
+			mintCap: billingMintCap,
+			rootCap: billingRootCap,
+			onError: (err) => console.error("[zap/billing]", err),
+		});
+		// Domain capability — replaces the tRPC domainRouter.
+		serve(server, {
+			path: "/zap/domain",
+			mintCap: domainMintCap,
+			rootCap: domainRootCap,
+			onError: (err) => console.error("[zap/domain]", err),
+		});
+		// Mount capability — replaces the tRPC mountRouter.
+		serve(server, {
+			path: "/zap/mount",
+			mintCap: mountMintCap,
+			rootCap: mountRootCap,
+			onError: (err) => console.error("[zap/mount]", err),
+		});
+		// Port capability — replaces the tRPC portRouter.
+		serve(server, {
+			path: "/zap/port",
+			mintCap: portMintCap,
+			rootCap: portRootCap,
+			onError: (err) => console.error("[zap/port]", err),
+		});
+		// Redirects capability — replaces the tRPC redirectsRouter.
+		serve(server, {
+			path: "/zap/redirects",
+			mintCap: redirectsMintCap,
+			rootCap: redirectsRootCap,
+			onError: (err) => console.error("[zap/redirects]", err),
 		});
 
 		server.listen(PORT, HOST);
