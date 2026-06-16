@@ -27,6 +27,7 @@ import { setupDeploymentLogsWebSocketServer } from "./wss/listen-deployment";
 import { setupTerminalWebSocketServer } from "./wss/terminal";
 import { adminMintCap, adminRootCap } from "./zap/admin-cap";
 import { aiMintCap, aiRootCap } from "./zap/ai-cap";
+import { auditLogMintCap, auditLogRootCap } from "./zap/audit-log-cap";
 import { backupMintCap, backupRootCap } from "./zap/backup-cap";
 import { billingMintCap, billingRootCap } from "./zap/billing-cap";
 import {
@@ -38,6 +39,10 @@ import {
 	certificateRootCap,
 } from "./zap/certificate-cap";
 import { clusterMintCap, clusterRootCap } from "./zap/cluster-cap";
+import {
+	customRoleMintCap,
+	customRoleRootCap,
+} from "./zap/custom-role-cap";
 import {
 	deployProviderMintCap,
 	deployProviderRootCap,
@@ -71,6 +76,10 @@ import {
 } from "./zap/git-provider-cap";
 import { gitlabMintCap, gitlabRootCap } from "./zap/gitlab-cap";
 import { k8sMintCap, k8sRootCap } from "./zap/k8s-cap";
+import {
+	licenseKeyMintCap,
+	licenseKeyRootCap,
+} from "./zap/license-key-cap";
 import { mariadbMintCap, mariadbRootCap } from "./zap/mariadb-cap";
 import { mongoMintCap, mongoRootCap } from "./zap/mongo-cap";
 import { mountMintCap, mountRootCap } from "./zap/mount-cap";
@@ -97,11 +106,13 @@ import {
 } from "./zap/redirects-cap";
 import { redisMintCap, redisRootCap } from "./zap/redis-cap";
 import { registryMintCap, registryRootCap } from "./zap/registry-cap";
+import { rollbackMintCap, rollbackRootCap } from "./zap/rollback-cap";
 import {
 	scheduleMintCap,
 	scheduleRootCap,
 } from "./zap/schedule-cap";
 import { securityMintCap, securityRootCap } from "./zap/security-cap";
+import { ssoMintCap, ssoRootCap } from "./zap/sso-cap";
 import { sshKeyMintCap, sshKeyRootCap } from "./zap/ssh-key-cap";
 import { stripeMintCap, stripeRootCap } from "./zap/stripe-cap";
 import { swarmMintCap, swarmRootCap } from "./zap/swarm-cap";
@@ -111,6 +122,10 @@ import {
 	volumeBackupsMintCap,
 	volumeBackupsRootCap,
 } from "./zap/volume-backups-cap";
+import {
+	whitelabelingMintCap,
+	whitelabelingRootCap,
+} from "./zap/whitelabeling-cap";
 
 config({ path: ".env" });
 const PORT = Number.parseInt(process.env.PORT || "3000", 10);
@@ -455,6 +470,48 @@ void app.prepare().then(async () => {
 			mintCap: adminMintCap,
 			rootCap: adminRootCap,
 			onError: (err) => console.error("[zap/admin]", err),
+		});
+		// Rollback capability — replaces the tRPC rollbackRouter.
+		serve(server, {
+			path: "/zap/rollback",
+			mintCap: rollbackMintCap,
+			rootCap: rollbackRootCap,
+			onError: (err) => console.error("[zap/rollback]", err),
+		});
+		// License-key capability (enterprise) — replaces the tRPC licenseKeyRouter.
+		serve(server, {
+			path: "/zap/license-key",
+			mintCap: licenseKeyMintCap,
+			rootCap: licenseKeyRootCap,
+			onError: (err) => console.error("[zap/license-key]", err),
+		});
+		// Custom-role capability (enterprise) — replaces the tRPC customRoleRouter.
+		serve(server, {
+			path: "/zap/custom-role",
+			mintCap: customRoleMintCap,
+			rootCap: customRoleRootCap,
+			onError: (err) => console.error("[zap/custom-role]", err),
+		});
+		// SSO capability (enterprise) — replaces the tRPC ssoRouter.
+		serve(server, {
+			path: "/zap/sso",
+			mintCap: ssoMintCap,
+			rootCap: ssoRootCap,
+			onError: (err) => console.error("[zap/sso]", err),
+		});
+		// Whitelabeling capability (enterprise) — replaces the tRPC whitelabelingRouter.
+		serve(server, {
+			path: "/zap/whitelabeling",
+			mintCap: whitelabelingMintCap,
+			rootCap: whitelabelingRootCap,
+			onError: (err) => console.error("[zap/whitelabeling]", err),
+		});
+		// Audit-log capability (enterprise) — replaces the tRPC auditLogRouter.
+		serve(server, {
+			path: "/zap/audit-log",
+			mintCap: auditLogMintCap,
+			rootCap: auditLogRootCap,
+			onError: (err) => console.error("[zap/audit-log]", err),
 		});
 
 		server.listen(PORT, HOST);
