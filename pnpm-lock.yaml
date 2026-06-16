@@ -265,11 +265,11 @@ importers:
         specifier: ^5.5.0
         version: 5.5.0
       '@zap-proto/web':
-        specifier: ^0.1.0
-        version: 0.1.0(ws@8.16.0)
+        specifier: ^0.1.1
+        version: 0.1.1(ws@8.16.0)
       '@zap-proto/zap':
-        specifier: ^1.1.0
-        version: 1.1.0
+        specifier: ^1.2.0
+        version: 1.2.0
       adm-zip:
         specifier: ^0.5.16
         version: 0.5.16
@@ -5007,8 +5007,8 @@ packages:
   '@xterm/xterm@5.5.0':
     resolution: {integrity: sha512-hqJHYaQb5OptNunnyAnkHyM8aCjZ1MEIDTQu1iIbbTD/xops91NB5yq1ZK/dC2JDbVWtF23zUtl9JE2NqwT87A==}
 
-  '@zap-proto/web@0.1.0':
-    resolution: {integrity: sha512-De9b6gYYXZYKggihaa6j56qaEZBMbYaH7dN0yh/SBT1EW0TpaUp9N32Q8qdp9ZINHcd9xO/N4eVF/Hx1ce8FMQ==}
+  '@zap-proto/web@0.1.1':
+    resolution: {integrity: sha512-QH1g72NhR4mGtytDO+jr0N3S2adaHYECyzCcTrkFwNKlVRdjux9UH5yn/XpGIvrx2zYFdNPDdYX2WxccGsg6og==}
     engines: {node: '>=18'}
     peerDependencies:
       ws: '>=8'
@@ -5016,8 +5016,9 @@ packages:
       ws:
         optional: true
 
-  '@zap-proto/zap@1.1.0':
-    resolution: {integrity: sha512-qJyT6OqHqtUuKZwh91Nl2CWCQ3MJKNHi1cHrha2sYPxuNrILS2Cey9j+c6Gev3KRuTkpfcJx3GPLapbeIzpVEw==}
+  '@zap-proto/zap@1.2.0':
+    resolution: {integrity: sha512-hi03b50aJZl4jwVLE96yPCh12FiHBClPZ/v9miycmUb/Q4Yj/KEKGqaaY+VHQm05KVT6rJwnwM26w+xsAshK+w==}
+    hasBin: true
 
   abbrev@1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==}
@@ -14758,13 +14759,13 @@ snapshots:
 
   '@xterm/xterm@5.5.0': {}
 
-  '@zap-proto/web@0.1.0(ws@8.16.0)':
+  '@zap-proto/web@0.1.1(ws@8.16.0)':
     dependencies:
-      '@zap-proto/zap': 1.1.0
+      '@zap-proto/zap': 1.2.0
     optionalDependencies:
       ws: 8.16.0
 
-  '@zap-proto/zap@1.1.0': {}
+  '@zap-proto/zap@1.2.0': {}
 
   abbrev@1.1.1: {}
 

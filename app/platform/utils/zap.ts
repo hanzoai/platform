@@ -1,172 +1,91 @@
 /**
- * Native ZAP RPC client (browser) — DOKS capability.
+ * utils/zap.ts — native ZAP RPC client (browser) for the DOKS capability.
  *
- * Replaces the former JSON-RPC HTTP shim (which fetched `/call` against the
- * AI-agent bridge). This is the browser frontend's binary-ZAP transport: it
- * opens a single WebSocket to `/zap/doks` via `@zap-proto/web`'s `connect()`,
- * speaks native ZAP envelopes over WS binary frames (no JSON, no tRPC), and
- * dispatches by method ordinal.
+ * Replaces the former tRPC `api.doks.*` surface. Opens a single WebSocket to
+ * `/zap/doks` via @zap-proto/web's `connect()` (shared transport in
+ * utils/zap-client.ts), speaks native binary ZAP envelopes (no JSON, no tRPC),
+ * and dispatches by the generated DoksMethod ordinal.
  *
- * Ergonomics mirror the tRPC `api.doks.*` surface the UI already uses:
+ * Ergonomics mirror the tRPC surface the UI already uses:
  *   const { data } = doks.getByOrg.useQuery();
  *   const provision = doks.provision.useMutation();
  *   provision.mutate({ organizationId, region, ha: false });
  *
- * Auth: the session cookie rides the WS upgrade automatically (same-origin),
- * which `serve()`'s mintCap validates; a rejected upgrade surfaces as a
- * WebRpcError. Method ordinals are the single source of truth in
- * server/zap/schema/doks.zap (mirrored by DoksMethod).
+ * Struct builders (newXxx) and ordinals (DoksMethod) are generated from
+ * server/zap/schema/doks.zap; this file only wires them to react-query hooks.
  */
 
+import { makeRpc } from "@/utils/zap-client";
 import {
-	type UseMutationOptions,
-	type UseQueryOptions,
-	useMutation,
-	useQuery,
-} from "@tanstack/react-query";
-import { type Connection, connect } from "@zap-proto/web/client";
-import { type Conn, Status } from "@zap-proto/zap";
-import {
-	AddNodePoolParams,
-	ClusterRef,
-	DeleteNodePoolParams,
-	decodeResult,
-	Empty,
-	encodeStruct,
-	ProvisionParams,
-	type StructSpec,
-	UpdateNodePoolParams,
-} from "@/server/zap/codec";
+	DoksMethod,
+	newAddNodePoolParams,
+	newClusterRef,
+	newDeleteNodePoolParams,
+	newEmpty,
+	newProvisionParams,
+	newUpdateNodePoolParams,
+} from "@/server/zap/schema/doks_zap";
 
-/**
- * The default output type for a DOKS RPC method. The generic `Result` carrier
- * returns the service value untyped (heterogeneous DB rows / provider payloads
- * with no stable column contract at this layer), so callsites narrow exactly as
- * they did against tRPC's inferred outputs. When per-method result StructSpecs
- * land (future work), each method's TOut is set to its concrete result type.
- */
-// biome-ignore lint/suspicious/noExplicitAny: the generic Result carrier is untyped by design
-type ZapValue = any;
+const rpc = makeRpc("/zap/doks");
 
-// Method ordinals — mirror server/zap/schema/doks.zap (and DoksMethod server-side).
-const Method = {
-	provision: 0,
-	get: 1,
-	getByOrg: 2,
-	status: 3,
-	kubeconfig: 4,
-	delete: 5,
-	upgradeToHA: 6,
-	addNodePool: 7,
-	updateNodePool: 8,
-	deleteNodePool: 9,
-	list: 10,
-	sync: 11,
-	listNodeSizes: 12,
-	listRegions: 13,
-	clusterCost: 14,
-	orgBilling: 15,
-	fleetBilling: 16,
-	recordSnapshot: 17,
-} as const;
+// The Empty struct carries a single padding byte (a ZAP struct needs >=1 field);
+// parameterless methods send it with _pad=0.
+const empty = () => newEmpty({ _pad: 0 });
 
-function wsUrl(): string {
-	const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-	return `${protocol}//${window.location.host}/zap/doks`;
-}
-
-// One lazy connection per tab, shared by every call (Conn is FIFO-correlated).
-let connPromise: Promise<Connection<Conn>> | null = null;
-
-function getConn(): Promise<Connection<Conn>> {
-	if (!connPromise) {
-		connPromise = connect<Conn>(wsUrl()).catch((err) => {
-			connPromise = null; // allow reconnect on next call
-			throw err;
-		});
-	}
-	return connPromise;
-}
-
-/** Invoke one DOKS method: encode params, call by ordinal, decode the result. */
-async function invoke<T>(
-	method: number,
-	spec: StructSpec,
-	params: Record<string, unknown>,
-): Promise<T> {
-	const { bootstrap } = await getConn();
-	const payload = encodeStruct(spec, params);
-	const resp = await bootstrap.call(method, { payload });
-	const value = decodeResult(resp.body);
-	if (resp.status !== Status.OK) {
-		const message =
-			value && typeof value === "object" && "error" in value
-				? String((value as { error: unknown }).error)
-				: `zap/doks call failed (status ${resp.status})`;
-		throw new Error(message);
-	}
-	return value as T;
-}
-
-/** A query method (hook + raw call), keyed for react-query caching. */
-function query<TArgs extends Record<string, unknown>, TOut = ZapValue>(
-	method: number,
-	spec: StructSpec,
-	key: string,
-) {
-	return {
-		call: (args: TArgs) => invoke<TOut>(method, spec, args),
-		useQuery: (
-			args?: TArgs,
-			options?: Omit<UseQueryOptions<TOut, Error>, "queryKey" | "queryFn">,
-		) =>
-			useQuery<TOut, Error>({
-				queryKey: ["zap", "doks", key, args ?? null],
-				queryFn: () => invoke<TOut>(method, spec, args ?? {}),
-				...options,
-			}),
-	};
-}
-
-/** A mutation method (hook + raw call). */
-function mutation<
-	TArgs extends Record<string, unknown> = Record<string, unknown>,
-	TOut = ZapValue,
->(method: number, spec: StructSpec) {
-	return {
-		call: (args: TArgs) => invoke<TOut>(method, spec, args),
-		useMutation: (
-			options?: Omit<UseMutationOptions<TOut, Error, TArgs>, "mutationFn">,
-		) =>
-			useMutation<TOut, Error, TArgs>({
-				mutationFn: (args) => invoke<TOut>(method, spec, args),
-				...options,
-			}),
-	};
-}
+// Builders that fill the generated struct from a loose UI args object, applying
+// the same optional defaults ("" / 0 = unset) the schema documents.
+const provision = (a: Record<string, unknown>) =>
+	newProvisionParams({
+		organizationId: String(a.organizationId ?? ""),
+		region: String(a.region ?? ""),
+		nodeSize: String(a.nodeSize ?? ""),
+		ha: Boolean(a.ha),
+		nodeCount: typeof a.nodeCount === "number" ? a.nodeCount : 0,
+	});
+const ref = (a: Record<string, unknown>) =>
+	newClusterRef({ doksClusterId: String(a.doksClusterId ?? "") });
+const addPool = (a: Record<string, unknown>) =>
+	newAddNodePoolParams({
+		doksClusterId: String(a.doksClusterId ?? ""),
+		name: String(a.name ?? ""),
+		size: String(a.size ?? ""),
+		count: typeof a.count === "number" ? a.count : 0,
+	});
+const updatePool = (a: Record<string, unknown>) =>
+	newUpdateNodePoolParams({
+		doksClusterId: String(a.doksClusterId ?? ""),
+		poolId: String(a.poolId ?? ""),
+		size: String(a.size ?? ""),
+		count: typeof a.count === "number" ? a.count : 0,
+	});
+const deletePool = (a: Record<string, unknown>) =>
+	newDeleteNodePoolParams({
+		doksClusterId: String(a.doksClusterId ?? ""),
+		poolId: String(a.poolId ?? ""),
+	});
 
 /**
  * The DOKS RPC surface — drop-in shaped for the prior tRPC `api.doks.*` usage.
- * Result types are `unknown`-by-default (the generic Result carrier); callsites
- * narrow as they did against tRPC's inferred outputs.
+ * Result types are untyped (the shared Result carrier returns heterogeneous DB
+ * rows / provider payloads); callsites narrow as they did against tRPC.
  */
 export const doks = {
-	provision: mutation(Method.provision, ProvisionParams),
-	get: query(Method.get, ClusterRef, "get"),
-	getByOrg: query(Method.getByOrg, Empty, "getByOrg"),
-	status: query(Method.status, ClusterRef, "status"),
-	kubeconfig: query(Method.kubeconfig, ClusterRef, "kubeconfig"),
-	delete: mutation(Method.delete, ClusterRef),
-	upgradeToHA: mutation(Method.upgradeToHA, ClusterRef),
-	addNodePool: mutation(Method.addNodePool, AddNodePoolParams),
-	updateNodePool: mutation(Method.updateNodePool, UpdateNodePoolParams),
-	deleteNodePool: mutation(Method.deleteNodePool, DeleteNodePoolParams),
-	list: query(Method.list, Empty, "list"),
-	sync: mutation(Method.sync, Empty),
-	listNodeSizes: query(Method.listNodeSizes, Empty, "listNodeSizes"),
-	listRegions: query(Method.listRegions, Empty, "listRegions"),
-	clusterCost: query(Method.clusterCost, ClusterRef, "clusterCost"),
-	orgBilling: query(Method.orgBilling, Empty, "orgBilling"),
-	fleetBilling: query(Method.fleetBilling, Empty, "fleetBilling"),
-	recordSnapshot: mutation(Method.recordSnapshot, Empty),
+	provision: rpc.mutation(DoksMethod.provision, provision),
+	get: rpc.query(DoksMethod.get, "get", ref),
+	getByOrg: rpc.query(DoksMethod.getByOrg, "getByOrg", empty),
+	status: rpc.query(DoksMethod.status, "status", ref),
+	kubeconfig: rpc.query(DoksMethod.kubeconfig, "kubeconfig", ref),
+	delete: rpc.mutation(DoksMethod.delete, ref),
+	upgradeToHA: rpc.mutation(DoksMethod.upgradeToHA, ref),
+	addNodePool: rpc.mutation(DoksMethod.addNodePool, addPool),
+	updateNodePool: rpc.mutation(DoksMethod.updateNodePool, updatePool),
+	deleteNodePool: rpc.mutation(DoksMethod.deleteNodePool, deletePool),
+	list: rpc.query(DoksMethod.list, "list", empty),
+	sync: rpc.mutation(DoksMethod.sync, empty),
+	listNodeSizes: rpc.query(DoksMethod.listNodeSizes, "listNodeSizes", empty),
+	listRegions: rpc.query(DoksMethod.listRegions, "listRegions", empty),
+	clusterCost: rpc.query(DoksMethod.clusterCost, "clusterCost", ref),
+	orgBilling: rpc.query(DoksMethod.orgBilling, "orgBilling", empty),
+	fleetBilling: rpc.query(DoksMethod.fleetBilling, "fleetBilling", empty),
+	recordSnapshot: rpc.mutation(DoksMethod.recordSnapshot, empty),
 } as const;
