@@ -1,97 +1,172 @@
 /**
- * ZAP Agent Bridge Client
+ * Native ZAP RPC client (browser) — DOKS capability.
  *
- * Calls the platform's JSON-RPC agent bridge (zap-bridge.ts) over HTTP.
- * This is the AI agent / MCP interface, NOT the native ZAP binary protocol.
+ * Replaces the former JSON-RPC HTTP shim (which fetched `/call` against the
+ * AI-agent bridge). This is the browser frontend's binary-ZAP transport: it
+ * opens a single WebSocket to `/zap/doks` via `@zap-proto/web`'s `connect()`,
+ * speaks native ZAP envelopes over WS binary frames (no JSON, no tRPC), and
+ * dispatches by method ordinal.
  *
- * The native ZAP protocol uses Cap'n Proto binary serialization over persistent
- * TCP connections (port 9998, two-party VatNetwork RPC). For the native protocol,
- * see @hanzo/zap-client and the schema at pkg/zap/schema/platform.capnp.
+ * Ergonomics mirror the tRPC `api.doks.*` surface the UI already uses:
+ *   const { data } = doks.getByOrg.useQuery();
+ *   const provision = doks.provision.useMutation();
+ *   provision.mutate({ organizationId, region, ha: false });
  *
- * This bridge exists so that browser frontends and AI agents can call platform
- * operations via standard HTTP/JSON without a Cap'n Proto client.
- *
- * Usage:
- *   import { zap } from "@/utils/zap";
- *
- *   // Query (calls HTTP bridge, NOT native Cap'n Proto)
- *   const { data } = zap.useQuery("platform.list_projects", { organizationId: "..." });
- *
- *   // Mutation
- *   const mutation = zap.useMutation("platform.create_project");
- *   mutation.mutate({ name: "My Project", organizationId: "..." });
+ * Auth: the session cookie rides the WS upgrade automatically (same-origin),
+ * which `serve()`'s mintCap validates; a rejected upgrade surfaces as a
+ * WebRpcError. Method ordinals are the single source of truth in
+ * server/zap/schema/doks.zap (mirrored by DoksMethod).
  */
 
-import { useMutation, useQuery, type UseQueryOptions, type UseMutationOptions } from "@tanstack/react-query";
+import {
+	type UseMutationOptions,
+	type UseQueryOptions,
+	useMutation,
+	useQuery,
+} from "@tanstack/react-query";
+import { type Connection, connect } from "@zap-proto/web/client";
+import { type Conn, Status } from "@zap-proto/zap";
+import {
+	AddNodePoolParams,
+	ClusterRef,
+	DeleteNodePoolParams,
+	decodeResult,
+	Empty,
+	encodeStruct,
+	ProvisionParams,
+	type StructSpec,
+	UpdateNodePoolParams,
+} from "@/server/zap/codec";
 
-// NOTE: This connects to the JSON-RPC HTTP bridge, not the native Cap'n Proto
-// TCP endpoint. The bridge translates HTTP/JSON calls into Cap'n Proto RPC
-// internally. Port 9998 is the native ZAP port; the bridge runs on BRIDGE_PORT.
-const ZAP_BRIDGE_PORT = process.env.NEXT_PUBLIC_ZAP_BRIDGE_PORT || "9999";
+/**
+ * The default output type for a DOKS RPC method. The generic `Result` carrier
+ * returns the service value untyped (heterogeneous DB rows / provider payloads
+ * with no stable column contract at this layer), so callsites narrow exactly as
+ * they did against tRPC's inferred outputs. When per-method result StructSpecs
+ * land (future work), each method's TOut is set to its concrete result type.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: the generic Result carrier is untyped by design
+type ZapValue = any;
 
-const ZAP_BRIDGE_URL = typeof window !== "undefined"
-	? `${window.location.protocol}//${window.location.host}`
-	: `http://localhost:${ZAP_BRIDGE_PORT}`;
+// Method ordinals — mirror server/zap/schema/doks.zap (and DoksMethod server-side).
+const Method = {
+	provision: 0,
+	get: 1,
+	getByOrg: 2,
+	status: 3,
+	kubeconfig: 4,
+	delete: 5,
+	upgradeToHA: 6,
+	addNodePool: 7,
+	updateNodePool: 8,
+	deleteNodePool: 9,
+	list: 10,
+	sync: 11,
+	listNodeSizes: 12,
+	listRegions: 13,
+	clusterCost: 14,
+	orgBilling: 15,
+	fleetBilling: 16,
+	recordSnapshot: 17,
+} as const;
 
-async function zapCall<T = any>(name: string, args: Record<string, any> = {}): Promise<T> {
-	const res = await fetch(`${ZAP_BRIDGE_URL}/call`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			...(process.env.NEXT_PUBLIC_ZAP_TOKEN
-				? { Authorization: `Bearer ${process.env.NEXT_PUBLIC_ZAP_TOKEN}` }
-				: {}),
-		},
-		body: JSON.stringify({ name, arguments: args }),
-	});
+function wsUrl(): string {
+	const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+	return `${protocol}//${window.location.host}/zap/doks`;
+}
 
-	const result = await res.json();
-	if (result.isError) {
-		throw new Error(result.error || "ZAP call failed");
+// One lazy connection per tab, shared by every call (Conn is FIFO-correlated).
+let connPromise: Promise<Connection<Conn>> | null = null;
+
+function getConn(): Promise<Connection<Conn>> {
+	if (!connPromise) {
+		connPromise = connect<Conn>(wsUrl()).catch((err) => {
+			connPromise = null; // allow reconnect on next call
+			throw err;
+		});
 	}
-	return result.data as T;
+	return connPromise;
 }
 
-async function zapListTools() {
-	const res = await fetch(`${ZAP_BRIDGE_URL}/tools`, {
-		headers: process.env.NEXT_PUBLIC_ZAP_TOKEN
-			? { Authorization: `Bearer ${process.env.NEXT_PUBLIC_ZAP_TOKEN}` }
-			: {},
-	});
-	return res.json();
+/** Invoke one DOKS method: encode params, call by ordinal, decode the result. */
+async function invoke<T>(
+	method: number,
+	spec: StructSpec,
+	params: Record<string, unknown>,
+): Promise<T> {
+	const { bootstrap } = await getConn();
+	const payload = encodeStruct(spec, params);
+	const resp = await bootstrap.call(method, { payload });
+	const value = decodeResult(resp.body);
+	if (resp.status !== Status.OK) {
+		const message =
+			value && typeof value === "object" && "error" in value
+				? String((value as { error: unknown }).error)
+				: `zap/doks call failed (status ${resp.status})`;
+		throw new Error(message);
+	}
+	return value as T;
+}
+
+/** A query method (hook + raw call), keyed for react-query caching. */
+function query<TArgs extends Record<string, unknown>, TOut = ZapValue>(
+	method: number,
+	spec: StructSpec,
+	key: string,
+) {
+	return {
+		call: (args: TArgs) => invoke<TOut>(method, spec, args),
+		useQuery: (
+			args?: TArgs,
+			options?: Omit<UseQueryOptions<TOut, Error>, "queryKey" | "queryFn">,
+		) =>
+			useQuery<TOut, Error>({
+				queryKey: ["zap", "doks", key, args ?? null],
+				queryFn: () => invoke<TOut>(method, spec, args ?? {}),
+				...options,
+			}),
+	};
+}
+
+/** A mutation method (hook + raw call). */
+function mutation<
+	TArgs extends Record<string, unknown> = Record<string, unknown>,
+	TOut = ZapValue,
+>(method: number, spec: StructSpec) {
+	return {
+		call: (args: TArgs) => invoke<TOut>(method, spec, args),
+		useMutation: (
+			options?: Omit<UseMutationOptions<TOut, Error, TArgs>, "mutationFn">,
+		) =>
+			useMutation<TOut, Error, TArgs>({
+				mutationFn: (args) => invoke<TOut>(method, spec, args),
+				...options,
+			}),
+	};
 }
 
 /**
- * React hook for ZAP queries (GET-like operations).
+ * The DOKS RPC surface — drop-in shaped for the prior tRPC `api.doks.*` usage.
+ * Result types are `unknown`-by-default (the generic Result carrier); callsites
+ * narrow as they did against tRPC's inferred outputs.
  */
-function useZapQuery<T = any>(
-	toolName: string,
-	args?: Record<string, any>,
-	options?: Omit<UseQueryOptions<T, Error>, "queryKey" | "queryFn">,
-) {
-	return useQuery<T, Error>({
-		queryKey: ["zap", toolName, args],
-		queryFn: () => zapCall<T>(toolName, args),
-		...options,
-	});
-}
-
-/**
- * React hook for ZAP mutations (POST-like operations).
- */
-function useZapMutation<T = any, TArgs = Record<string, any>>(
-	toolName: string,
-	options?: Omit<UseMutationOptions<T, Error, TArgs>, "mutationFn">,
-) {
-	return useMutation<T, Error, TArgs>({
-		mutationFn: (args) => zapCall<T>(toolName, args as Record<string, any>),
-		...options,
-	});
-}
-
-export const zap = {
-	call: zapCall,
-	listTools: zapListTools,
-	useQuery: useZapQuery,
-	useMutation: useZapMutation,
-};
+export const doks = {
+	provision: mutation(Method.provision, ProvisionParams),
+	get: query(Method.get, ClusterRef, "get"),
+	getByOrg: query(Method.getByOrg, Empty, "getByOrg"),
+	status: query(Method.status, ClusterRef, "status"),
+	kubeconfig: query(Method.kubeconfig, ClusterRef, "kubeconfig"),
+	delete: mutation(Method.delete, ClusterRef),
+	upgradeToHA: mutation(Method.upgradeToHA, ClusterRef),
+	addNodePool: mutation(Method.addNodePool, AddNodePoolParams),
+	updateNodePool: mutation(Method.updateNodePool, UpdateNodePoolParams),
+	deleteNodePool: mutation(Method.deleteNodePool, DeleteNodePoolParams),
+	list: query(Method.list, Empty, "list"),
+	sync: mutation(Method.sync, Empty),
+	listNodeSizes: query(Method.listNodeSizes, Empty, "listNodeSizes"),
+	listRegions: query(Method.listRegions, Empty, "listRegions"),
+	clusterCost: query(Method.clusterCost, ClusterRef, "clusterCost"),
+	orgBilling: query(Method.orgBilling, Empty, "orgBilling"),
+	fleetBilling: query(Method.fleetBilling, Empty, "fleetBilling"),
+	recordSnapshot: mutation(Method.recordSnapshot, Empty),
+} as const;
