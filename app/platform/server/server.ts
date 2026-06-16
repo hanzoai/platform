@@ -27,10 +27,32 @@ import { setupDeploymentLogsWebSocketServer } from "./wss/listen-deployment";
 import { setupTerminalWebSocketServer } from "./wss/terminal";
 import { aiMintCap, aiRootCap } from "./zap/ai-cap";
 import { clusterMintCap, clusterRootCap } from "./zap/cluster-cap";
+import {
+	destinationMintCap,
+	destinationRootCap,
+} from "./zap/destination-cap";
+import {
+	digitaloceanMintCap,
+	digitaloceanRootCap,
+} from "./zap/digitalocean-cap";
 import { dnsMintCap, dnsRootCap } from "./zap/dns-cap";
 import { doksMintCap, doksRootCap } from "./zap/doks-cap";
+import {
+	environmentMintCap,
+	environmentRootCap,
+} from "./zap/environment-cap";
 import { gatewayMintCap, gatewayRootCap } from "./zap/gateway-cap";
 import { k8sMintCap, k8sRootCap } from "./zap/k8s-cap";
+import {
+	notificationMintCap,
+	notificationRootCap,
+} from "./zap/notification-cap";
+import {
+	organizationMintCap,
+	organizationRootCap,
+} from "./zap/organization-cap";
+import { projectMintCap, projectRootCap } from "./zap/project-cap";
+import { registryMintCap, registryRootCap } from "./zap/registry-cap";
 
 config({ path: ".env" });
 const PORT = Number.parseInt(process.env.PORT || "3000", 10);
@@ -109,6 +131,55 @@ void app.prepare().then(async () => {
 			mintCap: aiMintCap,
 			rootCap: aiRootCap,
 			onError: (err) => console.error("[zap/ai]", err),
+		});
+		// Project capability — replaces the tRPC projectRouter.
+		serve(server, {
+			path: "/zap/project",
+			mintCap: projectMintCap,
+			rootCap: projectRootCap,
+			onError: (err) => console.error("[zap/project]", err),
+		});
+		// Environment capability — replaces the tRPC environmentRouter.
+		serve(server, {
+			path: "/zap/environment",
+			mintCap: environmentMintCap,
+			rootCap: environmentRootCap,
+			onError: (err) => console.error("[zap/environment]", err),
+		});
+		// Organization capability — replaces the tRPC organizationRouter.
+		serve(server, {
+			path: "/zap/organization",
+			mintCap: organizationMintCap,
+			rootCap: organizationRootCap,
+			onError: (err) => console.error("[zap/organization]", err),
+		});
+		// Notification capability — replaces the tRPC notificationRouter.
+		serve(server, {
+			path: "/zap/notification",
+			mintCap: notificationMintCap,
+			rootCap: notificationRootCap,
+			onError: (err) => console.error("[zap/notification]", err),
+		});
+		// Destination capability — replaces the tRPC destinationRouter.
+		serve(server, {
+			path: "/zap/destination",
+			mintCap: destinationMintCap,
+			rootCap: destinationRootCap,
+			onError: (err) => console.error("[zap/destination]", err),
+		});
+		// Registry capability — replaces the tRPC registryRouter.
+		serve(server, {
+			path: "/zap/registry",
+			mintCap: registryMintCap,
+			rootCap: registryRootCap,
+			onError: (err) => console.error("[zap/registry]", err),
+		});
+		// DigitalOcean capability — replaces the tRPC digitaloceanRouter.
+		serve(server, {
+			path: "/zap/digitalocean",
+			mintCap: digitaloceanMintCap,
+			rootCap: digitaloceanRootCap,
+			onError: (err) => console.error("[zap/digitalocean]", err),
 		});
 
 		server.listen(PORT, HOST);

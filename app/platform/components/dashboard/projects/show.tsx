@@ -52,18 +52,19 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/utils/api";
+import { project as projectClient } from "@/utils/zap-project";
 import { useDebounce } from "@/utils/hooks/use-debounce";
 import { HandleProject } from "./handle-project";
 import { ProjectEnvironment } from "./project-environment";
 
 export const ShowProjects = () => {
-	const utils = api.useUtils();
+	const projectUtils = projectClient.useUtils();
 	const router = useRouter();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
-	const { data, isPending } = api.project.all.useQuery();
+	const { data, isPending } = projectClient.all.useQuery();
 	const { data: auth } = api.user.get.useQuery();
 	const { data: permissions } = api.user.getPermissions.useQuery();
-	const { mutateAsync } = api.project.remove.useMutation();
+	const { mutateAsync } = projectClient.remove.useMutation();
 	const { data: availableTags } = api.tag.all.useQuery();
 
 	const [searchQuery, setSearchQuery] = useState(
@@ -475,7 +476,7 @@ export const ShowProjects = () => {
 																													);
 																												})
 																												.finally(() => {
-																													utils.project.all.invalidate();
+																													projectUtils.all.invalidate();
 																												});
 																										}}
 																									>

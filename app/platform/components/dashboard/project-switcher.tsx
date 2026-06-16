@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/popover";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { api } from "@/utils/api";
+import { project as projectClient } from "@/utils/zap-project";
 import { useProjectContext } from "@/hooks/use-project-context";
 
 export function ProjectSwitcher({ collapsed }: { collapsed?: boolean }) {
@@ -35,7 +35,7 @@ export function ProjectSwitcher({ collapsed }: { collapsed?: boolean }) {
 	const router = useRouter();
 	const { activeProjectId, setActiveProject, setActiveEnvironment } = useProjectContext();
 
-	const { data: projects, isLoading } = api.project.all.useQuery();
+	const { data: projects, isPending } = projectClient.all.useQuery();
 
 	const activeProject = projects?.find(
 		(p) => p.projectId === activeProjectId,
@@ -71,7 +71,7 @@ export function ProjectSwitcher({ collapsed }: { collapsed?: boolean }) {
 		setOpen(false);
 	};
 
-	if (isLoading) {
+	if (isPending) {
 		return (
 			<div className="flex items-center justify-center h-8">
 				<Loader2 className="animate-spin size-3 text-muted-foreground" />

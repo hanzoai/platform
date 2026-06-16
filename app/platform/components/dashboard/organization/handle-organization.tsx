@@ -24,7 +24,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { api } from "@/utils/api";
+import { organization as organizationClient } from "@/utils/zap-organization";
 
 const organizationSchema = z.object({
 	name: z.string().min(1, {
