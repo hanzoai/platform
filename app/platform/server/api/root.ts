@@ -3,19 +3,20 @@ import { adminRouter } from "./routers/admin";
 import { aiRouter } from "./routers/ai";
 import { applicationRouter } from "./routers/application";
 import { backupRouter } from "./routers/backup";
+import { billingRouter } from "./routers/billing";
 import { bitbucketRouter } from "./routers/bitbucket";
 import { certificateRouter } from "./routers/certificate";
 import { clusterRouter } from "./routers/cluster";
 import { composeRouter } from "./routers/compose";
 import { deploymentRouter } from "./routers/deployment";
 import { destinationRouter } from "./routers/destination";
-import { dnsRouter } from "./routers/dns";
 import { digitaloceanRouter } from "./routers/digitalocean";
-import { gatewayRouter } from "./routers/gateway";
+import { dnsRouter } from "./routers/dns";
 import { dockerRouter } from "./routers/docker";
-import { doksRouter } from "./routers/doks";
+// doksRouter migrated to native @zap-proto/web (server/zap/doks-cap.ts).
 import { domainRouter } from "./routers/domain";
 import { environmentRouter } from "./routers/environment";
+import { gatewayRouter } from "./routers/gateway";
 import { gitProviderRouter } from "./routers/git-provider";
 import { giteaRouter } from "./routers/gitea";
 import { githubRouter } from "./routers/github";
@@ -47,7 +48,6 @@ import { serverRouter } from "./routers/server";
 import { settingsRouter } from "./routers/settings";
 import { sshRouter } from "./routers/ssh-key";
 import { stripeRouter } from "./routers/stripe";
-import { billingRouter } from "./routers/billing";
 import { swarmRouter } from "./routers/swarm";
 import { tagRouter } from "./routers/tag";
 import { userRouter } from "./routers/user";
@@ -64,7 +64,8 @@ export const appRouter = createTRPCRouter({
 	digitalocean: digitaloceanRouter,
 	gateway: gatewayRouter,
 	docker: dockerRouter,
-	doks: doksRouter,
+	// doks: migrated to native @zap-proto/web — see utils/zap.ts (browser) and
+	// server/zap/doks-cap.ts (server). No tRPC doks router remains.
 	project: projectRouter,
 	application: applicationRouter,
 	backup: backupRouter,

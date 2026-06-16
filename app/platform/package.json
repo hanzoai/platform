@@ -95,6 +95,8 @@
 		"@trpc/react-query": "^11.10.0",
 		"@trpc/server": "^11.10.0",
 		"@uiw/codemirror-theme-github": "^4.23.12",
+		"@zap-proto/web": "^0.1.0",
+		"@zap-proto/zap": "^1.1.0",
 		"@uiw/react-codemirror": "^4.23.12",
 		"@xterm/addon-attach": "0.10.0",
 		"@xterm/addon-clipboard": "0.1.0",

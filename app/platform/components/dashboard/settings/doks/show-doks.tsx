@@ -1,5 +1,5 @@
-import { useMemo } from "react";
 import { Cloud, Loader2, ServerCrash } from "lucide-react";
+import { useMemo } from "react";
 import {
 	Card,
 	CardContent,
@@ -7,12 +7,12 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { api } from "@/utils/api";
+import { doks } from "@/utils/zap";
 import { ClusterCard } from "./cluster-card";
 import { ProvisionCluster } from "./provision-cluster";
 
 export const ShowDoks = () => {
-	const { data: clusterData, isLoading, refetch } = api.doks.getByOrg.useQuery();
+	const { data: clusterData, isLoading, refetch } = doks.getByOrg.useQuery();
 
 	// getByOrg returns a single cluster or null; normalize to array
 	const clusters = useMemo(() => {
@@ -60,7 +60,8 @@ export const ShowDoks = () => {
 									No DOKS clusters provisioned yet.
 								</span>
 								<span className="text-sm text-muted-foreground">
-									Click "Provision Cluster" to create your first Kubernetes cluster.
+									Click "Provision Cluster" to create your first Kubernetes
+									cluster.
 								</span>
 							</div>
 						)}
