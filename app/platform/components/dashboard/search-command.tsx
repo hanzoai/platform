@@ -24,6 +24,7 @@ import {
 	CommandSeparator,
 } from "@/components/ui/command";
 import { api } from "@/utils/api";
+import { project as projectClient } from "@/utils/zap-project";
 import { StatusTooltip } from "../shared/status-tooltip";
 
 // Extended Services type to include environmentId and environmentName for search navigation
@@ -56,7 +57,7 @@ export const SearchCommand = () => {
 	const [open, setOpen] = React.useState(false);
 	const [search, setSearch] = React.useState("");
 	const { data: session } = api.user.session.useQuery();
-	const { data } = api.project.all.useQuery(undefined, {
+	const { data } = projectClient.all.useQuery(undefined, {
 		enabled: !!session,
 	});
 	const { data: isCloud } = api.settings.isCloud.useQuery();

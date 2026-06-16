@@ -42,7 +42,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { api } from "@/utils/api";
+import { digitalocean } from "@/utils/zap-digitalocean";
 
 // ============================================================================
 // Schema
@@ -98,24 +98,24 @@ export function ScalePoolDialog({
 	const [open, setOpen] = useState(false);
 	const [isScaling, setIsScaling] = useState(false);
 
-	const utils = api.useUtils();
+	const utils = digitalocean.useUtils();
 
 	// Fetch available sizes and regions
-	const { data: sizes, isLoading: isLoadingSizes } = api.digitalocean.listSizes.useQuery(
+	const { data: sizes, isLoading: isLoadingSizes } = digitalocean.listSizes.useQuery(
 		{ providerId },
 		{ enabled: open }
 	);
-	const { data: regions, isLoading: isLoadingRegions } = api.digitalocean.listRegions.useQuery(
+	const { data: regions, isLoading: isLoadingRegions } = digitalocean.listRegions.useQuery(
 		{ providerId },
 		{ enabled: open }
 	);
 
 	// Scale mutations
-	const scaleUpMutation = api.digitalocean.scaleUp.useMutation({
+	const scaleUpMutation = digitalocean.scaleUp.useMutation({
 		onSuccess: (data) => {
 			toast.success(`Scaling operation started. Job ID: ${data.jobId}`);
-			utils.digitalocean.listPoolInstances.invalidate({ poolId });
-			utils.digitalocean.listScalingJobs.invalidate({ poolId });
+			utils.listPoolInstances.invalidate({ poolId });
+			utils.listScalingJobs.invalidate({ poolId });
 			setOpen(false);
 			onScaleStart?.();
 		},
@@ -124,11 +124,11 @@ export function ScalePoolDialog({
 		},
 	});
 
-	const scaleDownMutation = api.digitalocean.scaleDown.useMutation({
+	const scaleDownMutation = digitalocean.scaleDown.useMutation({
 		onSuccess: (data) => {
 			toast.success(`Scale down started. Job ID: ${data.jobId}`);
-			utils.digitalocean.listPoolInstances.invalidate({ poolId });
-			utils.digitalocean.listScalingJobs.invalidate({ poolId });
+			utils.listPoolInstances.invalidate({ poolId });
+			utils.listScalingJobs.invalidate({ poolId });
 			setOpen(false);
 			onScaleStart?.();
 		},

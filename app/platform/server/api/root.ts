@@ -9,8 +9,8 @@ import { certificateRouter } from "./routers/certificate";
 // clusterRouter migrated to native @zap-proto/web (server/zap/cluster-cap.ts).
 import { composeRouter } from "./routers/compose";
 import { deploymentRouter } from "./routers/deployment";
-import { destinationRouter } from "./routers/destination";
-import { digitaloceanRouter } from "./routers/digitalocean";
+// destinationRouter migrated to native @zap-proto/web (server/zap/destination-cap.ts).
+// digitaloceanRouter migrated to native @zap-proto/web (server/zap/digitalocean-cap.ts).
 // dnsRouter migrated to native @zap-proto/web (server/zap/dns-cap.ts).
 import { dockerRouter } from "./routers/docker";
 // doksRouter migrated to native @zap-proto/web (server/zap/doks-cap.ts).
@@ -40,7 +40,7 @@ import { ssoRouter } from "./routers/proprietary/sso";
 import { whitelabelingRouter } from "./routers/proprietary/whitelabeling";
 import { redirectsRouter } from "./routers/redirects";
 import { redisRouter } from "./routers/redis";
-import { registryRouter } from "./routers/registry";
+// registryRouter migrated to native @zap-proto/web (server/zap/registry-cap.ts).
 import { rollbackRouter } from "./routers/rollbacks";
 import { scheduleRouter } from "./routers/schedule";
 import { securityRouter } from "./routers/security";
@@ -60,9 +60,10 @@ import { volumeBackupsRouter } from "./routers/volume-backups";
 
 export const appRouter = createTRPCRouter({
 	admin: adminRouter,
+	// digitalocean: migrated to native @zap-proto/web — see utils/zap-digitalocean.ts
+	// (browser) and server/zap/digitalocean-cap.ts (server).
 	// dns: migrated to native @zap-proto/web — see utils/zap-dns.ts (browser)
 	// and server/zap/dns-cap.ts (server). No tRPC dns router remains.
-	digitalocean: digitaloceanRouter,
 	// gateway: migrated to native @zap-proto/web — see utils/zap-gateway.ts
 	// (browser) and server/zap/gateway-cap.ts (server). No tRPC gateway router.
 	docker: dockerRouter,
@@ -77,8 +78,8 @@ export const appRouter = createTRPCRouter({
 	// (browser) and server/zap/cluster-cap.ts (server). No tRPC cluster router.
 	compose: composeRouter,
 	deployment: deploymentRouter,
-	destination: destinationRouter,
-	docker: dockerRouter,
+	// destination: migrated to native @zap-proto/web — see utils/zap-destination.ts
+	// (browser) and server/zap/destination-cap.ts (server).
 	domain: domainRouter,
 	gitea: giteaRouter,
 	gitProvider: gitProviderRouter,
@@ -93,10 +94,10 @@ export const appRouter = createTRPCRouter({
 	port: portRouter,
 	postgres: postgresRouter,
 	previewDeployment: previewDeploymentRouter,
-	project: projectRouter,
 	redirects: redirectsRouter,
 	redis: redisRouter,
-	registry: registryRouter,
+	// registry: migrated to native @zap-proto/web — see utils/zap-registry.ts
+	// (browser) and server/zap/registry-cap.ts (server).
 	security: securityRouter,
 	server: serverRouter,
 	settings: settingsRouter,

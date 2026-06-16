@@ -33,6 +33,7 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
+import { organization } from "@/utils/zap-organization";
 import { Logo } from "../shared/logo";
 import { AddOrganization } from "./organization/handle-organization";
 import { DialogAction } from "../shared/dialog-action";
@@ -47,10 +48,10 @@ export function OrgSwitcher({ collapsed }: { collapsed?: boolean }) {
 	const {
 		data: organizations,
 		refetch,
-		isLoading,
-	} = api.organization.all.useQuery();
-	const { mutateAsync: deleteOrganization, isLoading: isRemoving } =
-		api.organization.delete.useMutation();
+		isPending,
+	} = organization.all.useQuery();
+	const { mutateAsync: deleteOrganization, isPending: isRemoving } =
+		organization.delete.useMutation();
 	const utils = api.useUtils();
 
 	const handleOrgSwitch = async (orgId: string) => {
@@ -61,7 +62,7 @@ export function OrgSwitcher({ collapsed }: { collapsed?: boolean }) {
 		window.location.href = "/dashboard/projects";
 	};
 
-	if (isLoading) {
+	if (isPending) {
 		return (
 			<div className="flex items-center justify-center h-10">
 				<Loader2 className="animate-spin size-4 text-muted-foreground" />

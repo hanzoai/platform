@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/accordion";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
+import { digitalocean } from "@/utils/zap-digitalocean";
 import { getLocale, serverSideTranslations } from "@/utils/i18n";
 
 // ============================================================================
@@ -68,7 +69,7 @@ const CloudProvidersPage = () => {
 	const {
 		data: providers,
 		isLoading: isLoadingProviders,
-	} = api.digitalocean.listProviders.useQuery();
+	} = digitalocean.listProviders.useQuery();
 
 	// Determine if we have any providers
 	const hasProviders = providers && providers.length > 0;
