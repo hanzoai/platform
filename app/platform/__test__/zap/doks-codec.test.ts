@@ -1,28 +1,32 @@
 // ZAP codec roundtrip tests for the migrated DOKS capability.
 //
-// Proves the hand-authored ZAP views/builders (server/zap/codec.ts) encode and
-// decode the DOKS param structs and the generic Result carrier as native ZAP
-// binary (Builder → Message/StructView), byte-stable across the field order
-// declared in server/zap/schema/doks.zap. No DB, no network — pure wire codec.
+// Proves the zapgen-generated struct views/builders (server/zap/schema/doks_zap.ts)
+// and the shared Result carrier (server/zap/result.ts) encode and decode the
+// DOKS param structs as native binary ZAP (Builder → Message/StructView), stable
+// across the field byte-offsets declared in server/zap/schema/doks.zap. No DB,
+// no network — pure wire codec.
 
 import { Message } from "@zap-proto/zap";
 import { describe, expect, it } from "vitest";
+import { decodeResult, encodeResult } from "@/server/zap/result";
 import {
 	AddNodePoolParams,
 	ClusterRef,
 	DeleteNodePoolParams,
-	decodeResult,
-	decodeStruct,
 	Empty,
-	encodeResult,
-	encodeStruct,
 	ProvisionParams,
 	UpdateNodePoolParams,
-} from "@/server/zap/codec";
+	newAddNodePoolParams,
+	newClusterRef,
+	newDeleteNodePoolParams,
+	newEmpty,
+	newProvisionParams,
+	newUpdateNodePoolParams,
+} from "@/server/zap/schema/doks_zap";
 
 describe("doks ZAP codec", () => {
 	it("encodes to a valid ZAP message (magic + version)", () => {
-		const bytes = encodeStruct(ClusterRef, { doksClusterId: "doks-abc" });
+		const bytes = newClusterRef({ doksClusterId: "doks-abc" });
 		// Message.parse throws ZapParseError on bad magic/version/size.
 		const msg = Message.parse(bytes);
 		expect(msg.size()).toBeGreaterThan(0);
@@ -32,38 +36,41 @@ describe("doks ZAP codec", () => {
 		const input = {
 			organizationId: "org-1",
 			region: "sfo3",
-			ha: true,
 			nodeSize: "s-2vcpu-4gb",
+			ha: true,
 			nodeCount: 3,
 		};
-		const out = decodeStruct(
-			ProvisionParams,
-			encodeStruct(ProvisionParams, input),
-		);
-		expect(out).toEqual(input);
+		const v = ProvisionParams.wrap(newProvisionParams(input));
+		expect({
+			organizationId: v.organizationId,
+			region: v.region,
+			nodeSize: v.nodeSize,
+			ha: v.ha,
+			nodeCount: v.nodeCount,
+		}).toEqual(input);
 	});
 
 	it("roundtrips ProvisionParams with unset optionals", () => {
 		const input = {
 			organizationId: "org-2",
 			region: "nyc1",
-			ha: false,
 			nodeSize: "",
+			ha: false,
 			nodeCount: 0,
 		};
-		const out = decodeStruct(
-			ProvisionParams,
-			encodeStruct(ProvisionParams, input),
-		);
-		expect(out).toEqual(input);
+		const v = ProvisionParams.wrap(newProvisionParams(input));
+		expect({
+			organizationId: v.organizationId,
+			region: v.region,
+			nodeSize: v.nodeSize,
+			ha: v.ha,
+			nodeCount: v.nodeCount,
+		}).toEqual(input);
 	});
 
 	it("roundtrips ClusterRef", () => {
-		const out = decodeStruct(
-			ClusterRef,
-			encodeStruct(ClusterRef, { doksClusterId: "c-9" }),
-		);
-		expect(out).toEqual({ doksClusterId: "c-9" });
+		const v = ClusterRef.wrap(newClusterRef({ doksClusterId: "c-9" }));
+		expect(v.doksClusterId).toBe("c-9");
 	});
 
 	it("roundtrips AddNodePoolParams", () => {
@@ -73,39 +80,41 @@ describe("doks ZAP codec", () => {
 			size: "s-4vcpu-8gb",
 			count: 5,
 		};
-		const out = decodeStruct(
-			AddNodePoolParams,
-			encodeStruct(AddNodePoolParams, input),
-		);
-		expect(out).toEqual(input);
+		const v = AddNodePoolParams.wrap(newAddNodePoolParams(input));
+		expect({
+			doksClusterId: v.doksClusterId,
+			name: v.name,
+			size: v.size,
+			count: v.count,
+		}).toEqual(input);
 	});
 
 	it("roundtrips UpdateNodePoolParams (mixed unset)", () => {
 		const input = {
 			doksClusterId: "c-1",
 			poolId: "p-1",
-			count: 0,
 			size: "s-2vcpu-4gb",
+			count: 0,
 		};
-		const out = decodeStruct(
-			UpdateNodePoolParams,
-			encodeStruct(UpdateNodePoolParams, input),
-		);
-		expect(out).toEqual(input);
+		const v = UpdateNodePoolParams.wrap(newUpdateNodePoolParams(input));
+		expect({
+			doksClusterId: v.doksClusterId,
+			poolId: v.poolId,
+			size: v.size,
+			count: v.count,
+		}).toEqual(input);
 	});
 
 	it("roundtrips DeleteNodePoolParams", () => {
 		const input = { doksClusterId: "c-1", poolId: "p-2" };
-		const out = decodeStruct(
-			DeleteNodePoolParams,
-			encodeStruct(DeleteNodePoolParams, input),
-		);
-		expect(out).toEqual(input);
+		const v = DeleteNodePoolParams.wrap(newDeleteNodePoolParams(input));
+		expect({ doksClusterId: v.doksClusterId, poolId: v.poolId }).toEqual(input);
 	});
 
 	it("encodes Empty params to a parseable message", () => {
-		const bytes = encodeStruct(Empty, {});
+		const bytes = newEmpty({ _pad: 0 });
 		expect(() => Message.parse(bytes)).not.toThrow();
+		expect(Empty.wrap(bytes)._pad).toBe(0);
 	});
 
 	it("roundtrips a Result carrying a nested object value", () => {
@@ -133,7 +142,7 @@ describe("doks ZAP codec", () => {
 
 	it("Result wire frame is a binary ZAP message, not JSON text", () => {
 		const bytes = encodeResult({ ok: true });
-		// First 4 bytes are the ZAP magic — proves binary ZAP, not a JSON body.
+		// Parses as a ZAP message of the exact byte length — binary, not a JSON body.
 		const msg = Message.parse(bytes);
 		expect(msg.size()).toBe(bytes.byteLength);
 	});
