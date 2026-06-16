@@ -26,7 +26,12 @@ import { setupDrawerLogsWebSocketServer } from "./wss/drawer-logs";
 import { setupDeploymentLogsWebSocketServer } from "./wss/listen-deployment";
 import { setupTerminalWebSocketServer } from "./wss/terminal";
 import { aiMintCap, aiRootCap } from "./zap/ai-cap";
+import { backupMintCap, backupRootCap } from "./zap/backup-cap";
 import { billingMintCap, billingRootCap } from "./zap/billing-cap";
+import {
+	bitbucketMintCap,
+	bitbucketRootCap,
+} from "./zap/bitbucket-cap";
 import { clusterMintCap, clusterRootCap } from "./zap/cluster-cap";
 import {
 	deployProviderMintCap,
@@ -52,6 +57,13 @@ import {
 	environmentRootCap,
 } from "./zap/environment-cap";
 import { gatewayMintCap, gatewayRootCap } from "./zap/gateway-cap";
+import { giteaMintCap, giteaRootCap } from "./zap/gitea-cap";
+import { githubMintCap, githubRootCap } from "./zap/github-cap";
+import {
+	gitProviderMintCap,
+	gitProviderRootCap,
+} from "./zap/git-provider-cap";
+import { gitlabMintCap, gitlabRootCap } from "./zap/gitlab-cap";
 import { k8sMintCap, k8sRootCap } from "./zap/k8s-cap";
 import { mountMintCap, mountRootCap } from "./zap/mount-cap";
 import {
@@ -78,6 +90,7 @@ import {
 	scheduleRootCap,
 } from "./zap/schedule-cap";
 import { securityMintCap, securityRootCap } from "./zap/security-cap";
+import { sshKeyMintCap, sshKeyRootCap } from "./zap/ssh-key-cap";
 import {
 	volumeBackupsMintCap,
 	volumeBackupsRootCap,
@@ -286,6 +299,55 @@ void app.prepare().then(async () => {
 			mintCap: volumeBackupsMintCap,
 			rootCap: volumeBackupsRootCap,
 			onError: (err) => console.error("[zap/volume-backups]", err),
+		});
+		// Backup capability — replaces the tRPC backupRouter.
+		serve(server, {
+			path: "/zap/backup",
+			mintCap: backupMintCap,
+			rootCap: backupRootCap,
+			onError: (err) => console.error("[zap/backup]", err),
+		});
+		// GitHub capability — replaces the tRPC githubRouter.
+		serve(server, {
+			path: "/zap/github",
+			mintCap: githubMintCap,
+			rootCap: githubRootCap,
+			onError: (err) => console.error("[zap/github]", err),
+		});
+		// GitLab capability — replaces the tRPC gitlabRouter.
+		serve(server, {
+			path: "/zap/gitlab",
+			mintCap: gitlabMintCap,
+			rootCap: gitlabRootCap,
+			onError: (err) => console.error("[zap/gitlab]", err),
+		});
+		// Gitea capability — replaces the tRPC giteaRouter.
+		serve(server, {
+			path: "/zap/gitea",
+			mintCap: giteaMintCap,
+			rootCap: giteaRootCap,
+			onError: (err) => console.error("[zap/gitea]", err),
+		});
+		// Bitbucket capability — replaces the tRPC bitbucketRouter.
+		serve(server, {
+			path: "/zap/bitbucket",
+			mintCap: bitbucketMintCap,
+			rootCap: bitbucketRootCap,
+			onError: (err) => console.error("[zap/bitbucket]", err),
+		});
+		// Git-provider capability — replaces the tRPC gitProviderRouter.
+		serve(server, {
+			path: "/zap/git-provider",
+			mintCap: gitProviderMintCap,
+			rootCap: gitProviderRootCap,
+			onError: (err) => console.error("[zap/git-provider]", err),
+		});
+		// SSH-key capability — replaces the tRPC sshRouter.
+		serve(server, {
+			path: "/zap/ssh-key",
+			mintCap: sshKeyMintCap,
+			rootCap: sshKeyRootCap,
+			onError: (err) => console.error("[zap/ssh-key]", err),
 		});
 
 		server.listen(PORT, HOST);
