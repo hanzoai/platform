@@ -9,6 +9,7 @@
  * per-query invalidation, mirroring tRPC's api.useUtils().
  */
 
+import type { Destination } from "@hanzo/platform/services/destination";
 import { encodeArgs } from "@/server/zap/args";
 import { DestinationMethod } from "@/server/zap/schema/destination_zap";
 import { makeRpc, makeUseUtils } from "@/utils/zap-client";
@@ -18,8 +19,16 @@ const rpc = makeRpc("/zap/destination");
 // Every Destination method carries its input via the generic Args carrier.
 const args = (a: Record<string, unknown>) => encodeArgs(a);
 
-const one = rpc.query(DestinationMethod.one, "one", args);
-const all = rpc.query(DestinationMethod.all, "all", args);
+const one = rpc.query<Record<string, unknown>, Destination>(
+	DestinationMethod.one,
+	"one",
+	args,
+);
+const all = rpc.query<Record<string, unknown>, Destination[]>(
+	DestinationMethod.all,
+	"all",
+	args,
+);
 
 export const destination = {
 	create: rpc.mutation(DestinationMethod.create, args),

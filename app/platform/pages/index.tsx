@@ -1,4 +1,8 @@
-import { IS_CLOUD, isAdminPresent } from "@hanzo/platform";
+import {
+	getWebServerSettings,
+	IS_CLOUD,
+	isAdminPresent,
+} from "@hanzo/platform";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
