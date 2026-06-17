@@ -24,9 +24,6 @@ import {
 	addNewService,
 	checkPortInUse,
 	checkServiceAccess,
-	// PRE-EXISTING: checkServicePermissionAndAccess was dropped by the Hanzo fork
-	// (the tRPC postgresRouter references it too and fails identically).
-	checkServicePermissionAndAccess,
 	createMount,
 	createPostgres,
 	deployPostgres,
@@ -54,6 +51,10 @@ import {
 	stopServiceRemote,
 	updatePostgresById,
 } from "@hanzo/platform";
+// PRE-EXISTING: services/permission not re-exported at the @hanzo/platform root
+// by the Hanzo fork; import checkServicePermissionAndAccess from its subpath
+// (mirrors mongo-cap.ts).
+import { checkServicePermissionAndAccess } from "@hanzo/platform/services/permission";
 import { db } from "@hanzo/platform/db";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { CallHandler } from "@zap-proto/web";

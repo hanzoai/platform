@@ -6,7 +6,7 @@ import { quote } from "shell-quote";
 import { writeDomainsToCompose } from "../docker/domain";
 import {
 	encodeBase64,
-	getEnviromentVariablesObject,
+	getEnvironmentVariablesObject,
 	prepareEnvironmentVariables,
 } from "../docker/utils";
 
@@ -131,7 +131,7 @@ echo "${encodedContent}" | base64 -d > "${envFilePath}";
 const getExportEnvCommand = (compose: ComposeNested) => {
 	if (compose.composeType !== "stack") return "";
 
-	const envVars = getEnviromentVariablesObject(
+	const envVars = getEnvironmentVariablesObject(
 		compose.env,
 		compose.environment.project.env,
 		compose.environment.env,

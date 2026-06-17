@@ -5,6 +5,9 @@ import {
 	updateRedirectById,
 } from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { audit } from "@/server/api/utils/audit";
+import { checkServicePermissionAndAccess } from "@hanzo/platform/services/permission";
 import {
 	apiCreateRedirect,
 	apiFindOneRedirect,

@@ -66,6 +66,37 @@ export const webServerSettings = pgTable("webServerSettings", {
 				},
 			},
 		}),
+	whitelabelingConfig: jsonb("whitelabelingConfig")
+		.$type<{
+			appName: string | null;
+			appDescription: string | null;
+			logoUrl: string | null;
+			faviconUrl: string | null;
+			customCss: string | null;
+			loginLogoUrl: string | null;
+			supportUrl: string | null;
+			docsUrl: string | null;
+			errorPageTitle: string | null;
+			errorPageDescription: string | null;
+			metaTitle: string | null;
+			footerText: string | null;
+		}>()
+		.default({
+			appName: null,
+			appDescription: null,
+			logoUrl: null,
+			faviconUrl: null,
+			customCss: null,
+			loginLogoUrl: null,
+			supportUrl: null,
+			docsUrl: null,
+			errorPageTitle: null,
+			errorPageDescription: null,
+			metaTitle: null,
+			footerText: null,
+		}),
+	remoteServersOnly: boolean("remoteServersOnly").notNull().default(false),
+	enforceSSO: boolean("enforceSSO").notNull().default(false),
 	// Cache Cleanup Configuration
 	cleanupCacheApplications: boolean("cleanupCacheApplications")
 		.notNull()
@@ -125,6 +156,8 @@ export const apiUpdateWebServerSettings = createSchema.partial().extend({
 	cleanupCacheApplications: z.boolean().optional(),
 	cleanupCacheOnPreviews: z.boolean().optional(),
 	cleanupCacheOnCompose: z.boolean().optional(),
+	remoteServersOnly: z.boolean().optional(),
+	enforceSSO: z.boolean().optional(),
 });
 
 export const apiAssignDomain = z

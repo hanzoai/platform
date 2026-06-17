@@ -1,3 +1,5 @@
+import { renderAsync } from "@react-email/components";
+import InvitationEmail from "../emails/emails/invitation";
 import { sendDiscordNotification, sendEmailNotification } from "../utils/notifications/utils";
 export const sendEmail = async ({
 	email,
@@ -22,6 +24,24 @@ export const sendEmail = async ({
 	);
 
 	return true;
+};
+
+export const renderInvitationEmail = async ({
+	email,
+	inviteLink,
+	organizationName,
+}: {
+	email: string;
+	inviteLink: string;
+	organizationName: string;
+}) => {
+	return renderAsync(
+		InvitationEmail({
+			inviteLink,
+			toEmail: email,
+			organizationName,
+		}),
+	);
 };
 
 export const sendDiscordNotificationWelcome = async (email: string) => {

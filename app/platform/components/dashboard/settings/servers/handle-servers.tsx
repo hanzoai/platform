@@ -121,7 +121,7 @@ export const HandleServers = ({ serverId, asButton = false }: Props) => {
 			serverType: data.serverType || "deploy",
 			serverId: serverId || "",
 		} as any)
-			.then(async (_data) => {
+			.then(async (_data: unknown) => {
 				await utils.server.all.invalidate();
 				refetchServer();
 				toast.success(serverId ? "Server Updated" : "Server Created");
