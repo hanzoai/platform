@@ -21,6 +21,8 @@
 import type { Postgres } from "../../postgres";
 import type { Redis } from "../../redis";
 import type { Mongo } from "../../mongo";
+// Canonical image-ref parser lives in the CI module — one implementation only.
+import { parseImageRef } from "../../ci/image-ref";
 
 // ---------------------------------------------------------------------------
 // Wire-shape types (mirror operator/src/crd.rs DatastoreSpec/ServiceSpec)
@@ -130,21 +132,6 @@ export interface CRMetadataInput {
 	resourceId: string;
 	paasTicket: string;
 	source: "platform.hanzo.ai";
-}
-
-/**
- * Split a docker image reference into [repository, tag]. Strict-mode safe.
- * `postgres:16-alpine` -> `["postgres", "16-alpine"]`
- * `postgres`           -> `["postgres", ""]`
- * `ghcr.io/x/y:v1`     -> `["ghcr.io/x/y", "v1"]`
- */
-function parseImageRef(ref: string): [string, string] {
-	const idx = ref.lastIndexOf(":");
-	if (idx <= 0) return [ref, ""];
-	// Skip `://` and `host:port/` style refs by checking for a `/` after the colon.
-	const afterColon = ref.slice(idx + 1);
-	if (afterColon.includes("/")) return [ref, ""];
-	return [ref.slice(0, idx), afterColon];
 }
 
 function buildMetadata(name: string, kind: OperatorKind, input: CRMetadataInput) {
