@@ -34,6 +34,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/utils/api";
+import { registry as registryApi } from "@/utils/zap-registry";
 
 const AddRegistrySchema = z.object({
 	registryName: z.string().min(1, {
@@ -83,10 +84,10 @@ interface Props {
 }
 
 export const HandleRegistry = ({ registryId }: Props) => {
-	const utils = api.useUtils();
+	const utils = registryApi.useUtils();
 	const [isOpen, setIsOpen] = useState(false);
 
-	const { data: registry } = api.registry.one.useQuery(
+	const { data: registry } = registryApi.one.useQuery(
 		{
 			registryId: registryId || "",
 		},
@@ -98,8 +99,8 @@ export const HandleRegistry = ({ registryId }: Props) => {
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
 	const { mutateAsync, error, isError } = registryId
-		? api.registry.update.useMutation()
-		: api.registry.create.useMutation();
+		? registryApi.update.useMutation()
+		: registryApi.create.useMutation();
 	const { data: deployServers } = api.server.withSSHKey.useQuery();
 	const { data: buildServers } = api.server.buildServers.useQuery();
 	const servers = [...(deployServers || []), ...(buildServers || [])];
@@ -108,13 +109,13 @@ export const HandleRegistry = ({ registryId }: Props) => {
 		isPending,
 		error: testRegistryError,
 		isError: testRegistryIsError,
-	} = api.registry.testRegistry.useMutation();
+	} = registryApi.testRegistry.useMutation();
 	const {
 		mutateAsync: testRegistryById,
 		isPending: isPendingById,
 		error: testRegistryByIdError,
 		isError: testRegistryByIdIsError,
-	} = api.registry.testRegistryById.useMutation();
+	} = registryApi.testRegistryById.useMutation();
 	const form = useForm<AddRegistry>({
 		defaultValues: {
 			username: "",
@@ -196,7 +197,7 @@ export const HandleRegistry = ({ registryId }: Props) => {
 
 		await mutateAsync(payload)
 			.then(async (_data) => {
-				await utils.registry.all.invalidate();
+				await utils.all.invalidate();
 				toast.success(registryId ? "Registry updated" : "Registry added");
 				setIsOpen(false);
 			})

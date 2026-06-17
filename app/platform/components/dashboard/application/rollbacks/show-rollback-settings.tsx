@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
+import { registry } from "@/utils/zap-registry";
 
 const formSchema = z
 	.object({
@@ -74,7 +75,7 @@ export const ShowRollbackSettings = ({ applicationId, children }: Props) => {
 	const { mutateAsync: updateApplication, isPending } =
 		api.application.update.useMutation();
 
-	const { data: registries } = api.registry.all.useQuery();
+	const { data: registries } = registry.all.useQuery();
 
 	const form = useForm<FormValues>({
 		resolver: zodResolver(formSchema),
