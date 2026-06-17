@@ -1,4 +1,4 @@
-# paas — AI Assistant Context
+# paas
 
 <div align="center">
   <a href="https://hanzo.ai">
