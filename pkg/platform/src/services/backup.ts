@@ -33,6 +33,7 @@ export const findBackupById = async (backupId: string) => {
 			mysql: true,
 			mariadb: true,
 			mongo: true,
+			libsql: true,
 			destination: true,
 			compose: true,
 		},

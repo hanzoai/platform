@@ -5,6 +5,7 @@ import {
 } from "@hanzo/platform";
 import { TRPCError } from "@trpc/server";
 import { audit } from "@/server/api/utils/audit";
+import { checkServicePermissionAndAccess } from "@hanzo/platform/services/permission";
 import { apiFindOneRollback } from "@/server/db/schema";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 

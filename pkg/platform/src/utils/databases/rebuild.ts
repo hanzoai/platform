@@ -1,11 +1,13 @@
 import { db } from "@hanzo/platform/db";
 import {
+	libsql,
 	mariadb,
 	mongo,
 	mysql,
 	postgres,
 	redis,
 } from "@hanzo/platform/db/schema";
+import { deployLibsql } from "@hanzo/platform/services/libsql";
 import { deployMariadb } from "@hanzo/platform/services/mariadb";
 import { deployMongo } from "@hanzo/platform/services/mongo";
 import { deployMySql } from "@hanzo/platform/services/mysql";
@@ -15,7 +17,13 @@ import { eq } from "drizzle-orm";
 import { removeService } from "../docker/utils";
 import { execAsync, execAsyncRemote } from "../process/execAsync";
 
-type DatabaseType = "postgres" | "mysql" | "mariadb" | "mongo" | "redis";
+type DatabaseType =
+	| "postgres"
+	| "mysql"
+	| "mariadb"
+	| "mongo"
+	| "redis"
+	| "libsql";
 
 export const rebuildDatabase = async (
 	databaseId: string,
@@ -51,6 +59,8 @@ export const rebuildDatabase = async (
 		await deployMongo(databaseId);
 	} else if (type === "redis") {
 		await deployRedis(databaseId);
+	} else if (type === "libsql") {
+		await deployLibsql(databaseId);
 	}
 };
 
@@ -90,6 +100,14 @@ const findDatabaseById = async (databaseId: string, type: DatabaseType) => {
 	if (type === "redis") {
 		return await db.query.redis.findFirst({
 			where: eq(redis.redisId, databaseId),
+			with: {
+				mounts: true,
+			},
+		});
+	}
+	if (type === "libsql") {
+		return await db.query.libsql.findFirst({
+			where: eq(libsql.libsqlId, databaseId),
 			with: {
 				mounts: true,
 			},

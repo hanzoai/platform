@@ -10,6 +10,7 @@
 		"declaration": false,
 		"baseUrl": ".",
 		"paths": {
+			"@hanzo/platform": ["../../pkg/platform/src/index.ts"],
 			"@hanzo/platform/*": ["../../pkg/platform/src/*"]
 		}
 	},
