@@ -64,6 +64,25 @@ export const findGithubById = async (githubId: string) => {
 	return githubProviderResult;
 };
 
+/**
+ * Resolve the GitHub provider row for a GitHub App webhook by its
+ * `installation.id`. Returns the provider joined with its gitProvider
+ * (which carries `organizationId`), or undefined if no provider matches.
+ *
+ * Used by platform-native CI/CD: every GitHub App webhook carries the
+ * installation id, which uniquely maps to the configured provider and
+ * thereby to the owning organization — no per-repo config lookup needed
+ * to authenticate the delivery.
+ */
+export const findGithubByInstallationId = async (installationId: string) => {
+	return db.query.github.findFirst({
+		where: eq(github.githubInstallationId, installationId),
+		with: {
+			gitProvider: true,
+		},
+	});
+};
+
 export const updateGithub = async (
 	githubId: string,
 	input: Partial<Github>,
