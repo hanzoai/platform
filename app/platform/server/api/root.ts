@@ -4,6 +4,7 @@ import { adminRouter } from "./routers/admin";
 import { applicationRouter } from "./routers/application";
 import { backupRouter } from "./routers/backup";
 import { billingRouter } from "./routers/billing";
+import { buildJobRouter } from "./routers/build-job";
 import { bitbucketRouter } from "./routers/bitbucket";
 import { certificateRouter } from "./routers/certificate";
 // clusterRouter migrated to native @zap-proto/web (server/zap/cluster-cap.ts).
@@ -72,6 +73,7 @@ export const appRouter = createTRPCRouter({
 	project: projectRouter,
 	application: applicationRouter,
 	backup: backupRouter,
+	buildJob: buildJobRouter,
 	bitbucket: bitbucketRouter,
 	certificates: certificateRouter,
 	// cluster: migrated to native @zap-proto/web — see utils/zap-cluster.ts
