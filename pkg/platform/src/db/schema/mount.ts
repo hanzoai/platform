@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { applications } from "./application";
 import { compose } from "./compose";
+import { libsql } from "./libsql";
 import { mariadb } from "./mariadb";
 import { mongo } from "./mongo";
 import { mysql } from "./mysql";
@@ -19,6 +20,7 @@ export const serviceType = pgEnum("serviceType", [
 	"mongo",
 	"redis",
 	"compose",
+	"libsql",
 ]);
 
 export const mountType = pgEnum("mountType", ["bind", "volume", "file"]);
@@ -57,6 +59,9 @@ export const mounts = pgTable("mount", {
 	composeId: text("composeId").references(() => compose.composeId, {
 		onDelete: "cascade",
 	}),
+	libsqlId: text("libsqlId").references(() => libsql.libsqlId, {
+		onDelete: "cascade",
+	}),
 });
 
 export const MountssRelations = relations(mounts, ({ one }) => ({
@@ -88,6 +93,10 @@ export const MountssRelations = relations(mounts, ({ one }) => ({
 		fields: [mounts.composeId],
 		references: [compose.composeId],
 	}),
+	libsql: one(libsql, {
+		fields: [mounts.libsqlId],
+		references: [libsql.libsqlId],
+	}),
 }));
 
 const createSchema = createInsertSchema(mounts, {
@@ -107,6 +116,7 @@ const createSchema = createInsertSchema(mounts, {
 		"mongo",
 		"redis",
 		"compose",
+		"libsql",
 	]),
 });
 
@@ -152,6 +162,7 @@ export const apiFindMountByApplicationId = createSchema
 			"mongo",
 			"redis",
 			"compose",
+			"libsql",
 		]),
 	})
 	.pick({

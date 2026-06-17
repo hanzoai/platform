@@ -20,9 +20,12 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import type { notifications } from "@hanzo/platform/db/schema";
 import { api } from "@/utils/api";
 import { notification } from "@/utils/zap-notification";
 import { HandleNotifications } from "./handle-notifications";
+
+type Notification = typeof notifications.$inferSelect;
 
 export const ShowNotifications = () => {
 	const { data, isPending, refetch } = notification.all.useQuery();
@@ -66,7 +69,7 @@ export const ShowNotifications = () => {
 								) : (
 									<div className="flex flex-col gap-4 min-h-[25vh]">
 										<div className="flex flex-col gap-4 rounded-lg ">
-											{data?.map((notification, _index) => (
+											{data?.map((notification: Notification, _index: number) => (
 												<div
 													key={notification.notificationId}
 													className="flex items-center justify-between bg-sidebar p-1 w-full rounded-lg"

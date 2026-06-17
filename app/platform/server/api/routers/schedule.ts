@@ -74,6 +74,13 @@ export const scheduleRouter = createTRPCRouter({
 		.mutation(async ({ input, ctx }) => {
 			const newSchedule = await createSchedule(input);
 
+			if (!newSchedule) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to create schedule",
+				});
+			}
+
 			// Verify org ownership on the newly created schedule
 			await assertScheduleOrgAccess(newSchedule, ctx.session.activeOrganizationId);
 
