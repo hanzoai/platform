@@ -9,6 +9,7 @@ import { bitbucketRouter } from "./routers/bitbucket";
 import { certificateRouter } from "./routers/certificate";
 // clusterRouter migrated to native @zap-proto/web (server/zap/cluster-cap.ts).
 import { composeRouter } from "./routers/compose";
+import { deployProviderRouter } from "./routers/deploy-provider";
 import { deploymentRouter } from "./routers/deployment";
 // destinationRouter migrated to native @zap-proto/web (server/zap/destination-cap.ts).
 // digitaloceanRouter migrated to native @zap-proto/web (server/zap/digitalocean-cap.ts).
@@ -79,6 +80,7 @@ export const appRouter = createTRPCRouter({
 	// cluster: migrated to native @zap-proto/web — see utils/zap-cluster.ts
 	// (browser) and server/zap/cluster-cap.ts (server). No tRPC cluster router.
 	compose: composeRouter,
+	deployProvider: deployProviderRouter,
 	deployment: deploymentRouter,
 	// destination: migrated to native @zap-proto/web — see utils/zap-destination.ts
 	// (browser) and server/zap/destination-cap.ts (server).
