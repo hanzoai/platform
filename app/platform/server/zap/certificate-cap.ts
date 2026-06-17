@@ -22,10 +22,8 @@ import {
 	findCertificateById,
 	IS_CLOUD,
 	removeCertificateById,
+	updateCertificate,
 } from "@hanzo/platform";
-// PRE-EXISTING: updateCertificate not in fork (only createCertificate exists in
-// pkg/platform/src/services/certificate.ts); old router certificate.ts references
-// it identically — pre-existing breakage, the update case is neutralized below.
 import { db } from "@hanzo/platform/db";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { CallHandler } from "@zap-proto/web";
@@ -173,26 +171,25 @@ async function dispatch(ctx: CertificateCtx, call: Call): Promise<unknown> {
 			});
 		}
 
-		// PRE-EXISTING: updateCertificate not in fork — case disabled to compile.
-		// case CertificateMethod.update: {
-		// 	const input = decodeArgs<{
-		// 		certificateId: string;
-		// 		name?: string;
-		// 		certificateData?: string;
-		// 		privateKey?: string;
-		// 	}>(call.payload);
-		// 	const certificate = await findCertificateById(input.certificateId);
-		// 	if (certificate.organizationId !== ctx.organizationId) {
-		// 		throw new UnauthorizedError(
-		// 			"You are not allowed to update this certificate",
-		// 		);
-		// 	}
-		// 	return await updateCertificate(input.certificateId, {
-		// 		name: input.name,
-		// 		certificateData: input.certificateData,
-		// 		privateKey: input.privateKey,
-		// 	});
-		// }
+		case CertificateMethod.update: {
+			const input = decodeArgs<{
+				certificateId: string;
+				name?: string;
+				certificateData?: string;
+				privateKey?: string;
+			}>(call.payload);
+			const certificate = await findCertificateById(input.certificateId);
+			if (certificate.organizationId !== ctx.organizationId) {
+				throw new UnauthorizedError(
+					"You are not allowed to update this certificate",
+				);
+			}
+			return await updateCertificate(input.certificateId, {
+				name: input.name,
+				certificateData: input.certificateData,
+				privateKey: input.privateKey,
+			});
+		}
 
 		default:
 			throw new NotFoundError(`unknown method ${call.method}`);
