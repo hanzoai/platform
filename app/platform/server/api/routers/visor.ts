@@ -77,7 +77,7 @@ export const visorRouter = createTRPCRouter({
 				region: z.string().min(1),
 				size: z.string().min(1),
 				image: z.string().optional(),
-				labels: z.record(z.string()).optional(),
+				labels: z.record(z.string(), z.string()).optional(),
 				userData: z.string().optional(),
 			}),
 		)
@@ -97,7 +97,7 @@ export const visorRouter = createTRPCRouter({
 			z.object({
 				name: z.string().min(1),
 				size: z.string().optional(),
-				labels: z.record(z.string()).optional(),
+				labels: z.record(z.string(), z.string()).optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {

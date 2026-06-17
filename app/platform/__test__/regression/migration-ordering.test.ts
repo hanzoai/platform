@@ -28,7 +28,9 @@ describe("drizzle migration ordering", () => {
 
 	it("sequential indices with no gaps", () => {
 		for (let i = 0; i < journal.entries.length; i++) {
-			expect(journal.entries[i].idx).toBe(i);
+			const entry = journal.entries[i];
+			expect(entry).toBeDefined();
+			expect(entry?.idx).toBe(i);
 		}
 	});
 

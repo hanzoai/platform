@@ -1,11 +1,13 @@
 import { db } from "@hanzo/platform/db";
 import {
 	type apiCreateServer,
+	member,
 	organization,
 	server,
 } from "@hanzo/platform/db/schema";
+import { hasValidLicense } from "@hanzo/platform/services/proprietary/license-key";
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 
 export type Server = typeof server.$inferSelect;
@@ -127,4 +129,38 @@ export const updateServerById = async (
 export const getAllServers = async () => {
 	const servers = await db.query.server.findMany() as unknown as Server[];
 	return servers;
+};
+
+export const getAccessibleServerIds = async (session: {
+	userId: string;
+	activeOrganizationId: string;
+}): Promise<Set<string>> => {
+	const { userId, activeOrganizationId } = session;
+
+	const allOrgServers = await db.query.server.findMany({
+		where: eq(server.organizationId, activeOrganizationId),
+		columns: {
+			serverId: true,
+		},
+	});
+
+	const memberRecord = await db.query.member.findFirst({
+		where: and(
+			eq(member.userId, userId),
+			eq(member.organizationId, activeOrganizationId),
+		),
+		columns: { accessedServers: true, role: true },
+	});
+
+	if (memberRecord?.role === "owner" || memberRecord?.role === "admin") {
+		return new Set(allOrgServers.map((s) => s.serverId));
+	}
+
+	const licensed = await hasValidLicense(activeOrganizationId);
+
+	if (!licensed) {
+		return new Set(allOrgServers.map((s) => s.serverId));
+	}
+
+	return new Set(memberRecord?.accessedServers ?? []);
 };

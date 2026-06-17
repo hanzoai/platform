@@ -9,6 +9,7 @@
  * per-query invalidation, mirroring tRPC's api.useUtils().
  */
 
+import type { DockerNode } from "@hanzo/platform";
 import { encodeArgs } from "@/server/zap/args";
 import { ClusterMethod } from "@/server/zap/schema/cluster_zap";
 import { makeRpc, makeUseUtils } from "@/utils/zap-client";
@@ -18,7 +19,11 @@ const rpc = makeRpc("/zap/cluster");
 // Every Cluster method carries its input via the generic Args carrier.
 const args = (a: Record<string, unknown>) => encodeArgs(a);
 
-const getNodes = rpc.query(ClusterMethod.getNodes, "getNodes", args);
+const getNodes = rpc.query<Record<string, unknown>, DockerNode[]>(
+	ClusterMethod.getNodes,
+	"getNodes",
+	args,
+);
 const addWorker = rpc.query(ClusterMethod.addWorker, "addWorker", args);
 const addManager = rpc.query(ClusterMethod.addManager, "addManager", args);
 
