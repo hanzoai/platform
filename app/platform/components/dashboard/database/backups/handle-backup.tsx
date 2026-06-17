@@ -61,6 +61,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
+import { destination } from "@/utils/zap-destination";
 import { ScheduleFormField } from "../../application/schedules/handle-schedules";
 
 type CacheType = "cache" | "fetch";
@@ -198,7 +199,7 @@ export const HandleBackup = ({
 }: Props) => {
 	const [isOpen, setIsOpen] = useState(false);
 
-	const { data, isPending } = api.destination.all.useQuery();
+	const { data, isPending } = destination.all.useQuery();
 	const { data: backup } = api.backup.one.useQuery(
 		{
 			backupId: backupId ?? "",

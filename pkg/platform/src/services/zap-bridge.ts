@@ -1,8 +1,20 @@
 /**
- * ZAP-to-Platform Service Bridge
+ * ZAP-to-Platform Service Bridge — AI-agent / MCP surface ONLY.
  *
- * Exposes Platform operations to AI agents via a JSON-RPC HTTP server.
- * Each tool handler calls existing service functions directly.
+ * Exposes Platform operations to AI agents via a JSON-RPC HTTP server. Each tool
+ * handler calls existing service functions directly.
+ *
+ * SCOPE BOUNDARY (do not conflate the two ZAP surfaces):
+ *   - THIS bridge is the AI-agent / MCP transport. Its sole consumer is
+ *     @hanzo/platform-mcp (pkg/mcp/src/utils/zapClient.ts), which fetches
+ *     `/call` and `/tools` over HTTP/JSON. It is load-bearing for MCP and is
+ *     intentionally retained.
+ *   - The BROWSER frontend RPC has been migrated OFF JSON-RPC onto native
+ *     @zap-proto/web (binary ZAP over WebSocket). See app/platform/utils/zap.ts
+ *     (client) + app/platform/server/zap/* (server). No browser code calls this
+ *     bridge. The former JSON-RPC React-hook client shim (utils/zap.ts) — which
+ *     was dead code, imported by zero components — was replaced by that native
+ *     client.
  *
  * Authentication: Bearer token validated against ZAP_AUTH_TOKEN env var.
  * Default port: 9998 (configurable via ZAP_PORT).

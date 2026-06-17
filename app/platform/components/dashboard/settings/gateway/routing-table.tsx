@@ -1,7 +1,7 @@
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { Loader2, Pencil, PlusIcon, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { type ControllerRenderProps, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { DialogAction } from "@/components/shared/dialog-action";
@@ -34,7 +34,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/utils/api";
+import { gateway } from "@/utils/zap-gateway";
 
 const routingFormSchema = z.object({
 	name: z.string().min(1, "Name is required"),
@@ -47,6 +47,8 @@ const routingFormSchema = z.object({
 });
 
 type RoutingFormValues = z.infer<typeof routingFormSchema>;
+
+type RoutingRule = RoutingFormValues & { routingRuleId: string };
 
 interface RoutingDialogProps {
 	open: boolean;
@@ -61,12 +63,12 @@ const RoutingDialog = ({
 	defaultValues,
 	mode,
 }: RoutingDialogProps) => {
-	const utils = api.useUtils();
+	const utils = gateway.useUtils();
 
 	const { mutateAsync: createMutation, isPending: isCreating } =
-		api.gateway.createRoute.useMutation();
+		gateway.createRoute.useMutation();
 	const { mutateAsync: updateMutation, isPending: isUpdating } =
-		api.gateway.updateRoute.useMutation();
+		gateway.updateRoute.useMutation();
 
 	const isSubmitting = isCreating || isUpdating;
 
@@ -124,7 +126,7 @@ const RoutingDialog = ({
 			})
 				.then(async () => {
 					toast.success("Route updated");
-					await utils.gateway.listRoutes.invalidate();
+					await utils.listRoutes.invalidate();
 					onOpenChange(false);
 				})
 				.catch(() => {
@@ -134,7 +136,7 @@ const RoutingDialog = ({
 			await createMutation(payload)
 				.then(async () => {
 					toast.success("Route created");
-					await utils.gateway.listRoutes.invalidate();
+					await utils.listRoutes.invalidate();
 					onOpenChange(false);
 				})
 				.catch(() => {
@@ -166,7 +168,11 @@ const RoutingDialog = ({
 						<FormField
 							control={form.control}
 							name="name"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<RoutingFormValues, "name">;
+							}) => (
 								<FormItem>
 									<FormLabel>Name</FormLabel>
 									<FormControl>
@@ -181,7 +187,11 @@ const RoutingDialog = ({
 							<FormField
 								control={form.control}
 								name="host"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<RoutingFormValues, "host">;
+								}) => (
 									<FormItem>
 										<FormLabel>Host</FormLabel>
 										<FormControl>
@@ -195,7 +205,11 @@ const RoutingDialog = ({
 							<FormField
 								control={form.control}
 								name="pathPrefix"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<RoutingFormValues, "pathPrefix">;
+								}) => (
 									<FormItem>
 										<FormLabel>Path Prefix</FormLabel>
 										<FormControl>
@@ -210,7 +224,11 @@ const RoutingDialog = ({
 						<FormField
 							control={form.control}
 							name="backend"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<RoutingFormValues, "backend">;
+							}) => (
 								<FormItem>
 									<FormLabel>Backend</FormLabel>
 									<FormControl>
@@ -225,7 +243,11 @@ const RoutingDialog = ({
 							<FormField
 								control={form.control}
 								name="priority"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<RoutingFormValues, "priority">;
+								}) => (
 									<FormItem>
 										<FormLabel>Priority</FormLabel>
 										<FormControl>
@@ -245,7 +267,11 @@ const RoutingDialog = ({
 							<FormField
 								control={form.control}
 								name="middlewares"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<RoutingFormValues, "middlewares">;
+								}) => (
 									<FormItem>
 										<FormLabel>Middlewares</FormLabel>
 										<FormControl>
@@ -263,7 +289,11 @@ const RoutingDialog = ({
 						<FormField
 							control={form.control}
 							name="enabled"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<RoutingFormValues, "enabled">;
+							}) => (
 								<FormItem className="flex items-center gap-3">
 									<FormLabel className="mt-2">Enabled</FormLabel>
 									<FormControl>
@@ -298,11 +328,11 @@ export const RoutingTable = () => {
 		(RoutingFormValues & { routingRuleId: string }) | undefined
 	>(undefined);
 
-	const { data: routes, isLoading } = api.gateway.listRoutes.useQuery();
-	const utils = api.useUtils();
+	const { data: routes, isLoading } = gateway.listRoutes.useQuery();
+	const utils = gateway.useUtils();
 
 	const { mutateAsync: deleteMutation, isPending: isDeleting } =
-		api.gateway.deleteRoute.useMutation();
+		gateway.deleteRoute.useMutation();
 
 	const handleEdit = (rule: NonNullable<typeof routes>[number]) => {
 		setEditingRule({
@@ -329,7 +359,7 @@ export const RoutingTable = () => {
 		await deleteMutation({ routingRuleId })
 			.then(async () => {
 				toast.success("Route deleted");
-				await utils.gateway.listRoutes.invalidate();
+				await utils.listRoutes.invalidate();
 			})
 			.catch(() => {
 				toast.error("Failed to delete route");
@@ -379,7 +409,7 @@ export const RoutingTable = () => {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{routes.map((rule) => (
+							{routes.map((rule: RoutingRule) => (
 								<TableRow key={rule.routingRuleId}>
 									<TableCell className="font-medium">{rule.name}</TableCell>
 									<TableCell className="font-mono text-xs">

@@ -55,8 +55,8 @@ export async function getServerSideProps(
 	});
 	await helpers.user.get.prefetch();
 	await helpers.settings.isCloud.prefetch();
-	await helpers.dns.listZones.prefetch();
-	await helpers.dns.listPagesProjects.prefetch();
+	// dns.* moved to the native ZAP `dns` capability (utils/zap-dns); its data
+	// is fetched client-side via the zap hooks, so there is no tRPC prefetch.
 
 	return {
 		props: {

@@ -26,6 +26,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { api } from "@/utils/api";
+import { project } from "@/utils/zap-project";
 
 const updateProjectSchema = z.object({
 	env: z.string().optional(),
@@ -43,10 +44,10 @@ export const ProjectEnvironment = ({ projectId, children }: Props) => {
 	const canRead = permissions?.projectEnvVars.read ?? false;
 	const canWrite = permissions?.projectEnvVars.write ?? false;
 	const [isOpen, setIsOpen] = useState(false);
-	const utils = api.useUtils();
+	const utils = project.useUtils();
 	const { mutateAsync, error, isError, isPending } =
-		api.project.update.useMutation();
-	const { data } = api.project.one.useQuery(
+		project.update.useMutation();
+	const { data } = project.one.useQuery(
 		{
 			projectId,
 		},
@@ -76,7 +77,7 @@ export const ProjectEnvironment = ({ projectId, children }: Props) => {
 		})
 			.then(() => {
 				toast.success("Project env updated successfully");
-				utils.project.all.invalidate();
+				utils.all.invalidate();
 			})
 			.catch(() => {
 				toast.error("Error updating the env");
