@@ -15,8 +15,7 @@ import { ShowModalLogs } from "../../web-server/show-modal-logs";
 import { TerminalModal } from "../../web-server/terminal-modal";
 import { GPUSupportModal } from "../gpu-support-modal";
 
-export const ShowHanzoActions = () => {
-	const { t } = useTranslation("settings");
+export const ShowPlatformActions = () => {
 	const { mutateAsync: reloadServer, isPending: isLoading } =
 		api.settings.reloadServer.useMutation();
 
@@ -27,8 +26,8 @@ export const ShowHanzoActions = () => {
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger asChild disabled={isPending}>
-				<Button isLoading={isPending} variant="outline">
+			<DropdownMenuTrigger asChild disabled={isLoading}>
+				<Button isLoading={isLoading} variant="outline">
 					Server
 				</Button>
 			</DropdownMenuTrigger>

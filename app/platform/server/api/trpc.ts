@@ -9,7 +9,9 @@
 
 // import { getServerAuthSession } from "@/server/auth";
 import { db } from "@hanzo/platform/db";
+import { statements } from "@hanzo/platform/lib/access-control";
 import { validateRequest } from "@hanzo/platform/lib/auth";
+import { checkPermission } from "@hanzo/platform/services/permission";
 import type { OpenApiMeta } from "@dokploy/trpc-openapi";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
@@ -166,6 +168,25 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
 		},
 	});
 });
+
+/**
+ * Permission-gated procedure builder.
+ *
+ * `withPermission("tag", "create")` returns a `protectedProcedure` whose
+ * middleware enforces the (resource, action) RBAC grant via
+ * `checkPermission(ctx, { [resource]: [action] })` before the handler runs.
+ * `checkPermission` throws a TRPCError when the active member lacks the grant.
+ */
+export const withPermission = <R extends Resource>(
+	resource: R,
+	action: ActionOf<R>,
+) =>
+	protectedProcedure.use(async ({ ctx, next }) => {
+		await checkPermission(ctx, {
+			[resource]: [action],
+		} as { [K in R]: ActionOf<R>[] });
+		return next({ ctx });
+	});
 
 export const cliProcedure = t.procedure.use(({ ctx, next }) => {
 	if (

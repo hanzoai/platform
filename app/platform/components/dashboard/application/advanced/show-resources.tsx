@@ -94,7 +94,8 @@ export type ServiceType =
 	| "redis"
 	| "mysql"
 	| "mariadb"
-	| "application";
+	| "application"
+	| "libsql";
 
 interface Props {
 	id: string;
@@ -114,6 +115,7 @@ export const ShowResources = ({ id, type }: Props) => {
 		application: () =>
 			api.application.one.useQuery({ applicationId: id }, { enabled: !!id }),
 		mongo: () => api.mongo.one.useQuery({ mongoId: id }, { enabled: !!id }),
+		libsql: () => api.libsql.one.useQuery({ libsqlId: id }, { enabled: !!id }),
 	};
 	const { data, refetch } = queryMap[type]
 		? queryMap[type]()
@@ -126,6 +128,7 @@ export const ShowResources = ({ id, type }: Props) => {
 		mariadb: () => api.mariadb.update.useMutation(),
 		application: () => api.application.update.useMutation(),
 		mongo: () => api.mongo.update.useMutation(),
+		libsql: () => api.libsql.update.useMutation(),
 	};
 
 	const { mutateAsync, isPending } = mutationMap[type]
@@ -155,19 +158,22 @@ export const ShowResources = ({ id, type }: Props) => {
 				cpuReservation: data?.cpuReservation || undefined,
 				memoryLimit: data?.memoryLimit || undefined,
 				memoryReservation: data?.memoryReservation || undefined,
-				ulimitsSwarm: data?.ulimitsSwarm || [],
+				ulimitsSwarm:
+					(data as { ulimitsSwarm?: AddResources["ulimitsSwarm"] })
+						?.ulimitsSwarm || [],
 			});
 		}
 	}, [data, form, form.reset]);
 
 	const onSubmit = async (formData: AddResources) => {
 		await mutateAsync({
+			applicationId: id || "",
+			libsqlId: id || "",
+			mariadbId: id || "",
 			mongoId: id || "",
+			mysqlId: id || "",
 			postgresId: id || "",
 			redisId: id || "",
-			mysqlId: id || "",
-			mariadbId: id || "",
-			applicationId: id || "",
 			cpuLimit: formData.cpuLimit || null,
 			cpuReservation: formData.cpuReservation || null,
 			memoryLimit: formData.memoryLimit || null,

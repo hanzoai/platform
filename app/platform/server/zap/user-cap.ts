@@ -42,10 +42,9 @@ import {
 	getHanzoUrl,
 	getUserByToken,
 	getWebServerSettings,
+	hasValidLicense,
 	IS_CLOUD,
 	removeUserById,
-	// PRE-EXISTING: renderInvitationEmail is not exported by the Hanzo fork
-	// (the old userRouter imports it identically — fork gap).
 	renderInvitationEmail,
 	sendEmailNotification,
 	sendResendNotification,
@@ -60,7 +59,13 @@ import {
 	apiUpdateUser,
 	invitation,
 	member,
+	session,
+	user,
 } from "@hanzo/platform/db/schema";
+import {
+	hasPermission,
+	resolvePermissions,
+} from "@hanzo/platform/services/permission";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
@@ -672,9 +677,7 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 					});
 				}
 
-				// PRE-EXISTING: `referenceId` is not a column of the fork's apikey
-				// schema (the old userRouter reads the same field — fork gap).
-				if (apiKeyToDelete.referenceId !== ctx.user.id) {
+				if (apiKeyToDelete.userId !== ctx.user.id) {
 					throw new TRPCError({
 						code: "UNAUTHORIZED",
 						message: "You are not authorized to delete this API key",
@@ -837,13 +840,20 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 			);
 
 			try {
-				const htmlContent = `
+				const toEmail = currentInvitation?.email;
+				if (!toEmail) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Invitation not found",
+					});
+				}
+				const subject = `You have been invited to join ${
+					organization?.name || "an organization"
+				} on Hanzo Platform`;
+				const html = `
 				<p>You are invited to join ${organization?.name || "organization"} on Hanzo Platform. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
 				`;
 
-				// PRE-EXISTING: toEmail/subject/html are undefined here — the original
-				// sendInvitation body (old userRouter) references the same undeclared
-				// names; ported verbatim, this is a pre-existing bug in the fork.
 				if (email) {
 					await sendEmailNotification(
 						{ ...email, toAddresses: [toEmail] },
