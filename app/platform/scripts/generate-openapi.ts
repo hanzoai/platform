@@ -9,7 +9,7 @@
 import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { generateOpenApiDocument } from "@hanzo/platform-trpc";
+import { generateOpenApiDocument } from "@dokploy/trpc-openapi";
 import { appRouter } from "../server/api/root";
 
 const __filename = fileURLToPath(import.meta.url);

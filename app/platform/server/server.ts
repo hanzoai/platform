@@ -10,7 +10,7 @@ import {
 	initializeNetwork,
 	initSchedules,
 	initVolumeBackupsCronJobs,
-	sendHanzoPlatformRestartNotifications,
+	sendPlatformRestartNotifications,
 	setupDirectories,
 } from "@hanzo/platform";
 import { createPlatformZapServer } from "@hanzo/platform/services/zap-bridge";
@@ -550,7 +550,7 @@ void app.prepare().then(async () => {
 			await initSchedules();
 			await initCancelDeployments();
 			await initVolumeBackupsCronJobs();
-			await sendHanzoPlatformRestartNotifications();
+			await sendPlatformRestartNotifications();
 		}
 
 		if (IS_CLOUD && process.env.NODE_ENV === "production") {

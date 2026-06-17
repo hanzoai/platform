@@ -3,9 +3,21 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, exists } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { audit } from "@/server/api/utils/audit";
 import { db } from "@/server/db";
-import { invitation, member, organization } from "@/server/db/schema";
-import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
+import {
+	invitation,
+	member,
+	organization,
+	organizationRole,
+	user,
+} from "@/server/db/schema";
+import {
+	adminProcedure,
+	createTRPCRouter,
+	protectedProcedure,
+	withPermission,
+} from "../trpc";
 export const organizationRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(
@@ -63,6 +75,11 @@ export const organizationRouter = createTRPCRouter({
 							),
 						),
 				),
+			with: {
+				members: {
+					where: eq(member.userId, ctx.user.id),
+				},
+			},
 		});
 		return memberResult;
 	}),
@@ -207,4 +224,230 @@ export const organizationRouter = createTRPCRouter({
 				.delete(invitation)
 				.where(eq(invitation.id, input.invitationId));
 		}),
+	inviteMember: withPermission("member", "create")
+		.input(
+			z.object({
+				email: z.string().email(),
+				role: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const orgId = ctx.session.activeOrganizationId;
+			const email = input.email.toLowerCase();
+
+			const existingUser = await db.query.user.findFirst({
+				where: eq(user.email, email),
+			});
+
+			if (existingUser) {
+				const existingMember = await db.query.member.findFirst({
+					where: and(
+						eq(member.organizationId, orgId),
+						eq(member.userId, existingUser.id),
+					),
+				});
+
+				if (existingMember) {
+					throw new TRPCError({
+						code: "CONFLICT",
+						message: "User is already a member of this organization",
+					});
+				}
+			}
+
+			const existingInvitation = await db.query.invitation.findFirst({
+				where: and(
+					eq(invitation.organizationId, orgId),
+					eq(invitation.email, email),
+					eq(invitation.status, "pending"),
+				),
+			});
+
+			if (existingInvitation) {
+				throw new TRPCError({
+					code: "CONFLICT",
+					message: "An invitation has already been sent to this email",
+				});
+			}
+
+			// Owner role is non-delegable — no one can invite as owner
+			if (input.role === "owner") {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Cannot invite a user with the owner role",
+				});
+			}
+
+			if (!["owner", "admin", "member"].includes(input.role)) {
+				const customRole = await db.query.organizationRole.findFirst({
+					where: and(
+						eq(organizationRole.organizationId, orgId),
+						eq(organizationRole.role, input.role),
+					),
+				});
+
+				if (!customRole) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: `Role "${input.role}" not found`,
+					});
+				}
+			}
+
+			const [created] = await db
+				.insert(invitation)
+				.values({
+					id: nanoid(),
+					organizationId: orgId,
+					email,
+					role: input.role as "owner" | "admin" | "member",
+					status: "pending",
+					expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+					inviterId: ctx.user.id,
+				})
+				.returning();
+
+			await audit(ctx, {
+				action: "create",
+				resourceType: "organization",
+				resourceId: created?.id,
+				resourceName: email,
+				metadata: { type: "inviteMember", role: input.role },
+			});
+			return created;
+		}),
+	updateMemberRole: withPermission("member", "update")
+		.input(
+			z.object({
+				memberId: z.string(),
+				role: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const target = await db.query.member.findFirst({
+				where: eq(member.id, input.memberId),
+				with: { user: true },
+			});
+
+			if (!target) {
+				throw new TRPCError({ code: "NOT_FOUND", message: "Member not found" });
+			}
+
+			if (target.organizationId !== ctx.session.activeOrganizationId) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "You are not allowed to update this member's role",
+				});
+			}
+
+			if (target.userId === ctx.user.id) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "You cannot change your own role",
+				});
+			}
+
+			// Owner role is nontransferable - cannot change to or from owner
+			if (target.role === "owner" || input.role === "owner") {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "The owner role is nontransferable",
+				});
+			}
+
+			// Only owners can change admin roles; admins can only change member roles
+			if (ctx.user.role === "admin" && target.role === "admin") {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message:
+						"Only the organization owner can change admin roles. Admins can only modify member roles.",
+				});
+			}
+
+			if (input.role !== "admin" && input.role !== "member") {
+				const customRole = await db.query.organizationRole.findFirst({
+					where: and(
+						eq(
+							organizationRole.organizationId,
+							ctx.session.activeOrganizationId,
+						),
+						eq(organizationRole.role, input.role),
+					),
+				});
+
+				if (!customRole) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: `Custom role "${input.role}" not found`,
+					});
+				}
+			}
+
+			await db
+				.update(member)
+				.set({ role: input.role })
+				.where(eq(member.id, input.memberId));
+
+			await audit(ctx, {
+				action: "update",
+				resourceType: "user",
+				resourceId: target.userId,
+				resourceName: target.user.email,
+				metadata: { before: target.role, after: input.role },
+			});
+			return true;
+		}),
+	setDefault: protectedProcedure
+		.input(
+			z.object({
+				organizationId: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const userMember = await db.query.member.findFirst({
+				where: and(
+					eq(member.organizationId, input.organizationId),
+					eq(member.userId, ctx.user.id),
+				),
+			});
+
+			if (!userMember) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "You are not a member of this organization",
+				});
+			}
+
+			await db
+				.update(member)
+				.set({ isDefault: false })
+				.where(eq(member.userId, ctx.user.id));
+
+			await db
+				.update(member)
+				.set({ isDefault: true })
+				.where(
+					and(
+						eq(member.organizationId, input.organizationId),
+						eq(member.userId, ctx.user.id),
+					),
+				);
+
+			await audit(ctx, {
+				action: "update",
+				resourceType: "organization",
+				resourceId: input.organizationId,
+				metadata: { type: "setDefault" },
+			});
+			return { success: true };
+		}),
+	active: protectedProcedure.query(async ({ ctx }) => {
+		if (!ctx.session.activeOrganizationId) {
+			return null;
+		}
+
+		return await db.query.organization.findFirst({
+			where: eq(organization.id, ctx.session.activeOrganizationId),
+		});
+	}),
 });

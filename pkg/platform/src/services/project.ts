@@ -53,12 +53,18 @@ export const findProjectById = async (projectId: string) => {
 			environments: {
 				with: {
 					applications: true,
+					compose: true,
+					libsql: true,
 					mariadb: true,
 					mongo: true,
 					mysql: true,
 					postgres: true,
 					redis: true,
-					compose: true,
+				},
+			},
+			projectTags: {
+				with: {
+					tag: true,
 				},
 			},
 		},

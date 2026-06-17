@@ -15,6 +15,7 @@ import {
 	DEFAULT_UPDATE_DATA,
 	execAsync,
 	findServerById,
+	getDockerDiskUsage,
 	getHanzoImageTag,
 	getLogCleanupStatus,
 	getUpdateData,
@@ -55,6 +56,7 @@ import { scheduledJobs, scheduleJob } from "node-schedule";
 import { parse, stringify } from "yaml";
 import { z } from "zod";
 import { audit } from "@/server/api/utils/audit";
+import { checkPermission } from "@hanzo/platform/services/permission";
 import {
 	apiAssignDomain,
 	apiEnableDashboard,
@@ -156,7 +158,7 @@ export const settingsRouter = createTRPCRouter({
 		}),
 	toggleDashboard: adminProcedure
 		.input(apiEnableDashboard)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			const ports = await readPorts("platform-traefik", input.serverId);
 			const env = await readEnvironmentVariables(
 				"platform-traefik",

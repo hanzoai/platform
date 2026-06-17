@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 import {
 	Body,
 	Button,
@@ -22,13 +23,15 @@ export type TemplateProps = {
 interface VercelInviteUserEmailProps {
 	inviteLink: string;
 	toEmail: string;
+	organizationName?: string;
 }
 
 export const InvitationEmail = ({
 	inviteLink,
 	toEmail,
+	organizationName = "an organization",
 }: VercelInviteUserEmailProps) => {
-	const previewText = "Join to Hanzo";
+	const previewText = `You've been invited to join ${organizationName} on Hanzo`;
 	return (
 		<Html>
 			<Head />
