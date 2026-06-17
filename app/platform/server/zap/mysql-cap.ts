@@ -58,11 +58,12 @@ import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import {
 	addNewService,
 	checkServiceAccess,
-	// PRE-EXISTING: checkServicePermissionAndAccess was dropped by the Hanzo fork
-	// (the tRPC mysqlRouter references it too and fails identically).
-	checkServicePermissionAndAccess,
 	findMemberById,
 } from "@hanzo/platform";
+// PRE-EXISTING: services/permission not re-exported at the @hanzo/platform root
+// by the Hanzo fork; import checkServicePermissionAndAccess from its subpath
+// (mirrors mongo-cap.ts).
+import { checkServicePermissionAndAccess } from "@hanzo/platform/services/permission";
 import {
 	// PRE-EXISTING: DATABASE_PASSWORD_MESSAGE / DATABASE_PASSWORD_REGEX are not
 	// exported by the Hanzo fork's schema (the tRPC mysqlRouter imports them too).

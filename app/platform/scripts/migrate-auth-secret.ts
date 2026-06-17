@@ -8,8 +8,8 @@
  * Both OLD_SECRET and NEW_SECRET are required.
  * Run this BEFORE restarting Dokploy with the new secret.
  */
-import { db } from "@dokploy/server/db";
-import { twoFactor } from "@dokploy/server/db/schema";
+import { db } from "@hanzo/platform/db";
+import { twoFactor } from "@hanzo/platform/db/schema";
 import { symmetricDecrypt, symmetricEncrypt } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
 

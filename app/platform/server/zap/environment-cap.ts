@@ -24,20 +24,18 @@ import {
 	checkEnvironmentAccess,
 	checkEnvironmentCreationPermission,
 	checkEnvironmentDeletionPermission,
-	// PRE-EXISTING: `checkPermission` and `findMemberByUserId` are not exported
-	// by the Hanzo fork (the fork ships `findMemberById` and has no granular
-	// permission helper). The old tRPC environmentRouter references the same two
-	// names and fails identically — this is a fork gap, not a cap regression.
-	checkPermission,
 	createEnvironment,
 	deleteEnvironment,
 	duplicateEnvironment,
 	findEnvironmentById,
 	findEnvironmentsByProjectId,
-	findMemberByUserId,
 	updateEnvironmentById,
 	addNewEnvironment,
 } from "@hanzo/platform";
+import {
+	checkPermission,
+	findMemberByUserId,
+} from "@hanzo/platform/services/permission";
 import { db } from "@hanzo/platform/db";
 import { environments, projects } from "@hanzo/platform/db/schema";
 import { validateRequest } from "@hanzo/platform/lib/auth";

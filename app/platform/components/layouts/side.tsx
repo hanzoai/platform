@@ -21,6 +21,7 @@ import {
 	GitBranch,
 	Globe,
 	HeartIcon,
+	House,
 	Key,
 	KeyRound,
 	Loader2,
@@ -87,6 +88,7 @@ import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import type { AppRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
+import { useWhitelabeling } from "@/utils/hooks/use-whitelabeling";
 import { AddOrganization } from "../dashboard/organization/handle-organization";
 import { DialogAction } from "../shared/dialog-action";
 import { Logo } from "../shared/logo";
@@ -915,6 +917,8 @@ export default function Page({ children }: Props) {
 
 	const includesProjects = pathname?.includes("/dashboard/project");
 	const { data: isCloud } = api.settings.isCloud.useQuery();
+	const { data: permissions } = api.user.getPermissions.useQuery();
+	const { config: whitelabeling } = useWhitelabeling();
 
 	const {
 		home: filteredHome,

@@ -1,4 +1,5 @@
 import { validateRequest } from "@hanzo/platform/lib/auth";
+import { hasPermission } from "@hanzo/platform/services/permission";
 import { Rocket } from "lucide-react";
 import type { GetServerSidePropsContext } from "next";
 import { useRouter } from "next/router";
