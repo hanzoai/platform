@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
+import { destination } from "@/utils/zap-destination";
 import type { CacheType } from "../domains/handle-domain";
 import { ScheduleFormField } from "../schedules/handle-schedules";
 
@@ -133,7 +134,7 @@ export const HandleVolumeBackups = ({
 	});
 
 	const serviceTypeForm = volumeBackupType;
-	const { data: destinations } = api.destination.all.useQuery();
+	const { data: destinations } = destination.all.useQuery();
 	const { data: volumeBackup } = api.volumeBackups.one.useQuery(
 		{ volumeBackupId: volumeBackupId || "" },
 		{ enabled: !!volumeBackupId },
