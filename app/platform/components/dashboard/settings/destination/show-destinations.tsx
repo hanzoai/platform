@@ -10,12 +10,13 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
+import { destination } from "@/utils/zap-destination";
 import { HandleDestinations } from "./handle-destinations";
 
 export const ShowDestinations = () => {
-	const { data, isPending, refetch } = api.destination.all.useQuery();
+	const { data, isPending, refetch } = destination.all.useQuery();
 	const { mutateAsync, isPending: isRemoving } =
-		api.destination.remove.useMutation();
+		destination.remove.useMutation();
 	const { data: permissions } = api.user.getPermissions.useQuery();
 	return (
 		<div className="w-full">

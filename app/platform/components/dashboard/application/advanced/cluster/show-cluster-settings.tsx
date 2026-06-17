@@ -33,6 +33,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/utils/api";
+import { registry } from "@/utils/zap-registry";
 import { AddSwarmSettings } from "./modify-swarm-settings";
 
 interface Props {
@@ -62,7 +63,7 @@ export const ShowClusterSettings = ({ id, type }: Props) => {
 	const { data, refetch } = queryMap[type]
 		? queryMap[type]()
 		: api.mongo.one.useQuery({ mongoId: id }, { enabled: !!id });
-	const { data: registries } = api.registry.all.useQuery();
+	const { data: registries } = registry.all.useQuery();
 
 	const mutationMap = {
 		application: () => api.application.update.useMutation(),

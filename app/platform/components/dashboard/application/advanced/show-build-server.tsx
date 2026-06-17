@@ -33,6 +33,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/utils/api";
+import { registry } from "@/utils/zap-registry";
 
 interface Props {
 	applicationId: string;
@@ -72,7 +73,7 @@ export const ShowBuildServer = ({ applicationId }: Props) => {
 		{ enabled: !!applicationId },
 	);
 	const { data: buildServers } = api.server.buildServers.useQuery();
-	const { data: registries } = api.registry.all.useQuery();
+	const { data: registries } = registry.all.useQuery();
 
 	const { mutateAsync, isPending } = api.application.update.useMutation();
 

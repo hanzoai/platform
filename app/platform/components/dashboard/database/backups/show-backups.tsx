@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
+import { destination } from "@/utils/zap-destination";
 import type { ServiceType } from "../../application/advanced/show-resources";
 import { ShowDeploymentsModal } from "../../application/deployments/show-deployments-modal";
 import { HandleBackup } from "./handle-backup";
@@ -69,7 +70,7 @@ export const ShowBackups = ({
 					compose: () =>
 						api.compose.one.useQuery({ composeId: id }, { enabled: !!id }),
 				};
-	const { data } = api.destination.all.useQuery();
+	const { data } = destination.all.useQuery();
 	const key = backupType === "database" ? databaseType : "compose";
 	const query = queryMap[key as keyof typeof queryMap];
 	const { data: postgres, refetch } = query
