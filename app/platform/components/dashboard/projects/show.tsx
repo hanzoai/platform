@@ -2,10 +2,12 @@ import {
 	AlertTriangle,
 	ArrowUpDown,
 	BookIcon,
+	Check,
 	FolderInput,
 	Loader2,
 	MoreHorizontalIcon,
 	Search,
+	Tag as TagIcon,
 	TrashIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -15,8 +17,6 @@ import { toast } from "sonner";
 import { BreadcrumbSidebar } from "@/components/shared/breadcrumb-sidebar";
 import { DateTooltip } from "@/components/shared/date-tooltip";
 import { FocusShortcutInput } from "@/components/shared/focus-shortcut-input";
-import { TagBadge } from "@/components/shared/tag-badge";
-import { TagFilter } from "@/components/shared/tag-filter";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -28,6 +28,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -38,6 +39,14 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
+import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -45,25 +54,149 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
+import { project as projectClient } from "@/utils/zap-project";
 import { useDebounce } from "@/utils/hooks/use-debounce";
 import { HandleProject } from "./handle-project";
 import { ProjectEnvironment } from "./project-environment";
 
+type TagOption = { id: string; name: string; color?: string };
+
+type Tag = { tagId: string; name: string; color?: string | null };
+
+type ProjectTag = { tag: Tag };
+
+type ProjectEnv = {
+	environmentId: string;
+	isDefault?: boolean;
+	applications: unknown[];
+	compose: unknown[];
+	libsql: unknown[];
+	mariadb: unknown[];
+	mongo: unknown[];
+	mysql: unknown[];
+	postgres: unknown[];
+	redis: unknown[];
+};
+
+type ProjectRow = {
+	projectId: string;
+	name: string;
+	description?: string | null;
+	createdAt: string;
+	environments: ProjectEnv[];
+	projectTags?: ProjectTag[];
+};
+
+const TagBadge = ({
+	name,
+	color,
+}: {
+	name: string;
+	color?: string | null;
+}) => (
+	<Badge
+		variant="outline"
+		className="gap-1"
+		style={color ? { borderColor: color, color } : undefined}
+	>
+		<span
+			className="size-2 rounded-full"
+			style={{ backgroundColor: color || "currentColor" }}
+		/>
+		{name}
+	</Badge>
+);
+
+const TagFilter = ({
+	tags,
+	selectedTags,
+	onTagsChange,
+}: {
+	tags: TagOption[];
+	selectedTags: string[];
+	onTagsChange: (ids: string[]) => void;
+}) => {
+	const [open, setOpen] = useState(false);
+
+	const toggle = (id: string) => {
+		onTagsChange(
+			selectedTags.includes(id)
+				? selectedTags.filter((t) => t !== id)
+				: [...selectedTags, id],
+		);
+	};
+
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>
+				<Button variant="outline" className="gap-2">
+					<TagIcon className="size-4" />
+					Tags
+					{selectedTags.length > 0 && (
+						<Badge variant="blank">{selectedTags.length}</Badge>
+					)}
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent className="w-56 p-0" align="end">
+				<Command>
+					<CommandInput placeholder="Filter tags..." />
+					<CommandList>
+						<CommandEmpty>No tags found.</CommandEmpty>
+						<CommandGroup>
+							{tags.map((tag) => {
+								const isSelected = selectedTags.includes(tag.id);
+								return (
+									<CommandItem
+										key={tag.id}
+										value={tag.name}
+										onSelect={() => toggle(tag.id)}
+										className="flex items-center gap-2"
+									>
+										<span
+											className="size-2 rounded-full"
+											style={{
+												backgroundColor: tag.color || "currentColor",
+											}}
+										/>
+										<span className="truncate">{tag.name}</span>
+										<Check
+											className={cn(
+												"ml-auto size-4",
+												isSelected ? "opacity-100" : "opacity-0",
+											)}
+										/>
+									</CommandItem>
+								);
+							})}
+						</CommandGroup>
+					</CommandList>
+				</Command>
+			</PopoverContent>
+		</Popover>
+	);
+};
+
 export const ShowProjects = () => {
-	const utils = api.useUtils();
+	const projectUtils = projectClient.useUtils();
 	const router = useRouter();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
-	const { data, isPending } = api.project.all.useQuery();
+	const { data, isPending } = projectClient.all.useQuery();
 	const { data: auth } = api.user.get.useQuery();
 	const { data: permissions } = api.user.getPermissions.useQuery();
-	const { mutateAsync } = api.project.remove.useMutation();
+	const { mutateAsync } = projectClient.remove.useMutation();
 	const { data: availableTags } = api.tag.all.useQuery();
 
 	const [searchQuery, setSearchQuery] = useState(
@@ -96,7 +229,7 @@ export const ShowProjects = () => {
 
 	useEffect(() => {
 		if (!availableTags) return;
-		const validIds = new Set(availableTags.map((t) => t.tagId));
+		const validIds = new Set(availableTags.map((t: Tag) => t.tagId));
 		setSelectedTagIds((prev) => {
 			const filtered = prev.filter((id) => validIds.has(id));
 			return filtered.length === prev.length ? prev : filtered;
@@ -130,8 +263,8 @@ export const ShowProjects = () => {
 	const filteredProjects = useMemo(() => {
 		if (!data) return [];
 
-		let filtered = data.filter(
-			(project) =>
+		let filtered = (data as ProjectRow[]).filter(
+			(project: ProjectRow) =>
 				project.name
 					.toLowerCase()
 					.includes(debouncedSearchQuery.toLowerCase()) ||
@@ -142,8 +275,8 @@ export const ShowProjects = () => {
 
 		// Filter by selected tags (OR logic: show projects with ANY selected tag)
 		if (selectedTagIds.length > 0) {
-			filtered = filtered.filter((project) =>
-				project.projectTags?.some((pt) =>
+			filtered = filtered.filter((project: ProjectRow) =>
+				project.projectTags?.some((pt: ProjectTag) =>
 					selectedTagIds.includes(pt.tag.tagId),
 				),
 			);
@@ -162,20 +295,24 @@ export const ShowProjects = () => {
 						new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
 					break;
 				case "services": {
-					const aTotalServices = a.environments.reduce((total, env) => {
-						return (
-							total +
-							(env.applications?.length || 0) +
-							(env.libsql?.length || 0) +
-							(env.mariadb?.length || 0) +
-							(env.mongo?.length || 0) +
-							(env.mysql?.length || 0) +
-							(env.postgres?.length || 0) +
-							(env.redis?.length || 0) +
-							(env.compose?.length || 0)
-						);
-					}, 0);
-					const bTotalServices = b.environments.reduce((total, env) => {
+					const aTotalServices = a.environments.reduce(
+						(total: number, env: ProjectEnv) => {
+							return (
+								total +
+								(env.applications?.length || 0) +
+								(env.libsql?.length || 0) +
+								(env.mariadb?.length || 0) +
+								(env.mongo?.length || 0) +
+								(env.mysql?.length || 0) +
+								(env.postgres?.length || 0) +
+								(env.redis?.length || 0) +
+								(env.compose?.length || 0)
+							);
+						},
+						0,
+					);
+					const bTotalServices = b.environments.reduce(
+						(total: number, env: ProjectEnv) => {
 						return (
 							total +
 							(env.applications?.length || 0) +
@@ -245,7 +382,7 @@ export const ShowProjects = () => {
 										<div className="flex items-center gap-2">
 											<TagFilter
 												tags={
-													availableTags?.map((tag) => ({
+													availableTags?.map((tag: Tag) => ({
 														id: tag.tagId,
 														name: tag.name,
 														color: tag.color || undefined,
@@ -475,7 +612,7 @@ export const ShowProjects = () => {
 																													);
 																												})
 																												.finally(() => {
-																													utils.project.all.invalidate();
+																													projectUtils.all.invalidate();
 																												});
 																										}}
 																									>

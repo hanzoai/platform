@@ -1,97 +1,91 @@
 /**
- * ZAP Agent Bridge Client
+ * utils/zap.ts — native ZAP RPC client (browser) for the DOKS capability.
  *
- * Calls the platform's JSON-RPC agent bridge (zap-bridge.ts) over HTTP.
- * This is the AI agent / MCP interface, NOT the native ZAP binary protocol.
+ * Replaces the former tRPC `api.doks.*` surface. Opens a single WebSocket to
+ * `/zap/doks` via @zap-proto/web's `connect()` (shared transport in
+ * utils/zap-client.ts), speaks native binary ZAP envelopes (no JSON, no tRPC),
+ * and dispatches by the generated DoksMethod ordinal.
  *
- * The native ZAP protocol uses Cap'n Proto binary serialization over persistent
- * TCP connections (port 9998, two-party VatNetwork RPC). For the native protocol,
- * see @hanzo/zap-client and the schema at pkg/zap/schema/platform.capnp.
+ * Ergonomics mirror the tRPC surface the UI already uses:
+ *   const { data } = doks.getByOrg.useQuery();
+ *   const provision = doks.provision.useMutation();
+ *   provision.mutate({ organizationId, region, ha: false });
  *
- * This bridge exists so that browser frontends and AI agents can call platform
- * operations via standard HTTP/JSON without a Cap'n Proto client.
- *
- * Usage:
- *   import { zap } from "@/utils/zap";
- *
- *   // Query (calls HTTP bridge, NOT native Cap'n Proto)
- *   const { data } = zap.useQuery("platform.list_projects", { organizationId: "..." });
- *
- *   // Mutation
- *   const mutation = zap.useMutation("platform.create_project");
- *   mutation.mutate({ name: "My Project", organizationId: "..." });
+ * Struct builders (newXxx) and ordinals (DoksMethod) are generated from
+ * server/zap/schema/doks.zap; this file only wires them to react-query hooks.
  */
 
-import { useMutation, useQuery, type UseQueryOptions, type UseMutationOptions } from "@tanstack/react-query";
+import { makeRpc } from "@/utils/zap-client";
+import {
+	DoksMethod,
+	newAddNodePoolParams,
+	newClusterRef,
+	newDeleteNodePoolParams,
+	newEmpty,
+	newProvisionParams,
+	newUpdateNodePoolParams,
+} from "@/server/zap/schema/doks_zap";
 
-// NOTE: This connects to the JSON-RPC HTTP bridge, not the native Cap'n Proto
-// TCP endpoint. The bridge translates HTTP/JSON calls into Cap'n Proto RPC
-// internally. Port 9998 is the native ZAP port; the bridge runs on BRIDGE_PORT.
-const ZAP_BRIDGE_PORT = process.env.NEXT_PUBLIC_ZAP_BRIDGE_PORT || "9999";
+const rpc = makeRpc("/zap/doks");
 
-const ZAP_BRIDGE_URL = typeof window !== "undefined"
-	? `${window.location.protocol}//${window.location.host}`
-	: `http://localhost:${ZAP_BRIDGE_PORT}`;
+// The Empty struct carries a single padding byte (a ZAP struct needs >=1 field);
+// parameterless methods send it with _pad=0.
+const empty = () => newEmpty({ _pad: 0 });
 
-async function zapCall<T = any>(name: string, args: Record<string, any> = {}): Promise<T> {
-	const res = await fetch(`${ZAP_BRIDGE_URL}/call`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			...(process.env.NEXT_PUBLIC_ZAP_TOKEN
-				? { Authorization: `Bearer ${process.env.NEXT_PUBLIC_ZAP_TOKEN}` }
-				: {}),
-		},
-		body: JSON.stringify({ name, arguments: args }),
+// Builders that fill the generated struct from a loose UI args object, applying
+// the same optional defaults ("" / 0 = unset) the schema documents.
+const provision = (a: Record<string, unknown>) =>
+	newProvisionParams({
+		organizationId: String(a.organizationId ?? ""),
+		region: String(a.region ?? ""),
+		nodeSize: String(a.nodeSize ?? ""),
+		ha: Boolean(a.ha),
+		nodeCount: typeof a.nodeCount === "number" ? a.nodeCount : 0,
 	});
-
-	const result = await res.json();
-	if (result.isError) {
-		throw new Error(result.error || "ZAP call failed");
-	}
-	return result.data as T;
-}
-
-async function zapListTools() {
-	const res = await fetch(`${ZAP_BRIDGE_URL}/tools`, {
-		headers: process.env.NEXT_PUBLIC_ZAP_TOKEN
-			? { Authorization: `Bearer ${process.env.NEXT_PUBLIC_ZAP_TOKEN}` }
-			: {},
+const ref = (a: Record<string, unknown>) =>
+	newClusterRef({ doksClusterId: String(a.doksClusterId ?? "") });
+const addPool = (a: Record<string, unknown>) =>
+	newAddNodePoolParams({
+		doksClusterId: String(a.doksClusterId ?? ""),
+		name: String(a.name ?? ""),
+		size: String(a.size ?? ""),
+		count: typeof a.count === "number" ? a.count : 0,
 	});
-	return res.json();
-}
+const updatePool = (a: Record<string, unknown>) =>
+	newUpdateNodePoolParams({
+		doksClusterId: String(a.doksClusterId ?? ""),
+		poolId: String(a.poolId ?? ""),
+		size: String(a.size ?? ""),
+		count: typeof a.count === "number" ? a.count : 0,
+	});
+const deletePool = (a: Record<string, unknown>) =>
+	newDeleteNodePoolParams({
+		doksClusterId: String(a.doksClusterId ?? ""),
+		poolId: String(a.poolId ?? ""),
+	});
 
 /**
- * React hook for ZAP queries (GET-like operations).
+ * The DOKS RPC surface — drop-in shaped for the prior tRPC `api.doks.*` usage.
+ * Result types are untyped (the shared Result carrier returns heterogeneous DB
+ * rows / provider payloads); callsites narrow as they did against tRPC.
  */
-function useZapQuery<T = any>(
-	toolName: string,
-	args?: Record<string, any>,
-	options?: Omit<UseQueryOptions<T, Error>, "queryKey" | "queryFn">,
-) {
-	return useQuery<T, Error>({
-		queryKey: ["zap", toolName, args],
-		queryFn: () => zapCall<T>(toolName, args),
-		...options,
-	});
-}
-
-/**
- * React hook for ZAP mutations (POST-like operations).
- */
-function useZapMutation<T = any, TArgs = Record<string, any>>(
-	toolName: string,
-	options?: Omit<UseMutationOptions<T, Error, TArgs>, "mutationFn">,
-) {
-	return useMutation<T, Error, TArgs>({
-		mutationFn: (args) => zapCall<T>(toolName, args as Record<string, any>),
-		...options,
-	});
-}
-
-export const zap = {
-	call: zapCall,
-	listTools: zapListTools,
-	useQuery: useZapQuery,
-	useMutation: useZapMutation,
-};
+export const doks = {
+	provision: rpc.mutation(DoksMethod.provision, provision),
+	get: rpc.query(DoksMethod.get, "get", ref),
+	getByOrg: rpc.query(DoksMethod.getByOrg, "getByOrg", empty),
+	status: rpc.query(DoksMethod.status, "status", ref),
+	kubeconfig: rpc.query(DoksMethod.kubeconfig, "kubeconfig", ref),
+	delete: rpc.mutation(DoksMethod.delete, ref),
+	upgradeToHA: rpc.mutation(DoksMethod.upgradeToHA, ref),
+	addNodePool: rpc.mutation(DoksMethod.addNodePool, addPool),
+	updateNodePool: rpc.mutation(DoksMethod.updateNodePool, updatePool),
+	deleteNodePool: rpc.mutation(DoksMethod.deleteNodePool, deletePool),
+	list: rpc.query(DoksMethod.list, "list", empty),
+	sync: rpc.mutation(DoksMethod.sync, empty),
+	listNodeSizes: rpc.query(DoksMethod.listNodeSizes, "listNodeSizes", empty),
+	listRegions: rpc.query(DoksMethod.listRegions, "listRegions", empty),
+	clusterCost: rpc.query(DoksMethod.clusterCost, "clusterCost", ref),
+	orgBilling: rpc.query(DoksMethod.orgBilling, "orgBilling", empty),
+	fleetBilling: rpc.query(DoksMethod.fleetBilling, "fleetBilling", empty),
+	recordSnapshot: rpc.mutation(DoksMethod.recordSnapshot, empty),
+} as const;
