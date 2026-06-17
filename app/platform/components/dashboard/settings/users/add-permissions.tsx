@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { api, type RouterOutputs } from "@/utils/api";
+import { project as projectClient } from "@/utils/zap-project";
 
 /** Shape returned by project.allForPermissions (admin only). Used for the permissions UI. */
 type ProjectForPermissions =
@@ -196,9 +197,12 @@ interface Props {
 export const AddUserPermissions = ({ userId, role }: Props) => {
 	const isCustomRole = !!role && !["owner", "admin", "member"].includes(role);
 	const [isOpen, setIsOpen] = useState(false);
-	const { data: projects } = api.project.allForPermissions.useQuery(undefined, {
-		enabled: isOpen,
-	});
+	const { data: projects } = projectClient.allForPermissions.useQuery(
+		undefined,
+		{
+			enabled: isOpen,
+		},
+	);
 	const { data: haveValidLicense } =
 		api.licenseKey.haveValidLicenseKey.useQuery();
 
