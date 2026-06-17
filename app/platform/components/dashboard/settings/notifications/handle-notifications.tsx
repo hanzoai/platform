@@ -46,6 +46,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
+import { notification as notificationRpc } from "@/utils/zap-notification";
 
 const notificationBaseSchema = z.object({
 	name: z.string().min(1, {
@@ -241,11 +242,11 @@ interface Props {
 }
 
 export const HandleNotifications = ({ notificationId }: Props) => {
-	const utils = api.useUtils();
+	const utils = notificationRpc.useUtils();
 	const [visible, setVisible] = useState(false);
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
-	const { data: notification } = api.notification.one.useQuery(
+	const { data: notification } = notificationRpc.one.useQuery(
 		{
 			notificationId: notificationId || "",
 		},
@@ -254,68 +255,68 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 		},
 	);
 	const { mutateAsync: testSlackConnection, isPending: isLoadingSlack } =
-		api.notification.testSlackConnection.useMutation();
+		notificationRpc.testSlackConnection.useMutation();
 	const { mutateAsync: testTelegramConnection, isPending: isLoadingTelegram } =
-		api.notification.testTelegramConnection.useMutation();
+		notificationRpc.testTelegramConnection.useMutation();
 	const { mutateAsync: testDiscordConnection, isPending: isLoadingDiscord } =
-		api.notification.testDiscordConnection.useMutation();
+		notificationRpc.testDiscordConnection.useMutation();
 	const { mutateAsync: testEmailConnection, isPending: isLoadingEmail } =
-		api.notification.testEmailConnection.useMutation();
+		notificationRpc.testEmailConnection.useMutation();
 	const { mutateAsync: testResendConnection, isPending: isLoadingResend } =
-		api.notification.testResendConnection.useMutation();
+		notificationRpc.testResendConnection.useMutation();
 	const { mutateAsync: testGotifyConnection, isPending: isLoadingGotify } =
-		api.notification.testGotifyConnection.useMutation();
+		notificationRpc.testGotifyConnection.useMutation();
 	const { mutateAsync: testNtfyConnection, isPending: isLoadingNtfy } =
-		api.notification.testNtfyConnection.useMutation();
+		notificationRpc.testNtfyConnection.useMutation();
 	const {
 		mutateAsync: testMattermostConnection,
 		isPending: isLoadingMattermost,
-	} = api.notification.testMattermostConnection.useMutation();
+	} = notificationRpc.testMattermostConnection.useMutation();
 	const { mutateAsync: testLarkConnection, isPending: isLoadingLark } =
-		api.notification.testLarkConnection.useMutation();
+		notificationRpc.testLarkConnection.useMutation();
 	const { mutateAsync: testTeamsConnection, isPending: isLoadingTeams } =
-		api.notification.testTeamsConnection.useMutation();
+		notificationRpc.testTeamsConnection.useMutation();
 	const { mutateAsync: testCustomConnection, isPending: isLoadingCustom } =
-		api.notification.testCustomConnection.useMutation();
+		notificationRpc.testCustomConnection.useMutation();
 	const { mutateAsync: testPushoverConnection, isPending: isLoadingPushover } =
-		api.notification.testPushoverConnection.useMutation();
+		notificationRpc.testPushoverConnection.useMutation();
 
 	const customMutation = notificationId
-		? api.notification.updateCustom.useMutation()
-		: api.notification.createCustom.useMutation();
+		? notificationRpc.updateCustom.useMutation()
+		: notificationRpc.createCustom.useMutation();
 	const slackMutation = notificationId
-		? api.notification.updateSlack.useMutation()
-		: api.notification.createSlack.useMutation();
+		? notificationRpc.updateSlack.useMutation()
+		: notificationRpc.createSlack.useMutation();
 	const telegramMutation = notificationId
-		? api.notification.updateTelegram.useMutation()
-		: api.notification.createTelegram.useMutation();
+		? notificationRpc.updateTelegram.useMutation()
+		: notificationRpc.createTelegram.useMutation();
 	const discordMutation = notificationId
-		? api.notification.updateDiscord.useMutation()
-		: api.notification.createDiscord.useMutation();
+		? notificationRpc.updateDiscord.useMutation()
+		: notificationRpc.createDiscord.useMutation();
 	const emailMutation = notificationId
-		? api.notification.updateEmail.useMutation()
-		: api.notification.createEmail.useMutation();
+		? notificationRpc.updateEmail.useMutation()
+		: notificationRpc.createEmail.useMutation();
 	const resendMutation = notificationId
-		? api.notification.updateResend.useMutation()
-		: api.notification.createResend.useMutation();
+		? notificationRpc.updateResend.useMutation()
+		: notificationRpc.createResend.useMutation();
 	const gotifyMutation = notificationId
-		? api.notification.updateGotify.useMutation()
-		: api.notification.createGotify.useMutation();
+		? notificationRpc.updateGotify.useMutation()
+		: notificationRpc.createGotify.useMutation();
 	const ntfyMutation = notificationId
-		? api.notification.updateNtfy.useMutation()
-		: api.notification.createNtfy.useMutation();
+		? notificationRpc.updateNtfy.useMutation()
+		: notificationRpc.createNtfy.useMutation();
 	const mattermostMutation = notificationId
-		? api.notification.updateMattermost.useMutation()
-		: api.notification.createMattermost.useMutation();
+		? notificationRpc.updateMattermost.useMutation()
+		: notificationRpc.createMattermost.useMutation();
 	const larkMutation = notificationId
-		? api.notification.updateLark.useMutation()
-		: api.notification.createLark.useMutation();
+		? notificationRpc.updateLark.useMutation()
+		: notificationRpc.createLark.useMutation();
 	const teamsMutation = notificationId
-		? api.notification.updateTeams.useMutation()
-		: api.notification.createTeams.useMutation();
+		? notificationRpc.updateTeams.useMutation()
+		: notificationRpc.createTeams.useMutation();
 	const pushoverMutation = notificationId
-		? api.notification.updatePushover.useMutation()
-		: api.notification.createPushover.useMutation();
+		? notificationRpc.updatePushover.useMutation()
+		: notificationRpc.createPushover.useMutation();
 
 	const form = useForm({
 		defaultValues: {
@@ -795,9 +796,9 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 						webhookUrl: "",
 					});
 					setVisible(false);
-					await utils.notification.all.invalidate();
+					await utils.all.invalidate();
 					if (notificationId) {
-						await utils.notification.one.invalidate({ notificationId });
+						await utils.one.invalidate({ notificationId });
 					}
 				})
 				.catch(() => {

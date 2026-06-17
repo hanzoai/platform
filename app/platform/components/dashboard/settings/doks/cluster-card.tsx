@@ -13,12 +13,7 @@ import { toast } from "sonner";
 import { DialogAction } from "@/components/shared/dialog-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -53,9 +48,12 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/utils/api";
+import { doks } from "@/utils/zap";
 
-const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+const STATUS_VARIANTS: Record<
+	string,
+	"default" | "secondary" | "destructive" | "outline"
+> = {
 	running: "default",
 	provisioning: "secondary",
 	pending: "secondary",
@@ -84,27 +82,26 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 	const [editPoolCount, setEditPoolCount] = useState(2);
 	const [editPoolSize, setEditPoolSize] = useState("");
 
-	const { data: cost } = api.doks.clusterCost.useQuery(
+	const { data: cost } = doks.clusterCost.useQuery(
 		{ doksClusterId: cluster.doksClusterId },
 		{ enabled: !!cluster.doksClusterId },
 	);
 
-	const { data: nodeSizes } = api.doks.listNodeSizes.useQuery(undefined, {
+	const { data: nodeSizes } = doks.listNodeSizes.useQuery(undefined, {
 		enabled: addPoolOpen || editPoolOpen,
 	});
 
-	const { mutateAsync: deleteCluster, isLoading: deleting } =
-		api.doks.delete.useMutation();
-	const { mutateAsync: upgradeToHA, isLoading: upgrading } =
-		api.doks.upgradeToHA.useMutation();
-	const { mutateAsync: addNodePool, isLoading: addingPool } =
-		api.doks.addNodePool.useMutation();
-	const { mutateAsync: updateNodePool, isLoading: updatingPool } =
-		api.doks.updateNodePool.useMutation();
-	const { mutateAsync: deleteNodePool } =
-		api.doks.deleteNodePool.useMutation();
+	const { mutateAsync: deleteCluster, isPending: deleting } =
+		doks.delete.useMutation();
+	const { mutateAsync: upgradeToHA, isPending: upgrading } =
+		doks.upgradeToHA.useMutation();
+	const { mutateAsync: addNodePool, isPending: addingPool } =
+		doks.addNodePool.useMutation();
+	const { mutateAsync: updateNodePool, isPending: updatingPool } =
+		doks.updateNodePool.useMutation();
+	const { mutateAsync: deleteNodePool } = doks.deleteNodePool.useMutation();
 
-	const kubeconfigQuery = api.doks.kubeconfig.useQuery(
+	const kubeconfigQuery = doks.kubeconfig.useQuery(
 		{ doksClusterId: cluster.doksClusterId },
 		{ enabled: false },
 	);
@@ -218,9 +215,7 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 						<CardTitle className="text-lg">
 							{cluster.name || cluster.doksClusterId}
 						</CardTitle>
-						<Badge variant={statusVariant}>
-							{cluster.status}
-						</Badge>
+						<Badge variant={statusVariant}>{cluster.status}</Badge>
 						{cluster.ha && (
 							<Badge variant="outline" className="gap-1">
 								<Shield className="size-3" />
@@ -233,9 +228,11 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 						<span>K8s: {cluster.k8sVersion}</span>
 						{cost && (
 							<span className="font-medium text-primary">
-								${typeof cost === "object" && "monthlyTotal" in cost
+								$
+								{typeof cost === "object" && "monthlyTotal" in cost
 									? (cost as any).monthlyTotal?.toFixed(2)
-									: "---"}/mo
+									: "---"}
+								/mo
 							</span>
 						)}
 					</div>
@@ -323,9 +320,7 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 								<TableBody>
 									{cluster.nodePools.map((pool: any) => (
 										<TableRow key={pool.poolId}>
-											<TableCell className="font-medium">
-												{pool.name}
-											</TableCell>
+											<TableCell className="font-medium">{pool.name}</TableCell>
 											<TableCell>{pool.size}</TableCell>
 											<TableCell className="text-center">
 												{pool.count}
@@ -336,7 +331,9 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 												)}
 											</TableCell>
 											<TableCell className="text-center">
-												<Badge variant={pool.autoScale ? "default" : "secondary"}>
+												<Badge
+													variant={pool.autoScale ? "default" : "secondary"}
+												>
 													{pool.autoScale ? "On" : "Off"}
 												</Badge>
 											</TableCell>
@@ -355,7 +352,11 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 														type="destructive"
 														onClick={() => handleDeleteNodePool(pool.poolId)}
 													>
-														<Button variant="ghost" size="sm" className="text-destructive">
+														<Button
+															variant="ghost"
+															size="sm"
+															className="text-destructive"
+														>
 															Delete
 														</Button>
 													</DialogAction>
@@ -460,7 +461,10 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 								<div className="flex flex-col gap-4 py-4">
 									<div className="flex flex-col gap-2">
 										<Label htmlFor="editPoolSize">Node Size</Label>
-										<Select value={editPoolSize} onValueChange={setEditPoolSize}>
+										<Select
+											value={editPoolSize}
+											onValueChange={setEditPoolSize}
+										>
 											<SelectTrigger>
 												<SelectValue placeholder="Select node size" />
 											</SelectTrigger>
