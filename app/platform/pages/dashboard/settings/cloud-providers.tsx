@@ -53,11 +53,27 @@ import {
 } from "@/components/ui/accordion";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
+import { digitalocean } from "@/utils/zap-digitalocean";
 import { getLocale, serverSideTranslations } from "@/utils/i18n";
 
 // ============================================================================
 // Page Component
 // ============================================================================
+
+// Shape of a cloud provider row returned by the ZAP `digitalocean` capability.
+// The ZAP client surfaces results as the untyped Result carrier, so we name the
+// fields the page actually reads here rather than casting to `any`.
+interface CloudProvider {
+	providerId: string;
+	name: string;
+	slug: string;
+	providerType: string;
+	defaultRegion: string;
+	isActive: boolean;
+	lastValidated: Date | null;
+	validationError: string | null;
+	createdAt: Date;
+}
 
 const CloudProvidersPage = () => {
 	const [configSheetOpen, setConfigSheetOpen] = useState(false);
@@ -68,7 +84,10 @@ const CloudProvidersPage = () => {
 	const {
 		data: providers,
 		isLoading: isLoadingProviders,
-	} = api.digitalocean.listProviders.useQuery();
+	} = digitalocean.listProviders.useQuery() as {
+		data: CloudProvider[] | undefined;
+		isLoading: boolean;
+	};
 
 	// Determine if we have any providers
 	const hasProviders = providers && providers.length > 0;
@@ -441,12 +460,9 @@ export async function getServerSideProps(ctx: GetServerSidePropsContext) {
 		transformer: superjson,
 	});
 
-	try {
-		await helpers.digitalocean.listProviders.prefetch();
-	} catch (error) {
-		// Provider queries may fail if schema not migrated yet
-		console.error("Failed to prefetch providers:", error);
-	}
+	// digitalocean.* moved to the native ZAP `digitalocean` capability
+	// (utils/zap-digitalocean); provider data is fetched client-side via the
+	// zap hooks, so there is no tRPC prefetch here.
 
 	return {
 		props: {

@@ -21,12 +21,13 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
+import { notification } from "@/utils/zap-notification";
 import { HandleNotifications } from "./handle-notifications";
 
 export const ShowNotifications = () => {
-	const { data, isPending, refetch } = api.notification.all.useQuery();
+	const { data, isPending, refetch } = notification.all.useQuery();
 	const { mutateAsync, isPending: isRemoving } =
-		api.notification.remove.useMutation();
+		notification.remove.useMutation();
 	const { data: permissions } = api.user.getPermissions.useQuery();
 
 	return (

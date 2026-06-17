@@ -1,7 +1,7 @@
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { Loader2, Pencil, PlusIcon, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { type ControllerRenderProps, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { DialogAction } from "@/components/shared/dialog-action";
@@ -40,7 +40,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/utils/api";
+import { gateway } from "@/utils/zap-gateway";
 
 const rateLimitScopes = ["global", "org", "user", "api-key"] as const;
 
@@ -55,6 +55,8 @@ const rateLimitFormSchema = z.object({
 
 type RateLimitFormValues = z.infer<typeof rateLimitFormSchema>;
 
+type RateLimitRule = RateLimitFormValues & { rateLimitRuleId: string };
+
 interface RateLimitDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -68,12 +70,12 @@ const RateLimitDialog = ({
 	defaultValues,
 	mode,
 }: RateLimitDialogProps) => {
-	const utils = api.useUtils();
+	const utils = gateway.useUtils();
 
 	const { mutateAsync: createMutation, isPending: isCreating } =
-		api.gateway.createRateLimit.useMutation();
+		gateway.createRateLimit.useMutation();
 	const { mutateAsync: updateMutation, isPending: isUpdating } =
-		api.gateway.updateRateLimit.useMutation();
+		gateway.updateRateLimit.useMutation();
 
 	const isSubmitting = isCreating || isUpdating;
 
@@ -119,7 +121,7 @@ const RateLimitDialog = ({
 			})
 				.then(async () => {
 					toast.success("Rate limit rule updated");
-					await utils.gateway.listRateLimits.invalidate();
+					await utils.listRateLimits.invalidate();
 					onOpenChange(false);
 				})
 				.catch(() => {
@@ -129,7 +131,7 @@ const RateLimitDialog = ({
 			await createMutation(payload)
 				.then(async () => {
 					toast.success("Rate limit rule created");
-					await utils.gateway.listRateLimits.invalidate();
+					await utils.listRateLimits.invalidate();
 					onOpenChange(false);
 				})
 				.catch(() => {
@@ -161,7 +163,11 @@ const RateLimitDialog = ({
 						<FormField
 							control={form.control}
 							name="name"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<RateLimitFormValues, "name">;
+							}) => (
 								<FormItem>
 									<FormLabel>Name</FormLabel>
 									<FormControl>
@@ -175,7 +181,11 @@ const RateLimitDialog = ({
 						<FormField
 							control={form.control}
 							name="scope"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<RateLimitFormValues, "scope">;
+							}) => (
 								<FormItem>
 									<FormLabel>Scope</FormLabel>
 									<Select
@@ -204,7 +214,11 @@ const RateLimitDialog = ({
 							<FormField
 								control={form.control}
 								name="scopeId"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<RateLimitFormValues, "scopeId">;
+								}) => (
 									<FormItem>
 										<FormLabel>Scope ID</FormLabel>
 										<FormControl>
@@ -223,7 +237,14 @@ const RateLimitDialog = ({
 							<FormField
 								control={form.control}
 								name="requestsPerMinute"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<
+										RateLimitFormValues,
+										"requestsPerMinute"
+									>;
+								}) => (
 									<FormItem>
 										<FormLabel>Requests / min</FormLabel>
 										<FormControl>
@@ -243,7 +264,11 @@ const RateLimitDialog = ({
 							<FormField
 								control={form.control}
 								name="burstSize"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<RateLimitFormValues, "burstSize">;
+								}) => (
 									<FormItem>
 										<FormLabel>Burst Size</FormLabel>
 										<FormControl>
@@ -264,7 +289,11 @@ const RateLimitDialog = ({
 						<FormField
 							control={form.control}
 							name="enabled"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<RateLimitFormValues, "enabled">;
+							}) => (
 								<FormItem className="flex items-center gap-3">
 									<FormLabel className="mt-2">Enabled</FormLabel>
 									<FormControl>
@@ -300,11 +329,11 @@ export const RateLimitTable = () => {
 	>(undefined);
 
 	const { data: rateLimits, isLoading } =
-		api.gateway.listRateLimits.useQuery();
-	const utils = api.useUtils();
+		gateway.listRateLimits.useQuery();
+	const utils = gateway.useUtils();
 
 	const { mutateAsync: deleteMutation, isPending: isDeleting } =
-		api.gateway.deleteRateLimit.useMutation();
+		gateway.deleteRateLimit.useMutation();
 
 	const handleEdit = (rule: NonNullable<typeof rateLimits>[number]) => {
 		setEditingRule({
@@ -328,7 +357,7 @@ export const RateLimitTable = () => {
 		await deleteMutation({ rateLimitRuleId })
 			.then(async () => {
 				toast.success("Rate limit rule deleted");
-				await utils.gateway.listRateLimits.invalidate();
+				await utils.listRateLimits.invalidate();
 			})
 			.catch(() => {
 				toast.error("Failed to delete rate limit rule");
@@ -378,7 +407,7 @@ export const RateLimitTable = () => {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{rateLimits.map((rule) => (
+							{rateLimits.map((rule: RateLimitRule) => (
 								<TableRow key={rule.rateLimitRuleId}>
 									<TableCell className="font-medium">{rule.name}</TableCell>
 									<TableCell>
