@@ -65,14 +65,12 @@ import { db } from "@hanzo/platform/db";
 import {
 	addNewEnvironment,
 	addNewProject,
-	// PRE-EXISTING: `checkPermission` and `findMemberByUserId` are not exported
-	// by the Hanzo fork (it ships `findMemberById` and has no granular permission
-	// helper). The old tRPC projectRouter references the same two names and fails
-	// identically — a fork gap, not a cap regression.
-	checkPermission,
 	checkProjectAccess,
-	findMemberByUserId,
 } from "@hanzo/platform";
+import {
+	checkPermission,
+	findMemberByUserId,
+} from "@hanzo/platform/services/permission";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import {
 	applications,
