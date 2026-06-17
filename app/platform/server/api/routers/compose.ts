@@ -39,7 +39,7 @@ import {
 	checkServiceAccess,
 	checkServicePermissionAndAccess,
 	findMemberByUserId,
-} from "@dokploy/server/services/permission";
+} from "@hanzo/platform/services/permission";
 import {
 	type CompleteTemplate,
 	fetchTemplateFiles,

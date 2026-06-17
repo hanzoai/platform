@@ -469,7 +469,7 @@ export const HandleNotifications = ({ notificationId }: Props) => {
 				form.reset({
 					appBuildError: notification.appBuildError,
 					appDeploy: notification.appDeploy,
-					dokployRestart: notification.dokployRestart,
+					hanzoRestart: notification.hanzoRestart,
 					databaseBackup: notification.databaseBackup,
 					dokployBackup: notification.dokployBackup,
 					volumeBackup: notification.volumeBackup,
