@@ -2,6 +2,7 @@ export * from "./account";
 export * from "./ai";
 export * from "./application";
 export * from "./backups";
+export * from "./build-job";
 export * from "./bitbucket";
 export * from "./certificate";
 export * from "./compose";
