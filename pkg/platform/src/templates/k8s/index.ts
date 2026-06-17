@@ -97,7 +97,7 @@ export function generateSecret(length: number): string {
 	const bytes = randomBytes(length);
 	let result = "";
 	for (let i = 0; i < length; i++) {
-		result += chars[bytes[i] % chars.length];
+		result += chars[(bytes[i] ?? 0) % chars.length];
 	}
 	return result;
 }
@@ -118,7 +118,7 @@ export function resolveSecrets(
 	const resolved: Record<string, string> = {};
 	for (const [key, value] of Object.entries(secrets)) {
 		const match = value.match(RANDOM_EXPR);
-		if (match) {
+		if (match?.[1]) {
 			resolved[key] = generateSecret(parseInt(match[1], 10));
 		} else {
 			resolved[key] = value;
@@ -149,7 +149,7 @@ export function resolveVariables(
 	for (const [name, rawValue] of Object.entries(variables)) {
 		let value = rawValue;
 		const match = rawValue.match(SECRET_REF_EXPR);
-		if (match) {
+		if (match?.[1]) {
 			value = resolvedSecrets[match[1]] ?? "";
 		}
 		result.push({ name, value });
@@ -392,6 +392,7 @@ function applyDefaults(
 		let current: Record<string, unknown> = ctx;
 		for (let i = 0; i < parts.length - 1; i++) {
 			const part = parts[i];
+			if (part === undefined) continue;
 			if (
 				current[part] == null ||
 				typeof current[part] !== "object" ||
@@ -401,7 +402,10 @@ function applyDefaults(
 			}
 			current = current[part] as Record<string, unknown>;
 		}
-		current[parts[parts.length - 1]] = value;
+		const lastPart = parts[parts.length - 1];
+		if (lastPart !== undefined) {
+			current[lastPart] = value;
+		}
 	}
 }
 

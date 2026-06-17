@@ -4,7 +4,7 @@ import {
 	apiRemoveDeployProvider,
 	apiTestDeployProvider,
 	apiUpdateDeployProvider,
-} from "@hanzo/platform-server/db/schema";
+} from "@hanzo/platform/db/schema";
 import {
 	createDeployProvider,
 	findDeployProviderById,
@@ -12,7 +12,7 @@ import {
 	removeDeployProviderById,
 	testDeployProviderConnection,
 	updateDeployProviderById,
-} from "@hanzo/platform-server/services/deploy-provider";
+} from "@hanzo/platform/services/deploy-provider";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, adminProcedure, protectedProcedure } from "@/server/api/trpc";
 

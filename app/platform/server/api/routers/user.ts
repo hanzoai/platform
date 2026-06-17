@@ -7,6 +7,7 @@ import {
 	getHanzoUrl,
 	getUserByToken,
 	getWebServerSettings,
+	hasValidLicense,
 	IS_CLOUD,
 	removeUserById,
 	renderInvitationEmail,
@@ -23,12 +24,18 @@ import {
 	apiUpdateUser,
 	invitation,
 	member,
+	session,
+	user,
 } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import * as bcrypt from "bcrypt";
 import { and, asc, eq, gt, ne } from "drizzle-orm";
 import { z } from "zod";
 import { audit } from "@/server/api/utils/audit";
+import {
+	hasPermission,
+	resolvePermissions,
+} from "@hanzo/platform/services/permission";
 import {
 	adminProcedure,
 	createTRPCRouter,
@@ -482,7 +489,7 @@ export const userRouter = createTRPCRouter({
 					});
 				}
 
-				if (apiKeyToDelete.referenceId !== ctx.user.id) {
+				if (apiKeyToDelete.userId !== ctx.user.id) {
 					throw new TRPCError({
 						code: "UNAUTHORIZED",
 						message: "You are not authorized to delete this API key",
@@ -650,7 +657,17 @@ export const userRouter = createTRPCRouter({
 			);
 
 			try {
-				const htmlContent = `
+				const toEmail = currentInvitation?.email;
+				if (!toEmail) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Invitation not found",
+					});
+				}
+				const subject = `You have been invited to join ${
+					organization?.name || "an organization"
+				} on Hanzo Platform`;
+				const html = `
 \t\t\t\t<p>You are invited to join ${organization?.name || "organization"} on Hanzo Platform. Click the link to accept the invitation: <a href="${inviteLink}">Accept Invitation</a></p>
 \t\t\t\t`;
 
