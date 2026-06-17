@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { type ControllerRenderProps, useForm } from "react-hook-form";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { Cloud, CheckCircle, XCircle, Loader2, Eye, EyeOff, Trash2 } from "lucide-react";
@@ -50,7 +50,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { api } from "@/utils/api";
+import { digitalocean } from "@/utils/zap-digitalocean";
 
 // ============================================================================
 // Schema
@@ -90,25 +90,25 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 	const [showToken, setShowToken] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const utils = api.useUtils();
+	const utils = digitalocean.useUtils();
 
 	// Fetch existing provider if editing
-	const { data: provider, isLoading: isLoadingProvider } = api.digitalocean.getProvider.useQuery(
+	const { data: provider, isLoading: isLoadingProvider } = digitalocean.getProvider.useQuery(
 		{ providerId: providerId! },
 		{ enabled: !!providerId }
 	);
 
 	// Fetch available regions
-	const { data: regions } = api.digitalocean.listRegions.useQuery(
+	const { data: regions } = digitalocean.listRegions.useQuery(
 		{ providerId: providerId! },
 		{ enabled: !!providerId }
 	);
 
 	// Configure mutation
-	const configureMutation = api.digitalocean.configureProvider.useMutation({
+	const configureMutation = digitalocean.configureProvider.useMutation({
 		onSuccess: () => {
 			toast.success("Cloud provider configured successfully");
-			utils.digitalocean.listProviders.invalidate();
+			utils.listProviders.invalidate();
 			onSuccess?.();
 		},
 		onError: (error) => {
@@ -117,11 +117,11 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 	});
 
 	// Update mutation
-	const updateMutation = api.digitalocean.updateProvider.useMutation({
+	const updateMutation = digitalocean.updateProvider.useMutation({
 		onSuccess: () => {
 			toast.success("Provider updated successfully");
-			utils.digitalocean.listProviders.invalidate();
-			utils.digitalocean.getProvider.invalidate({ providerId });
+			utils.listProviders.invalidate();
+			utils.getProvider.invalidate({ providerId: providerId! });
 		},
 		onError: (error) => {
 			toast.error(`Failed to update provider: ${error.message}`);
@@ -129,10 +129,10 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 	});
 
 	// Delete mutation
-	const deleteMutation = api.digitalocean.deleteProvider.useMutation({
+	const deleteMutation = digitalocean.deleteProvider.useMutation({
 		onSuccess: () => {
 			toast.success("Provider deleted successfully");
-			utils.digitalocean.listProviders.invalidate();
+			utils.listProviders.invalidate();
 			onSuccess?.();
 		},
 		onError: (error) => {
@@ -217,7 +217,11 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 							<FormField
 								control={form.control}
 								name="name"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<ConfigureProviderInput, "name">;
+								}) => (
 									<FormItem>
 										<FormLabel>Provider Name</FormLabel>
 										<FormControl>
@@ -234,7 +238,11 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 							<FormField
 								control={form.control}
 								name="slug"
-								render={({ field }) => (
+								render={({
+									field,
+								}: {
+									field: ControllerRenderProps<ConfigureProviderInput, "slug">;
+								}) => (
 									<FormItem>
 										<FormLabel>Slug</FormLabel>
 										<FormControl>
@@ -256,7 +264,11 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 						<FormField
 							control={form.control}
 							name="apiToken"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<ConfigureProviderInput, "apiToken">;
+							}) => (
 								<FormItem>
 									<FormLabel>
 										API Token {providerId && "(leave blank to keep existing)"}
@@ -302,7 +314,11 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 						<FormField
 							control={form.control}
 							name="defaultRegion"
-							render={({ field }) => (
+							render={({
+								field,
+							}: {
+								field: ControllerRenderProps<ConfigureProviderInput, "defaultRegion">;
+							}) => (
 								<FormItem>
 									<FormLabel>Default Region</FormLabel>
 									<Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -312,7 +328,9 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent>
-											{(regions || DEFAULT_REGIONS).map((region) => (
+											{((regions || DEFAULT_REGIONS) as Array<
+											string | { slug: string; name: string }
+										>).map((region) => (
 												<SelectItem
 													key={typeof region === "string" ? region : region.slug}
 													value={typeof region === "string" ? region : region.slug}
