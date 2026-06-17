@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
+import { destination as destinationApi } from "@/utils/zap-destination";
 import { S3_PROVIDERS } from "./constants";
 
 const addDestination = z.object({
@@ -70,15 +71,15 @@ interface Props {
 
 export const HandleDestinations = ({ destinationId }: Props) => {
 	const [open, setOpen] = useState(false);
-	const utils = api.useUtils();
+	const utils = destinationApi.useUtils();
 	const { data: servers } = api.server.withSSHKey.useQuery();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
 	const { mutateAsync, isError, error, isPending } = destinationId
-		? api.destination.update.useMutation()
-		: api.destination.create.useMutation();
+		? destinationApi.update.useMutation()
+		: destinationApi.create.useMutation();
 
-	const { data: destination } = api.destination.one.useQuery(
+	const { data: destination } = destinationApi.one.useQuery(
 		{
 			destinationId: destinationId || "",
 		},
@@ -92,7 +93,7 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 		isPending: isPendingConnection,
 		error: connectionError,
 		isError: isErrorConnection,
-	} = api.destination.testConnection.useMutation();
+	} = destinationApi.testConnection.useMutation();
 
 	const form = useForm<AddDestination>({
 		defaultValues: {
@@ -145,9 +146,9 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 		})
 			.then(async () => {
 				toast.success(`Destination ${destinationId ? "Updated" : "Created"}`);
-				await utils.destination.all.invalidate();
+				await utils.all.invalidate();
 				if (destinationId) {
-					await utils.destination.one.invalidate({ destinationId });
+					await utils.one.invalidate({ destinationId });
 				}
 				setOpen(false);
 			})

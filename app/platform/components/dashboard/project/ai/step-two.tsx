@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { api } from "@/utils/api";
+import { ai } from "@/utils/zap-ai";
 import type { TemplateInfo } from "./template-generator";
 
 export interface StepProps {
@@ -29,7 +29,7 @@ export const StepTwo = ({ templateInfo, setTemplateInfo }: StepProps) => {
 	const selectedVariant = templateInfo.details;
 
 	const { mutateAsync, isPending, error, isError } =
-		api.ai.suggest.useMutation();
+		ai.suggest.useMutation();
 
 	useEffect(() => {
 		if (suggestions?.length > 0) {
