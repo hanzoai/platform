@@ -21,6 +21,7 @@ pkg.exports = {
 	"./db/schema": "./dist/db/schema/index.js",
 	"./db/schema/*": "./dist/db/schema/*.js",
 	"./lib/auth": "./dist/lib/auth.js",
+	"./services/ci": "./dist/services/ci/index.js",
 	"./services/*": "./dist/services/*.js",
 	"./templates/*": "./dist/templates/*.js",
 	"./utils/*": "./dist/utils/*.js",

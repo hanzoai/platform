@@ -48,7 +48,6 @@ import {
 	restoreWebServerBackup,
 } from "@hanzo/platform/utils/restore";
 import { TRPCError } from "@trpc/server";
-import { observable } from "@trpc/server/observable";
 import { z } from "zod";
 import {
 	createTRPCRouter,
@@ -56,6 +55,7 @@ import {
 	withPermission,
 } from "@/server/api/trpc";
 import { audit } from "@/server/api/utils/audit";
+import { checkServicePermissionAndAccess } from "@hanzo/platform/services/permission";
 import {
 	apiCreateBackup,
 	apiFindOneBackup,
@@ -316,6 +316,30 @@ export const backupRouter = createTRPCRouter({
 			}
 		}),
 
+	manualBackupWebServer: protectedProcedure
+		.input(apiFindOneBackup)
+		.mutation(async ({ input, ctx }) => {
+			try {
+				const backup = await findBackupById(input.backupId);
+				const backupOrgId = await getBackupOrganizationId(backup);
+				assertOrgMatch(backupOrgId, ctx.session.activeOrganizationId);
+
+				await runWebServerBackup(backup);
+
+				await keepLatestNBackups(backup);
+				return true;
+			} catch (error) {
+				const message =
+					error instanceof Error
+						? error.message
+						: "Error running manual Web Server backup ";
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message,
+				});
+			}
+		}),
+
 	manualBackupMySql: protectedProcedure
 		.input(apiFindOneBackup)
 		.mutation(async ({ input, ctx }) => {
@@ -499,7 +523,7 @@ export const backupRouter = createTRPCRouter({
 			},
 		})
 		.input(apiRestoreBackup)
-		.subscription(async ({ input, ctx }) => {
+		.subscription(async function* ({ input, ctx, signal }) {
 			const destination = await findDestinationById(input.destinationId);
 			if (destination.organizationId !== ctx.session.activeOrganizationId) {
 				throw new TRPCError({
@@ -507,56 +531,55 @@ export const backupRouter = createTRPCRouter({
 					message: "You are not authorized to access this destination",
 				});
 			}
+
+			const queue: string[] = [];
+			let done = false;
+			const onLog = (log: string) => {
+				queue.push(log);
+			};
+			const finish = (run: Promise<unknown>) => {
+				run
+					.catch(() => {})
+					.finally(() => {
+						done = true;
+					});
+			};
+
 			if (input.backupType === "database") {
 				if (input.databaseType === "postgres") {
 					const postgres = await findPostgresById(input.databaseId);
-
-					return observable<string>((emit) => {
-						restorePostgresBackup(postgres, destination, input, (log) => {
-							emit.next(log);
-						});
-					});
-				}
-				if (input.databaseType === "mysql") {
+					finish(restorePostgresBackup(postgres, destination, input, onLog));
+				} else if (input.databaseType === "mysql") {
 					const mysql = await findMySqlById(input.databaseId);
-					return observable<string>((emit) => {
-						restoreMySqlBackup(mysql, destination, input, (log) => {
-							emit.next(log);
-						});
-					});
-				}
-				if (input.databaseType === "mariadb") {
+					finish(restoreMySqlBackup(mysql, destination, input, onLog));
+				} else if (input.databaseType === "mariadb") {
 					const mariadb = await findMariadbById(input.databaseId);
-					return observable<string>((emit) => {
-						restoreMariadbBackup(mariadb, destination, input, (log) => {
-							emit.next(log);
-						});
-					});
-				}
-				if (input.databaseType === "mongo") {
+					finish(restoreMariadbBackup(mariadb, destination, input, onLog));
+				} else if (input.databaseType === "mongo") {
 					const mongo = await findMongoById(input.databaseId);
-					return observable<string>((emit) => {
-						restoreMongoBackup(mongo, destination, input, (log) => {
-							emit.next(log);
-						});
-					});
+					finish(restoreMongoBackup(mongo, destination, input, onLog));
+				} else if (input.databaseType === "web-server") {
+					finish(restoreWebServerBackup(destination, input.backupFile, onLog));
+				} else {
+					done = true;
 				}
-				if (input.databaseType === "web-server") {
-					return observable<string>((emit) => {
-						restoreWebServerBackup(destination, input.backupFile, (log) => {
-							emit.next(log);
-						});
-					});
-				}
-			}
-			if (input.backupType === "compose") {
+			} else if (input.backupType === "compose") {
 				const compose = await findComposeById(input.databaseId);
-				return observable<string>((emit) => {
-					restoreComposeBackup(compose, destination, input, (log) => {
-						emit.next(log);
-					});
-				});
+				finish(restoreComposeBackup(compose, destination, input, onLog));
+			} else {
+				done = true;
 			}
-			return true;
+
+			while (!done || queue.length > 0) {
+				if (queue.length > 0) {
+					yield queue.shift()!;
+				} else {
+					await new Promise((r) => setTimeout(r, 50));
+				}
+
+				if (signal?.aborted) {
+					return;
+				}
+			}
 		}),
 });

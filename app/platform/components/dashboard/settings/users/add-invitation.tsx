@@ -33,6 +33,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/utils/api";
+import type { notifications } from "@hanzo/platform/db/schema";
 import { notification } from "@/utils/zap-notification";
 
 const addInvitation = z
@@ -313,7 +314,8 @@ export const AddInvitation = () => {
 													</SelectTrigger>
 												</FormControl>
 												<SelectContent>
-													{emailProviders?.map((provider) => (
+													{emailProviders?.map(
+													(provider: typeof notifications.$inferSelect) => (
 														<SelectItem
 															key={provider.notificationId}
 															value={provider.notificationId}
