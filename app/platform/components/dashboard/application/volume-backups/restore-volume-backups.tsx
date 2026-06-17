@@ -43,6 +43,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
+import { destination } from "@/utils/zap-destination";
 import { formatBytes } from "../../database/backups/restore-backup";
 import { type LogLine, parseLogs } from "../../docker/logs/utils";
 
@@ -69,7 +70,7 @@ export const RestoreVolumeBackups = ({ id, type, serverId }: Props) => {
 	const [search, setSearch] = useState("");
 	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-	const { data: destinations = [] } = api.destination.all.useQuery();
+	const { data: destinations = [] } = destination.all.useQuery();
 
 	const form = useForm({
 		defaultValues: {

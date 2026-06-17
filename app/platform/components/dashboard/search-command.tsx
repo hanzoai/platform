@@ -24,12 +24,25 @@ import {
 	CommandSeparator,
 } from "@/components/ui/command";
 import { api } from "@/utils/api";
+import { project as projectClient } from "@/utils/zap-project";
 import { StatusTooltip } from "../shared/status-tooltip";
 
 // Extended Services type to include environmentId and environmentName for search navigation
 type SearchServices = Services & {
 	environmentId: string;
 	environmentName: string;
+};
+
+type SearchEnvironment = {
+	environmentId: string;
+	name: string;
+	isDefault?: boolean;
+};
+
+type SearchProject = {
+	projectId: string;
+	name: string;
+	environments: SearchEnvironment[];
 };
 
 const extractAllServicesFromProject = (project: any): SearchServices[] => {
@@ -56,7 +69,7 @@ export const SearchCommand = () => {
 	const [open, setOpen] = React.useState(false);
 	const [search, setSearch] = React.useState("");
 	const { data: session } = api.user.session.useQuery();
-	const { data } = api.project.all.useQuery(undefined, {
+	const { data } = projectClient.all.useQuery(undefined, {
 		enabled: !!session,
 	});
 	const { data: isCloud } = api.settings.isCloud.useQuery();
@@ -87,11 +100,12 @@ export const SearchCommand = () => {
 					</CommandEmpty>
 					<CommandGroup heading={"Projects"}>
 						<CommandList>
-							{data?.map((project) => {
+							{data?.map((project: SearchProject) => {
 								// Find default environment from accessible environments, or fall back to first accessible environment
 								const defaultEnvironment =
 									project.environments.find(
-										(environment) => environment.isDefault,
+										(environment: SearchEnvironment) =>
+											environment.isDefault,
 									) || project?.environments?.[0];
 
 								if (!defaultEnvironment) return null;
@@ -116,7 +130,7 @@ export const SearchCommand = () => {
 					<CommandSeparator />
 					<CommandGroup heading={"Services"}>
 						<CommandList>
-							{data?.map((project) => {
+							{data?.map((project: SearchProject) => {
 								const applications: SearchServices[] =
 									extractAllServicesFromProject(project);
 								return applications.map((application) => (

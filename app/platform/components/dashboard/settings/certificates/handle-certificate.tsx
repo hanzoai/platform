@@ -115,7 +115,10 @@ export const HandleCertificate = ({ certificateId }: Props) => {
 			autoRenew: data.autoRenew,
 			serverId: data.serverId === "hanzo" ? undefined : data.serverId,
 			organizationId: "",
-		})
+		};
+		await mutateAsync(
+			certificateId ? { ...basePayload, certificateId } : basePayload,
+		)
 			.then(async () => {
 				toast.success(
 					certificateId ? "Certificate Updated" : "Certificate Created",
