@@ -8,14 +8,14 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { api } from "@/utils/api";
+import { cluster } from "@/utils/zap-cluster";
 
 interface Props {
 	serverId?: string;
 }
 
 export const AddManager = ({ serverId }: Props) => {
-	const { data, isPending, error, isError } = api.cluster.addManager.useQuery({
+	const { data, isPending, error, isError } = cluster.addManager.useQuery({
 		serverId,
 	});
 

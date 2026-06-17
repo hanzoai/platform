@@ -27,22 +27,30 @@ import {
 } from "@/components/ui/popover";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { api } from "@/utils/api";
+import { project as projectClient } from "@/utils/zap-project";
 import { useProjectContext } from "@/hooks/use-project-context";
+
+type ProjectSummary = {
+	projectId: string;
+	name: string;
+	environments?: { environmentId: string; name?: string }[];
+};
 
 export function ProjectSwitcher({ collapsed }: { collapsed?: boolean }) {
 	const [open, setOpen] = useState(false);
 	const router = useRouter();
 	const { activeProjectId, setActiveProject, setActiveEnvironment } = useProjectContext();
 
-	const { data: projects, isLoading } = api.project.all.useQuery();
+	const { data: projects, isPending } = projectClient.all.useQuery();
 
 	const activeProject = projects?.find(
-		(p) => p.projectId === activeProjectId,
+		(p: ProjectSummary) => p.projectId === activeProjectId,
 	);
 
 	const handleProjectSelect = (projectId: string) => {
-		const project = projects?.find((p) => p.projectId === projectId);
+		const project = projects?.find(
+			(p: ProjectSummary) => p.projectId === projectId,
+		);
 		if (!project) return;
 
 		setActiveProject(projectId);
@@ -71,7 +79,7 @@ export function ProjectSwitcher({ collapsed }: { collapsed?: boolean }) {
 		setOpen(false);
 	};
 
-	if (isLoading) {
+	if (isPending) {
 		return (
 			<div className="flex items-center justify-center h-8">
 				<Loader2 className="animate-spin size-3 text-muted-foreground" />
@@ -128,7 +136,7 @@ export function ProjectSwitcher({ collapsed }: { collapsed?: boolean }) {
 					<CommandList>
 						<CommandEmpty>No projects found.</CommandEmpty>
 						<CommandGroup heading="Projects">
-							{projects.map((project) => {
+							{projects.map((project: ProjectSummary) => {
 								const count = serviceCount(project);
 								return (
 									<CommandItem

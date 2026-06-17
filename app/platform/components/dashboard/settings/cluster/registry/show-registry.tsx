@@ -10,12 +10,13 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/utils/api";
+import { registry } from "@/utils/zap-registry";
 import { HandleRegistry } from "./handle-registry";
 
 export const ShowRegistry = () => {
 	const { mutateAsync, isPending: isRemoving } =
-		api.registry.remove.useMutation();
-	const { data, isPending, refetch } = api.registry.all.useQuery();
+		registry.remove.useMutation();
+	const { data, isPending, refetch } = registry.all.useQuery();
 	const { data: permissions } = api.user.getPermissions.useQuery();
 
 	return (

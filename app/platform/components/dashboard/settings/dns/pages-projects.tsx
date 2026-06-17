@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api } from "@/utils/api";
+import { dns } from "@/utils/zap-dns";
 
 const createProjectSchema = z.object({
 	name: z
@@ -84,7 +84,7 @@ function getDeploymentStatusVariant(
 
 function CreateProjectDialog({ onSuccess }: { onSuccess: () => void }) {
 	const [open, setOpen] = useState(false);
-	const { mutateAsync, isPending } = api.dns.createPagesProject.useMutation();
+	const { mutateAsync, isPending } = dns.createPagesProject.useMutation();
 
 	const form = useForm<CreateProjectForm>({
 		defaultValues: {
@@ -181,7 +181,7 @@ function AddDomainDialog({
 	onSuccess: () => void;
 }) {
 	const [open, setOpen] = useState(false);
-	const { mutateAsync, isPending } = api.dns.addPagesDomain.useMutation();
+	const { mutateAsync, isPending } = dns.addPagesDomain.useMutation();
 
 	const form = useForm<AddDomainForm>({
 		defaultValues: {
@@ -280,9 +280,9 @@ function ProjectCard({
 }) {
 	const [expanded, setExpanded] = useState(false);
 	const { mutateAsync: triggerDeploy, isPending: isDeploying } =
-		api.dns.triggerPagesDeploy.useMutation();
+		dns.triggerPagesDeploy.useMutation();
 	const { mutateAsync: removeDomain, isPending: isRemovingDomain } =
-		api.dns.removePagesDomain.useMutation();
+		dns.removePagesDomain.useMutation();
 
 	const latestStatus =
 		project.latest_deployment?.latest_stage?.status ?? "unknown";
@@ -427,7 +427,7 @@ export function PagesProjects() {
 		data: projects,
 		isLoading,
 		refetch,
-	} = api.dns.listPagesProjects.useQuery();
+	} = dns.listPagesProjects.useQuery();
 
 	if (isLoading) {
 		return (
