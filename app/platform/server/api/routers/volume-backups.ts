@@ -187,10 +187,6 @@ export const volumeBackupsRouter = createTRPCRouter({
 			const orgId = await getVolumeBackupOrgId(newVolumeBackup);
 			assertVbOrgMatch(orgId, ctx.session.activeOrganizationId);
 
-			// Verify org ownership on the newly created volume backup
-			const orgId = await getVolumeBackupOrgId(newVolumeBackup);
-			assertVbOrgMatch(orgId, ctx.session.activeOrganizationId);
-
 			if (newVolumeBackup?.enabled) {
 				if (IS_CLOUD) {
 					await schedule({

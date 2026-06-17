@@ -7,7 +7,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { api } from "@/utils/api";
+import { gateway } from "@/utils/zap-gateway";
 
 interface StatusCardProps {
 	title: string;
@@ -53,7 +53,7 @@ const StatusCard = ({ title, icon, healthy, error, metrics }: StatusCardProps) =
 );
 
 export const GatewayStatus = () => {
-	const { data: status, isLoading } = api.gateway.status.useQuery(undefined, {
+	const { data: status, isLoading } = gateway.status.useQuery(undefined, {
 		refetchInterval: 30000,
 	});
 

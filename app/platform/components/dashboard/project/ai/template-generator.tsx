@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/utils/api";
+import { ai } from "@/utils/zap-ai";
 import { StepOne } from "./step-one";
 import { StepThree } from "./step-three";
 import { StepTwo } from "./step-two";
@@ -94,17 +95,24 @@ interface Props {
 	projectName?: string;
 }
 
+type AiProvider = {
+	aiId: string;
+	name: string;
+	model: string;
+	isEnabled?: boolean;
+};
+
 export const TemplateGenerator = ({ environmentId }: Props) => {
 	const [open, setOpen] = useState(false);
 	const stepper = useStepper();
-	const { data: aiSettings } = api.ai.getAll.useQuery();
-	const { mutateAsync } = api.ai.deploy.useMutation();
+	const { data: aiSettings } = ai.getAll.useQuery();
+	const { mutateAsync } = ai.deploy.useMutation();
 	const [templateInfo, setTemplateInfo] =
 		useState<TemplateInfo>(defaultTemplateInfo);
 	const utils = api.useUtils();
 
 	const haveAtleasOneProviderEnabled = aiSettings?.some(
-		(ai) => ai.isEnabled === true,
+		(ai: AiProvider) => ai.isEnabled === true,
 	);
 
 	const isDisabled = () => {
@@ -261,7 +269,7 @@ export const TemplateGenerator = ({ environmentId }: Props) => {
 															<SelectValue placeholder="Select an AI provider" />
 														</SelectTrigger>
 														<SelectContent>
-															{aiSettings.map((ai) => (
+															{aiSettings.map((ai: AiProvider) => (
 																<SelectItem key={ai.aiId} value={ai.aiId}>
 																	{ai.name} ({ai.model})
 																</SelectItem>

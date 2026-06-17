@@ -39,7 +39,8 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { api } from "@/utils/api";
+import { cluster } from "@/utils/zap-cluster";
+import { registry as registryApi } from "@/utils/zap-registry";
 import { AddNode } from "./add-node";
 import { ShowNodeData } from "./show-node-data";
 
@@ -48,12 +49,12 @@ interface Props {
 }
 
 export const ShowNodes = ({ serverId }: Props) => {
-	const { data, isPending, refetch } = api.cluster.getNodes.useQuery({
+	const { data, isPending, refetch } = cluster.getNodes.useQuery({
 		serverId,
 	});
-	const { data: registry } = api.registry.all.useQuery();
+	const { data: registry } = registryApi.all.useQuery();
 
-	const { mutateAsync: deleteNode } = api.cluster.removeWorker.useMutation();
+	const { mutateAsync: deleteNode } = cluster.removeWorker.useMutation();
 
 	const haveAtLeastOneRegistry = !!(registry && registry?.length > 0);
 	return (

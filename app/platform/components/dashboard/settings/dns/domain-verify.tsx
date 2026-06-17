@@ -23,7 +23,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { api } from "@/utils/api";
+import { dns } from "@/utils/zap-dns";
 
 const verifyDomainSchema = z.object({
 	domain: z.string().min(1, "Domain is required"),
@@ -41,7 +41,7 @@ interface VerifyResult {
 
 export function DomainVerify() {
 	const [result, setResult] = useState<VerifyResult | null>(null);
-	const { mutateAsync, isPending } = api.dns.verifyDomain.useMutation();
+	const { mutateAsync, isPending } = dns.verifyDomain.useMutation();
 
 	const form = useForm<VerifyDomainForm>({
 		defaultValues: {
