@@ -10,13 +10,23 @@ const nextConfig = {
 		ignoreBuildErrors: true,
 	},
 	transpilePackages: ["@hanzo/platform", "@hanzo/ui"],
-	// In frontend-only mode, proxy API calls to production platform
 	async rewrites() {
-		if (process.env.SKIP_ENV_VALIDATION !== "1") return [];
-		const target = process.env.PLATFORM_API_URL || "https://platform.hanzo.ai";
-		return [
-			{ source: "/api/:path*", destination: `${target}/api/:path*` },
-		];
+		// Canonical request path is /v1/* (no /api/ prefix, per platform convention).
+		// The Next.js pages router physically serves these handlers under /api/v1/*,
+		// so map the canonical path onto the physical one at request time. Both
+		// /v1/* and /api/v1/* resolve to the same handler.
+		const canonical = [{ source: "/v1/:path*", destination: "/api/v1/:path*" }];
+
+		// In frontend-only mode, also proxy API calls to the production platform.
+		if (process.env.SKIP_ENV_VALIDATION === "1") {
+			const target = process.env.PLATFORM_API_URL || "https://platform.hanzo.ai";
+			return [
+				...canonical,
+				{ source: "/api/:path*", destination: `${target}/api/:path*` },
+			];
+		}
+
+		return canonical;
 	},
 	async headers() {
 		return [
