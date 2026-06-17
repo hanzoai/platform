@@ -52,6 +52,7 @@ const handleCertificateSchema = z.object({
 	certificateData: z.string().min(1, "Certificate data is required"),
 	privateKey: z.string().min(1, "Private key is required"),
 	serverId: z.string().optional(),
+	autoRenew: z.boolean().optional(),
 });
 
 type HandleCertificateForm = z.infer<typeof handleCertificateSchema>;
@@ -80,7 +81,7 @@ export const HandleCertificate = ({ certificateId }: Props) => {
 	const createMutation = api.certificates.create.useMutation();
 	const updateMutation = api.certificates.update.useMutation();
 	const mutation = certificateId ? updateMutation : createMutation;
-	const { mutateAsync, isError, error, isPending } = mutation;
+	const { isError, error, isPending } = mutation;
 
 	const form = useForm<HandleCertificateForm>({
 		defaultValues: {
@@ -116,9 +117,10 @@ export const HandleCertificate = ({ certificateId }: Props) => {
 			serverId: data.serverId === "hanzo" ? undefined : data.serverId,
 			organizationId: "",
 		};
-		await mutateAsync(
-			certificateId ? { ...basePayload, certificateId } : basePayload,
-		)
+		const run = certificateId
+			? updateMutation.mutateAsync({ ...basePayload, certificateId })
+			: createMutation.mutateAsync(basePayload);
+		await run
 			.then(async () => {
 				toast.success(
 					certificateId ? "Certificate Updated" : "Certificate Created",

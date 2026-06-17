@@ -12,7 +12,7 @@ import { useRouter } from "next/router";
 import { type ReactElement, useState } from "react";
 import { toast } from "sonner";
 import superjson from "superjson";
-import { ShowEnvironment } from "@/components/dashboard/application/environment/show-environment";
+import { ShowEnvironment } from "@/components/dashboard/application/environment/show-enviroment";
 import { ShowDockerLogs } from "@/components/dashboard/application/logs/show";
 import { DeleteService } from "@/components/dashboard/compose/delete-service";
 import { ContainerFreeMonitoring } from "@/components/dashboard/monitoring/free/container/show-free-container-monitoring";

@@ -1,7 +1,7 @@
 import {
 	ADDITIONAL_FLAG_ERROR,
 	ADDITIONAL_FLAG_REGEX,
-} from "@dokploy/server/db/validations/destination";
+} from "@hanzo/platform/db/validations/destination";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { PenBoxIcon, PlusIcon, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -152,11 +152,11 @@ export const HandleDestinations = ({ destinationId }: Props) => {
 				}
 				setOpen(false);
 			})
-			.catch((e) => {
+			.catch((e: unknown) => {
 				toast.error(
 					`Error ${destinationId ? "Updating" : "Creating"} the Destination`,
 					{
-						description: e.message,
+						description: e instanceof Error ? e.message : String(e),
 					},
 				);
 			});

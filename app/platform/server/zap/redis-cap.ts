@@ -26,9 +26,6 @@ import {
 	addNewService,
 	checkPortInUse,
 	checkServiceAccess,
-	// PRE-EXISTING: checkServicePermissionAndAccess was dropped by the Hanzo fork
-	// (the tRPC redisRouter references it too and fails identically).
-	checkServicePermissionAndAccess,
 	createMount,
 	createRedis,
 	deployRedis,
@@ -54,6 +51,10 @@ import {
 	stopServiceRemote,
 	updateRedisById,
 } from "@hanzo/platform";
+// PRE-EXISTING: services/permission not re-exported at the @hanzo/platform root
+// by the Hanzo fork; import checkServicePermissionAndAccess from its subpath
+// (mirrors mongo-cap.ts).
+import { checkServicePermissionAndAccess } from "@hanzo/platform/services/permission";
 import { db } from "@hanzo/platform/db";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { CallHandler } from "@zap-proto/web";
@@ -81,6 +82,16 @@ export interface RedisCtx {
 	userId: string;
 	email: string;
 }
+
+/**
+ * permCtx — adapt the flat per-connection RedisCtx to the `PermissionCtx`
+ * shape (`{ user: { id }, session: { activeOrganizationId } }`) that the ported
+ * checkServicePermissionAndAccess helper expects (mirrors postgres-cap.ts).
+ */
+const permCtx = (ctx: RedisCtx) => ({
+	user: { id: ctx.userId },
+	session: { activeOrganizationId: ctx.organizationId },
+});
 
 /**
  * redisMintCap — bearer→ctx boundary. Mirrors `protectedProcedure`'s
@@ -175,9 +186,10 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 			}
 
 			if (input.serverId) {
-				// PRE-EXISTING: getAccessibleServerIds was dropped by the Hanzo fork
-				// (the tRPC redisRouter calls it with ctx.session too).
-				const accessibleIds = await getAccessibleServerIds(ctx.session);
+				const accessibleIds = await getAccessibleServerIds({
+					activeOrganizationId: ctx.organizationId,
+					userId: ctx.userId,
+				});
 				if (!accessibleIds.has(input.serverId)) {
 					throw new UnauthorizedError(
 						"You are not authorized to access this server",
@@ -230,7 +242,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 
 		case RedisMethod.start: {
 			const input = decodeArgs<{ redisId: string }>(call.payload);
-			await checkServicePermissionAndAccess(ctx, input.redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), input.redisId, {
 				deployment: ["create"],
 			});
 			const redis = await findRedisById(input.redisId);
@@ -258,7 +270,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 
 		case RedisMethod.reload: {
 			const input = decodeArgs<{ redisId: string }>(call.payload);
-			await checkServicePermissionAndAccess(ctx, input.redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), input.redisId, {
 				deployment: ["create"],
 			});
 			const redis = await findRedisById(input.redisId);
@@ -293,7 +305,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 
 		case RedisMethod.stop: {
 			const input = decodeArgs<{ redisId: string }>(call.payload);
-			await checkServicePermissionAndAccess(ctx, input.redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), input.redisId, {
 				deployment: ["create"],
 			});
 			const redis = await findRedisById(input.redisId);
@@ -322,7 +334,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 			const input = decodeArgs<{ redisId: string; externalPort?: number }>(
 				call.payload,
 			);
-			await checkServicePermissionAndAccess(ctx, input.redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), input.redisId, {
 				service: ["create"],
 			});
 			const redis = await findRedisById(input.redisId);
@@ -357,7 +369,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 
 		case RedisMethod.deploy: {
 			const input = decodeArgs<{ redisId: string }>(call.payload);
-			await checkServicePermissionAndAccess(ctx, input.redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), input.redisId, {
 				deployment: ["create"],
 			});
 			const redis = await findRedisById(input.redisId);
@@ -382,7 +394,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 			// analog in a single request/response call and is dropped; deployment
 			// runs to completion and all queued lines are returned.
 			const input = decodeArgs<{ redisId: string }>(call.payload);
-			await checkServicePermissionAndAccess(ctx, input.redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), input.redisId, {
 				deployment: ["create"],
 			});
 			const logs: string[] = [];
@@ -400,7 +412,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 				// biome-ignore lint/suspicious/noExplicitAny: apiChangeRedisStatus input, ported verbatim
 				applicationStatus: any;
 			}>(call.payload);
-			await checkServicePermissionAndAccess(ctx, input.redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), input.redisId, {
 				deployment: ["create"],
 			});
 			const mongo = await findRedisById(input.redisId);
@@ -460,7 +472,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 
 		case RedisMethod.saveEnvironment: {
 			const input = decodeArgs<{ redisId: string; env?: string }>(call.payload);
-			await checkServicePermissionAndAccess(ctx, input.redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), input.redisId, {
 				envVars: ["write"],
 			});
 			const updatedRedis = await updateRedisById(input.redisId, {
@@ -489,7 +501,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 				[k: string]: any;
 			}>(call.payload);
 			const { redisId, ...rest } = input;
-			await checkServicePermissionAndAccess(ctx, redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), redisId, {
 				service: ["create"],
 			});
 			const redis = await updateRedisById(redisId, {
@@ -530,7 +542,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 				throw new BadRequestError(DATABASE_PASSWORD_MESSAGE);
 			}
 			const { redisId, password } = input;
-			await checkServicePermissionAndAccess(ctx, redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), redisId, {
 				service: ["create"],
 			});
 
@@ -577,7 +589,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 			const input = decodeArgs<{ redisId: string; targetEnvironmentId: string }>(
 				call.payload,
 			);
-			await checkServicePermissionAndAccess(ctx, input.redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), input.redisId, {
 				service: ["create"],
 			});
 
@@ -608,7 +620,7 @@ async function dispatch(ctx: RedisCtx, call: Call): Promise<unknown> {
 
 		case RedisMethod.rebuild: {
 			const input = decodeArgs<{ redisId: string }>(call.payload);
-			await checkServicePermissionAndAccess(ctx, input.redisId, {
+			await checkServicePermissionAndAccess(permCtx(ctx), input.redisId, {
 				deployment: ["create"],
 			});
 

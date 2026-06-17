@@ -9,6 +9,7 @@
  * per-query invalidation, mirroring tRPC's api.useUtils().
  */
 
+import type { Registry } from "@hanzo/platform/services/registry";
 import { encodeArgs } from "@/server/zap/args";
 import { RegistryMethod } from "@/server/zap/schema/registry_zap";
 import { makeRpc, makeUseUtils } from "@/utils/zap-client";
@@ -18,8 +19,16 @@ const rpc = makeRpc("/zap/registry");
 // Every Registry method carries its input via the generic Args carrier.
 const args = (a: Record<string, unknown>) => encodeArgs(a);
 
-const all = rpc.query(RegistryMethod.all, "all", args);
-const one = rpc.query(RegistryMethod.one, "one", args);
+const all = rpc.query<Record<string, unknown>, Registry[]>(
+	RegistryMethod.all,
+	"all",
+	args,
+);
+const one = rpc.query<Record<string, unknown>, Registry>(
+	RegistryMethod.one,
+	"one",
+	args,
+);
 
 export const registry = {
 	create: rpc.mutation(RegistryMethod.create, args),

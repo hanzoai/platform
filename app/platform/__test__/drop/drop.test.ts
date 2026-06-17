@@ -31,6 +31,9 @@ if (typeof window === "undefined") {
 const baseApp: ApplicationNested = {
 	railpackVersion: "0.15.4",
 	applicationId: "",
+	deployTarget: "local",
+	k8sClusterId: null,
+	k8sNamespace: null,
 	previewLabels: [],
 	createEnvFile: true,
 	bitbucketRepositorySlug: "",
