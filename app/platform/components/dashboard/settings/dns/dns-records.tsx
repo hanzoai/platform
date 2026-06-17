@@ -50,7 +50,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/utils/api";
+import { dns } from "@/utils/zap-dns";
 
 const DNS_RECORD_TYPES = [
 	"A",
@@ -99,7 +99,7 @@ function AddRecordDialog({
 	onSuccess: () => void;
 }) {
 	const [open, setOpen] = useState(false);
-	const { mutateAsync, isPending } = api.dns.createRecord.useMutation();
+	const { mutateAsync, isPending } = dns.createRecord.useMutation();
 
 	const form = useForm<CreateRecordForm>({
 		defaultValues: {
@@ -271,7 +271,7 @@ function EditRecordDialog({
 	onSuccess: () => void;
 }) {
 	const [open, setOpen] = useState(false);
-	const { mutateAsync, isPending } = api.dns.updateRecord.useMutation();
+	const { mutateAsync, isPending } = dns.updateRecord.useMutation();
 
 	const form = useForm<EditRecordForm>({
 		defaultValues: {
@@ -428,19 +428,19 @@ function EditRecordDialog({
 export function DnsRecords() {
 	const [selectedZoneId, setSelectedZoneId] = useState<string>("");
 	const { data: zones, isLoading: zonesLoading } =
-		api.dns.listZones.useQuery();
+		dns.listZones.useQuery();
 
 	const {
 		data: records,
 		isLoading: recordsLoading,
 		refetch: refetchRecords,
-	} = api.dns.listRecords.useQuery(
+	} = dns.listRecords.useQuery(
 		{ zoneId: selectedZoneId || undefined },
 		{ enabled: selectedZoneId !== "" },
 	);
 
 	const { mutateAsync: deleteRecord, isPending: isDeleting } =
-		api.dns.deleteRecord.useMutation();
+		dns.deleteRecord.useMutation();
 
 	const handleDelete = async (recordId: string) => {
 		await deleteRecord({ recordId, zoneId: selectedZoneId })

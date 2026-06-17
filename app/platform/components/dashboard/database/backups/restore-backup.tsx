@@ -62,6 +62,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
+import { destination } from "@/utils/zap-destination";
 import type { ServiceType } from "../../application/advanced/show-resources";
 import { type LogLine, parseLogs } from "../../docker/logs/utils";
 
@@ -205,7 +206,7 @@ export const RestoreBackup = ({
 	const [search, setSearch] = useState("");
 	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-	const { data: destinations = [] } = api.destination.all.useQuery();
+	const { data: destinations = [] } = destination.all.useQuery();
 
 	const form = useForm({
 		defaultValues: {
