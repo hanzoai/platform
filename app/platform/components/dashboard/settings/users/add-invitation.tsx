@@ -33,6 +33,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/utils/api";
+import { notification } from "@/utils/zap-notification";
 
 const addInvitation = z
 	.object({
@@ -98,8 +99,7 @@ export const AddInvitation = () => {
 	const [open, setOpen] = useState(false);
 	const utils = api.useUtils();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
-	const { data: emailProviders } =
-		api.notification.getEmailProviders.useQuery();
+	const { data: emailProviders } = notification.getEmailProviders.useQuery();
 	const { mutateAsync: inviteMember, isPending: isInviting } =
 		api.organization.inviteMember.useMutation();
 	const { mutateAsync: sendInvitation } = api.user.sendInvitation.useMutation();

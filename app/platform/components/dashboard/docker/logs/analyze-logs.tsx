@@ -26,7 +26,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { api } from "@/utils/api";
+import { ai } from "@/utils/zap-ai";
 import type { LogLine } from "./utils";
 
 interface Props {
@@ -40,10 +40,10 @@ export function AnalyzeLogs({ logs, context }: Props) {
 	const [open, setOpen] = useState(false);
 	const [aiId, setAiId] = useState<string>("");
 	const [copied, setCopied] = useState(false);
-	const { data: providers } = api.ai.getEnabledProviders.useQuery(undefined, {
+	const { data: providers } = ai.getEnabledProviders.useQuery(undefined, {
 		enabled: open,
 	});
-	const { mutate, isPending, data, reset } = api.ai.analyzeLogs.useMutation({
+	const { mutate, isPending, data, reset } = ai.analyzeLogs.useMutation({
 		onError: (error) => {
 			toast.error("Analysis failed", {
 				description: error.message,
@@ -131,11 +131,13 @@ export function AnalyzeLogs({ logs, context }: Props) {
 										<SelectValue placeholder="Select AI provider..." />
 									</SelectTrigger>
 									<SelectContent>
-										{providers?.map((p) => (
-											<SelectItem key={p.aiId} value={p.aiId}>
-												{p.name} ({p.model})
-											</SelectItem>
-										))}
+										{providers?.map(
+											(p: { aiId: string; name: string; model: string }) => (
+												<SelectItem key={p.aiId} value={p.aiId}>
+													{p.name} ({p.model})
+												</SelectItem>
+											),
+										)}
 									</SelectContent>
 								</Select>
 								<Button

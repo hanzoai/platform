@@ -36,6 +36,7 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { api } from "@/utils/api";
+import { project as projectClient } from "@/utils/zap-project";
 import { useUrl } from "@/utils/hooks/use-url";
 import { extractServices } from "../users/add-permissions";
 
@@ -100,7 +101,7 @@ export const SetupMonitoring = ({ serverId }: Props) => {
 
 	const url = useUrl();
 
-	const { data: projects } = api.project.allForPermissions.useQuery();
+	const { data: projects } = projectClient.allForPermissions.useQuery();
 
 	const extractServicesFromProjects = () => {
 		if (!projects) return [];
