@@ -8,26 +8,34 @@
  *      uniquely by (repo, sha, target).
  *   4. Dispatch each job to its arcd runner pool.
  *
- * arcd-protocol decision (documented in PR + docs/PLATFORM_CI.md):
- *   arcd polls GitHub's own Actions job queue (JIT runners) — there is no
- *   standalone arcd job-acceptance API. Rather than reimplement GitHub's
- *   runner-registration/job-acquire protocol as a server inside platform
- *   (multi-week effort), the scheduler dispatches builds to the EXISTING
- *   self-hosted arcd pools via `workflow_dispatch`, pinning the runner pool
- *   per matrix entry. Platform owns the system-of-record (this module + the
- *   buildJob table) and the deploy decision; the build muscle stays on our
- *   own hardware. A native arcd long-poll protocol is the next iteration.
+ * arcd dispatch — native long-poll (default) with workflow_dispatch fallback:
+ *   Platform owns a native long-poll protocol. When a build's pool has a live
+ *   registered arcd runner (an `arcd_runner` row with a recent `lastSeen`), the
+ *   scheduler enqueues the job onto the in-process long-poll fabric
+ *   (`buildQueue`); the runner pulls it via POST /v1/arcd/poll, builds, pushes
+ *   to GHCR, and reports back via POST /v1/arcd/complete. No GitHub Actions hop.
+ *
+ *   The legacy `workflow_dispatch` path remains for migration: it is used when
+ *   the repo's `.platform.yml` sets `build.dispatch: workflow_dispatch`, when
+ *   the WORKFLOW_DISPATCH_FALLBACK env forces it, or transparently when a
+ *   `native` pool has NO live runner yet (so a build is never stranded). As
+ *   runners self-register over the new protocol, pools flip to native with no
+ *   config change. Platform owns the system-of-record (this module + the
+ *   buildJob table) and the deploy decision regardless of dispatch path.
  */
 import { authGithub } from "@hanzo/platform/utils/providers/github";
 import { TRPCError } from "@trpc/server";
 import { findGithubByInstallationId } from "../github";
+import { poolHasLiveRunner } from "./arcd-runner";
 import type { BuildJob } from "./build-job";
 import {
 	createBuildJob,
 	findBuildJobByTarget,
 	markBuildRunning,
 } from "./build-job";
+import { buildQueue } from "./build-queue";
 import {
+	type DispatchMode,
 	type PlatformConfig,
 	parsePlatformConfig,
 	resolveTag,
@@ -123,12 +131,56 @@ export async function fetchPlatformConfig(
 }
 
 /**
+ * Decide how a job reaches its runner. `workflow_dispatch` wins when the repo
+ * pins it, when WORKFLOW_DISPATCH_FALLBACK forces it globally, or when a
+ * `native` pool has no live runner yet (transparent fallback so a build is
+ * never stranded). Otherwise `native`.
+ */
+export async function resolveDispatchMode(
+	config: PlatformConfig,
+	pool: string,
+	now: number = Date.now(),
+): Promise<DispatchMode> {
+	if (config.build.dispatch === "workflow_dispatch") return "workflow_dispatch";
+	if (process.env.WORKFLOW_DISPATCH_FALLBACK === "true") {
+		return "workflow_dispatch";
+	}
+	return (await poolHasLiveRunner(pool, now)) ? "native" : "workflow_dispatch";
+}
+
+/**
+ * Dispatch a single build job natively: enqueue it onto the long-poll fabric
+ * for its pool. An arcd runner pulls it via POST /v1/arcd/poll. Returns the
+ * dispatch correlation id (`native:<buildJobId>`).
+ */
+function dispatchNative(
+	job: BuildJob,
+	config: PlatformConfig,
+	installationId: string,
+): string {
+	buildQueue.enqueue(job.runnerPool, {
+		buildJobId: job.buildJobId,
+		repo: job.repo,
+		sha: job.sha,
+		ref: job.ref,
+		branch: job.branch,
+		target: job.target,
+		image: job.image,
+		dockerfile: config.build.dockerfile,
+		context: config.build.context,
+		push: config.build.push,
+		installationId,
+	});
+	return `native:${job.buildJobId}`;
+}
+
+/**
  * Dispatch a single build job to its arcd runner pool via workflow_dispatch.
  * Returns a dispatch correlation id. GitHub's dispatch endpoint returns 204
  * with no run id, so we correlate on (repo, sha, target) which is carried as
  * a workflow input and echoed back by the build workflow on completion.
  */
-async function dispatchBuild(
+async function dispatchWorkflow(
 	provider: ResolvedProvider["provider"],
 	job: BuildJob,
 	config: PlatformConfig,
@@ -152,6 +204,23 @@ async function dispatchBuild(
 		},
 	});
 	return dispatchId;
+}
+
+/**
+ * Dispatch one job by the resolved mode. Returns the correlation id stored on
+ * the buildJob row (`native:<id>` or `repo@sha#target`).
+ */
+async function dispatchBuild(
+	provider: ResolvedProvider["provider"],
+	job: BuildJob,
+	config: PlatformConfig,
+	installationId: string,
+): Promise<string> {
+	const mode = await resolveDispatchMode(config, job.runnerPool);
+	if (mode === "native") {
+		return dispatchNative(job, config, installationId);
+	}
+	return dispatchWorkflow(provider, job, config);
 }
 
 /**
@@ -193,7 +262,12 @@ export async function scheduleBuilds(
 			status: "queued",
 			rolloutStatus: "skipped",
 		});
-		const dispatchId = await dispatchBuild(provider, job, config);
+		const dispatchId = await dispatchBuild(
+			provider,
+			job,
+			config,
+			input.installationId,
+		);
 		jobs.push(await markBuildRunning(job.buildJobId, dispatchId));
 	}
 
