@@ -1,5 +1,5 @@
 import {
-	getEnviromentVariablesObject,
+	getEnvironmentVariablesObject,
 	prepareEnvironmentVariablesForShell,
 } from "@hanzo/platform/utils/docker/utils";
 import { quote } from "shell-quote";
@@ -52,7 +52,7 @@ export const getDockerCommand = (application: ApplicationNested) => {
 			commandArgs.push("--build-arg", arg);
 		}
 
-		const secrets = getEnviromentVariablesObject(
+		const secrets = getEnvironmentVariablesObject(
 			buildSecrets,
 			application.environment.project.env,
 			application.environment.env,

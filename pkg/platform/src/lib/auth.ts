@@ -3,6 +3,7 @@ import * as bcrypt from "bcrypt";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
+import { sso } from "@better-auth/sso";
 import { admin, apiKey, organization, genericOAuth } from "better-auth/plugins";
 import { iamProvider } from "@hanzo/iam/betterauth";
 import { and, desc, eq } from "drizzle-orm";
@@ -11,6 +12,10 @@ import { db } from "../db";
 import * as schema from "../db/schema";
 import { getUserByToken } from "../services/admin";
 import { updateUser } from "../services/user";
+import {
+	getWebServerSettings,
+	updateWebServerSettings,
+} from "../services/web-server-settings";
 import { sendEmail } from "../verification/send-verification-email";
 import { getPublicIpWithFallback } from "../wss/utils";
 
@@ -54,19 +59,14 @@ const { handler, api } = betterAuth({
 	},
 	...(!IS_CLOUD && {
 		async trustedOrigins() {
-			const admin = await db.query.member.findFirst({
-				where: eq(schema.member.role, "owner"),
-				with: {
-					user: true,
-				},
-			});
+			const settings = await getWebServerSettings();
 
-			if (admin) {
+			if (settings) {
 				return [
-					...(admin.user.serverIp
-						? [`http://${admin.user.serverIp}:3000`]
+					...(settings.serverIp
+						? [`http://${settings.serverIp}:3000`]
 						: []),
-					...(admin.user.host ? [`https://${admin.user.host}`] : []),
+					...(settings.host ? [`https://${settings.host}`] : []),
 				];
 			}
 			return [];
@@ -150,7 +150,7 @@ const { handler, api } = betterAuth({
 					});
 
 					if (!IS_CLOUD) {
-						await updateUser(user.id, {
+						await updateWebServerSettings({
 							serverIp: await getPublicIpWithFallback(),
 						});
 					}
@@ -227,6 +227,7 @@ const { handler, api } = betterAuth({
 		apiKey({
 			enableMetadata: true,
 		}),
+		sso(),
 		// twoFactor(), // Disabled due to better-auth bug: "Body is not allowed with GET or HEAD methods"
 		organization({
 			async sendInvitationEmail(data, _request) {
@@ -277,6 +278,8 @@ const { handler, api } = betterAuth({
 export const auth = {
 	handler,
 	createApiKey: api.createApiKey,
+	registerSSOProvider: api.registerSSOProvider,
+	updateSSOProvider: api.updateSSOProvider,
 };
 
 export const validateRequest = async (request: IncomingMessage) => {
@@ -290,7 +293,7 @@ export const validateRequest = async (request: IncomingMessage) => {
 			});
 
 			if (error) {
-				throw new Error(error.message || "Error verifying API key");
+				throw new Error(error.message?.toString() || "Error verifying API key");
 			}
 			if (!valid || !key) {
 				return {
@@ -336,7 +339,8 @@ export const validateRequest = async (request: IncomingMessage) => {
 
 			const {
 				id,
-				name,
+				firstName,
+				lastName,
 				email,
 				emailVerified,
 				image,
@@ -344,6 +348,7 @@ export const validateRequest = async (request: IncomingMessage) => {
 				updatedAt,
 				twoFactorEnabled,
 			} = apiKeyRecord.user;
+			const name = [firstName, lastName].filter(Boolean).join(" ");
 
 			const mockSession = {
 				session: {

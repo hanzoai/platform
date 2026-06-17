@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { applications } from "./application";
 import { compose } from "./compose";
+import { libsql } from "./libsql";
 import { mariadb } from "./mariadb";
 import { mongo } from "./mongo";
 import { mysql } from "./mysql";
@@ -42,6 +43,7 @@ export const environmentRelations = relations(
 		redis: many(redis),
 		mongo: many(mongo),
 		compose: many(compose),
+		libsql: many(libsql),
 	}),
 );
 
