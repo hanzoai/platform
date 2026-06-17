@@ -29,8 +29,6 @@ import type { IncomingMessage } from "node:http";
 import {
 	checkPortInUse,
 	checkServiceAccess,
-	// PRE-EXISTING: checkServicePermissionAndAccess dropped by the Hanzo fork (the tRPC mariadbRouter references it too)
-	checkServicePermissionAndAccess,
 	createMariadb,
 	createMount,
 	deployMariadb,
@@ -58,6 +56,10 @@ import {
 	stopServiceRemote,
 	updateMariadbById,
 } from "@hanzo/platform";
+// PRE-EXISTING: services/permission not re-exported at the @hanzo/platform root
+// by the Hanzo fork; import checkServicePermissionAndAccess from its subpath
+// (mirrors mongo-cap.ts).
+import { checkServicePermissionAndAccess } from "@hanzo/platform/services/permission";
 import { db } from "@hanzo/platform/db";
 import {
 	environments,

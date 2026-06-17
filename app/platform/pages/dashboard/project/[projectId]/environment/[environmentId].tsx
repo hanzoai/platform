@@ -1,5 +1,6 @@
 import type { findEnvironmentById } from "@hanzo/platform";
 import { validateRequest } from "@hanzo/platform/lib/auth";
+import { useWhitelabeling } from "@/utils/hooks/use-whitelabeling";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import {
 	Ban,

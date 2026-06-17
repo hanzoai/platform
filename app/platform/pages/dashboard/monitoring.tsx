@@ -1,5 +1,6 @@
 import { IS_CLOUD } from "@hanzo/platform/constants";
 import { validateRequest } from "@hanzo/platform/lib/auth";
+import { hasPermission } from "@hanzo/platform/services/permission";
 import { Loader2 } from "lucide-react";
 import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";
@@ -91,7 +92,7 @@ Dashboard.getLayout = (page: ReactElement) => {
 export async function getServerSideProps(
 	ctx: GetServerSidePropsContext<{ serviceId: string }>,
 ) {
-	const { user } = await validateRequest(ctx.req);
+	const { user, session } = await validateRequest(ctx.req);
 	if (!user) {
 		return {
 			redirect: {

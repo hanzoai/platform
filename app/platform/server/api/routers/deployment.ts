@@ -8,7 +8,9 @@ import {
 	findDeploymentById,
 	findMemberById,
 	findServerById,
+	IS_CLOUD,
 	removeDeployment,
+	resolveServicePath,
 	updateDeploymentStatus,
 } from "@hanzo/platform";
 import { db } from "@hanzo/platform/db";
@@ -16,6 +18,10 @@ import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { audit } from "@/server/api/utils/audit";
+import {
+	checkServicePermissionAndAccess,
+	findMemberByUserId,
+} from "@hanzo/platform/services/permission";
 import {
 	apiFindAllByApplication,
 	apiFindAllByCompose,
