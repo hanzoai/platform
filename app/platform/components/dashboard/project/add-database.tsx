@@ -62,6 +62,7 @@ const dockerImageDefaultPlaceholder: Record<DbType, string> = {
 	mysql: "ghcr.io/hanzoai/sql-mysql:8",
 	postgres: "ghcr.io/hanzoai/sql:18",
 	redis: "ghcr.io/hanzoai/kv:8",
+	libsql: "ghcr.io/tursodatabase/libsql-server:v0.24.32",
 };
 
 const databasesUserDefaultPlaceholder: Record<
@@ -286,7 +287,7 @@ export const AddDatabase = ({ environmentId, projectName }: Props) => {
 				databasePassword: data.databasePassword,
 				databaseUser:
 					data.databaseUser || databasesUserDefaultPlaceholder[data.type],
-				serverId: data.serverId === "dokploy" ? null : data.serverId,
+				serverId: data.serverId === "platform" ? null : data.serverId,
 			});
 		} else if (data.type === "mariadb") {
 			promise = mariadbMutation.mutateAsync({
@@ -307,22 +308,6 @@ export const AddDatabase = ({ environmentId, projectName }: Props) => {
 				serverId: data.serverId === "platform" ? null : data.serverId,
 				replicaSets: data.replicaSets,
 			});
-		} else if (data.type === "redis") {
-			promise = redisMutation.mutateAsync({
-				...commonParams,
-				databasePassword: data.databasePassword,
-				serverId: data.serverId === "platform" ? null : data.serverId,
-			});
-		} else if (data.type === "mariadb") {
-			promise = mariadbMutation.mutateAsync({
-				...commonParams,
-				databasePassword: data.databasePassword,
-				databaseRootPassword: data.databaseRootPassword || "",
-				databaseName: data.databaseName || "mariadb",
-				databaseUser:
-					data.databaseUser || databasesUserDefaultPlaceholder[data.type],
-				serverId: data.serverId === "platform" ? null : data.serverId,
-			});
 		} else if (data.type === "mysql") {
 			promise = mysqlMutation.mutateAsync({
 				...commonParams,
@@ -340,13 +325,13 @@ export const AddDatabase = ({ environmentId, projectName }: Props) => {
 				databaseName: data.databaseName || "postgres",
 				databaseUser:
 					data.databaseUser || databasesUserDefaultPlaceholder[data.type],
-				serverId: data.serverId === "dokploy" ? null : data.serverId,
+				serverId: data.serverId === "platform" ? null : data.serverId,
 			});
 		} else if (data.type === "redis") {
 			promise = redisMutation.mutateAsync({
 				...commonParams,
 				databasePassword: data.databasePassword,
-				serverId: data.serverId === "dokploy" ? null : data.serverId,
+				serverId: data.serverId === "platform" ? null : data.serverId,
 			});
 		}
 

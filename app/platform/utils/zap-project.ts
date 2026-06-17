@@ -9,6 +9,7 @@
  * invalidation, mirroring tRPC's api.useUtils().
  */
 
+import type { RouterOutputs } from "@/utils/api";
 import { encodeArgs } from "@/server/zap/args";
 import { ProjectMethod } from "@/server/zap/schema/project_zap";
 import { makeRpc, makeUseUtils } from "@/utils/zap-client";
@@ -18,13 +19,20 @@ const rpc = makeRpc("/zap/project");
 // Every Project method carries its input via the generic Args carrier.
 const args = (a: Record<string, unknown>) => encodeArgs(a);
 
-const one = rpc.query(ProjectMethod.one, "one", args);
-const all = rpc.query(ProjectMethod.all, "all", args);
-const allForPermissions = rpc.query(
-	ProjectMethod.allForPermissions,
-	"allForPermissions",
+const one = rpc.query<Record<string, unknown>, RouterOutputs["project"]["one"]>(
+	ProjectMethod.one,
+	"one",
 	args,
 );
+const all = rpc.query<Record<string, unknown>, RouterOutputs["project"]["all"]>(
+	ProjectMethod.all,
+	"all",
+	args,
+);
+const allForPermissions = rpc.query<
+	Record<string, unknown>,
+	RouterOutputs["project"]["allForPermissions"]
+>(ProjectMethod.allForPermissions, "allForPermissions", args);
 const homeStats = rpc.query(ProjectMethod.homeStats, "homeStats", args);
 const search = rpc.query(ProjectMethod.search, "search", args);
 

@@ -186,6 +186,9 @@ async function dispatchWorkflow(
 	config: PlatformConfig,
 ): Promise<string> {
 	const [owner, name] = job.repo.split("/");
+	if (!owner || !name) {
+		throw new Error(`Invalid repo "${job.repo}": expected "owner/name" format`);
+	}
 	const octokit = authGithub(provider);
 	const dispatchId = `${job.repo}@${job.sha}#${job.target}`;
 	await octokit.rest.actions.createWorkflowDispatch({

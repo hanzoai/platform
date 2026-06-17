@@ -54,7 +54,7 @@ import { validateRequest } from "@hanzo/platform/lib/auth";
 // PRE-EXISTING: module @hanzo/platform/services/permission dropped by the Hanzo fork (the tRPC mongoRouter references it too)
 import {
 	checkServicePermissionAndAccess,
-	findMemberById,
+	findMemberByUserId,
 } from "@hanzo/platform/services/permission";
 import {
 	addNewService,
@@ -187,7 +187,10 @@ async function dispatch(ctx: MongoCtx, call: Call): Promise<unknown> {
 				}
 
 				if (input.serverId) {
-					const accessibleIds = await getAccessibleServerIds(ctx.session);
+					const accessibleIds = await getAccessibleServerIds({
+						userId: ctx.user.id,
+						activeOrganizationId: ctx.session.activeOrganizationId,
+					});
 					if (!accessibleIds.has(input.serverId)) {
 						throw new UnauthorizedError(
 							"You are not authorized to access this server",
@@ -688,7 +691,7 @@ async function dispatch(ctx: MongoCtx, call: Call): Promise<unknown> {
 					ilike(mongoTable.description ?? "", `%${input.description.trim()}%`),
 				);
 			}
-			const { accessedServices } = await findMemberById(
+			const { accessedServices } = await findMemberByUserId(
 				ctx.user.id,
 				ctx.session.activeOrganizationId,
 			);
