@@ -5,7 +5,7 @@ ALTER TABLE "schedule" ADD CONSTRAINT "schedule_organizationId_organization_id_f
 UPDATE "schedule" s
 SET "organizationId" = m."organization_id"
 FROM "member" m
-WHERE s."scheduleType" = 'dokploy-server'
+WHERE s."scheduleType" = 'platform-server'
   AND s."userId" = m."user_id"
   AND m."role" = 'owner';--> statement-breakpoint
 ALTER TABLE "schedule" DROP COLUMN "userId";
