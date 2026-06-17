@@ -26,8 +26,13 @@ COPY app/schedules/package.json ./app/schedules/
 COPY pkg/platform/package.json ./pkg/platform/
 COPY pkg/mcp/package.json ./pkg/mcp/
 
-# Install dependencies (cached unless package.json or lockfile changes)
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --no-frozen-lockfile
+# Install dependencies (cached unless package.json or lockfile changes).
+# --frozen-lockfile pins the exact, tested dependency graph from pnpm-lock.yaml.
+# Without it (--no-frozen-lockfile), pnpm floats caret ranges to the latest
+# matching release at build time: that silently bumped next ^16.1.6 -> 16.2.9,
+# whose setupFsCheck reads routesManifest.onMatchHeaders.map() and crashes the
+# custom server when the build omits that manifest field. Honor the lockfile.
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Now copy source code (this layer rebuilds on any source change)
 COPY . .
