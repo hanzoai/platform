@@ -77,7 +77,7 @@ describe("mechanizeDockerContainer", () => {
 	});
 
 	it("passes stopGracePeriodSwarm as a number and keeps zero values", async () => {
-		const application = createApplication({ stopGracePeriodSwarm: 0 });
+		const application = createApplication({ stopGracePeriodSwarm: 0n });
 
 		await mechanizeDockerContainer(application);
 

@@ -1,6 +1,6 @@
-import { db } from "@dokploy/server/db";
-import { member, organizationRole, user } from "@dokploy/server/db/schema";
-import { statements } from "@dokploy/server/lib/access-control";
+import { db } from "@hanzo/platform/db";
+import { member, organizationRole, user } from "@hanzo/platform/db/schema";
+import { statements } from "@hanzo/platform/lib/access-control";
 import { TRPCError } from "@trpc/server";
 import { and, count, eq } from "drizzle-orm";
 import { z } from "zod";

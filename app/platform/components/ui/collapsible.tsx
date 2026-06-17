@@ -1,1 +1,5 @@
-export { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@hanzo/ui/collapsible";
+export {
+	Collapsible,
+	CollapsibleTrigger,
+	CollapsibleContent,
+} from "@hanzo/ui/collapsible";
