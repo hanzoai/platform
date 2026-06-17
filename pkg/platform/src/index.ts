@@ -16,6 +16,7 @@ export * from "./services/cloudflare-dns-provider";
 export * from "./services/cluster";
 export * from "./services/dns-provider";
 export * from "./services/compose";
+export * from "./services/deploy-provider";
 export * from "./services/deployment";
 export * from "./services/destination";
 export * from "./services/docker";
@@ -27,6 +28,7 @@ export * from "./services/git-provider";
 export * from "./services/gitea";
 export * from "./services/github";
 export * from "./services/gitlab";
+export * from "./services/libsql";
 export * from "./services/mariadb";
 export * from "./services/mongo";
 export * from "./services/mount";
@@ -38,6 +40,7 @@ export * from "./services/port";
 export * from "./services/postgres";
 export * from "./services/preview-deployment";
 export * from "./services/project";
+export * from "./services/proprietary/audit-log";
 export * from "./services/proprietary/license-key";
 export * from "./services/proprietary/sso";
 export * from "./services/redirect";
@@ -72,6 +75,7 @@ export * from "./utils/access-log/types";
 export * from "./utils/access-log/utils";
 export * from "./utils/backups/compose";
 export * from "./utils/backups/index";
+export * from "./utils/backups/libsql";
 export * from "./utils/backups/mariadb";
 export * from "./utils/backups/mongo";
 export * from "./utils/backups/mysql";
@@ -138,3 +142,8 @@ export * from "./utils/crons/enterprise";
 export * from "./utils/volume-backups/index";
 export * from "./utils/watch-paths/should-deploy";
 export * from "./wss/utils";
+// Targeted re-export: the Hanzo fork adds its own `sendEmail` to
+// utils/notifications/utils, so we cannot `export *` the verification module
+// (it would collide). Surface only renderInvitationEmail at the root, where
+// the app imports it (matching upstream's root-level availability).
+export { renderInvitationEmail } from "./verification/send-verification-email";

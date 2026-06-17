@@ -50,7 +50,10 @@ import {
 import { findEnvironmentsByProjectId } from "./environment";
 import { deployApplication } from "./application";
 import { db } from "@hanzo/platform/db";
-import { projects } from "@hanzo/platform/db/schema";
+import {
+	apiProvisionDoksCluster,
+	projects,
+} from "@hanzo/platform/db/schema";
 import { eq } from "drizzle-orm";
 
 // --- Tool definitions ---
@@ -193,13 +196,7 @@ const tools: ToolDef[] = [
 			required: ["organizationId"],
 		},
 		handler: async (args) => {
-			return provisionDoksCluster({
-				organizationId: args.organizationId,
-				region: args.region,
-				nodeSize: args.nodeSize,
-				nodeCount: args.nodeCount,
-				ha: args.ha,
-			});
+			return provisionDoksCluster(apiProvisionDoksCluster.parse(args));
 		},
 	},
 	{

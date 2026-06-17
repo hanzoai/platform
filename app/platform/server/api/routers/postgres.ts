@@ -31,6 +31,12 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { audit } from "@/server/api/utils/audit";
 import {
+	addNewService,
+	checkServiceAccess,
+	checkServicePermissionAndAccess,
+	findMemberByUserId,
+} from "@hanzo/platform/services/permission";
+import {
 	apiChangePostgresStatus,
 	apiCreatePostgres,
 	apiDeployPostgres,
