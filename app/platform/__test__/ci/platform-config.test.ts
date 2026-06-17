@@ -143,6 +143,26 @@ build:
 	});
 });
 
+describe("build.dispatch", () => {
+	it("defaults to native when omitted", () => {
+		const cfg = parsePlatformConfig(VALID);
+		expect(cfg.build.dispatch).toBe("native");
+	});
+	it("accepts an explicit workflow_dispatch", () => {
+		const cfg = parsePlatformConfig(
+			VALID.replace("push: true", "push: true\n  dispatch: workflow_dispatch"),
+		);
+		expect(cfg.build.dispatch).toBe("workflow_dispatch");
+	});
+	it("rejects an unknown dispatch mode", () => {
+		expect(() =>
+			parsePlatformConfig(
+				VALID.replace("push: true", "push: true\n  dispatch: carrier-pigeon"),
+			),
+		).toThrow(PlatformConfigError);
+	});
+});
+
 describe("runnerPoolFor", () => {
 	it("maps linux/amd64 to <org>-linux-amd64", () => {
 		expect(runnerPoolFor("hanzoai", { os: "linux", arch: "amd64" })).toBe(

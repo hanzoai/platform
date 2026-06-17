@@ -8,8 +8,10 @@
  * arcd runner pools.
  */
 
+export * from "./arcd-runner";
 export * from "./build-completion";
 export * from "./build-job";
+export * from "./build-queue";
 export * from "./build-scheduler";
 export * from "./deploy-executor";
 export * from "./github-webhook";

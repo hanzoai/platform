@@ -25,6 +25,20 @@ export interface MatrixEntry {
 	arch: BuildArch;
 }
 
+/**
+ * How a build job reaches a runner:
+ *   - `native`           — enqueue onto platform's long-poll fabric; an arcd
+ *                          runner pulls it via POST /v1/arcd/poll. The default.
+ *   - `workflow_dispatch`— the legacy GHA path; platform calls GitHub's
+ *                          workflow_dispatch API. Opt-in fallback for repos
+ *                          that have not migrated their runners to long-poll.
+ *
+ * Even under `native`, a pool with NO live registered runner transparently
+ * falls back to `workflow_dispatch` so a build is never stranded — the
+ * `native` choice is "prefer long-poll", not "long-poll or nothing".
+ */
+export type DispatchMode = "native" | "workflow_dispatch";
+
 export interface BuildConfig {
 	matrix: MatrixEntry[];
 	dockerfile: string;
@@ -33,6 +47,8 @@ export interface BuildConfig {
 	/** Tag template; only `{{git.sha}}` and `{{git.branch}}` are supported. */
 	tagPattern: string;
 	push: boolean;
+	/** Runner dispatch mode. Defaults to `native` (long-poll). */
+	dispatch: DispatchMode;
 }
 
 export interface DeployTarget {
@@ -161,6 +177,17 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig {
 		);
 	}
 
+	const dispatchRaw = build.dispatch;
+	if (
+		dispatchRaw !== undefined &&
+		dispatchRaw !== "native" &&
+		dispatchRaw !== "workflow_dispatch"
+	) {
+		throw new PlatformConfigError(
+			`build.dispatch must be one of native, workflow_dispatch (got ${JSON.stringify(dispatchRaw)})`,
+		);
+	}
+
 	const buildConfig: BuildConfig = {
 		matrix,
 		dockerfile: optionalString(build, "dockerfile", "./Dockerfile"),
@@ -168,6 +195,7 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig {
 		image,
 		tagPattern: optionalString(build, "tag-pattern", "{{git.sha}}"),
 		push: build.push === undefined ? true : build.push === true,
+		dispatch: (dispatchRaw as DispatchMode | undefined) ?? "native",
 	};
 
 	if (build.push !== undefined && typeof build.push !== "boolean") {

@@ -1,6 +1,7 @@
 export * from "./account";
 export * from "./ai";
 export * from "./application";
+export * from "./arcd-runner";
 export * from "./backups";
 export * from "./build-job";
 export * from "./bitbucket";
