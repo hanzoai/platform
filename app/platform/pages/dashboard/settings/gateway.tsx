@@ -58,9 +58,8 @@ export async function getServerSideProps(
 	});
 	await helpers.user.get.prefetch();
 	await helpers.settings.isCloud.prefetch();
-	await helpers.gateway.status.prefetch();
-	await helpers.gateway.listRateLimits.prefetch();
-	await helpers.gateway.listRoutes.prefetch();
+	// gateway.* moved to the native ZAP `gateway` capability (utils/zap-gateway);
+	// its data is fetched client-side via the zap hooks, no tRPC prefetch.
 
 	return {
 		props: {
