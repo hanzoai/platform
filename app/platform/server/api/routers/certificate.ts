@@ -3,6 +3,7 @@ import {
 	findCertificateById,
 	IS_CLOUD,
 	removeCertificateById,
+	updateCertificate,
 } from "@hanzo/platform";
 import { db } from "@hanzo/platform/db";
 import { TRPCError } from "@trpc/server";

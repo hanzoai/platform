@@ -248,7 +248,7 @@ export const HandleVolumeBackups = ({
 				});
 				setIsOpen(false);
 			})
-			.catch((error) => {
+			.catch((error: unknown) => {
 				toast.error(
 					error instanceof Error ? error.message : "An unknown error occurred",
 				);
