@@ -7,10 +7,10 @@
  * Auth: shared service bearer token (PAAS_SERVICE_TOKEN). See server/paas/container-api.ts.
  */
 import type { NextApiRequest, NextApiResponse } from "next";
-import { findProjectById } from "@hanzo/platform/services/project";
 import {
 	PAAS_NAMESPACE,
 	getLiveIndex,
+	listApplicationsInScope,
 	mapApplicationToContainer,
 	methodNotAllowed,
 	requireServiceToken,
@@ -29,20 +29,7 @@ export default async function handler(
 	>;
 
 	try {
-		const project: any = await findProjectById(projectId);
-		if (project.organizationId !== orgId) {
-			res.status(404).json({ message: "Project not found in organization" });
-			return;
-		}
-		const env = (project.environments ?? []).find(
-			(e: any) => e.environmentId === environmentId,
-		);
-		if (!env) {
-			res.status(404).json({ message: "Environment not found in project" });
-			return;
-		}
-
-		const apps: any[] = env.applications ?? [];
+		const apps = await listApplicationsInScope(orgId, projectId, environmentId);
 		const live = await getLiveIndex(PAAS_NAMESPACE);
 		const containers = apps.map((app) =>
 			mapApplicationToContainer(app, live[app.appName]),

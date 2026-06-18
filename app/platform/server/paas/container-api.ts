@@ -18,6 +18,9 @@
  */
 import { timingSafeEqual } from "node:crypto";
 import type { NextApiRequest, NextApiResponse } from "next";
+import { eq } from "drizzle-orm";
+import { db } from "@hanzo/platform/db";
+import { applications } from "@hanzo/platform/db/schema";
 
 /**
  * Namespace where platform-managed workloads actually run. The live workloads
@@ -92,6 +95,26 @@ export function appInScope(
 		proj.organizationId === orgId &&
 		proj.projectId === projectId &&
 		env.environmentId === environmentId
+	);
+}
+
+/**
+ * List applications in an environment, scoped to the org/project/env. Uses the
+ * same proven `environment -> project` relation as findApplicationById, and
+ * deliberately avoids findProjectById's heavier nested query (projectTags /
+ * libsql / compose relations), which fails against the live DB schema.
+ */
+export async function listApplicationsInScope(
+	orgId: string,
+	projectId: string,
+	environmentId: string,
+): Promise<any[]> {
+	const apps = await db.query.applications.findMany({
+		where: eq(applications.environmentId, environmentId),
+		with: { environment: { with: { project: true } } },
+	});
+	return (apps as any[]).filter((a) =>
+		appInScope(a, orgId, projectId, environmentId),
 	);
 }
 
