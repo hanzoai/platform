@@ -32,6 +32,17 @@ export const arcdRunner = pgTable("arcd_runner", {
 	 * platform and the runner hold the identical bytes to sign/verify bodies.
 	 */
 	secret: text("secret").notNull(),
+	/**
+	 * Owning org of this runner. NULL = a Hanzo-managed SHARED runner (the
+	 * default fleet, available to every tenant). Non-null = a tenant's OWN
+	 * runner, registered under their org.
+	 *
+	 * This is an ownership value for registration / audit / isolation / billing
+	 * ONLY. It is NEVER read by routing: the scheduler dispatches purely on
+	 * `poolLabel` + liveness (`poolHasLiveRunner`). Decomplected from dispatch
+	 * on purpose — ownership lives on the row, routing never consults it.
+	 */
+	organizationId: text("organizationId"),
 	/** ISO timestamp of the last successful poll/complete from this runner. */
 	lastSeen: text("lastSeen"),
 	createdAt: text("createdAt")
@@ -43,12 +54,17 @@ const createSchema = createInsertSchema(arcdRunner, {
 	runnerId: z.string().min(1),
 	poolLabel: z.string().min(1),
 	secret: z.string().min(32),
+	// Optional at the API boundary: a tenant registering their own runner omits
+	// it (the route fills in their org); a platform-admin passes null to mint a
+	// shared runner. Ownership only — see the column comment; routing never reads it.
+	organizationId: z.string().min(1).nullish(),
 });
 
 export const apiRegisterArcdRunner = createSchema.pick({
 	runnerId: true,
 	poolLabel: true,
 	secret: true,
+	organizationId: true,
 });
 
 export type ArcdRunner = typeof arcdRunner.$inferSelect;

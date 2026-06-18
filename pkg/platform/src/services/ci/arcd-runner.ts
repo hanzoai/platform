@@ -18,6 +18,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { db, eq } from "@hanzo/platform/db";
 import { type ArcdRunner, arcdRunner } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
+import { isNull } from "drizzle-orm";
 
 /**
  * A runner is considered live if it polled within this window. The poll hold is
@@ -31,14 +32,31 @@ export async function registerRunner(input: {
 	runnerId: string;
 	poolLabel: string;
 	secret: string;
+	/**
+	 * Owning org. Omitted/null = a Hanzo-managed SHARED runner. Ownership value
+	 * only — recorded for audit/isolation/billing, never read by routing.
+	 */
+	organizationId?: string | null;
 }): Promise<ArcdRunner> {
 	const now = new Date().toISOString();
+	const organizationId = input.organizationId ?? null;
 	const row = await db
 		.insert(arcdRunner)
-		.values({ ...input, lastSeen: now })
+		.values({
+			runnerId: input.runnerId,
+			poolLabel: input.poolLabel,
+			secret: input.secret,
+			organizationId,
+			lastSeen: now,
+		})
 		.onConflictDoUpdate({
 			target: arcdRunner.runnerId,
-			set: { poolLabel: input.poolLabel, secret: input.secret, lastSeen: now },
+			set: {
+				poolLabel: input.poolLabel,
+				secret: input.secret,
+				organizationId,
+				lastSeen: now,
+			},
 		})
 		.returning()
 		.then((r) => r[0]);
@@ -49,6 +67,36 @@ export async function registerRunner(input: {
 		});
 	}
 	return row;
+}
+
+/**
+ * List registered runners, optionally scoped by ownership. This is an
+ * ownership/management read — it has nothing to do with routing.
+ *
+ *   - `{ organizationId: "<id>" }` → that tenant's own runners only.
+ *   - `{ organizationId: null }`   → Hanzo-managed shared runners only.
+ *   - `{}` (omitted)               → every runner (admin/global view).
+ */
+export async function listRunners(
+	filter: { organizationId?: string | null } = {},
+): Promise<ArcdRunner[]> {
+	const where =
+		filter.organizationId === undefined
+			? undefined
+			: filter.organizationId === null
+				? isNull(arcdRunner.organizationId)
+				: eq(arcdRunner.organizationId, filter.organizationId);
+	return db.query.arcdRunner.findMany({ where });
+}
+
+/**
+ * Remove a runner's registration. Deleting the row is the revocation: its
+ * secret no longer authenticates, and the pool falls back to
+ * `workflow_dispatch` once no other live runner serves it. Idempotent — a
+ * no-op if the runner is already gone. Caller enforces ownership scoping.
+ */
+export async function revokeRunner(runnerId: string): Promise<void> {
+	await db.delete(arcdRunner).where(eq(arcdRunner.runnerId, runnerId));
 }
 
 export async function findRunner(
