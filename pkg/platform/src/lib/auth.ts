@@ -44,16 +44,6 @@ const { handler, api } = betterAuth({
 		schema: schema,
 	}),
 	appName: "Hanzo",
-	socialProviders: {
-		github: {
-			clientId: process.env.GITHUB_CLIENT_ID as string,
-			clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-		},
-		google: {
-			clientId: process.env.GOOGLE_CLIENT_ID as string,
-			clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-		},
-	},
 	logger: {
 		disabled: process.env.NODE_ENV === "production",
 	},
@@ -253,14 +243,11 @@ const { handler, api } = betterAuth({
 			? [
 					genericOAuth({
 						config: [
-							(() => {
-								const p = iamProvider({
-									serverUrl: IAM_URL,
-									clientId: IAM_CLIENT_ID as string,
-									clientSecret: IAM_CLIENT_SECRET as string,
-								});
-								return { ...p, providerId: p.id };
-							})(),
+							iamProvider({
+								serverUrl: IAM_URL,
+								clientId: IAM_CLIENT_ID as string,
+								clientSecret: IAM_CLIENT_SECRET as string,
+							}),
 						],
 					}),
 				]
@@ -275,11 +262,37 @@ const { handler, api } = betterAuth({
 	],
 });
 
+// Hanzo IAM OAuth provider id (from @hanzo/iam/betterauth — "hanzo").
+export const IAM_PROVIDER_ID = "hanzo";
+
+// Whether the IAM OIDC provider is configured (client id + secret present).
+export const IAM_CONFIGURED = Boolean(IAM_CLIENT_ID && IAM_CLIENT_SECRET);
+
+// Base URL of the platform itself (used for OAuth post-logout redirect).
+const PLATFORM_URL = (
+	process.env.BETTER_AUTH_URL || "https://platform.hanzo.ai"
+).replace(/\/$/, "");
+
+/**
+ * RP-initiated logout URL at Hanzo IAM. Sending the browser here after the
+ * local session cookie is cleared kills the IAM session too, then bounces
+ * back to `/login` (which re-fires the OAuth flow if still needed).
+ */
+export function iamLogoutUrl(): string {
+	const redirect = `${PLATFORM_URL}/login`;
+	return (
+		`${IAM_URL}/v1/iam/oauth/logout` +
+		`?post_logout_redirect_uri=${encodeURIComponent(redirect)}` +
+		(IAM_CLIENT_ID ? `&client_id=${encodeURIComponent(IAM_CLIENT_ID)}` : "")
+	);
+}
+
 export const auth = {
 	handler,
 	createApiKey: api.createApiKey,
 	registerSSOProvider: api.registerSSOProvider,
 	updateSSOProvider: api.updateSSOProvider,
+	signInWithOAuth2: api.signInWithOAuth2,
 };
 
 export const validateRequest = async (request: IncomingMessage) => {
