@@ -325,20 +325,7 @@ export async function resolveDeploymentName(
 	return match ? match.name : null;
 }
 
-/**
- * Rolling-restart a workload's k8s Deployment (by resolved Deployment name) by
- * stamping the standard `restartedAt` annotation — the same thing
- * `kubectl rollout restart` does.
- *
- * NOTE: we patch directly here rather than via the platform's
- * services/k8s/k8s-deployment#restartDeployment helper, which calls
- * patchNamespacedDeployment WITHOUT a Content-Type. In @kubernetes/client-node
- * v1.x the default is interpreted as JSON-Patch (an array of ops), so the
- * server rejects this strategic-merge object with
- * "cannot unmarshal object into []jsonPatchOp". We set the strategic-merge
- * content-type explicitly (as a plain options object, avoiding a direct
- * @kubernetes/client-node import from this app package).
- */
+/** Rolling-restart a workload's k8s Deployment (by resolved Deployment name). */
 export async function restartWorkload(
 	namespace: string,
 	deploymentName: string,
@@ -346,20 +333,9 @@ export async function restartWorkload(
 	const { getDefaultClients } = await import(
 		"@hanzo/platform/services/k8s/k8s-client"
 	);
-	const clients = getDefaultClients();
-	const patch = {
-		spec: {
-			template: {
-				metadata: {
-					annotations: {
-						"kubectl.kubernetes.io/restartedAt": new Date().toISOString(),
-					},
-				},
-			},
-		},
-	};
-	await clients.apps.patchNamespacedDeployment(
-		{ name: deploymentName, namespace, body: patch },
-		{ headers: { "Content-Type": "application/strategic-merge-patch+json" } } as any,
+	const { restartDeployment } = await import(
+		"@hanzo/platform/services/k8s/k8s-deployment"
 	);
+	const clients = getDefaultClients();
+	await restartDeployment(clients, namespace, deploymentName);
 }
