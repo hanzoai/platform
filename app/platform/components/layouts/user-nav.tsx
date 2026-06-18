@@ -145,12 +145,10 @@ export const UserNav = () => {
 				<DropdownMenuItem
 					className="cursor-pointer"
 					onClick={async () => {
-						await authClient.signOut().then(() => {
-							router.push("/");
-						});
-						// await mutateAsync().then(() => {
-						// 	router.push("/");
-						// });
+						await authClient.signOut();
+						// Kill the IAM session too (RP-initiated logout),
+						// then bounce back to /login.
+						window.location.href = "/api/auth/iam-logout";
 					}}
 				>
 					Log out
