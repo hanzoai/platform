@@ -310,9 +310,10 @@ describe("arcd native long-poll — integration", () => {
 	});
 
 	it("falls back to workflow_dispatch when no live runner serves the pool", async () => {
-		// No runner registered ⇒ resolveDispatchMode returns workflow_dispatch,
-		// and the mocked createWorkflowDispatch throws — proving the scheduler
-		// took the fallback branch (and did NOT silently native-enqueue).
+		// No runner registered for any candidate pool ⇒ resolveTarget returns
+		// { kind: "workflow_dispatch" }, and the mocked createWorkflowDispatch
+		// throws — proving the scheduler took the fallback branch (and did NOT
+		// silently native-enqueue).
 		await expect(
 			scheduleBuilds({
 				installationId: "9001",
