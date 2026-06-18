@@ -22,6 +22,7 @@ const config = {
 		extend: {
 			fontFamily: {
 				sans: ["var(--font-geist)", ...defaultTheme.fontFamily.sans],
+				mono: ["var(--font-geist-mono)", ...defaultTheme.fontFamily.mono],
 			},
 			screens: {
 				"3xl": "1920px",
