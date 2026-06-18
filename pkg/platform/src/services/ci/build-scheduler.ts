@@ -15,10 +15,15 @@
  *   (`buildQueue`); the runner pulls it via POST /v1/arcd/poll, builds, pushes
  *   to GHCR, and reports back via POST /v1/arcd/complete. No GitHub Actions hop.
  *
+ *   Per matrix entry the scheduler resolves an ORDERED preference list of
+ *   pools — the repo's own org pool first, the shared `hanzo` pool second —
+ *   to a single `BuildTarget` (see `resolveTarget`). The first pool with a
+ *   live runner wins; if none has one, it falls back to `workflow_dispatch`.
+ *
  *   The legacy `workflow_dispatch` path remains for migration: it is used when
  *   the repo's `.platform.yml` sets `build.dispatch: workflow_dispatch`, when
- *   the WORKFLOW_DISPATCH_FALLBACK env forces it, or transparently when a
- *   `native` pool has NO live runner yet (so a build is never stranded). As
+ *   the WORKFLOW_DISPATCH_FALLBACK env forces it, or transparently when NO
+ *   candidate pool has a live runner yet (so a build is never stranded). As
  *   runners self-register over the new protocol, pools flip to native with no
  *   config change. Platform owns the system-of-record (this module + the
  *   buildJob table) and the deploy decision regardless of dispatch path.
@@ -35,7 +40,6 @@ import {
 } from "./build-job";
 import { buildQueue } from "./build-queue";
 import {
-	type DispatchMode,
 	type PlatformConfig,
 	parsePlatformConfig,
 	resolveTag,
@@ -44,6 +48,13 @@ import {
 
 /** Canonical reusable workflow filename platform dispatches build jobs to. */
 const PLATFORM_BUILD_WORKFLOW = "platform-build.yml";
+
+/**
+ * Org label of the shared runner tier. A `hanzo-<os>-<arch>` pool backs any
+ * repo whose own org has not (yet) registered a runner for the target. This is
+ * the ONE place that name lives; the resolver itself is org-agnostic.
+ */
+const SHARED_RUNNER_ORG = "hanzo";
 
 export interface ScheduleInput {
 	/** GitHub App installation id from the webhook payload. */
@@ -131,21 +142,42 @@ export async function fetchPlatformConfig(
 }
 
 /**
- * Decide how a job reaches its runner. `workflow_dispatch` wins when the repo
- * pins it, when WORKFLOW_DISPATCH_FALLBACK forces it globally, or when a
- * `native` pool has no live runner yet (transparent fallback so a build is
- * never stranded). Otherwise `native`.
+ * Where a build runs: a specific native pool, or the workflow_dispatch fallback.
  */
-export async function resolveDispatchMode(
+export type BuildTarget =
+	| { kind: "native"; pool: string }
+	| { kind: "workflow_dispatch" };
+
+/**
+ * Resolve a build to its dispatch target over an ORDERED preference list of
+ * pools. One concern, one way:
+ *   (a) the repo pins `dispatch: workflow_dispatch`               → fallback
+ *   (b) WORKFLOW_DISPATCH_FALLBACK forces the GHA path globally   → fallback
+ *   (c) the FIRST pool in `pools` with a live registered runner   → native
+ *   (d) no pool has a live runner                                 → fallback
+ *
+ * Priority between candidate pools (e.g. tenant before shared) is encoded
+ * ONLY as the order of `pools`. The resolver does not know what "tenant" or
+ * "shared" means and never reads organizationId — that policy lives at the
+ * call site. Orthogonal, composable, and testable in isolation.
+ */
+export async function resolveTarget(
 	config: PlatformConfig,
-	pool: string,
+	pools: string[],
 	now: number = Date.now(),
-): Promise<DispatchMode> {
-	if (config.build.dispatch === "workflow_dispatch") return "workflow_dispatch";
-	if (process.env.WORKFLOW_DISPATCH_FALLBACK === "true") {
-		return "workflow_dispatch";
+): Promise<BuildTarget> {
+	if (config.build.dispatch === "workflow_dispatch") {
+		return { kind: "workflow_dispatch" };
 	}
-	return (await poolHasLiveRunner(pool, now)) ? "native" : "workflow_dispatch";
+	if (process.env.WORKFLOW_DISPATCH_FALLBACK === "true") {
+		return { kind: "workflow_dispatch" };
+	}
+	for (const pool of pools) {
+		if (await poolHasLiveRunner(pool, now)) {
+			return { kind: "native", pool };
+		}
+	}
+	return { kind: "workflow_dispatch" };
 }
 
 /**
@@ -210,17 +242,21 @@ async function dispatchWorkflow(
 }
 
 /**
- * Dispatch one job by the resolved mode. Returns the correlation id stored on
+ * Dispatch one job by an already-resolved target — the resolver runs once, at
+ * the call site, so the target and the job's `runnerPool` never diverge. A
+ * `native` target enqueues onto `job.runnerPool` (= `target.pool`); a
+ * `workflow_dispatch` target hands off to GHA with `job.runnerPool` (= the
+ * tenant pool) as the runner-pool input. Returns the correlation id stored on
  * the buildJob row (`native:<id>` or `repo@sha#target`).
  */
 async function dispatchBuild(
 	provider: ResolvedProvider["provider"],
 	job: BuildJob,
 	config: PlatformConfig,
+	target: BuildTarget,
 	installationId: string,
 ): Promise<string> {
-	const mode = await resolveDispatchMode(config, job.runnerPool);
-	if (mode === "native") {
+	if (target.kind === "native") {
 		return dispatchNative(job, config, installationId);
 	}
 	return dispatchWorkflow(provider, job, config);
@@ -249,6 +285,15 @@ export async function scheduleBuilds(
 			jobs.push(existing);
 			continue;
 		}
+		// Preference order: the repo's own org pool first, the shared `hanzo`
+		// pool second. de-dup so a hanzoai/* repo (whose org pool IS the shared
+		// pool) does not probe the same pool twice. The resolver reads this
+		// order as the tenant-before-shared priority — it is told nothing else.
+		const tenantPool = runnerPoolFor(orgLabel(input.repo), entry);
+		const sharedPool = runnerPoolFor(SHARED_RUNNER_ORG, entry);
+		const pools = [...new Set([tenantPool, sharedPool])];
+		const resolved = await resolveTarget(config, pools);
+
 		const tag = resolveTag(config.build.tagPattern, {
 			sha: input.sha,
 			branch: input.branch,
@@ -259,7 +304,9 @@ export async function scheduleBuilds(
 			ref: input.ref,
 			branch: input.branch,
 			target,
-			runnerPool: runnerPoolFor(orgLabel(input.repo), entry),
+			// Native lands on the resolved pool; the workflow_dispatch fallback
+			// records the tenant pool as the runner-pool the GHA job requests.
+			runnerPool: resolved.kind === "native" ? resolved.pool : tenantPool,
 			image: `${config.build.image}:${tag}`,
 			organizationId,
 			status: "queued",
@@ -269,6 +316,7 @@ export async function scheduleBuilds(
 			provider,
 			job,
 			config,
+			resolved,
 			input.installationId,
 		);
 		jobs.push(await markBuildRunning(job.buildJobId, dispatchId));
