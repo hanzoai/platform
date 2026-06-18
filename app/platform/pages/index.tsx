@@ -3,7 +3,7 @@ import {
 	IS_CLOUD,
 	isAdminPresent,
 } from "@hanzo/platform";
-import { validateRequest } from "@hanzo/platform/lib/auth";
+import { IAM_CONFIGURED, validateRequest } from "@hanzo/platform/lib/auth";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import type { GetServerSidePropsContext } from "next";
@@ -13,10 +13,10 @@ import { type ReactElement, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { SignInWithGithub } from "@/components/auth/sign-in-with-github";
 import { SignInWithGoogle } from "@/components/auth/sign-in-with-google";
 import { SignInWithHanzo } from "@/components/auth/sign-in-with-hanzo";
+import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
@@ -252,9 +252,7 @@ export default function Home({ IS_CLOUD, enforceSSO }: Props) {
 			)}
 			<CardContent className="p-0">
 				{!isTwoFactor ? (
-					<>
-						{loginContent}
-					</>
+					<>{loginContent}</>
 				) : (
 					<>
 						<form
@@ -415,6 +413,17 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 				};
 			}
 		} catch {}
+
+		// Cloud auth is IAM-only: no login form, redirect straight to the
+		// `/login` entry which fires the hanzo.id OAuth flow server-side.
+		if (IAM_CONFIGURED) {
+			return {
+				redirect: {
+					permanent: false,
+					destination: "/login",
+				},
+			};
+		}
 
 		return {
 			props: {
