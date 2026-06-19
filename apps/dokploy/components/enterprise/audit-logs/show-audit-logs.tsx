@@ -1,6 +1,6 @@
 import { ClipboardList } from "lucide-react";
 import React from "react";
-import { EnterpriseFeatureGate } from "@/components/proprietary/enterprise-feature-gate";
+import { EnterpriseFeatureGate } from "@/components/enterprise/enterprise-feature-gate";
 import {
 	Card,
 	CardContent,

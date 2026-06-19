@@ -1,13 +1,7 @@
 /**
- * audit.ts — the audit-trail sink used by the tRPC routers.
+ * audit.ts — a lightweight stdout audit-trail sink.
  *
- * The upstream Dokploy build persisted audit events through its proprietary
- * `@dokploy/server/services/proprietary/audit-log` module backed by an
- * `auditLog` table. The Hanzo fork strips that proprietary layer (and its
- * table), so the routers' `audit(ctx, …)` calls had no implementation — an
- * unresolved `../utils/audit` import that broke the server bundle.
- *
- * This module restores the call signature with a real, structured sink: every
+ * This is the structured-logging variant of the audit sink: every
  * event is emitted as a single JSON line on stdout, which the o11y stack
  * (platform.hanzo.ai logging) ingests as the audit stream. When the fork
  * re-introduces a first-party `auditLog` table, swap the `console` write for a
