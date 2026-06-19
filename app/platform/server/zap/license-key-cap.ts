@@ -3,7 +3,7 @@
 // license-key-cap.ts — the native @zap-proto/web LicenseKey capability.
 //
 // Binary-ZAP replacement for the tRPC `licenseKeyRouter`
-// (server/api/routers/proprietary/license-key.ts):
+// (server/api/routers/enterprise/license-key.ts):
 //   - licenseKeyMintCap: bearer→ctx boundary at the WS upgrade. Requires a
 //                        session+user (mirrors `protectedProcedure`, the base of
 //                        every method); null → HTTP 401 before any socket opens.
