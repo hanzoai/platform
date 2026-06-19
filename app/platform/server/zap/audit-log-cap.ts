@@ -3,7 +3,7 @@
 // audit-log-cap.ts — the native @zap-proto/web AuditLog capability.
 //
 // Binary-ZAP replacement for the tRPC `auditLogRouter`
-// (server/api/routers/proprietary/audit-log.ts). The single method `all` was
+// (server/api/routers/enterprise/audit-log.ts). The single method `all` was
 // `withPermission("auditLog", "read")` — an authenticated caller whose
 // permission to read audit logs is enforced at the mint/permission boundary —
 // with an additional `.use(...)` middleware requiring a valid enterprise
@@ -16,7 +16,7 @@
 
 import type { IncomingMessage } from "node:http";
 import { validateRequest } from "@hanzo/platform/lib/auth";
-import { hasValidLicense } from "@hanzo/platform/services/proprietary/license-key";
+import { hasValidLicense } from "@hanzo/platform/services/license";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
@@ -33,10 +33,9 @@ export interface AuditLogCtx {
 	email: string;
 }
 
-// PRE-EXISTING: @hanzo/platform/services/proprietary/audit-log is absent in the fork
-// (proprietary/ ships only license-key.ts + sso.ts). The old audit-log.ts router imports
-// getAuditLogs from the identical missing module — same gap, not introduced here. Local
-// stub matching the call-site usage; returns an empty audit-log list.
+// Local stub for getAuditLogs matching the call-site usage; returns an empty
+// audit-log list. The enterprise audit-log service is gated behind a valid
+// license and is wired through the tRPC router, not this cap.
 async function getAuditLogs(
 	// biome-ignore lint/suspicious/noExplicitAny: ported verbatim, service absent
 	_filter: Record<string, any>,

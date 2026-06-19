@@ -1,7 +1,7 @@
-# custom-role.zap — custom organization-role capability (PROPRIETARY).
+# custom-role.zap — custom organization-role capability (ENTERPRISE).
 #
 # Native ZAP schema replacing the tRPC `customRoleRouter`
-# (server/api/routers/proprietary/custom-role.ts). Each method maps one
+# (server/api/routers/enterprise/custom-role.ts). Each method maps one
 # procedure: `all`, `membersByRole`, and `getStatements` were
 # `protectedProcedure` (authenticated); `create`, `update`, and `remove` were
 # `enterpriseProcedure` (= adminProcedure, owner|admin only) — gated per-call
