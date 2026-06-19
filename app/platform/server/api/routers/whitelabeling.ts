@@ -10,7 +10,7 @@ import {
 	enterpriseProcedure,
 	protectedProcedure,
 	publicProcedure,
-} from "../../trpc";
+} from "../trpc";
 
 export const whitelabelingRouter = createTRPCRouter({
 	get: protectedProcedure.query(async () => {
