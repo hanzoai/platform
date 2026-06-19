@@ -10,8 +10,7 @@ import { IAM, type IAMConfig } from "@hanzo/iam/browser";
  * directly (it serves CORS for the OIDC endpoints); the platform origin
  * does NOT proxy `/v1/iam/oauth/*`, so no `proxyBaseUrl` is set.
  */
-const SERVER_URL =
-	process.env.NEXT_PUBLIC_IAM_SERVER_URL || "https://hanzo.id";
+const SERVER_URL = process.env.NEXT_PUBLIC_IAM_SERVER_URL || "https://hanzo.id";
 const CLIENT_ID = process.env.NEXT_PUBLIC_IAM_CLIENT_ID || "hanzo-platform";
 
 /** Build the IAM client against the current origin's callback route. */

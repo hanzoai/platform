@@ -1,5 +1,4 @@
 import { getIamServerSession } from "@hanzo/platform/lib/auth";
-import { serialize } from "cookie";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 /**
@@ -21,27 +20,39 @@ import type { NextApiRequest, NextApiResponse } from "next";
 const COOKIE_NAME = "hanzo_iam_access_token";
 const DEFAULT_MAX_AGE = 60 * 60 * 24 * 3; // 3 days — matches the prior session TTL.
 
+/**
+ * Serialize the session cookie. Attributes are fixed (httpOnly, Lax, Secure in
+ * prod, root path), so a tiny inline builder beats pulling in an untyped
+ * `cookie` dependency — one less thing in the tree, validated at this boundary.
+ */
+function sessionCookie(value: string, maxAge: number): string {
+	const parts = [
+		`${COOKIE_NAME}=${encodeURIComponent(value)}`,
+		"Path=/",
+		"HttpOnly",
+		"SameSite=Lax",
+		`Max-Age=${Math.floor(maxAge)}`,
+	];
+	if (process.env.NODE_ENV === "production") {
+		parts.push("Secure");
+	}
+	return parts.join("; ");
+}
+
 export default async function handler(
 	req: NextApiRequest,
 	res: NextApiResponse,
 ) {
 	if (req.method === "DELETE") {
-		res.setHeader(
-			"Set-Cookie",
-			serialize(COOKIE_NAME, "", {
-				httpOnly: true,
-				secure: process.env.NODE_ENV === "production",
-				sameSite: "lax",
-				path: "/",
-				maxAge: 0,
-			}),
-		);
+		res.setHeader("Set-Cookie", sessionCookie("", 0));
 		return res.status(204).end();
 	}
 
 	if (req.method !== "POST") {
 		res.setHeader("Allow", ["POST", "DELETE"]);
-		return res.status(405).json({ message: `Method ${req.method} not allowed` });
+		return res
+			.status(405)
+			.json({ message: `Method ${req.method} not allowed` });
 	}
 
 	const accessToken = (req.body?.accessToken ?? "") as string;
@@ -63,15 +74,6 @@ export default async function handler(
 			? Math.floor(req.body.expiresIn)
 			: DEFAULT_MAX_AGE;
 
-	res.setHeader(
-		"Set-Cookie",
-		serialize(COOKIE_NAME, accessToken, {
-			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
-			sameSite: "lax",
-			path: "/",
-			maxAge: expiresIn,
-		}),
-	);
+	res.setHeader("Set-Cookie", sessionCookie(accessToken, expiresIn));
 	return res.status(200).json({ ok: true });
 }
