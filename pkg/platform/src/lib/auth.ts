@@ -1,8 +1,8 @@
 import type { IncomingMessage } from "node:http";
+import { sso } from "@better-auth/sso";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { sso } from "@better-auth/sso";
 import { admin, apiKey, organization } from "better-auth/plugins";
 import { and, desc, eq } from "drizzle-orm";
 import { IS_CLOUD } from "../constants";
@@ -41,9 +41,7 @@ const { handler, api } = betterAuth({
 
 			if (settings) {
 				return [
-					...(settings.serverIp
-						? [`http://${settings.serverIp}:3000`]
-						: []),
+					...(settings.serverIp ? [`http://${settings.serverIp}:3000`] : []),
 					...(settings.host ? [`https://${settings.host}`] : []),
 				];
 			}
@@ -211,10 +209,10 @@ export const auth = {
 	updateSSOProvider: api.updateSSOProvider,
 };
 
+export type { PlatformSession } from "./iam";
 // IAM is the identity surface; re-export from the single auth entry point so
 // consumers import auth helpers from one place (@hanzo/platform/lib/auth).
 export { getIamServerSession, upsertUserFromIam } from "./iam";
-export type { PlatformSession } from "./iam";
 
 export const validateRequest = async (request: IncomingMessage) => {
 	const apiKey = request.headers["x-api-key"] as string;

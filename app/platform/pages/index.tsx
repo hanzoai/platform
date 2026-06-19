@@ -32,7 +32,9 @@ export default function Home() {
 		} catch (err) {
 			setIsRedirecting(false);
 			setError(
-				err instanceof Error ? err.message : "Could not start sign-in with Hanzo",
+				err instanceof Error
+					? err.message
+					: "Could not start sign-in with Hanzo",
 			);
 		}
 	};
