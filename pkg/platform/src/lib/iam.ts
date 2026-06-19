@@ -84,51 +84,54 @@ export const upsertUserFromIam = async (
 		email;
 	const [firstName, ...rest] = displayName.split(" ");
 	const lastName = rest.join(" ");
-	const image =
-		typeof claims.picture === "string" ? claims.picture : undefined;
+	const image = typeof claims.picture === "string" ? claims.picture : undefined;
 	const now = new Date();
 
 	// IAM `sub` is the stable subject ("org/username"); use it as the local id
 	// so the same IAM principal always maps to the same platform user row.
 	const userId = identity.userId;
 
-	let row = await db.query.user.findFirst({
-		where: eq(schema.user.id, userId),
-	});
-	if (!row) {
-		row = await db.query.user.findFirst({
+	const existing =
+		(await db.query.user.findFirst({
+			where: eq(schema.user.id, userId),
+		})) ??
+		(await db.query.user.findFirst({
 			where: eq(schema.user.email, email),
-		});
-	}
+		}));
 
-	if (row) {
-		[row] = await db
-			.update(schema.user)
-			.set({
-				email,
-				firstName: firstName || row.firstName,
-				lastName: lastName || row.lastName,
-				emailVerified: true,
-				isRegistered: true,
-				image: image ?? row.image,
-				updatedAt: now,
-			})
-			.where(eq(schema.user.id, row.id))
-			.returning();
-	} else {
-		[row] = await db
-			.insert(schema.user)
-			.values({
-				id: userId,
-				email,
-				firstName: firstName || "",
-				lastName,
-				emailVerified: true,
-				isRegistered: true,
-				image,
-				updatedAt: now,
-			})
-			.returning();
+	const [row] = existing
+		? await db
+				.update(schema.user)
+				.set({
+					email,
+					firstName: firstName || existing.firstName,
+					lastName: lastName || existing.lastName,
+					emailVerified: true,
+					isRegistered: true,
+					image: image ?? existing.image,
+					updatedAt: now,
+				})
+				.where(eq(schema.user.id, existing.id))
+				.returning()
+		: await db
+				.insert(schema.user)
+				.values({
+					id: userId,
+					email,
+					firstName: firstName || "",
+					lastName,
+					emailVerified: true,
+					isRegistered: true,
+					image,
+					updatedAt: now,
+				})
+				.returning();
+
+	// A matched UPDATE or a fresh INSERT always returns exactly one row; if the
+	// driver yields nothing the data model is broken — fail closed, never deref
+	// undefined.
+	if (!row) {
+		throw new Error("IAM user upsert returned no row");
 	}
 
 	const member = await db.query.member.findFirst({
@@ -146,7 +149,7 @@ export const upsertUserFromIam = async (
 			...row,
 			name: [row.firstName, row.lastName].filter(Boolean).join(" "),
 			role: member?.role || row.role || "member",
-			ownerId: member?.organization.ownerId || row.id,
+			ownerId: member?.organization?.ownerId || row.id,
 		},
 	};
 };
