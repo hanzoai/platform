@@ -1,5 +1,5 @@
 import type { AuditAction, AuditResourceType } from "@hanzo/platform/db/schema";
-import { createAuditLog } from "@hanzo/platform/services/proprietary/audit-log";
+import { createAuditLog } from "@hanzo/platform/services/enterprise/audit-log";
 
 interface AuditCtx {
 	user: { id: string; email: string; role: string };
