@@ -1,7 +1,7 @@
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
-import { Logo } from "@/components/shared/logo";
 import { AlertBlock } from "@/components/shared/alert-block";
+import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { CardDescription, CardTitle } from "@/components/ui/card";
 import { createIam } from "@/lib/iam-browser";
