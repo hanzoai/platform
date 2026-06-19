@@ -1,6 +1,6 @@
 /**
  * utils/zap-custom-role.ts — native ZAP RPC client (browser) for the CustomRole
- * capability (PROPRIETARY). Replaces the tRPC `api.customRole.*` surface.
+ * capability (ENTERPRISE). Replaces the tRPC `api.customRole.*` surface.
  *
  * Opens a single WebSocket to `/zap/custom-role` via the shared transport
  * (utils/zap-client.ts), speaks binary ZAP envelopes, dispatches by the

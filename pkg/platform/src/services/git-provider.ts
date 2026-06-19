@@ -1,6 +1,6 @@
 import { db } from "@hanzo/platform/db";
 import { gitProvider, member } from "@hanzo/platform/db/schema";
-import { hasValidLicense } from "@hanzo/platform/services/proprietary/license-key";
+import { hasValidLicense } from "@hanzo/platform/services/license";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 

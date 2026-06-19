@@ -35,11 +35,11 @@ import { portRouter } from "./routers/port";
 import { postgresRouter } from "./routers/postgres";
 import { previewDeploymentRouter } from "./routers/preview-deployment";
 import { projectRouter } from "./routers/project";
-import { auditLogRouter } from "./routers/proprietary/audit-log";
-import { customRoleRouter } from "./routers/proprietary/custom-role";
-import { licenseKeyRouter } from "./routers/proprietary/license-key";
-import { ssoRouter } from "./routers/proprietary/sso";
-import { whitelabelingRouter } from "./routers/proprietary/whitelabeling";
+import { auditLogRouter } from "./routers/enterprise/audit-log";
+import { customRoleRouter } from "./routers/enterprise/custom-role";
+import { licenseKeyRouter } from "./routers/enterprise/license-key";
+import { ssoRouter } from "./routers/enterprise/sso";
+import { whitelabelingRouter } from "./routers/enterprise/whitelabeling";
 import { redirectsRouter } from "./routers/redirects";
 import { redisRouter } from "./routers/redis";
 // registryRouter migrated to native @zap-proto/web (server/zap/registry-cap.ts).

@@ -6,8 +6,8 @@ import superjson from "superjson";
 import { ToggleEnforceSSO } from "@/components/dashboard/settings/servers/actions/toggle-enforce-sso";
 import { ToggleRemoteServersOnly } from "@/components/dashboard/settings/servers/actions/toggle-remote-servers-only";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
-import { EnterpriseFeatureGate } from "@/components/proprietary/enterprise-feature-gate";
-import { SSOSettings } from "@/components/proprietary/sso/sso-settings";
+import { EnterpriseFeatureGate } from "@/components/enterprise/enterprise-feature-gate";
+import { SSOSettings } from "@/components/enterprise/sso/sso-settings";
 import {
 	Card,
 	CardContent,

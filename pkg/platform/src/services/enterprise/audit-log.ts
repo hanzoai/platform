@@ -1,8 +1,8 @@
 import { db } from "@hanzo/platform/db";
 import type { AuditAction, AuditResourceType } from "@hanzo/platform/db/schema";
 import { auditLog } from "@hanzo/platform/db/schema";
-import { hasValidLicense } from "@hanzo/platform/services/proprietary/license-key";
 import { and, desc, eq, gte, ilike, lte } from "drizzle-orm";
+import { hasValidLicense } from "../license";
 
 export type { AuditAction, AuditResourceType };
 
