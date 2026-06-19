@@ -86,9 +86,17 @@ async function resolveProvider(
 }
 
 /**
- * Fetch `.platform.yml` from the repo at a specific ref. Returns the parsed
- * + validated config, or null when the repo has not opted in (no file).
- * Any other failure (bad YAML, schema violation, API error) throws.
+ * Canonical repo config name is `hanzo.yml`. `.platform.yml` is the legacy
+ * name, read only as a transitional fallback until every repo has migrated —
+ * remove it once base/insights/app are all on `hanzo.yml`.
+ */
+const CONFIG_NAMES = ["hanzo.yml", ".platform.yml"] as const;
+
+/**
+ * Fetch the repo's platform config at a specific ref, trying each name in
+ * `CONFIG_NAMES` order. Returns the parsed + validated config, or null when
+ * the repo has not opted in (no config file under any name). Any other failure
+ * (bad YAML, schema violation, API error) throws.
  */
 export async function fetchPlatformConfig(
 	provider: ResolvedProvider["provider"],
@@ -103,31 +111,34 @@ export async function fetchPlatformConfig(
 		});
 	}
 	const octokit = authGithub(provider);
-	try {
-		const res = await octokit.rest.repos.getContent({
-			owner,
-			repo: name,
-			path: ".platform.yml",
-			ref,
-		});
-		const data = res.data as { content?: string; encoding?: string };
-		if (!data.content || data.encoding !== "base64") {
+	for (const path of CONFIG_NAMES) {
+		try {
+			const res = await octokit.rest.repos.getContent({
+				owner,
+				repo: name,
+				path,
+				ref,
+			});
+			const data = res.data as { content?: string; encoding?: string };
+			if (!data.content || data.encoding !== "base64") {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: `${path} in ${repo}@${ref} is not a regular file`,
+				});
+			}
+			const text = Buffer.from(data.content, "base64").toString("utf8");
+			return parsePlatformConfig(text);
+		} catch (err) {
+			const e = err as { status?: number };
+			if (e.status === 404) continue; // not under this name — try the next
+			if (err instanceof TRPCError) throw err;
 			throw new TRPCError({
 				code: "BAD_REQUEST",
-				message: `.platform.yml in ${repo}@${ref} is not a regular file`,
+				message: `Failed to read ${path} from ${repo}@${ref}: ${(err as Error).message}`,
 			});
 		}
-		const text = Buffer.from(data.content, "base64").toString("utf8");
-		return parsePlatformConfig(text);
-	} catch (err) {
-		const e = err as { status?: number };
-		if (e.status === 404) return null;
-		if (err instanceof TRPCError) throw err;
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message: `Failed to read .platform.yml from ${repo}@${ref}: ${(err as Error).message}`,
-		});
 	}
+	return null; // no config under any candidate name → repo not opted in
 }
 
 /**
