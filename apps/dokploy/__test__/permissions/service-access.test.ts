@@ -44,7 +44,7 @@ vi.mock("@dokploy/server/db", () => ({
 	},
 }));
 
-vi.mock("@dokploy/server/services/proprietary/license-key", () => ({
+vi.mock("@dokploy/server/services/license", () => ({
 	hasValidLicense: vi.fn(() => Promise.resolve(false)),
 }));
 
