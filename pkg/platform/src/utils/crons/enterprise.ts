@@ -15,4 +15,4 @@ export const validateLicenseKey = async (_licenseKey: string) => {
 	return true;
 };
 
-// hasValidLicense is exported from services/proprietary/license-key.ts
+// hasValidLicense is exported from services/sso.ts
