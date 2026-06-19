@@ -1380,7 +1380,7 @@ async function dispatch(ctx: ComposeCtx, call: Call): Promise<unknown> {
 			}
 			// PRE-EXISTING: getContainerLogs is not exported by the fork (the old
 			// tRPC composeRouter imported it from @dokploy/server too). Org
-			// ownership is already verified above; with no log source available in
+			// ownership is already verified above; with no log provider available in
 			// the fork, return an empty log payload to preserve compile + shape.
 			// return await getContainerLogs(
 			// 	input.containerId,

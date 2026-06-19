@@ -552,8 +552,7 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 				// gap stayed hidden — fork data-model gap).
 				const { id, accessedGitProviders, accessedServers, ...rest } = input;
 
-				// PRE-EXISTING: hasValidLicense's proprietary module is absent here
-				// (the old userRouter calls the same bare name — fork gap).
+				// hasValidLicense resolves from @hanzo/platform/services/license.
 				const licensed = await hasValidLicense(
 					ctx.session?.activeOrganizationId || "",
 				);

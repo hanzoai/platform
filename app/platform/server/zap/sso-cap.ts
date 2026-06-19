@@ -3,7 +3,7 @@
 // sso-cap.ts — the native @zap-proto/web Sso capability.
 //
 // Binary-ZAP replacement for the tRPC `ssoRouter`
-// (server/api/routers/proprietary/sso.ts). The router mixes procedure bases:
+// (server/api/routers/enterprise/sso.ts). The router mixes procedure bases:
 //   - publicProcedure     (showSignInWithSSO, enforceSSO) — no auth required;
 //   - enterpriseProcedure (listProviders, getTrustedOrigins, one, update,
 //                          deleteProvider, register, addTrustedOrigin,

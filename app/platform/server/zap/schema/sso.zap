@@ -1,7 +1,7 @@
 # sso.zap — enterprise SSO capability.
 #
 # Native ZAP schema replacing the tRPC `ssoRouter`
-# (server/api/routers/proprietary/sso.ts). The router mixes procedure bases:
+# (server/api/routers/enterprise/sso.ts). The router mixes procedure bases:
 # `publicProcedure` (showSignInWithSSO, enforceSSO — no auth) and
 # `enterpriseProcedure` (the rest — owner|admin gated). Inputs ride the shared
 # Args carrier (../args.ts); return values the shared Result carrier
