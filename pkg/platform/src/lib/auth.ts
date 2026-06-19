@@ -39,6 +39,14 @@ const IAM_CLIENT_SECRET =
 
 const { handler, api } = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL || "https://platform.hanzo.ai",
+	// Canonical auth surface is /v1/auth (HIP-0111: /v1/, never /api/). Better
+	// Auth derives every endpoint AND the OAuth callback redirect_uri from
+	// baseURL + basePath, so the IAM redirect becomes
+	// https://platform.hanzo.ai/v1/auth/oauth2/callback/hanzo — the value
+	// registered on the hanzo-platform app in IAM. The route handler lives at
+	// pages/v1/auth/[...all].ts to match, and the client basePath
+	// (app/platform/lib/auth-client.ts) is kept in lockstep.
+	basePath: "/v1/auth",
 	database: drizzleAdapter(db, {
 		provider: "pg",
 		schema: schema,
