@@ -1,5 +1,5 @@
-import { getAuditLogs } from "@hanzo/platform/services/proprietary/audit-log";
-import { hasValidLicense } from "@hanzo/platform/services/proprietary/license-key";
+import { getAuditLogs } from "@hanzo/platform/services/enterprise/audit-log";
+import { hasValidLicense } from "@hanzo/platform/services/license";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, withPermission } from "../../trpc";
