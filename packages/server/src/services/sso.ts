@@ -1,5 +1,5 @@
-import { db } from "@hanzo/platform/db";
-import { organization } from "@hanzo/platform/db/schema";
+import { db } from "@hanzo/platform-server/db";
+import { organization, user } from "@hanzo/platform-server/db/schema";
 import { eq } from "drizzle-orm";
 
 export const getSSOProviders = async () => {
@@ -43,4 +43,24 @@ export const getOrganizationOwnerId = async (organizationId: string) => {
 	});
 	if (!org) return null;
 	return org.ownerId;
+};
+
+export const hasValidLicense = async (organizationId: string) => {
+	const ownerId = await getOrganizationOwnerId(organizationId);
+
+	if (!ownerId) {
+		return false;
+	}
+
+	const currentUser = await db.query.user.findFirst({
+		where: eq(user.id, ownerId),
+		columns: {
+			enableEnterpriseFeatures: true,
+			isValidEnterpriseLicense: true,
+		},
+	});
+	return !!(
+		currentUser?.enableEnterpriseFeatures &&
+		currentUser?.isValidEnterpriseLicense
+	);
 };

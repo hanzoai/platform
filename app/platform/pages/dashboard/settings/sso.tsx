@@ -4,8 +4,8 @@ import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";
 import superjson from "superjson";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
-import { EnterpriseFeatureGate } from "@/components/proprietary/enterprise-feature-gate";
-import { SSOSettings } from "@/components/proprietary/sso/sso-settings";
+import { EnterpriseFeatureGate } from "@/components/enterprise/enterprise-feature-gate";
+import { SSOSettings } from "@/components/enterprise/sso/sso-settings";
 import { Card } from "@/components/ui/card";
 import { appRouter } from "@/server/api/root";
 
