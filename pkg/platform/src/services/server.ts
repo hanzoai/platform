@@ -5,7 +5,7 @@ import {
 	organization,
 	server,
 } from "@hanzo/platform/db/schema";
-import { hasValidLicense } from "@hanzo/platform/services/proprietary/license-key";
+import { hasValidLicense } from "@hanzo/platform/services/license";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import type { z } from "zod";

@@ -1,10 +1,10 @@
 // Copyright (C) 2025, Lux Industries Inc. All rights reserved.
 //
 // custom-role-cap.ts — the native @zap-proto/web CustomRole capability
-// (PROPRIETARY).
+// (ENTERPRISE).
 //
 // Binary-ZAP replacement for the tRPC `customRoleRouter`
-// (server/api/routers/proprietary/custom-role.ts). The `all`, `membersByRole`,
+// (server/api/routers/enterprise/custom-role.ts). The `all`, `membersByRole`,
 // and `getStatements` methods were `protectedProcedure` (authenticated only);
 // `create`, `update`, and `remove` were `enterpriseProcedure` (= adminProcedure,
 // owner|admin only). The mint boundary requires session+user (a null return
@@ -19,7 +19,7 @@
 
 import type { IncomingMessage } from "node:http";
 import { db } from "@hanzo/platform/db";
-// PRE-EXISTING: the Hanzo fork strips the proprietary RBAC layer — the
+// PRE-EXISTING: the Hanzo fork strips the enterprise RBAC layer — the
 // `organizationRole` table and `@hanzo/platform/lib/access-control`
 // (`statements`) do not exist in the fork's schema/lib. The custom-role
 // feature is unavailable here; these imports resolve to nothing and every

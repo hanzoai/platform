@@ -1,7 +1,7 @@
 # whitelabeling.zap — white-label settings capability.
 #
 # Native ZAP schema replacing the tRPC `whitelabelingRouter`
-# (server/api/routers/proprietary/whitelabeling.ts). The router mixes procedure
+# (server/api/routers/enterprise/whitelabeling.ts). The router mixes procedure
 # bases: `protectedProcedure` (get), `enterpriseProcedure` (update, reset —
 # owner-only inside the body) and `publicProcedure` (getPublic — no auth).
 # Inputs ride the shared Args carrier (../args.ts); return values the shared
