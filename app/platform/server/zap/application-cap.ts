@@ -1373,7 +1373,7 @@ async function dispatch(ctx: ApplicationCtx, call: Call): Promise<unknown> {
 			}
 			// PRE-EXISTING: getContainerLogs is not exported by the fork (the old
 			// tRPC applicationRouter imported it from @dokploy/server too). Org
-			// ownership is already verified above; with no log source available in
+			// ownership is already verified above; with no log provider available in
 			// the fork, return an empty log payload to preserve compile + shape.
 			// return await getContainerLogs(
 			// 	application.appName,
