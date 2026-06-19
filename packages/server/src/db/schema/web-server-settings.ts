@@ -66,7 +66,7 @@ export const webServerSettings = pgTable("webServerSettings", {
 				},
 			},
 		}),
-	// Whitelabeling Configuration (Enterprise / Proprietary)
+	// Whitelabeling Configuration (Enterprise)
 	whitelabelingConfig: jsonb("whitelabelingConfig")
 		.$type<{
 			appName: string | null;

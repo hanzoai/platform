@@ -3,7 +3,7 @@
 // whitelabeling-cap.ts — the native @zap-proto/web Whitelabeling capability.
 //
 // Binary-ZAP replacement for the tRPC `whitelabelingRouter`
-// (server/api/routers/proprietary/whitelabeling.ts). The router mixes procedure
+// (server/api/routers/enterprise/whitelabeling.ts). The router mixes procedure
 // bases:
 //   - protectedProcedure  (get) — authenticated caller (session+user);
 //   - enterpriseProcedure (update, reset) — owner|admin caller (the body
