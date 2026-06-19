@@ -4,8 +4,8 @@ import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";
 import superjson from "superjson";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
-import { EnterpriseFeatureGate } from "@/components/proprietary/enterprise-feature-gate";
-import { WhitelabelingSettings } from "@/components/proprietary/whitelabeling/whitelabeling-settings";
+import { EnterpriseFeatureGate } from "@/components/enterprise/enterprise-feature-gate";
+import { WhitelabelingSettings } from "@/components/enterprise/whitelabeling/whitelabeling-settings";
 import { Card } from "@/components/ui/card";
 import { appRouter } from "@/server/api/root";
 

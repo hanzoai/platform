@@ -1,7 +1,7 @@
 # license-key.zap — enterprise license-key capability.
 #
 # Native ZAP schema replacing the tRPC `licenseKeyRouter`
-# (server/api/routers/proprietary/license-key.ts). Five methods were
+# (server/api/routers/enterprise/license-key.ts). Five methods were
 # `adminProcedure` (the WS admin gate, owner|admin); one
 # (`haveValidLicenseKey`) was `protectedProcedure` (session+user only). The
 # admin methods' bodies additionally enforce `ctx.user.role === "owner"`
