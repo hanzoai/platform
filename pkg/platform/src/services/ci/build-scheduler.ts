@@ -103,31 +103,31 @@ export async function fetchPlatformConfig(
 		});
 	}
 	const octokit = authGithub(provider);
-	try {
-		const res = await octokit.rest.repos.getContent({
-			owner,
-			repo: name,
-			path: ".platform.yml",
-			ref,
-		});
-		const data = res.data as { content?: string; encoding?: string };
-		if (!data.content || data.encoding !== "base64") {
+	// Prefer `hanzo.yml`; fall back to the legacy `.platform.yml`. A repo opts in
+	// with either filename; missing both → null (stays on GHA).
+	for (const path of ["hanzo.yml", ".platform.yml"]) {
+		try {
+			const res = await octokit.rest.repos.getContent({ owner, repo: name, path, ref });
+			const data = res.data as { content?: string; encoding?: string };
+			if (!data.content || data.encoding !== "base64") {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: `${path} in ${repo}@${ref} is not a regular file`,
+				});
+			}
+			const text = Buffer.from(data.content, "base64").toString("utf8");
+			return parsePlatformConfig(text);
+		} catch (err) {
+			const e = err as { status?: number };
+			if (e.status === 404) continue; // try the next filename
+			if (err instanceof TRPCError) throw err;
 			throw new TRPCError({
 				code: "BAD_REQUEST",
-				message: `.platform.yml in ${repo}@${ref} is not a regular file`,
+				message: `Failed to read ${path} from ${repo}@${ref}: ${(err as Error).message}`,
 			});
 		}
-		const text = Buffer.from(data.content, "base64").toString("utf8");
-		return parsePlatformConfig(text);
-	} catch (err) {
-		const e = err as { status?: number };
-		if (e.status === 404) return null;
-		if (err instanceof TRPCError) throw err;
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message: `Failed to read .platform.yml from ${repo}@${ref}: ${(err as Error).message}`,
-		});
 	}
+	return null;
 }
 
 /**
