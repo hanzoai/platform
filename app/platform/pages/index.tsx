@@ -4,226 +4,44 @@ import {
 	isAdminPresent,
 } from "@hanzo/platform";
 import { validateRequest } from "@hanzo/platform/lib/auth";
-import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
-import { REGEXP_ONLY_DIGITS } from "input-otp";
 import type { GetServerSidePropsContext } from "next";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { type ReactElement, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
+import { type ReactElement, useEffect, useState } from "react";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
-import { SignInWithGithub } from "@/components/auth/sign-in-with-github";
-import { SignInWithGoogle } from "@/components/auth/sign-in-with-google";
-import { SignInWithHanzo } from "@/components/auth/sign-in-with-hanzo";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardDescription } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { InputOTP } from "@/components/ui/input-otp";
-import { Label } from "@/components/ui/label";
-import { authClient } from "@/lib/auth-client";
-import { api } from "@/utils/api";
+import { createIam } from "@/lib/iam-browser";
 import { useWhitelabelingPublic } from "@/utils/hooks/use-whitelabeling";
 
-const LoginSchema = z.object({
-	email: z.string().email(),
-	password: z.string().min(8),
-});
-
-const _TwoFactorSchema = z.object({
-	code: z.string().min(6),
-});
-
-type LoginForm = z.infer<typeof LoginSchema>;
-
-interface Props {
-	IS_CLOUD: boolean;
-	enforceSSO: boolean;
-}
-export default function Home({ IS_CLOUD, enforceSSO }: Props) {
-	const router = useRouter();
+/**
+ * Platform sign-in. The platform has NO auth of its own (HIP-0111): this page
+ * only hands the user to Hanzo IAM via the @hanzo/iam PKCE redirect. No
+ * email/password, no GitHub/Google, no Better Auth login UI.
+ */
+export default function Home() {
 	const { config: whitelabeling } = useWhitelabelingPublic();
-	const { data: showSignInWithSSO } = api.sso.showSignInWithSSO.useQuery();
-	const [isLoginLoading, setIsLoginLoading] = useState(false);
-	const [isTwoFactorLoading, setIsTwoFactorLoading] = useState(false);
-	const [isBackupCodeLoading, setIsBackupCodeLoading] = useState(false);
-	const [isTwoFactor, setIsTwoFactor] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [twoFactorCode, setTwoFactorCode] = useState("");
-	const [isBackupCodeModalOpen, setIsBackupCodeModalOpen] = useState(false);
-	const [backupCode, setBackupCode] = useState("");
-	const loginForm = useForm<LoginForm>({
-		resolver: zodResolver(LoginSchema),
-		defaultValues: {
-			email: "",
-			password: "",
-		},
-	});
+	const [isRedirecting, setIsRedirecting] = useState(false);
 
-	const onSubmit = async (values: LoginForm) => {
-		setIsLoginLoading(true);
+	const signIn = async () => {
+		setError(null);
+		setIsRedirecting(true);
 		try {
-			const { data, error } = await authClient.signIn.email({
-				email: values.email,
-				password: values.password,
-			});
-
-			if (error) {
-				const isEmailNotVerified =
-					error.code === "EMAIL_NOT_VERIFIED" ||
-					error.message?.toLowerCase().includes("email not verified");
-				if (isEmailNotVerified) {
-					const msg =
-						"Your email is not verified. We've sent a new verification link to your email.";
-					toast.info(msg);
-					setError(msg);
-					return;
-				}
-				toast.error(error.message);
-				setError(error.message || "An error occurred while logging in");
-				return;
-			}
-
-			// @ts-ignore
-			if (data?.twoFactorRedirect as boolean) {
-				setTwoFactorCode("");
-				setIsTwoFactor(true);
-				toast.info("Please enter your 2FA code");
-				return;
-			}
-
-			toast.success("Logged in successfully");
-			router.push("/dashboard/home");
-		} catch {
-			toast.error("An error occurred while logging in");
-		} finally {
-			setIsLoginLoading(false);
-		}
-	};
-	const onTwoFactorSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (twoFactorCode.length !== 6) {
-			toast.error("Please enter a valid 6-digit code");
-			return;
-		}
-
-		setIsTwoFactorLoading(true);
-		try {
-			const { error } = await authClient.twoFactor.verifyTotp({
-				code: twoFactorCode.replace(/\s/g, ""),
-			});
-
-			if (error) {
-				toast.error(error.message);
-				setError(error.message || "An error occurred while verifying 2FA code");
-				return;
-			}
-
-			toast.success("Logged in successfully");
-			router.push("/dashboard/home");
-		} catch {
-			toast.error("An error occurred while verifying 2FA code");
-		} finally {
-			setIsTwoFactorLoading(false);
+			await createIam().signinRedirect();
+		} catch (err) {
+			setIsRedirecting(false);
+			setError(
+				err instanceof Error ? err.message : "Could not start sign-in with Hanzo",
+			);
 		}
 	};
 
-	const onBackupCodeSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (backupCode.length < 8) {
-			toast.error("Please enter a valid backup code");
-			return;
-		}
-
-		setIsBackupCodeLoading(true);
-		try {
-			const { error } = await authClient.twoFactor.verifyBackupCode({
-				code: backupCode.trim(),
-			});
-
-			if (error) {
-				toast.error(error.message);
-				setError(
-					error.message || "An error occurred while verifying backup code",
-				);
-				return;
-			}
-
-			toast.success("Logged in successfully");
-			router.push("/dashboard/home");
-		} catch {
-			toast.error("An error occurred while verifying backup code");
-		} finally {
-			setIsBackupCodeLoading(false);
-		}
-	};
-
-	const loginContent = (
-		<>
-			<SignInWithHanzo />
-			{IS_CLOUD && <SignInWithGithub />}
-			{IS_CLOUD && <SignInWithGoogle />}
-			<Form {...loginForm}>
-				<form
-					onSubmit={loginForm.handleSubmit(onSubmit)}
-					className="space-y-4"
-					id="login-form"
-				>
-					<FormField
-						control={loginForm.control}
-						name="email"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Email</FormLabel>
-								<FormControl>
-									<Input placeholder="john@example.com" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={loginForm.control}
-						name="password"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Password</FormLabel>
-								<FormControl>
-									<Input
-										type="password"
-										placeholder="Enter your password"
-										{...field}
-									/>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<Button className="w-full" type="submit" isLoading={isLoginLoading}>
-						Login
-					</Button>
-				</form>
-			</Form>
-		</>
-	);
+	// Kick the redirect off automatically — IAM is the only way in.
+	useEffect(() => {
+		void signIn();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	return (
 		<>
@@ -242,7 +60,7 @@ export default function Home({ IS_CLOUD, enforceSSO }: Props) {
 					</div>
 				</h1>
 				<p className="text-sm text-muted-foreground">
-					Enter your email and password to sign in
+					Continue to Hanzo to sign in
 				</p>
 			</div>
 			{error && (
@@ -251,149 +69,16 @@ export default function Home({ IS_CLOUD, enforceSSO }: Props) {
 				</AlertBlock>
 			)}
 			<CardContent className="p-0">
-				{!isTwoFactor ? (
-					<>
-						{loginContent}
-					</>
-				) : (
-					<>
-						<form
-							onSubmit={onTwoFactorSubmit}
-							className="space-y-4"
-							id="two-factor-form"
-							autoComplete="on"
-						>
-							<div className="flex flex-col gap-2">
-								<Label htmlFor="totp-code">2FA Code</Label>
-								<InputOTP
-									id="totp-code"
-									name="totp"
-									value={twoFactorCode}
-									onChange={setTwoFactorCode}
-									maxLength={6}
-									placeholder="••••••"
-									pattern={REGEXP_ONLY_DIGITS}
-									autoFocus
-								/>
-								<CardDescription>
-									Enter the 6-digit code from your authenticator app
-								</CardDescription>
-								<button
-									type="button"
-									onClick={() => setIsBackupCodeModalOpen(true)}
-									className="text-sm text-muted-foreground hover:underline self-start mt-2"
-								>
-									Lost access to your authenticator app?
-								</button>
-							</div>
-
-							<div className="flex gap-4">
-								<Button
-									variant="outline"
-									className="w-full"
-									type="button"
-									onClick={() => {
-										setIsTwoFactor(false);
-										setTwoFactorCode("");
-									}}
-								>
-									Back
-								</Button>
-								<Button
-									className="w-full"
-									type="submit"
-									isLoading={isTwoFactorLoading}
-								>
-									Verify
-								</Button>
-							</div>
-						</form>
-
-						<Dialog
-							open={isBackupCodeModalOpen}
-							onOpenChange={setIsBackupCodeModalOpen}
-						>
-							<DialogContent>
-								<DialogHeader>
-									<DialogTitle>Enter Backup Code</DialogTitle>
-									<DialogDescription>
-										Enter one of your backup codes to access your account
-									</DialogDescription>
-								</DialogHeader>
-
-								<form onSubmit={onBackupCodeSubmit} className="space-y-4">
-									<div className="flex flex-col gap-2">
-										<Label>Backup Code</Label>
-										<Input
-											value={backupCode}
-											onChange={(e) => setBackupCode(e.target.value)}
-											placeholder="Enter your backup code"
-											className="font-mono"
-										/>
-										<CardDescription>
-											Enter one of the backup codes you received when setting up
-											2FA
-										</CardDescription>
-									</div>
-
-									<div className="flex gap-4">
-										<Button
-											variant="outline"
-											className="w-full"
-											type="button"
-											onClick={() => {
-												setIsBackupCodeModalOpen(false);
-												setBackupCode("");
-											}}
-										>
-											Cancel
-										</Button>
-										<Button
-											className="w-full"
-											type="submit"
-											isLoading={isBackupCodeLoading}
-										>
-											Verify
-										</Button>
-									</div>
-								</form>
-							</DialogContent>
-						</Dialog>
-					</>
-				)}
-
-				<div className="flex flex-row justify-between flex-wrap">
-					<div className="mt-4 text-center text-sm flex flex-row justify-center gap-2">
-						{IS_CLOUD && (
-							<Link
-								className="hover:underline text-muted-foreground"
-								href="/register"
-							>
-								Create an account
-							</Link>
-						)}
-					</div>
-
-					<div className="mt-4 text-sm flex flex-row justify-center gap-2">
-						{IS_CLOUD ? (
-							<Link
-								className="hover:underline text-muted-foreground"
-								href="/send-reset-password"
-							>
-								Lost your password?
-							</Link>
-						) : (
-							<Link
-								className="hover:underline text-muted-foreground"
-								href="https://docs.hanzo.ai/docs/core/reset-password"
-								target="_blank"
-							>
-								Lost your password?
-							</Link>
-						)}
-					</div>
-				</div>
-				<div className="p-2" />
+				<Button
+					className="w-full"
+					isLoading={isRedirecting}
+					onClick={() => void signIn()}
+				>
+					Sign in with Hanzo
+				</Button>
+				<CardDescription className="mt-4 text-center">
+					You'll be redirected to Hanzo to authenticate securely.
+				</CardDescription>
 			</CardContent>
 		</>
 	);
@@ -402,6 +87,7 @@ export default function Home({ IS_CLOUD, enforceSSO }: Props) {
 Home.getLayout = (page: ReactElement) => {
 	return <OnboardingLayout>{page}</OnboardingLayout>;
 };
+
 export async function getServerSideProps(context: GetServerSidePropsContext) {
 	if (IS_CLOUD) {
 		try {
@@ -416,15 +102,11 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 			}
 		} catch {}
 
-		return {
-			props: {
-				IS_CLOUD: IS_CLOUD,
-				enforceSSO: false,
-			},
-		};
+		return { props: {} };
 	}
-	const hasAdmin = await isAdminPresent();
 
+	// Self-hosted first-run still needs an initial admin before IAM is wired.
+	const hasAdmin = await isAdminPresent();
 	if (!hasAdmin) {
 		return {
 			redirect: {
@@ -435,7 +117,6 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 	}
 
 	const { user } = await validateRequest(context.req);
-
 	if (user) {
 		return {
 			redirect: {
@@ -445,12 +126,6 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 		};
 	}
 
-	const webServerSettings = await getWebServerSettings();
-
-	return {
-		props: {
-			hasAdmin,
-			enforceSSO: webServerSettings?.enforceSSO ?? false,
-		},
-	};
+	await getWebServerSettings();
+	return { props: {} };
 }
