@@ -35,6 +35,7 @@ import {
 } from "./build-job";
 import { buildQueue } from "./build-queue";
 import {
+	type BuildConfig,
 	type DispatchMode,
 	type PlatformConfig,
 	parsePlatformConfig,
@@ -148,11 +149,11 @@ export async function fetchPlatformConfig(
  * never stranded). Otherwise `native`.
  */
 export async function resolveDispatchMode(
-	config: PlatformConfig,
+	build: BuildConfig,
 	pool: string,
 	now: number = Date.now(),
 ): Promise<DispatchMode> {
-	if (config.build.dispatch === "workflow_dispatch") return "workflow_dispatch";
+	if (build.dispatch === "workflow_dispatch") return "workflow_dispatch";
 	if (process.env.WORKFLOW_DISPATCH_FALLBACK === "true") {
 		return "workflow_dispatch";
 	}
@@ -166,7 +167,7 @@ export async function resolveDispatchMode(
  */
 function dispatchNative(
 	job: BuildJob,
-	config: PlatformConfig,
+	build: BuildConfig,
 	installationId: string,
 ): string {
 	buildQueue.enqueue(job.runnerPool, {
@@ -177,9 +178,9 @@ function dispatchNative(
 		branch: job.branch,
 		target: job.target,
 		image: job.image,
-		dockerfile: config.build.dockerfile,
-		context: config.build.context,
-		push: config.build.push,
+		dockerfile: build.dockerfile,
+		context: build.context,
+		push: build.push,
 		installationId,
 	});
 	return `native:${job.buildJobId}`;
@@ -194,7 +195,7 @@ function dispatchNative(
 async function dispatchWorkflow(
 	provider: ResolvedProvider["provider"],
 	job: BuildJob,
-	config: PlatformConfig,
+	build: BuildConfig,
 ): Promise<string> {
 	const [owner, name] = job.repo.split("/");
 	if (!owner || !name) {
@@ -212,9 +213,9 @@ async function dispatchWorkflow(
 			target: job.target,
 			"runner-pool": job.runnerPool,
 			image: job.image,
-			dockerfile: config.build.dockerfile,
-			context: config.build.context,
-			push: String(config.build.push),
+			dockerfile: build.dockerfile,
+			context: build.context,
+			push: String(build.push),
 		},
 	});
 	return dispatchId;
@@ -227,14 +228,14 @@ async function dispatchWorkflow(
 async function dispatchBuild(
 	provider: ResolvedProvider["provider"],
 	job: BuildJob,
-	config: PlatformConfig,
+	build: BuildConfig,
 	installationId: string,
 ): Promise<string> {
-	const mode = await resolveDispatchMode(config, job.runnerPool);
+	const mode = await resolveDispatchMode(build, job.runnerPool);
 	if (mode === "native") {
-		return dispatchNative(job, config, installationId);
+		return dispatchNative(job, build, installationId);
 	}
-	return dispatchWorkflow(provider, job, config);
+	return dispatchWorkflow(provider, job, build);
 }
 
 /**
@@ -253,36 +254,46 @@ export async function scheduleBuilds(
 	if (!config) return null;
 
 	const jobs: BuildJob[] = [];
-	for (const entry of config.build.matrix) {
-		const target = `${entry.os}/${entry.arch}`;
-		const existing = await findBuildJobByTarget(input.repo, input.sha, target);
-		if (existing) {
-			jobs.push(existing);
-			continue;
+	// One job per (image, matrix entry). The target key includes the image name
+	// for multi-image repos so two images on the same os/arch don't collide;
+	// legacy single-build repos (name "") keep the bare `os/arch` target.
+	for (const build of config.builds) {
+		for (const entry of build.matrix) {
+			const arch = `${entry.os}/${entry.arch}`;
+			const target = build.name ? `${build.name}:${arch}` : arch;
+			const existing = await findBuildJobByTarget(
+				input.repo,
+				input.sha,
+				target,
+			);
+			if (existing) {
+				jobs.push(existing);
+				continue;
+			}
+			const tag = resolveTag(build.tagPattern, {
+				sha: input.sha,
+				branch: input.branch,
+			});
+			const job = await createBuildJob({
+				repo: input.repo,
+				sha: input.sha,
+				ref: input.ref,
+				branch: input.branch,
+				target,
+				runnerPool: runnerPoolFor(orgLabel(input.repo), entry),
+				image: `${build.image}:${tag}`,
+				organizationId,
+				status: "queued",
+				rolloutStatus: "skipped",
+			});
+			const dispatchId = await dispatchBuild(
+				provider,
+				job,
+				build,
+				input.installationId,
+			);
+			jobs.push(await markBuildRunning(job.buildJobId, dispatchId));
 		}
-		const tag = resolveTag(config.build.tagPattern, {
-			sha: input.sha,
-			branch: input.branch,
-		});
-		const job = await createBuildJob({
-			repo: input.repo,
-			sha: input.sha,
-			ref: input.ref,
-			branch: input.branch,
-			target,
-			runnerPool: runnerPoolFor(orgLabel(input.repo), entry),
-			image: `${config.build.image}:${tag}`,
-			organizationId,
-			status: "queued",
-			rolloutStatus: "skipped",
-		});
-		const dispatchId = await dispatchBuild(
-			provider,
-			job,
-			config,
-			input.installationId,
-		);
-		jobs.push(await markBuildRunning(job.buildJobId, dispatchId));
 	}
 
 	return { organizationId, config, jobs };

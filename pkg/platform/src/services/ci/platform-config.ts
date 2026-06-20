@@ -40,6 +40,8 @@ export interface MatrixEntry {
 export type DispatchMode = "native" | "workflow_dispatch";
 
 export interface BuildConfig {
+	/** Image name (multi-image `images:` form); empty for the legacy `build:` form. */
+	name: string;
 	matrix: MatrixEntry[];
 	dockerfile: string;
 	context: string;
@@ -69,7 +71,12 @@ export interface DeployConfig {
 }
 
 export interface PlatformConfig {
-	build: BuildConfig;
+	/**
+	 * One or more images to build. The legacy `build:` block yields a single
+	 * entry; the `images:` list (hanzo.yml) yields one per image. Always
+	 * non-empty.
+	 */
+	builds: BuildConfig[];
 	deploy?: DeployConfig;
 }
 
@@ -116,35 +123,24 @@ function optionalString(
 	return v;
 }
 
-/**
- * Validate a raw parsed object against the `.platform.yml` schema.
- * Returns a fully-typed `PlatformConfig` or throws `PlatformConfigError`
- * with a path-qualified message identifying the first violation.
- */
-export function validatePlatformConfig(raw: unknown): PlatformConfig {
-	if (!isObject(raw)) {
+/** Parse + de-duplicate a matrix list. `def` supplies the default when absent. */
+function parseMatrix(
+	rawMatrix: unknown,
+	path: string,
+	def?: MatrixEntry[],
+): MatrixEntry[] {
+	if (rawMatrix === undefined && def) return def;
+	if (!Array.isArray(rawMatrix) || rawMatrix.length === 0) {
 		throw new PlatformConfigError(
-			".platform.yml must be a YAML mapping at the top level",
+			`${path} must be a non-empty list of { os, arch } entries`,
 		);
 	}
-
-	if (!isObject(raw.build)) {
-		throw new PlatformConfigError(".platform.yml: `build` block is required");
-	}
-	const build = raw.build;
-
-	if (!Array.isArray(build.matrix) || build.matrix.length === 0) {
-		throw new PlatformConfigError(
-			"build.matrix must be a non-empty list of { os, arch } entries",
-		);
-	}
-	const matrix: MatrixEntry[] = build.matrix.map((entry, i) => {
-		const at = `build.matrix[${i}]`;
+	const matrix: MatrixEntry[] = rawMatrix.map((entry, i) => {
+		const at = `${path}[${i}]`;
 		if (!isObject(entry)) {
 			throw new PlatformConfigError(`${at} must be a mapping`);
 		}
-		const os = entry.os;
-		const arch = entry.arch;
+		const { os, arch } = entry;
 		if (!VALID_OS.includes(os as BuildOS)) {
 			throw new PlatformConfigError(
 				`${at}.os must be one of ${VALID_OS.join(", ")} (got ${JSON.stringify(os)})`,
@@ -157,49 +153,119 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig {
 		}
 		return { os: os as BuildOS, arch: arch as BuildArch };
 	});
-
-	// Reject duplicate matrix entries — they would enqueue colliding jobs.
 	const seen = new Set<string>();
 	for (const m of matrix) {
 		const key = `${m.os}/${m.arch}`;
 		if (seen.has(key)) {
-			throw new PlatformConfigError(
-				`build.matrix contains duplicate target ${key}`,
-			);
+			throw new PlatformConfigError(`${path} contains duplicate target ${key}`);
 		}
 		seen.add(key);
 	}
+	return matrix;
+}
 
+function parseDispatch(raw: unknown, path: string): DispatchMode {
+	if (raw !== undefined && raw !== "native" && raw !== "workflow_dispatch") {
+		throw new PlatformConfigError(
+			`${path}.dispatch must be one of native, workflow_dispatch (got ${JSON.stringify(raw)})`,
+		);
+	}
+	return (raw as DispatchMode | undefined) ?? "native";
+}
+
+/** Legacy single `build:` block → one BuildConfig. */
+function parseBuildBlock(build: Record<string, unknown>): BuildConfig {
 	const image = requireString(build, "image", "build");
 	if (image.includes(":")) {
 		throw new PlatformConfigError(
 			"build.image must be a bare repository (no tag); the tag comes from build.tag-pattern",
 		);
 	}
-
-	const dispatchRaw = build.dispatch;
-	if (
-		dispatchRaw !== undefined &&
-		dispatchRaw !== "native" &&
-		dispatchRaw !== "workflow_dispatch"
-	) {
-		throw new PlatformConfigError(
-			`build.dispatch must be one of native, workflow_dispatch (got ${JSON.stringify(dispatchRaw)})`,
-		);
+	if (build.push !== undefined && typeof build.push !== "boolean") {
+		throw new PlatformConfigError("build.push must be a boolean");
 	}
-
-	const buildConfig: BuildConfig = {
-		matrix,
+	return {
+		name: "",
+		matrix: parseMatrix(build.matrix, "build.matrix"),
 		dockerfile: optionalString(build, "dockerfile", "./Dockerfile"),
 		context: optionalString(build, "context", "."),
 		image,
 		tagPattern: optionalString(build, "tag-pattern", "{{git.sha}}"),
 		push: build.push === undefined ? true : build.push === true,
-		dispatch: (dispatchRaw as DispatchMode | undefined) ?? "native",
+		dispatch: parseDispatch(build.dispatch, "build"),
 	};
+}
 
-	if (build.push !== undefined && typeof build.push !== "boolean") {
-		throw new PlatformConfigError("build.push must be a boolean");
+/** One entry of the multi-image `images:` list (hanzo.yml) → one BuildConfig. */
+function parseImageEntry(entry: unknown, i: number): BuildConfig {
+	const at = `images[${i}]`;
+	if (!isObject(entry)) {
+		throw new PlatformConfigError(`${at} must be a mapping`);
+	}
+	const name = requireString(entry, "name", at);
+	const repo = requireString(entry, "repo", at);
+	if (repo.includes(":")) {
+		throw new PlatformConfigError(
+			`${at}.repo must be a bare repository (no tag); the tag is derived from tag-suffix`,
+		);
+	}
+	if (entry.push !== undefined && typeof entry.push !== "boolean") {
+		throw new PlatformConfigError(`${at}.push must be a boolean`);
+	}
+	const context = optionalString(entry, "context", ".");
+	// Default Dockerfile sits under the build context, matching the cicd runner.
+	const dockerfile = optionalString(entry, "dockerfile", `${context}/Dockerfile`);
+	// Per-image deterministic tag: `<sha>-<arch>-<suffix>` (suffix defaults to name).
+	const suffix = optionalString(entry, "tag-suffix", name);
+	return {
+		name,
+		matrix: parseMatrix(entry.matrix, `${at}.matrix`, [
+			{ os: "linux", arch: "amd64" },
+		]),
+		dockerfile,
+		context,
+		image: repo,
+		tagPattern: `{{git.sha}}-amd64-${suffix}`,
+		push: entry.push === undefined ? true : entry.push === true,
+		dispatch: parseDispatch(entry.dispatch, at),
+	};
+}
+
+/**
+ * Validate a raw parsed object against the `hanzo.yml` / `.platform.yml` schema.
+ * Returns a fully-typed `PlatformConfig` or throws `PlatformConfigError`
+ * with a path-qualified message identifying the first violation.
+ *
+ * Two build shapes are accepted, normalized to `builds[]`:
+ *   - `images:` (hanzo.yml) — a list of { name, repo, context, … }, one per image.
+ *   - `build:`  (legacy .platform.yml) — a single image block.
+ */
+export function validatePlatformConfig(raw: unknown): PlatformConfig {
+	if (!isObject(raw)) {
+		throw new PlatformConfigError(
+			"config must be a YAML mapping at the top level",
+		);
+	}
+
+	let builds: BuildConfig[];
+	if (Array.isArray(raw.images)) {
+		if (raw.images.length === 0) {
+			throw new PlatformConfigError("`images` must be a non-empty list");
+		}
+		builds = raw.images.map(parseImageEntry);
+		const names = new Set<string>();
+		for (const b of builds) {
+			if (names.has(b.name)) {
+				throw new PlatformConfigError(`duplicate image name "${b.name}"`);
+			}
+			names.add(b.name);
+		}
+	} else if (isObject(raw.build)) {
+		builds = [parseBuildBlock(raw.build)];
+	} else {
+		throw new PlatformConfigError(
+			"config requires either an `images:` list (hanzo.yml) or a `build:` block (.platform.yml)",
+		);
 	}
 
 	let deploy: DeployConfig | undefined;
@@ -216,6 +282,13 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig {
 			throw new PlatformConfigError(
 				"deploy.on must be a non-empty list of branch names",
 			);
+		}
+		// Two deploy shapes: platform-native operator rollout (`target:`) vs the
+		// Deployment-style rollout (`services:`, hanzo.yml) owned by the cicd
+		// runner / GitOps. The platform only performs the operator-CR rollout, so
+		// a `services:`-only deploy is build-only here (deploy left undefined).
+		if (d.target === undefined && (d.services !== undefined || d.cluster !== undefined)) {
+			return { builds, deploy: undefined };
 		}
 		if (!isObject(d.target)) {
 			throw new PlatformConfigError(
@@ -247,7 +320,7 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig {
 		};
 	}
 
-	return { build: buildConfig, deploy };
+	return { builds, deploy };
 }
 
 /** Parse + validate `.platform.yml` text. Throws `PlatformConfigError` on bad input. */
