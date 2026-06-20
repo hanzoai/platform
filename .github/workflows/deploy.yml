@@ -12,7 +12,7 @@ env:
 jobs:
   # ── Test gates — broken code does not ship ───────────────────
   quality:
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     timeout-minutes: 15
     strategy:
       fail-fast: true
