@@ -1,44 +1,32 @@
 import type { IncomingMessage } from "node:http";
-import * as bcrypt from "bcrypt";
+import { sso } from "@better-auth/sso";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { sso } from "@better-auth/sso";
-import { admin, apiKey, organization, genericOAuth } from "better-auth/plugins";
-import { iamProvider } from "@hanzo/iam/betterauth";
+import { admin, apiKey, organization } from "better-auth/plugins";
 import { and, desc, eq } from "drizzle-orm";
 import { IS_CLOUD } from "../constants";
 import { db } from "../db";
 import * as schema from "../db/schema";
 import { getUserByToken } from "../services/admin";
-import { updateUser } from "../services/user";
 import {
 	getWebServerSettings,
 	updateWebServerSettings,
 } from "../services/web-server-settings";
 import { sendEmail } from "../verification/send-verification-email";
 import { getPublicIpWithFallback } from "../wss/utils";
+import { getIamServerSession, upsertUserFromIam } from "./iam";
 
-// IAM OIDC configuration (prefer IAM_* env vars)
-const IAM_URL = (
-	process.env.IAM_URL ||
-	process.env.IAM_ENDPOINT ||
-	process.env.HANZO_IAM_URL ||
-	process.env.HANZO_IAM_ENDPOINT ||
-	process.env.HANZO_IAM_SERVER_URL ||
-	"https://iam.hanzo.ai"
-).replace(/\/$/, "");
-const IAM_CLIENT_ID =
-	process.env.IAM_CLIENT_ID ||
-	process.env.HANZO_IAM_CLIENT_ID ||
-	process.env.HANZO_CLIENT_ID;
-const IAM_CLIENT_SECRET =
-	process.env.IAM_CLIENT_SECRET ||
-	process.env.HANZO_IAM_CLIENT_SECRET ||
-	process.env.HANZO_CLIENT_SECRET;
-
+// Better Auth survives ONLY as the host for the api-key / organization / sso
+// plugins (Stage 2/3 still rely on them). Identity itself is Hanzo IAM —
+// there is no platform-local login (no email/password, no GitHub/Google, no
+// generic-oauth). See ./iam and IAM_MIGRATION.md.
 const { handler, api } = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL || "https://platform.hanzo.ai",
+	// Residual Better Auth (api-key / organization / sso plugins only) keeps its
+	// own /v1/auth namespace — the authClient calls it. Hanzo IAM identity lives
+	// on /v1/iam/*, which the @hanzo/iam SDK drives. Never /api/.
+	basePath: "/v1/auth",
 	database: drizzleAdapter(db, {
 		provider: "pg",
 		schema: schema,
@@ -53,52 +41,15 @@ const { handler, api } = betterAuth({
 
 			if (settings) {
 				return [
-					...(settings.serverIp
-						? [`http://${settings.serverIp}:3000`]
-						: []),
+					...(settings.serverIp ? [`http://${settings.serverIp}:3000`] : []),
 					...(settings.host ? [`https://${settings.host}`] : []),
 				];
 			}
 			return [];
 		},
 	}),
-	emailVerification: {
-		sendOnSignUp: true,
-		autoSignInAfterVerification: true,
-		sendVerificationEmail: async ({ user, url }) => {
-			if (IS_CLOUD) {
-				await sendEmail({
-					email: user.email,
-					subject: "Verify your email",
-					text: `
-				<p>Click the link to verify your email: <a href="${url}">Verify Email</a></p>
-				`,
-				});
-			}
-		},
-	},
-	emailAndPassword: {
-		enabled: true,
-		autoSignIn: !IS_CLOUD,
-		requireEmailVerification: IS_CLOUD,
-		password: {
-			async hash(password) {
-				return bcrypt.hashSync(password, 10);
-			},
-			async verify({ hash, password }) {
-				return bcrypt.compareSync(password, hash);
-			},
-		},
-		sendResetPassword: async ({ user, url }) => {
-			await sendEmail({
-				email: user.email,
-				subject: "Reset your password",
-				text: `
-				<p>Click the link to reset your password: <a href="${url}">Reset Password</a></p>
-				`,
-			});
-		},
-	},
+	// No emailAndPassword / emailVerification: identity is Hanzo IAM. The
+	// platform never hashes a password nor sends a verification mail.
 	databaseHooks: {
 		user: {
 			create: {
@@ -238,20 +189,9 @@ const { handler, api } = betterAuth({
 				}
 			},
 		}),
-		// Hanzo IAM OIDC provider
-		...(IAM_CLIENT_ID && IAM_CLIENT_SECRET
-			? [
-					genericOAuth({
-						config: [
-							iamProvider({
-								serverUrl: IAM_URL,
-								clientId: IAM_CLIENT_ID as string,
-								clientSecret: IAM_CLIENT_SECRET as string,
-							}),
-						],
-					}),
-				]
-			: []),
+		// IAM login no longer rides Better Auth's generic-oauth: the browser
+		// drives the @hanzo/iam PKCE flow directly and validateRequest verifies
+		// the resulting token. See ./iam.
 		...(IS_CLOUD
 			? [
 					admin({
@@ -262,38 +202,17 @@ const { handler, api } = betterAuth({
 	],
 });
 
-// Hanzo IAM OAuth provider id (from @hanzo/iam/betterauth — "hanzo").
-export const IAM_PROVIDER_ID = "hanzo";
-
-// Whether the IAM OIDC provider is configured (client id + secret present).
-export const IAM_CONFIGURED = Boolean(IAM_CLIENT_ID && IAM_CLIENT_SECRET);
-
-// Base URL of the platform itself (used for OAuth post-logout redirect).
-const PLATFORM_URL = (
-	process.env.BETTER_AUTH_URL || "https://platform.hanzo.ai"
-).replace(/\/$/, "");
-
-/**
- * RP-initiated logout URL at Hanzo IAM. Sending the browser here after the
- * local session cookie is cleared kills the IAM session too, then bounces
- * back to `/login` (which re-fires the OAuth flow if still needed).
- */
-export function iamLogoutUrl(): string {
-	const redirect = `${PLATFORM_URL}/login`;
-	return (
-		`${IAM_URL}/v1/iam/oauth/logout` +
-		`?post_logout_redirect_uri=${encodeURIComponent(redirect)}` +
-		(IAM_CLIENT_ID ? `&client_id=${encodeURIComponent(IAM_CLIENT_ID)}` : "")
-	);
-}
-
 export const auth = {
 	handler,
 	createApiKey: api.createApiKey,
 	registerSSOProvider: api.registerSSOProvider,
 	updateSSOProvider: api.updateSSOProvider,
-	signInWithOAuth2: api.signInWithOAuth2,
 };
+
+export type { PlatformSession } from "./iam";
+// IAM is the identity surface; re-export from the single auth entry point so
+// consumers import auth helpers from one place (@hanzo/platform/lib/auth).
+export { getIamServerSession, upsertUserFromIam } from "./iam";
 
 export const validateRequest = async (request: IncomingMessage) => {
 	const apiKey = request.headers["x-api-key"] as string;
@@ -392,41 +311,17 @@ export const validateRequest = async (request: IncomingMessage) => {
 		}
 	}
 
-	// If no API key, proceed with normal session validation
-	const session = await api.getSession({
-		headers: new Headers({
-			cookie: request.headers.cookie || "",
-		}),
-	});
-
-	if (!session?.session || !session.user) {
+	// No API key: identity comes from Hanzo IAM. Verify the IAM access token
+	// (Bearer header or hanzo_iam_access_token cookie) against hanzo.id's
+	// JWKS, then resolve it onto the local user/member/organization rows so the
+	// returned shape stays identical for every caller.
+	const identity = await getIamServerSession(request);
+	if (!identity) {
 		return {
 			session: null,
 			user: null,
 		};
 	}
 
-	// TypeScript now knows session and session.user are not null
-	// But we need to help it understand with non-null assertions
-	const member = await db.query.member.findFirst({
-		where: and(
-			eq(schema.member.userId, session.user!.id),
-			eq(
-				schema.member.organizationId,
-				session.session!.activeOrganizationId || "",
-			),
-		),
-		with: {
-			organization: true,
-		},
-	});
-
-	session.user!.role = member?.role || "member";
-	if (member) {
-		session.user!.ownerId = member.organization.ownerId;
-	} else {
-		session.user!.ownerId = session.user!.id;
-	}
-
-	return session;
+	return upsertUserFromIam(identity);
 };
