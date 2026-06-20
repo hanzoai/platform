@@ -14,6 +14,7 @@ import {
 	appInScope,
 	mapDeploymentToPipelineRun,
 	methodNotAllowed,
+	requireParams,
 	requireServiceToken,
 } from "@/server/paas/container-api";
 
@@ -24,10 +25,14 @@ export default async function handler(
 	if (req.method !== "GET") return methodNotAllowed(req, res, ["GET"]);
 	if (!requireServiceToken(req, res)) return;
 
-	const { orgId, projectId, environmentId, containerId } = req.query as Record<
-		string,
-		string
-	>;
+	const params = requireParams(req, res, [
+		"orgId",
+		"projectId",
+		"environmentId",
+		"containerId",
+	]);
+	if (!params) return;
+	const { orgId, projectId, environmentId, containerId } = params;
 
 	try {
 		const app: any = await findApplicationById(containerId);

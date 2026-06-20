@@ -86,9 +86,17 @@ async function resolveProvider(
 }
 
 /**
- * Fetch `.platform.yml` from the repo at a specific ref. Returns the parsed
- * + validated config, or null when the repo has not opted in (no file).
- * Any other failure (bad YAML, schema violation, API error) throws.
+ * Canonical repo config name is `hanzo.yml`. `.platform.yml` is the legacy
+ * name, read only as a transitional fallback until every repo has migrated —
+ * remove it once base/insights/app are all on `hanzo.yml`.
+ */
+const CONFIG_NAMES = ["hanzo.yml", ".platform.yml"] as const;
+
+/**
+ * Fetch the repo's platform config at a specific ref, trying each name in
+ * `CONFIG_NAMES` order. Returns the parsed + validated config, or null when
+ * the repo has not opted in (no config file under any name). Any other failure
+ * (bad YAML, schema violation, API error) throws.
  */
 export async function fetchPlatformConfig(
 	provider: ResolvedProvider["provider"],
@@ -103,11 +111,14 @@ export async function fetchPlatformConfig(
 		});
 	}
 	const octokit = authGithub(provider);
-	// Prefer `hanzo.yml`; fall back to the legacy `.platform.yml`. A repo opts in
-	// with either filename; missing both → null (stays on GHA).
-	for (const path of ["hanzo.yml", ".platform.yml"]) {
+	for (const path of CONFIG_NAMES) {
 		try {
-			const res = await octokit.rest.repos.getContent({ owner, repo: name, path, ref });
+			const res = await octokit.rest.repos.getContent({
+				owner,
+				repo: name,
+				path,
+				ref,
+			});
 			const data = res.data as { content?: string; encoding?: string };
 			if (!data.content || data.encoding !== "base64") {
 				throw new TRPCError({
@@ -119,7 +130,7 @@ export async function fetchPlatformConfig(
 			return parsePlatformConfig(text);
 		} catch (err) {
 			const e = err as { status?: number };
-			if (e.status === 404) continue; // try the next filename
+			if (e.status === 404) continue; // not under this name — try the next
 			if (err instanceof TRPCError) throw err;
 			throw new TRPCError({
 				code: "BAD_REQUEST",
@@ -127,7 +138,7 @@ export async function fetchPlatformConfig(
 			});
 		}
 	}
-	return null;
+	return null; // no config under any candidate name → repo not opted in
 }
 
 /**

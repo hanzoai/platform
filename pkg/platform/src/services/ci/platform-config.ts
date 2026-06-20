@@ -263,10 +263,37 @@ export function parsePlatformConfig(yamlText: string): PlatformConfig {
 	return validatePlatformConfig(raw);
 }
 
-/** arcd pool label for an org + matrix entry, e.g. `hanzoai-linux-amd64`. */
-export function runnerPoolFor(org: string, entry: MatrixEntry): string {
+/**
+ * GitHub org login → ARC pool brand prefix. ARC scale sets are named by
+ * BRAND (`hanzo`, `lux`, `zoo`), not by the org's GitHub login (`hanzoai`,
+ * `luxfi`, `zooai`). An org absent from this table is its own brand
+ * (`hanzobot` → `hanzobot`), which is the forward-safe default for any new
+ * org that names its pools after its login.
+ */
+const ORG_TO_BRAND: Readonly<Record<string, string>> = {
+	hanzoai: "hanzo",
+	luxfi: "lux",
+	zooai: "zoo",
+};
+
+/** Pool role segment. The build scheduler dispatches build jobs only. */
+export type RunnerRole = "build" | "deploy";
+
+/**
+ * arcd pool label for an org + matrix entry, e.g.
+ * `runnerPoolFor("hanzoai", { os: "linux", arch: "amd64" })` →
+ * `hanzo-build-linux-amd64`. This MUST match the live ARC scale-set name in
+ * `arc-system` exactly, or the dispatched job's `runs-on` matches no runner
+ * and hangs. Scale sets follow `<brand>-<role>-<os>-<arch>`.
+ */
+export function runnerPoolFor(
+	org: string,
+	entry: MatrixEntry,
+	role: RunnerRole = "build",
+): string {
+	const brand = ORG_TO_BRAND[org] ?? org;
 	const osLabel = entry.os === "darwin" ? "macos" : entry.os;
-	return `${org}-${osLabel}-${entry.arch}`;
+	return `${brand}-${role}-${osLabel}-${entry.arch}`;
 }
 
 /** Resolve a tag-pattern template against the triggering git context. */
