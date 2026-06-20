@@ -13,7 +13,13 @@ export function SignInWithHanzo() {
 			onClick={async () => {
 				setIsLoading(true);
 				try {
-					await authClient.signIn.social({ provider: "hanzo" });
+					// IAM is registered via the genericOAuth plugin (providerId "hanzo"),
+					// reached through signIn.oauth2 — NOT signIn.social (which only resolves
+					// built-in social providers and 404s on "hanzo").
+					await authClient.signIn.oauth2({
+						providerId: "hanzo",
+						callbackURL: "/",
+					});
 				} catch {
 					setIsLoading(false);
 				}

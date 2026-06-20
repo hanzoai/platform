@@ -74,6 +74,30 @@ export function methodNotAllowed(
 	res.status(405).json({ message: `Method ${req.method} not allowed` });
 }
 
+/**
+ * Boundary validator for dynamic route params. Each named param in `req.query`
+ * may be string | string[] | undefined; this narrows them to plain strings and
+ * 400s on any missing one. Returns the typed record, or null after writing the
+ * error response (caller should `return`).
+ */
+export function requireParams<K extends string>(
+	req: NextApiRequest,
+	res: NextApiResponse,
+	names: readonly K[],
+): Record<K, string> | null {
+	const out = {} as Record<K, string>;
+	for (const name of names) {
+		const raw = req.query[name];
+		const value = Array.isArray(raw) ? raw[0] : raw;
+		if (!value) {
+			res.status(400).json({ message: `Missing path parameter: ${name}` });
+			return null;
+		}
+		out[name] = value;
+	}
+	return out;
+}
+
 // ---------------------------------------------------------------------------
 // Scope guard
 // ---------------------------------------------------------------------------
