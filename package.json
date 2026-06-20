@@ -48,7 +48,8 @@
 		"overrides": {
 			"esbuild": "0.20.2",
 			"next": "16.1.6",
-			"nan": "2.27.0"
+			"nan": "2.27.0",
+			"react-hook-form": "7.71.2"
 		},
 		"peerDependencyRules": {
 			"ignoreMissing": [
