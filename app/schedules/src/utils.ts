@@ -24,6 +24,13 @@ import {
 	server,
 	volumeBackups,
 } from "@hanzo/platform/db";
+import {
+	readDeclaredTag,
+	readLatestTag,
+	readReleaseMeta,
+	readRunningTag,
+} from "@hanzo/platform/services/apps/index";
+import { APPS_READER_CRONS } from "./apps-readers.js";
 import { logger } from "./logger.js";
 import { scheduleJob } from "./queue.js";
 import type { QueueJob } from "./schema.js";
@@ -115,6 +122,14 @@ export const runJobs = async (job: QueueJob) => {
 			if (volumeBackup.enabled) {
 				await runVolumeBackup(volumeBackupId);
 			}
+		} else if (job.type === "read-latest-tag") {
+			await readLatestTag();
+		} else if (job.type === "read-declared-tag") {
+			await readDeclaredTag();
+		} else if (job.type === "read-running-tag") {
+			await readRunningTag();
+		} else if (job.type === "read-release-meta") {
+			await readReleaseMeta();
 		}
 	} catch (error) {
 		logger.error(error);
@@ -268,5 +283,24 @@ export const initializeJobs = async () => {
 	logger.info(
 		{ Quantity: filteredVolumeBackupsBasedOnServerStatus.length },
 		"Volume Backups Initialized",
+	);
+
+	// apps-lifecycle readers (PR 2 of docs/APPS_LIFECYCLE.md): four singleton
+	// repeatable jobs, each on its OWN cron. They sweep the whole apps table, so
+	// they take no id and are registered unconditionally (not gated on any DB
+	// row). cleanQueue() ran at boot, so this re-registers them fresh each start.
+	for (const reader of APPS_READER_CRONS) {
+		try {
+			await scheduleJob({
+				type: reader.type,
+				cronSchedule: reader.cronSchedule,
+			});
+		} catch (error) {
+			logger.error(error, `Failed to schedule apps reader ${reader.type}`);
+		}
+	}
+	logger.info(
+		{ Quantity: APPS_READER_CRONS.length },
+		"Apps Lifecycle Readers Initialized",
 	);
 };
