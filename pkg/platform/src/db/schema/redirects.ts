@@ -1,19 +1,24 @@
 import { relations } from "drizzle-orm";
-import { boolean, pgTable, serial, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { applications } from "./application";
 
-export const redirects = pgTable("redirect", {
+export const redirects = sqliteTable("redirect", {
 	redirectId: text("redirectId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	regex: text("regex").notNull(),
 	replacement: text("replacement").notNull(),
-	permanent: boolean("permanent").notNull().default(false),
-	uniqueConfigKey: serial("uniqueConfigKey"),
+	permanent: integer("permanent", { mode: "boolean" }).notNull().default(false),
+	// Postgres `serial` had no SQLite non-PK equivalent. This key only needs
+	// to be a non-null integer that's unique within an app's Traefik router
+	// names; a random 31-bit value satisfies both with no call-site changes.
+	uniqueConfigKey: integer("uniqueConfigKey")
+		.notNull()
+		.$defaultFn(() => Math.floor(Math.random() * 2_147_483_647)),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),

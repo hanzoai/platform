@@ -57,7 +57,6 @@ export * from "./services/volume-backups";
 export * from "./services/web-server-settings";
 export * from "./setup/config-paths";
 export * from "./setup/monitoring-setup";
-export * from "./setup/postgres-setup";
 export * from "./setup/redis-setup";
 export * from "./setup/server-audit";
 export * from "./setup/server-setup";

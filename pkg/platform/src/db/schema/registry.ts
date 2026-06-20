@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -11,9 +11,8 @@ import { applications } from "./application";
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const registryType = pgEnum("RegistryType", ["selfHosted", "cloud"]);
 
-export const registry = pgTable("registry", {
+export const registry = sqliteTable("registry", {
 	registryId: text("registryId")
 		.notNull()
 		.primaryKey()
@@ -26,7 +25,9 @@ export const registry = pgTable("registry", {
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
-	registryType: registryType("selfHosted").notNull().default("cloud"),
+	registryType: text("selfHosted", { enum: ["selfHosted", "cloud"] })
+		.notNull()
+		.default("cloud"),
 	organizationId: text("organizationId")
 		.notNull()
 		.references(() => organization.id, { onDelete: "cascade" }),

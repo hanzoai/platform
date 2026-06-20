@@ -1,47 +1,32 @@
-import fs from "node:fs";
+/**
+ * SQLite connection resolution for platform's internal datastore.
+ *
+ * Platform is a Hanzo-internal app: it runs on Base SQLite per the CTO
+ * architecture directive. There are no network credentials and no
+ * plaintext-password fallback (that whole class of risk is gone with the
+ * Postgres driver).
+ *
+ * Resolution order:
+ *   1. DATABASE_URL  — explicit override. Accepts a bare path or a
+ *      `file:`-prefixed URL (e.g. `file::memory:?cache=shared` for tests,
+ *      or `file:/data/platform.db` for a pinned location).
+ *   2. PLATFORM_DB_PATH — filesystem path to the SQLite file.
+ *   3. Default — `data/platform.db`, the local-dev convention.
+ *
+ * Per-tenant Base instances (one SQLite per org) are layered on top of this
+ * primitive by the connection factory in `./index.ts`.
+ */
 
-export const {
-	DATABASE_URL,
-	POSTGRES_PASSWORD_FILE,
-	POSTGRES_USER = "platform",
-	POSTGRES_DB = "platform",
-	POSTGRES_HOST = "platform-postgres",
-	POSTGRES_PORT = "5432",
-} = process.env;
+const { DATABASE_URL, PLATFORM_DB_PATH } = process.env;
 
-function readSecret(path: string): string {
-	try {
-		return fs.readFileSync(path, "utf8").trim();
-	} catch {
-		throw new Error(`Cannot read secret at ${path}`);
+function resolveDbUrl(): string {
+	if (DATABASE_URL) {
+		return DATABASE_URL;
 	}
+	if (PLATFORM_DB_PATH) {
+		return PLATFORM_DB_PATH;
+	}
+	return "data/platform.db";
 }
-export let dbUrl: string;
-if (DATABASE_URL) {
-	// Compatibilidad legacy / overrides
-	dbUrl = DATABASE_URL;
-} else if (POSTGRES_PASSWORD_FILE) {
-	const password = readSecret(POSTGRES_PASSWORD_FILE);
-	dbUrl = `postgres://${POSTGRES_USER}:${encodeURIComponent(
-		password,
-	)}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}`;
-} else {
-	if (process.env.NODE_ENV !== "test") {
-		console.warn(`
-		⚠️  [DEPRECATED DATABASE CONFIG]
-		You are using the legacy hardcoded database credentials.
-		This mode WILL BE REMOVED in a future release.
 
-		Please migrate to Docker Secrets using POSTGRES_PASSWORD_FILE.
-		Please execute this command in your server: curl -sSL https://hanzo.ai/security/0.26.6.sh | bash
-		`);
-	}
-
-	if (process.env.NODE_ENV === "production") {
-		dbUrl =
-			"postgres://platform:amukds4wi9001583845717ad2@platform-postgres:5432/platform";
-	} else {
-		dbUrl =
-			"postgres://platform:amukds4wi9001583845717ad2@localhost:5432/platform";
-	}
-}
+export const dbUrl: string = resolveDbUrl();

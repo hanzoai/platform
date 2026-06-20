@@ -1,13 +1,10 @@
 import { relations, sql } from "drizzle-orm";
 import {
-	type AnyPgColumn,
-	boolean,
+	AnySQLiteColumn,
 	integer,
-	pgEnum,
-	pgTable,
-	serial,
+	sqliteTable,
 	text,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -15,27 +12,27 @@ import { domain } from "../validations/domain";
 import { applications } from "./application";
 import { compose } from "./compose";
 import { previewDeployments } from "./preview-deployments";
-import { certificateType } from "./shared";
 
-export const domainType = pgEnum("domainType", [
-	"compose",
-	"application",
-	"preview",
-]);
-
-export const domains = pgTable("domain", {
+export const domains = sqliteTable("domain", {
 	domainId: text("domainId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	host: text("host").notNull(),
-	https: boolean("https").notNull().default(false),
+	https: integer("https", { mode: "boolean" }).notNull().default(false),
 	port: integer("port").default(3000),
 	customEntrypoint: text("customEntrypoint"),
 	path: text("path").default("/"),
 	serviceName: text("serviceName"),
-	domainType: domainType("domainType").default("application"),
-	uniqueConfigKey: serial("uniqueConfigKey"),
+	domainType: text("domainType", {
+		enum: ["compose", "application", "preview"],
+	}).default("application"),
+	// Postgres `serial` had no SQLite non-PK equivalent. This key only needs
+	// to be a non-null integer that's unique within an app's Traefik router
+	// names; a random 31-bit value satisfies both with no call-site changes.
+	uniqueConfigKey: integer("uniqueConfigKey")
+		.notNull()
+		.$defaultFn(() => Math.floor(Math.random() * 2_147_483_647)),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
@@ -48,13 +45,19 @@ export const domains = pgTable("domain", {
 		{ onDelete: "cascade" },
 	),
 	previewDeploymentId: text("previewDeploymentId").references(
-		(): AnyPgColumn => previewDeployments.previewDeploymentId,
+		(): AnySQLiteColumn => previewDeployments.previewDeploymentId,
 		{ onDelete: "cascade" },
 	),
-	certificateType: certificateType("certificateType").notNull().default("none"),
+	certificateType: text("certificateType", {
+		enum: ["letsencrypt", "none", "custom"],
+	})
+		.notNull()
+		.default("none"),
 	internalPath: text("internalPath").default("/"),
-	stripPath: boolean("stripPath").notNull().default(false),
-	middlewares: text("middlewares").array().default(sql`ARRAY[]::text[]`),
+	stripPath: integer("stripPath", { mode: "boolean" }).notNull().default(false),
+	middlewares: text("middlewares", { mode: "json" })
+		.$type<string[]>()
+		.default(sql`'[]'`),
 });
 
 export const domainsRelations = relations(domains, ({ one }) => ({

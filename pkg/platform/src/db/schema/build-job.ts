@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -18,23 +18,7 @@ import { organization } from "./account";
  * and why" — independent of GitHub's own run history.
  */
 
-export const buildJobStatus = pgEnum("BuildJobStatus", [
-	"queued",
-	"running",
-	"succeeded",
-	"failed",
-	"cancelled",
-]);
-
-export const deployRolloutStatus = pgEnum("DeployRolloutStatus", [
-	"pending",
-	"applied",
-	"running",
-	"failed",
-	"skipped",
-]);
-
-export const buildJob = pgTable("build_job", {
+export const buildJob = sqliteTable("build_job", {
 	buildJobId: text("buildJobId")
 		.notNull()
 		.primaryKey()
@@ -56,7 +40,11 @@ export const buildJob = pgTable("build_job", {
 	runnerPool: text("runnerPool").notNull(),
 	/** Fully-resolved image reference being built, e.g. `ghcr.io/hanzoai/zip:<sha>`. */
 	image: text("image").notNull(),
-	status: buildJobStatus("status").notNull().default("queued"),
+	status: text("status", {
+		enum: ["queued", "running", "succeeded", "failed", "cancelled"],
+	})
+		.notNull()
+		.default("queued"),
 	/**
 	 * Identifier returned by the build dispatch (GitHub workflow run id when
 	 * dispatched via workflow_dispatch). Used to correlate completion.
@@ -67,7 +55,9 @@ export const buildJob = pgTable("build_job", {
 	/** Human-readable failure reason when status=failed. */
 	error: text("error"),
 	/** Rollout state once a successful build hands off to the DeployExecutor. */
-	rolloutStatus: deployRolloutStatus("rolloutStatus")
+	rolloutStatus: text("rolloutStatus", {
+		enum: ["pending", "applied", "running", "failed", "skipped"],
+	})
 		.notNull()
 		.default("skipped"),
 	/** Name of the operator CR the rollout targeted (kind=Service). */

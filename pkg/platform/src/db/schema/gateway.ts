@@ -1,4 +1,4 @@
-import { boolean, integer, json, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -7,28 +7,23 @@ import { z } from "zod";
 // Enums
 // ============================================================================
 
-export const rateLimitScope = pgEnum("rateLimitScope", [
-	"global",
-	"org",
-	"user",
-	"api-key",
-]);
-
 // ============================================================================
 // Tables
 // ============================================================================
 
-export const rateLimitRules = pgTable("rate_limit_rule", {
+export const rateLimitRules = sqliteTable("rate_limit_rule", {
 	rateLimitRuleId: text("rateLimitRuleId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	name: text("name").notNull(),
-	scope: rateLimitScope("scope").notNull().default("global"),
+	scope: text("scope", { enum: ["global", "org", "user", "api-key"] })
+		.notNull()
+		.default("global"),
 	scopeId: text("scopeId"),
 	requestsPerMinute: integer("requestsPerMinute").notNull().default(60),
 	burstSize: integer("burstSize").notNull().default(10),
-	enabled: boolean("enabled").notNull().default(true),
+	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
@@ -37,7 +32,7 @@ export const rateLimitRules = pgTable("rate_limit_rule", {
 		.$defaultFn(() => new Date().toISOString()),
 });
 
-export const routingRules = pgTable("routing_rule", {
+export const routingRules = sqliteTable("routing_rule", {
 	routingRuleId: text("routingRuleId")
 		.notNull()
 		.primaryKey()
@@ -46,9 +41,12 @@ export const routingRules = pgTable("routing_rule", {
 	host: text("host").notNull(),
 	pathPrefix: text("pathPrefix"),
 	backend: text("backend").notNull(),
-	middlewares: json("middlewares").$type<string[]>().notNull().default([]),
+	middlewares: text("middlewares", { mode: "json" })
+		.$type<string[]>()
+		.notNull()
+		.default([]),
 	priority: integer("priority").notNull().default(0),
-	enabled: boolean("enabled").notNull().default(true),
+	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
