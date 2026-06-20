@@ -8,6 +8,7 @@ export * from "./lib/logger";
 export * from "./monitoring/utils";
 export * from "./services/admin";
 export * from "./services/application";
+export * from "./services/apps";
 export * from "./services/backup";
 export * from "./services/bitbucket";
 export * from "./services/certificate";
