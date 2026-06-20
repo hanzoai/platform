@@ -14,6 +14,7 @@ import {
 	PAAS_NAMESPACE,
 	appInScope,
 	methodNotAllowed,
+	requireParams,
 	requireServiceToken,
 	resolveDeploymentName,
 	restartWorkload,
@@ -26,10 +27,14 @@ export default async function handler(
 	if (req.method !== "POST") return methodNotAllowed(req, res, ["POST"]);
 	if (!requireServiceToken(req, res)) return;
 
-	const { orgId, projectId, environmentId, containerId } = req.query as Record<
-		string,
-		string
-	>;
+	const params = requireParams(req, res, [
+		"orgId",
+		"projectId",
+		"environmentId",
+		"containerId",
+	]);
+	if (!params) return;
+	const { orgId, projectId, environmentId, containerId } = params;
 
 	try {
 		const app: any = await findApplicationById(containerId);

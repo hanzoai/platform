@@ -13,6 +13,7 @@ import {
 	listApplicationsInScope,
 	mapApplicationToContainer,
 	methodNotAllowed,
+	requireParams,
 	requireServiceToken,
 } from "@/server/paas/container-api";
 
@@ -23,10 +24,13 @@ export default async function handler(
 	if (req.method !== "GET") return methodNotAllowed(req, res, ["GET"]);
 	if (!requireServiceToken(req, res)) return;
 
-	const { orgId, projectId, environmentId } = req.query as Record<
-		string,
-		string
-	>;
+	const params = requireParams(req, res, [
+		"orgId",
+		"projectId",
+		"environmentId",
+	]);
+	if (!params) return;
+	const { orgId, projectId, environmentId } = params;
 
 	try {
 		const apps = await listApplicationsInScope(orgId, projectId, environmentId);
