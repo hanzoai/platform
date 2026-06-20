@@ -1,6 +1,12 @@
 import { Queue, type RepeatableJob } from "bullmq";
 import { logger } from "./logger.js";
-import type { QueueJob } from "./schema.js";
+import { APPS_READER_TYPES, type QueueJob } from "./schema.js";
+
+/** Reader jobs are singletons keyed by their type (one of each, sweeping the
+ *  whole apps table). Centralizes the "is this a reader?" + "what's its job
+ *  name?" decision so all three queue ops agree. */
+const isAppsReaderJob = (type: QueueJob["type"]): boolean =>
+	(APPS_READER_TYPES as readonly string[]).includes(type);
 
 export const jobQueue = new Queue("backupQueue", {
 	connection: {
@@ -47,6 +53,13 @@ export const scheduleJob = async (job: QueueJob) => {
 				pattern: job.cronSchedule,
 			},
 		});
+	} else if (isAppsReaderJob(job.type)) {
+		// Singleton repeatable keyed by the reader type itself.
+		await jobQueue.add(job.type, job, {
+			repeat: {
+				pattern: job.cronSchedule,
+			},
+		});
 	}
 };
 
@@ -79,6 +92,12 @@ export const removeJob = async (data: QueueJob) => {
 		});
 		return result;
 	}
+	if (isAppsReaderJob(data.type)) {
+		const result = await jobQueue.removeRepeatable(data.type, {
+			pattern: data.cronSchedule,
+		});
+		return result;
+	}
 	return false;
 };
 
@@ -104,6 +123,10 @@ export const getJobRepeatable = async (
 	if (data.type === "volume-backup") {
 		const { volumeBackupId } = data;
 		const job = repeatableJobs.find((j) => j.name === volumeBackupId);
+		return job ? job : null;
+	}
+	if (isAppsReaderJob(data.type)) {
+		const job = repeatableJobs.find((j) => j.name === data.type);
 		return job ? job : null;
 	}
 	return null;
