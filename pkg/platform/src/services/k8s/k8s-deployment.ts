@@ -6,6 +6,7 @@
  */
 
 import { TRPCError } from "@trpc/server";
+import { PatchStrategy, setHeaderOptions } from "@kubernetes/client-node";
 import { loadManifestParsed } from "../../templates/k8s/index";
 import type { K8sClients } from "./k8s-client";
 
@@ -239,7 +240,14 @@ export async function restartDeployment(
 	};
 
 	try {
-		await clients.apps.patchNamespacedDeployment({ name, namespace, body: patch });
+		// Must set the strategic-merge content-type explicitly. The
+		// @kubernetes/client-node v1.x default is JSON-Patch (an array of ops),
+		// so a merge object is rejected with "cannot unmarshal object into
+		// []jsonPatchOp". setHeaderOptions wires the Content-Type via middleware.
+		await clients.apps.patchNamespacedDeployment(
+			{ name, namespace, body: patch },
+			setHeaderOptions("Content-Type", PatchStrategy.StrategicMergePatch),
+		);
 	} catch (err) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
