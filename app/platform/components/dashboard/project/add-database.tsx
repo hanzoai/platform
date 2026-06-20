@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -374,7 +375,11 @@ export const AddDatabase = ({ environmentId, projectName }: Props) => {
 			</DialogTrigger>
 			<DialogContent className="md:max-h-[90vh]  sm:max-w-2xl">
 				<DialogHeader>
-					<DialogTitle>Databases</DialogTitle>
+					<DialogTitle>Customer Databases &amp; Caches</DialogTitle>
+					<DialogDescription>
+						Provision a managed database or cache for your customer app. For
+						Hanzo internal app storage, use Base SQLite per-tenant.
+					</DialogDescription>
 				</DialogHeader>
 
 				<Form {...form}>
