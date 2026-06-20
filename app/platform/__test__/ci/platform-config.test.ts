@@ -32,9 +32,9 @@ describe("parsePlatformConfig", () => {
 	it("parses a full valid config", () => {
 		const cfg = parsePlatformConfig(VALID);
 		expect(cfg.builds).toHaveLength(1);
-		expect(cfg.builds[0].matrix).toHaveLength(2);
-		expect(cfg.builds[0].image).toBe("ghcr.io/hanzoai/zip");
-		expect(cfg.builds[0].push).toBe(true);
+		expect(cfg.builds[0]!.matrix).toHaveLength(2);
+		expect(cfg.builds[0]!.image).toBe("ghcr.io/hanzoai/zip");
+		expect(cfg.builds[0]!.push).toBe(true);
 		expect(cfg.deploy?.target.name).toBe("zip");
 		expect(cfg.deploy?.target.crd).toBe("Service");
 	});
@@ -46,10 +46,10 @@ build:
     - { os: linux, arch: amd64 }
   image: ghcr.io/hanzoai/base
 `);
-		expect(cfg.builds[0].dockerfile).toBe("./Dockerfile");
-		expect(cfg.builds[0].context).toBe(".");
-		expect(cfg.builds[0].tagPattern).toBe("{{git.sha}}");
-		expect(cfg.builds[0].push).toBe(true);
+		expect(cfg.builds[0]!.dockerfile).toBe("./Dockerfile");
+		expect(cfg.builds[0]!.context).toBe(".");
+		expect(cfg.builds[0]!.tagPattern).toBe("{{git.sha}}");
+		expect(cfg.builds[0]!.push).toBe(true);
 		expect(cfg.deploy).toBeUndefined();
 	});
 
@@ -157,14 +157,14 @@ describe("images (hanzo.yml multi-image)", () => {
 	it("parses a list of images into builds", () => {
 		const cfg = parsePlatformConfig(MULTI_IMAGE);
 		expect(cfg.builds).toHaveLength(2);
-		expect(cfg.builds[0].name).toBe("api");
-		expect(cfg.builds[0].image).toBe("ghcr.io/bootnode/bootnode");
-		expect(cfg.builds[0].context).toBe("./api");
-		expect(cfg.builds[0].dockerfile).toBe("./api/Dockerfile");
-		expect(cfg.builds[0].tagPattern).toBe("{{git.sha}}-amd64-api");
-		expect(cfg.builds[1].name).toBe("web");
+		expect(cfg.builds[0]!.name).toBe("api");
+		expect(cfg.builds[0]!.image).toBe("ghcr.io/bootnode/bootnode");
+		expect(cfg.builds[0]!.context).toBe("./api");
+		expect(cfg.builds[0]!.dockerfile).toBe("./api/Dockerfile");
+		expect(cfg.builds[0]!.tagPattern).toBe("{{git.sha}}-amd64-api");
+		expect(cfg.builds[1]!.name).toBe("web");
 		// default matrix is linux/amd64
-		expect(cfg.builds[0].matrix).toEqual([{ os: "linux", arch: "amd64" }]);
+		expect(cfg.builds[0]!.matrix).toEqual([{ os: "linux", arch: "amd64" }]);
 		// `test`/`kms` keys are ignored by the platform; deploy via cicd/universe
 		expect(cfg.deploy).toBeUndefined();
 	});
@@ -199,13 +199,13 @@ describe("images (hanzo.yml multi-image)", () => {
 describe("build.dispatch", () => {
 	it("defaults to native when omitted", () => {
 		const cfg = parsePlatformConfig(VALID);
-		expect(cfg.builds[0].dispatch).toBe("native");
+		expect(cfg.builds[0]!.dispatch).toBe("native");
 	});
 	it("accepts an explicit workflow_dispatch", () => {
 		const cfg = parsePlatformConfig(
 			VALID.replace("push: true", "push: true\n  dispatch: workflow_dispatch"),
 		);
-		expect(cfg.builds[0].dispatch).toBe("workflow_dispatch");
+		expect(cfg.builds[0]!.dispatch).toBe("workflow_dispatch");
 	});
 	it("rejects an unknown dispatch mode", () => {
 		expect(() =>
