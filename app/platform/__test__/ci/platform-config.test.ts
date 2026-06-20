@@ -164,15 +164,33 @@ describe("build.dispatch", () => {
 });
 
 describe("runnerPoolFor", () => {
-	it("maps linux/amd64 to <org>-linux-amd64", () => {
+	it("maps hanzoai/linux/amd64 to the real ARC pool hanzo-build-linux-amd64", () => {
 		expect(runnerPoolFor("hanzoai", { os: "linux", arch: "amd64" })).toBe(
-			"hanzoai-linux-amd64",
+			"hanzo-build-linux-amd64",
+		);
+	});
+	it("maps org login to brand prefix (luxfi→lux, zooai→zoo)", () => {
+		expect(runnerPoolFor("luxfi", { os: "linux", arch: "amd64" })).toBe(
+			"lux-build-linux-amd64",
+		);
+		expect(runnerPoolFor("zooai", { os: "linux", arch: "amd64" })).toBe(
+			"zoo-build-linux-amd64",
+		);
+	});
+	it("defaults an unmapped org to its own login as brand", () => {
+		expect(runnerPoolFor("hanzobot", { os: "linux", arch: "amd64" })).toBe(
+			"hanzobot-build-linux-amd64",
 		);
 	});
 	it("maps darwin to macos", () => {
 		expect(runnerPoolFor("hanzoai", { os: "darwin", arch: "arm64" })).toBe(
-			"hanzoai-macos-arm64",
+			"hanzo-build-macos-arm64",
 		);
+	});
+	it("honors an explicit deploy role", () => {
+		expect(
+			runnerPoolFor("hanzoai", { os: "linux", arch: "amd64" }, "deploy"),
+		).toBe("hanzo-deploy-linux-amd64");
 	});
 });
 
