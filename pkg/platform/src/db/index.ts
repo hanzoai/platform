@@ -1,3 +1,5 @@
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import BetterSqlite3 from "better-sqlite3";
 import { and, eq } from "drizzle-orm";
 import {
@@ -32,6 +34,25 @@ export function resolveSqlitePath(url: string): string {
 }
 
 /**
+ * Ensure the parent directory of a file-backed SQLite path exists.
+ *
+ * Postgres connected over the network, so nothing on disk had to pre-exist.
+ * better-sqlite3 will create the database file itself, but it cannot create
+ * missing parent directories — on a fresh container or a freshly-mounted PVC,
+ * `data/platform.db` fails with "Cannot open database because the directory
+ * does not exist". Creating it here makes opening robust everywhere (runtime,
+ * migration, Next.js build-time page-data collection). No-op for `:memory:`.
+ *
+ * Exported so the migration and reset entrypoints share the same behaviour.
+ */
+export function ensureSqliteDir(path: string): void {
+	if (path === ":memory:") {
+		return;
+	}
+	mkdirSync(dirname(path), { recursive: true });
+}
+
+/**
  * Open a SQLite connection with the PRAGMAs platform relies on:
  *   - foreign_keys ON: the schema declares FKs with onDelete actions.
  *     SQLite ignores them unless this is enabled per connection — Postgres
@@ -40,7 +61,9 @@ export function resolveSqlitePath(url: string): string {
  *   - busy_timeout: wait rather than throw SQLITE_BUSY under contention.
  */
 function openConnection(): Database {
-	const sqlite = new BetterSqlite3(resolveSqlitePath(dbUrl));
+	const path = resolveSqlitePath(dbUrl);
+	ensureSqliteDir(path);
+	const sqlite = new BetterSqlite3(path);
 	sqlite.pragma("journal_mode = WAL");
 	sqlite.pragma("foreign_keys = ON");
 	sqlite.pragma("busy_timeout = 5000");

@@ -1,4 +1,4 @@
-import { dbUrl, resolveSqlitePath } from "@hanzo/platform/db";
+import { dbUrl, ensureSqliteDir, resolveSqlitePath } from "@hanzo/platform/db";
 import BetterSqlite3 from "better-sqlite3";
 
 /**
@@ -7,7 +7,9 @@ import BetterSqlite3 from "better-sqlite3";
  * drop order doesn't matter, then re-enabled.
  */
 const clearDb = (): void => {
-	const sqlite = new BetterSqlite3(resolveSqlitePath(dbUrl));
+	const dbPath = resolveSqlitePath(dbUrl);
+	ensureSqliteDir(dbPath);
+	const sqlite = new BetterSqlite3(dbPath);
 	try {
 		sqlite.pragma("foreign_keys = OFF");
 		const tables = sqlite
