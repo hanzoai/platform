@@ -16,11 +16,19 @@
  * These handlers are additive — they introduce a new /v1 surface and never touch
  * existing Dokploy routes, services, or data.
  */
-import { timingSafeEqual } from "node:crypto";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { eq } from "drizzle-orm";
 import { db } from "@hanzo/platform/db";
 import { applications } from "@hanzo/platform/db/schema";
+import {
+	methodNotAllowed,
+	requireParams,
+	requireServiceToken as requireServiceTokenFor,
+} from "@/server/v1/http";
+
+// Generic /v1 transport helpers live in server/v1/http.ts — re-exported here so
+// the existing container handlers keep importing them from one place.
+export { methodNotAllowed, requireParams };
 
 /**
  * Namespace where platform-managed workloads actually run. The live workloads
@@ -30,72 +38,19 @@ import { applications } from "@hanzo/platform/db/schema";
 export const PAAS_NAMESPACE = process.env.PAAS_K8S_NAMESPACE || "hanzo";
 
 // ---------------------------------------------------------------------------
-// Auth — shared service token (build-callback.ts pattern)
+// Auth — shared service token (build-callback.ts pattern). The PaaS surface
+// accepts its dedicated PAAS_SERVICE_TOKEN, falling back to the generic
+// platform service token.
 // ---------------------------------------------------------------------------
 
-function safeEqual(a: string, b: string): boolean {
-	const ab = Buffer.from(a);
-	const bb = Buffer.from(b);
-	if (ab.length !== bb.length) return false;
-	return timingSafeEqual(ab, bb);
-}
-
-/**
- * Validate the shared service token. On failure, writes the error response and
- * returns false; returns true when the caller is authenticated.
- */
 export function requireServiceToken(
 	req: NextApiRequest,
 	res: NextApiResponse,
 ): boolean {
-	const expected = process.env.PAAS_SERVICE_TOKEN;
-	if (!expected) {
-		res.status(500).json({
-			message: "PAAS_SERVICE_TOKEN is not configured on the server",
-		});
-		return false;
-	}
-	const header = req.headers.authorization ?? "";
-	const prefix = "Bearer ";
-	const provided = header.startsWith(prefix) ? header.slice(prefix.length) : "";
-	if (!provided || !safeEqual(provided, expected)) {
-		res.status(401).json({ message: "Unauthorized" });
-		return false;
-	}
-	return true;
-}
-
-export function methodNotAllowed(
-	req: NextApiRequest,
-	res: NextApiResponse,
-	allowed: string[],
-): void {
-	res.setHeader("Allow", allowed);
-	res.status(405).json({ message: `Method ${req.method} not allowed` });
-}
-
-/**
- * Boundary validator for dynamic route params. Each named param in `req.query`
- * may be string | string[] | undefined; this narrows them to plain strings and
- * 400s on any missing one. Returns the typed record, or null after writing the
- * error response (caller should `return`).
- */
-export function requireParams<K extends string>(
-	req: NextApiRequest,
-	res: NextApiResponse,
-	names: readonly K[],
-): Record<K, string> | null {
-	const out = {} as Record<K, string>;
-	for (const name of names) {
-		const raw = req.query[name];
-		const value = Array.isArray(raw) ? raw[0] : raw;
-		if (!value) {
-			res.status(400).json({ message: `Missing path parameter: ${name}` });
-			return null;
-		}
-		out[name] = value;
-	}
-	return out;
+	return requireServiceTokenFor(req, res, [
+		"PAAS_SERVICE_TOKEN",
+		"PLATFORM_SERVICE_TOKEN",
+	]);
 }
 
 // ---------------------------------------------------------------------------
