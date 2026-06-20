@@ -12,7 +12,7 @@ on:
 
 jobs:
   anti-slop:
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     steps:
       - uses: peakoss/anti-slop@v0
         with:

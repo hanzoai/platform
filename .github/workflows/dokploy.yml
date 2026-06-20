@@ -10,7 +10,7 @@ env:
 
 jobs:
   docker-amd:
-    runs-on: ubuntu-22.04
+    runs-on: hanzo-build-linux-amd64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,7 +50,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
   docker-arm:
-    runs-on: ubuntu-24.04-arm
+    runs-on: hanzo-build-linux-amd64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -93,7 +93,7 @@ jobs:
 
   combine-manifests:
     needs: [docker-amd, docker-arm]
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -137,7 +137,7 @@ jobs:
   generate-release:
     needs: [combine-manifests]
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     outputs:
       version: ${{ steps.get_version.outputs.version }}
     steps:
@@ -166,7 +166,7 @@ jobs:
   sync-version:
     needs: [generate-release]
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
