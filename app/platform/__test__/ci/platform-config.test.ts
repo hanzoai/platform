@@ -31,9 +31,10 @@ deploy:
 describe("parsePlatformConfig", () => {
 	it("parses a full valid config", () => {
 		const cfg = parsePlatformConfig(VALID);
-		expect(cfg.build.matrix).toHaveLength(2);
-		expect(cfg.build.image).toBe("ghcr.io/hanzoai/zip");
-		expect(cfg.build.push).toBe(true);
+		expect(cfg.builds).toHaveLength(1);
+		expect(cfg.builds[0].matrix).toHaveLength(2);
+		expect(cfg.builds[0].image).toBe("ghcr.io/hanzoai/zip");
+		expect(cfg.builds[0].push).toBe(true);
 		expect(cfg.deploy?.target.name).toBe("zip");
 		expect(cfg.deploy?.target.crd).toBe("Service");
 	});
@@ -45,10 +46,10 @@ build:
     - { os: linux, arch: amd64 }
   image: ghcr.io/hanzoai/base
 `);
-		expect(cfg.build.dockerfile).toBe("./Dockerfile");
-		expect(cfg.build.context).toBe(".");
-		expect(cfg.build.tagPattern).toBe("{{git.sha}}");
-		expect(cfg.build.push).toBe(true);
+		expect(cfg.builds[0].dockerfile).toBe("./Dockerfile");
+		expect(cfg.builds[0].context).toBe(".");
+		expect(cfg.builds[0].tagPattern).toBe("{{git.sha}}");
+		expect(cfg.builds[0].push).toBe(true);
 		expect(cfg.deploy).toBeUndefined();
 	});
 
@@ -143,16 +144,68 @@ build:
 	});
 });
 
+const MULTI_IMAGE = `
+images:
+  - { name: api, context: ./api, repo: ghcr.io/bootnode/bootnode, tag-suffix: api }
+  - { name: web, context: ./web, repo: ghcr.io/bootnode/bootnode, tag-suffix: web }
+test:
+  - { name: api, run: "pytest -q" }
+kms: { path: /deploy, environment: prod }
+`;
+
+describe("images (hanzo.yml multi-image)", () => {
+	it("parses a list of images into builds", () => {
+		const cfg = parsePlatformConfig(MULTI_IMAGE);
+		expect(cfg.builds).toHaveLength(2);
+		expect(cfg.builds[0].name).toBe("api");
+		expect(cfg.builds[0].image).toBe("ghcr.io/bootnode/bootnode");
+		expect(cfg.builds[0].context).toBe("./api");
+		expect(cfg.builds[0].dockerfile).toBe("./api/Dockerfile");
+		expect(cfg.builds[0].tagPattern).toBe("{{git.sha}}-amd64-api");
+		expect(cfg.builds[1].name).toBe("web");
+		// default matrix is linux/amd64
+		expect(cfg.builds[0].matrix).toEqual([{ os: "linux", arch: "amd64" }]);
+		// `test`/`kms` keys are ignored by the platform; deploy via cicd/universe
+		expect(cfg.deploy).toBeUndefined();
+	});
+	it("rejects an empty images list", () => {
+		expect(() => validatePlatformConfig({ images: [] })).toThrow(/non-empty/);
+	});
+	it("rejects a tag in images[].repo", () => {
+		expect(() =>
+			validatePlatformConfig({ images: [{ name: "a", repo: "x/y:v1" }] }),
+		).toThrow(/bare repository/);
+	});
+	it("rejects duplicate image names", () => {
+		expect(() =>
+			validatePlatformConfig({
+				images: [
+					{ name: "api", repo: "x/y" },
+					{ name: "api", repo: "x/z" },
+				],
+			}),
+		).toThrow(/duplicate image name/);
+	});
+	it("treats a Deployment-style deploy (services) as build-only", () => {
+		const cfg = validatePlatformConfig({
+			images: [{ name: "api", repo: "x/y" }],
+			deploy: { on: ["main"], cluster: "c", namespace: "n", services: [] },
+		});
+		expect(cfg.builds).toHaveLength(1);
+		expect(cfg.deploy).toBeUndefined();
+	});
+});
+
 describe("build.dispatch", () => {
 	it("defaults to native when omitted", () => {
 		const cfg = parsePlatformConfig(VALID);
-		expect(cfg.build.dispatch).toBe("native");
+		expect(cfg.builds[0].dispatch).toBe("native");
 	});
 	it("accepts an explicit workflow_dispatch", () => {
 		const cfg = parsePlatformConfig(
 			VALID.replace("push: true", "push: true\n  dispatch: workflow_dispatch"),
 		);
-		expect(cfg.build.dispatch).toBe("workflow_dispatch");
+		expect(cfg.builds[0].dispatch).toBe("workflow_dispatch");
 	});
 	it("rejects an unknown dispatch mode", () => {
 		expect(() =>
