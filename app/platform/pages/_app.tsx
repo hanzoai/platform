@@ -2,17 +2,24 @@ import "@/styles/globals.css";
 
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
-import { Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import Head from "next/head";
 import { ThemeProvider } from "next-themes";
 import NextTopLoader from "nextjs-toploader";
 import type { ReactElement, ReactNode } from "react";
 import { SearchCommand } from "@/components/dashboard/search-command";
-import { WhitelabelingProvider } from "@/components/proprietary/whitelabeling/whitelabeling-provider";
+import { WhitelabelingProvider } from "@/components/enterprise/whitelabeling/whitelabeling-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { api } from "@/utils/api";
 
-const inter = Inter({ subsets: ["latin"] });
+const geistSans = Geist({
+	subsets: ["latin"],
+	variable: "--font-geist",
+});
+const geistMono = Geist_Mono({
+	subsets: ["latin"],
+	variable: "--font-geist-mono",
+});
 
 export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
 	getLayout?: (page: ReactElement) => ReactNode;
@@ -30,14 +37,7 @@ const MyApp = ({
 	const getLayout = Component.getLayout ?? ((page) => page);
 
 	return (
-		<>
-			<style jsx global>
-				{`
-					:root {
-						--font-inter: ${inter.style.fontFamily};
-					}
-				`}
-			</style>
+		<div className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
 			<Head>
 				<title>Hanzo Platform</title>
 			</Head>
@@ -53,7 +53,7 @@ const MyApp = ({
 				<SearchCommand />
 				{getLayout(<Component {...pageProps} />)}
 			</ThemeProvider>
-		</>
+		</div>
 	);
 };
 
