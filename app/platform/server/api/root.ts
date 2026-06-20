@@ -2,6 +2,7 @@ import { createTRPCRouter } from "../api/trpc";
 import { adminRouter } from "./routers/admin";
 // aiRouter migrated to native @zap-proto/web (server/zap/ai-cap.ts).
 import { applicationRouter } from "./routers/application";
+import { appsRouter } from "./routers/apps";
 import { backupRouter } from "./routers/backup";
 import { billingRouter } from "./routers/billing";
 import { buildJobRouter } from "./routers/build-job";
@@ -73,6 +74,7 @@ export const appRouter = createTRPCRouter({
 	// server/zap/doks-cap.ts (server). No tRPC doks router remains.
 	project: projectRouter,
 	application: applicationRouter,
+	apps: appsRouter,
 	backup: backupRouter,
 	buildJob: buildJobRouter,
 	bitbucket: bitbucketRouter,
