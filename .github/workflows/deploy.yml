@@ -48,6 +48,8 @@ jobs:
           docker swarm init
           docker network create --driver overlay platform-network || true
 
+      - name: Native build toolchain
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++ pkg-config libsecret-1-dev
       - run: pnpm install --frozen-lockfile
       - run: pnpm server:build
       - run: pnpm ${{ matrix.check }}
@@ -80,6 +82,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
+          target: platform
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.ORG }}/platform:${{ steps.meta.outputs.suffix }}
@@ -116,7 +119,8 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.cloud
+          file: ./Dockerfile
+          target: cloud
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.ORG }}/platform-cloud:${{ steps.meta.outputs.suffix }}
@@ -152,7 +156,8 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.schedule
+          file: ./Dockerfile
+          target: schedules
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           platforms: linux/amd64
@@ -184,7 +189,8 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.server
+          file: ./Dockerfile
+          target: api
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           platforms: linux/amd64
