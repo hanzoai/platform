@@ -1,6 +1,6 @@
 {
 	"name": "@hanzo/platform-app",
-	"version": "v0.28.5",
+	"version": "v0.28.6",
 	"private": true,
 	"license": "Apache-2.0",
 	"type": "module",
