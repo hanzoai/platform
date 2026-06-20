@@ -48,6 +48,12 @@ jobs:
           docker swarm init
           docker network create --driver overlay platform-network || true
 
+      - name: Ensure native build toolchain (node-gyp needs make/gcc/python)
+        run: |
+          command -v make >/dev/null && command -v cc >/dev/null && exit 0
+          (sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3) \
+            || (apt-get update -qq && apt-get install -y -qq build-essential python3) \
+            || (apk add --no-cache build-base python3) || true
       - run: pnpm install --frozen-lockfile
       - run: pnpm server:build
       - run: pnpm ${{ matrix.check }}
