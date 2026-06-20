@@ -15,7 +15,7 @@ jobs:
   e2e:
     name: Playwright E2E
     timeout-minutes: 20
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     env:
       CI: true
 
