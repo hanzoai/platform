@@ -30,6 +30,22 @@ export function resolveSqlitePath(url: string): string {
 		// the `?? ""` satisfies noUncheckedIndexedAccess without a non-null `!`.
 		return url.slice("file:".length).split("?")[0] ?? "";
 	}
+	// Fail closed on a network-database URL. Platform's datastore is Base
+	// SQLite; a `postgres://`/`mysql://` URL here is a misconfiguration (e.g. a
+	// stale `${db.DATABASE_URL}` injection). Returning it verbatim would make
+	// better-sqlite3 open a file literally named "postgres://host/db" — a junk
+	// path that succeeds, yielding a silent EMPTY database. Throwing turns that
+	// data-loss footgun into a loud boot failure a healthcheck catches.
+	const scheme = url.match(/^([a-z][a-z0-9+.-]*):\/\//i)?.[1];
+	if (scheme) {
+		throw new Error(
+			`Platform datastore is SQLite; refusing a "${scheme}://" URL. ` +
+				`Set PLATFORM_DB_PATH to a file path or ":memory:", or ` +
+				`DATABASE_URL to a "file:" SQLite URL. A network-database URL ` +
+				`would be opened as a literal filename and silently create an ` +
+				`empty database.`,
+		);
+	}
 	return url;
 }
 

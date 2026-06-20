@@ -1,9 +1,11 @@
+import { randomInt } from "node:crypto";
 import { relations, sql } from "drizzle-orm";
 import {
 	AnySQLiteColumn,
 	integer,
 	sqliteTable,
 	text,
+	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
@@ -29,10 +31,13 @@ export const domains = sqliteTable("domain", {
 	}).default("application"),
 	// Postgres `serial` had no SQLite non-PK equivalent. This key only needs
 	// to be a non-null integer that's unique within an app's Traefik router
-	// names; a random 31-bit value satisfies both with no call-site changes.
+	// names. `crypto.randomInt` (not `Math.random`) so the value is not
+	// predictable; uniqueness within an app is enforced by the
+	// `domain_unique_config_key_per_app` index below, not by hoping a 31-bit
+	// random never collides.
 	uniqueConfigKey: integer("uniqueConfigKey")
 		.notNull()
-		.$defaultFn(() => Math.floor(Math.random() * 2_147_483_647)),
+		.$defaultFn(() => randomInt(0, 2_147_483_647)),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
@@ -58,7 +63,18 @@ export const domains = sqliteTable("domain", {
 	middlewares: text("middlewares", { mode: "json" })
 		.$type<string[]>()
 		.default(sql`'[]'`),
-});
+}, (table) => ({
+	// `uniqueConfigKey` becomes a Traefik router name suffix for an
+	// application's domains. Two domains under the same application sharing a
+	// key would clobber each other's router — silently. SQLite treats NULL as
+	// distinct, so compose/preview domains (`applicationId IS NULL`) are not
+	// constrained against each other, which is correct: only application
+	// domains contend for application router names.
+	uniqueConfigKeyPerApp: uniqueIndex("domain_unique_config_key_per_app").on(
+		table.applicationId,
+		table.uniqueConfigKey,
+	),
+}));
 
 export const domainsRelations = relations(domains, ({ one }) => ({
 	application: one(applications, {

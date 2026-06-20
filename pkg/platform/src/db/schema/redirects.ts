@@ -1,5 +1,11 @@
+import { randomInt } from "node:crypto";
 import { relations } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+	integer,
+	sqliteTable,
+	text,
+	uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -15,17 +21,27 @@ export const redirects = sqliteTable("redirect", {
 	permanent: integer("permanent", { mode: "boolean" }).notNull().default(false),
 	// Postgres `serial` had no SQLite non-PK equivalent. This key only needs
 	// to be a non-null integer that's unique within an app's Traefik router
-	// names; a random 31-bit value satisfies both with no call-site changes.
+	// names. `crypto.randomInt` (not `Math.random`) so the value is not
+	// predictable; uniqueness within an app is enforced by the
+	// `redirect_unique_config_key_per_app` index below.
 	uniqueConfigKey: integer("uniqueConfigKey")
 		.notNull()
-		.$defaultFn(() => Math.floor(Math.random() * 2_147_483_647)),
+		.$defaultFn(() => randomInt(0, 2_147_483_647)),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
 	applicationId: text("applicationId")
 		.notNull()
 		.references(() => applications.applicationId, { onDelete: "cascade" }),
-});
+}, (table) => ({
+	// Same router-name contention as `domain`: a redirect's `uniqueConfigKey`
+	// names its Traefik router within the application. `applicationId` is
+	// NOT NULL here, so every redirect is constrained.
+	uniqueConfigKeyPerApp: uniqueIndex("redirect_unique_config_key_per_app").on(
+		table.applicationId,
+		table.uniqueConfigKey,
+	),
+}));
 
 export const redirectRelations = relations(redirects, ({ one }) => ({
 	application: one(applications, {
