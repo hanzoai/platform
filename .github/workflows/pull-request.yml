@@ -43,6 +43,8 @@ jobs:
           docker network create --driver overlay platform-network || true
           echo "✅ Docker Swarm initialized"
       
+      - name: Native build toolchain
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++ pkg-config libsecret-1-dev
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter=@hanzo/platform build
       - run: pnpm typecheck
@@ -56,6 +58,8 @@ jobs:
         with:
           node-version: 20.16.0
           cache: "pnpm"
+      - name: Native build toolchain
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++ pkg-config libsecret-1-dev
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter=@hanzo/platform build
       - run: pnpm test
@@ -69,6 +73,8 @@ jobs:
         with:
           node-version: 20.16.0
           cache: "pnpm"
+      - name: Native build toolchain
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++ pkg-config libsecret-1-dev
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter=@hanzo/platform build
       - run: pnpm build
