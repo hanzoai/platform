@@ -1,13 +1,10 @@
 import { relations } from "drizzle-orm";
 import {
-	type AnyPgColumn,
-	boolean,
+	AnySQLiteColumn,
 	integer,
-	jsonb,
-	pgEnum,
-	pgTable,
+	sqliteTable,
 	text,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -21,18 +18,8 @@ import { mongo } from "./mongo";
 import { mysql } from "./mysql";
 import { postgres } from "./postgres";
 import { user } from "./user";
-export const databaseType = pgEnum("databaseType", [
-	"postgres",
-	"mariadb",
-	"mysql",
-	"mongo",
-	"web-server",
-	"libsql",
-]);
 
-export const backupType = pgEnum("backupType", ["database", "compose"]);
-
-export const backups = pgTable("backup", {
+export const backups = sqliteTable("backup", {
 	backupId: text("backupId")
 		.notNull()
 		.primaryKey()
@@ -42,7 +29,7 @@ export const backups = pgTable("backup", {
 		.$defaultFn(() => generateAppName("backup"))
 		.unique(),
 	schedule: text("schedule").notNull(),
-	enabled: boolean("enabled"),
+	enabled: integer("enabled", { mode: "boolean" }),
 	database: text("database").notNull(),
 	prefix: text("prefix").notNull(),
 	serviceName: text("serviceName"),
@@ -50,38 +37,45 @@ export const backups = pgTable("backup", {
 		.notNull()
 		.references(() => destinations.destinationId, { onDelete: "cascade" }),
 	keepLatestCount: integer("keepLatestCount"),
-	backupType: backupType("backupType").notNull().default("database"),
-	databaseType: databaseType("databaseType").notNull(),
+	backupType: text("backupType", { enum: ["database", "compose"] })
+		.notNull()
+		.default("database"),
+	databaseType: text("databaseType", {
+		enum: ["postgres", "mariadb", "mysql", "mongo", "web-server", "libsql"],
+	}).notNull(),
 	composeId: text("composeId").references(
-		(): AnyPgColumn => compose.composeId,
+		(): AnySQLiteColumn => compose.composeId,
 		{
 			onDelete: "cascade",
 		},
 	),
 	postgresId: text("postgresId").references(
-		(): AnyPgColumn => postgres.postgresId,
+		(): AnySQLiteColumn => postgres.postgresId,
 		{
 			onDelete: "cascade",
 		},
 	),
 	mariadbId: text("mariadbId").references(
-		(): AnyPgColumn => mariadb.mariadbId,
+		(): AnySQLiteColumn => mariadb.mariadbId,
 		{
 			onDelete: "cascade",
 		},
 	),
-	mysqlId: text("mysqlId").references((): AnyPgColumn => mysql.mysqlId, {
+	mysqlId: text("mysqlId").references((): AnySQLiteColumn => mysql.mysqlId, {
 		onDelete: "cascade",
 	}),
-	mongoId: text("mongoId").references((): AnyPgColumn => mongo.mongoId, {
+	mongoId: text("mongoId").references((): AnySQLiteColumn => mongo.mongoId, {
 		onDelete: "cascade",
 	}),
-	libsqlId: text("libsqlId").references((): AnyPgColumn => libsql.libsqlId, {
-		onDelete: "cascade",
-	}),
+	libsqlId: text("libsqlId").references(
+		(): AnySQLiteColumn => libsql.libsqlId,
+		{
+			onDelete: "cascade",
+		},
+	),
 	userId: text("userId").references(() => user.id),
 	// Only for compose backups
-	metadata: jsonb("metadata").$type<
+	metadata: text("metadata", { mode: "json" }).$type<
 		| {
 				postgres?: {
 					databaseUser: string;
