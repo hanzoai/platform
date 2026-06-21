@@ -62,7 +62,7 @@ export const notificationRouter = createTRPCRouter({
 						.select()
 						.from(server)
 						.where(
-							sql`${server.metricsConfig}::jsonb -> 'server' ->> 'token' = ${input.Token}`,
+							sql`json_extract(${server.metricsConfig}, '$.server.token') = ${input.Token}`,
 						);
 
 					if (!result?.[0]?.organizationId) {
