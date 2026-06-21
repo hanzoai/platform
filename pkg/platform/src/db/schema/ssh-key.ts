@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text } from "drizzle-orm/pg-core";
+import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { applications } from "./application";
 import { compose } from "./compose";
 import { server } from "./server";
 
-export const sshKeys = pgTable("ssh-key", {
+export const sshKeys = sqliteTable("ssh-key", {
 	sshKeyId: text("sshKeyId")
 		.notNull()
 		.primaryKey()
@@ -65,10 +65,9 @@ export const apiRemoveSshKey = createSchema
 	})
 	.required();
 
-export const apiUpdateSshKey = z
-	.object({
-		name: z.string().optional(),
-		description: z.string().optional(),
-		lastUsedAt: z.string().optional(),
-		sshKeyId: z.string().min(1),
-	});
+export const apiUpdateSshKey = z.object({
+	name: z.string().optional(),
+	description: z.string().optional(),
+	lastUsedAt: z.string().optional(),
+	sshKeyId: z.string().min(1),
+});

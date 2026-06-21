@@ -1,22 +1,21 @@
 import { relations } from "drizzle-orm";
-import { integer, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { applications } from "./application";
 
-export const protocolType = pgEnum("protocolType", ["tcp", "udp"]);
-export const publishModeType = pgEnum("publishModeType", ["ingress", "host"]);
-
-export const ports = pgTable("port", {
+export const ports = sqliteTable("port", {
 	portId: text("portId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	publishedPort: integer("publishedPort").notNull(),
-	publishMode: publishModeType("publishMode").notNull().default("host"),
+	publishMode: text("publishMode", { enum: ["ingress", "host"] })
+		.notNull()
+		.default("host"),
 	targetPort: integer("targetPort").notNull(),
-	protocol: protocolType("protocol").notNull(),
+	protocol: text("protocol", { enum: ["tcp", "udp"] }).notNull(),
 
 	applicationId: text("applicationId")
 		.notNull()

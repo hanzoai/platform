@@ -1,38 +1,7 @@
-import { dbUrl } from "@hanzo/platform/db/constants";
-import * as schema from "@hanzo/platform/db/schema";
-import { and, eq } from "drizzle-orm";
-import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-
-export { and, eq };
-
-type Database = PostgresJsDatabase<typeof schema>;
 /**
- * Evita problemas de redeclaración global en monorepos.
- * No usamos `declare global`.
+ * The platform app shares one SQLite connection with the @hanzo/platform
+ * package — constructed once, with the right PRAGMAs (foreign_keys, WAL,
+ * busy_timeout), in `pkg/platform/src/db/index.ts`. Re-export it here so
+ * both `@/server/db` and `@hanzo/platform/db` resolve to the same instance.
  */
-const globalForDb = globalThis as unknown as {
-	db?: Database;
-};
-
-let dbConnection: Database;
-
-if (process.env.NODE_ENV === "production") {
-	// En producción no usamos global cache
-	dbConnection = drizzle(postgres(dbUrl), {
-		schema,
-	});
-} else {
-	// En desarrollo reutilizamos conexión para evitar múltiples conexiones
-	if (!globalForDb.db) {
-		globalForDb.db = drizzle(postgres(dbUrl), {
-			schema,
-		});
-	}
-
-	dbConnection = globalForDb.db;
-}
-
-export const db: Database = dbConnection;
-
-export { dbUrl };
+export { and, db, dbUrl, eq } from "@hanzo/platform/db";

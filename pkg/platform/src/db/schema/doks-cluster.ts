@@ -1,52 +1,51 @@
-import { relations } from "drizzle-orm";
-import {
-	boolean,
-	integer,
-	jsonb,
-	pgEnum,
-	pgTable,
-	real,
-	text,
-} from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { organization } from "./account";
 
-export const doksClusterStatus = pgEnum("doksClusterStatus", [
-	"pending",
-	"provisioning",
-	"running",
-	"error",
-	"deleting",
-	"deleted",
-]);
-
-export const doksCluster = pgTable("doks_cluster", {
+export const doksCluster = sqliteTable("doks_cluster", {
 	doksClusterId: text("doksClusterId")
+
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	name: text("name").notNull(),
 	doClusterId: text("doClusterId"),
 	region: text("region").notNull().default("sfo3"),
-	status: doksClusterStatus("status").notNull().default("pending"),
+	status: text("status", {
+		enum: [
+			"pending",
+			"provisioning",
+			"running",
+			"error",
+			"deleting",
+			"deleted",
+		],
+	})
+		.notNull()
+		.default("pending"),
 	endpoint: text("endpoint"),
 	k8sVersion: text("k8sVersion").default("1.34.1-do.3"),
-	ha: boolean("ha").notNull().default(false),
-	autoUpgrade: boolean("autoUpgrade").notNull().default(true),
-	surgeUpgrade: boolean("surgeUpgrade").notNull().default(true),
+	ha: integer("ha", { mode: "boolean" }).notNull().default(false),
+	autoUpgrade: integer("autoUpgrade", { mode: "boolean" })
+		.notNull()
+		.default(true),
+	surgeUpgrade: integer("surgeUpgrade", { mode: "boolean" })
+		.notNull()
+		.default(true),
 	organizationId: text("organizationId")
 		.notNull()
 		.references(() => organization.id, { onDelete: "cascade" }),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
-	tags: text("tags")
-		.array()
+	tags: text("tags", { mode: "json" })
+		.$type<string[]>()
 		.notNull()
-		.default([]),
-	maintenancePolicy: jsonb("maintenancePolicy")
+		.default(sql`'[]'`),
+	maintenancePolicy: text("maintenancePolicy", { mode: "json" })
 		.$type<{ startTime: string; day: string }>()
 		.default({ startTime: "04:00", day: "sunday" }),
 });
@@ -59,8 +58,9 @@ export const doksClusterRelations = relations(doksCluster, ({ one, many }) => ({
 	nodePools: many(doksNodePool),
 }));
 
-export const doksNodePool = pgTable("doks_node_pool", {
+export const doksNodePool = sqliteTable("doks_node_pool", {
 	poolId: text("poolId")
+
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
@@ -70,14 +70,14 @@ export const doksNodePool = pgTable("doks_node_pool", {
 	count: integer("count").notNull().default(2),
 	minNodes: integer("minNodes").notNull().default(1),
 	maxNodes: integer("maxNodes").notNull().default(6),
-	autoScale: boolean("autoScale").notNull().default(true),
+	autoScale: integer("autoScale", { mode: "boolean" }).notNull().default(true),
 	doksClusterId: text("doksClusterId")
 		.notNull()
 		.references(() => doksCluster.doksClusterId, { onDelete: "cascade" }),
-	tags: text("tags")
-		.array()
+	tags: text("tags", { mode: "json" })
+		.$type<string[]>()
 		.notNull()
-		.default([]),
+		.default(sql`'[]'`),
 });
 
 export const doksNodePoolRelations = relations(doksNodePool, ({ one }) => ({

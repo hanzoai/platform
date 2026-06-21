@@ -1,13 +1,5 @@
 import { relations } from "drizzle-orm";
-import {
-	bigint,
-	boolean,
-	integer,
-	json,
-	pgEnum,
-	pgTable,
-	text,
-} from "drizzle-orm/pg-core";
+import { blob, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -27,8 +19,6 @@ import { registry } from "./registry";
 import { security } from "./security";
 import { server } from "./server";
 import {
-	applicationStatus,
-	certificateType,
 	type EndpointSpecSwarm,
 	EndpointSpecSwarmSchema,
 	type HealthCheckSwarm,
@@ -43,7 +33,6 @@ import {
 	RestartPolicySwarmSchema,
 	type ServiceModeSwarm,
 	ServiceModeSwarmSchema,
-	triggerType,
 	type UlimitsSwarm,
 	UlimitsSwarmSchema,
 	type UpdateConfigSwarm,
@@ -51,36 +40,13 @@ import {
 } from "./shared";
 import { sshKeys } from "./ssh-key";
 import { APP_NAME_MESSAGE, APP_NAME_REGEX, generateAppName } from "./utils";
-export const sourceType = pgEnum("sourceType", [
-	"docker",
-	"git",
-	"github",
-	"gitlab",
-	"bitbucket",
-	"gitea",
-	"drop",
-]);
-
-export const buildType = pgEnum("buildType", [
-	"dockerfile",
-	"heroku_buildpacks",
-	"paketo_buildpacks",
-	"nixpacks",
-	"static",
-	"railpack",
-]);
 
 // Deploy target: where the built artifact ends up. Default 'local'
 // preserves Dokploy's existing Docker / Swarm behavior; 'cloud'
 // routes through Hanzo Cloud; 'k8s' invokes the Agnost-port at
 // services/k8s for direct Kubernetes deploys.
-export const deployTarget = pgEnum("deployTarget", [
-	"local",
-	"cloud",
-	"k8s",
-]);
 
-export const applications = pgTable("application", {
+export const applications = sqliteTable("application", {
 	applicationId: text("applicationId")
 		.notNull()
 		.primaryKey()
@@ -93,27 +59,32 @@ export const applications = pgTable("application", {
 	description: text("description"),
 	env: text("env"),
 	previewEnv: text("previewEnv"),
-	watchPaths: text("watchPaths").array(),
+	watchPaths: text("watchPaths", { mode: "json" }).$type<string[]>(),
 	previewBuildArgs: text("previewBuildArgs"),
 	previewBuildSecrets: text("previewBuildSecrets"),
-	previewLabels: text("previewLabels").array(),
+	previewLabels: text("previewLabels", { mode: "json" }).$type<string[]>(),
 	previewWildcard: text("previewWildcard"),
 	previewPort: integer("previewPort").default(3000),
-	previewHttps: boolean("previewHttps").notNull().default(false),
+	previewHttps: integer("previewHttps", { mode: "boolean" })
+		.notNull()
+		.default(false),
 	previewPath: text("previewPath").default("/"),
-	previewCertificateType: certificateType("certificateType")
+	previewCertificateType: text("certificateType", {
+		enum: ["letsencrypt", "none", "custom"],
+	})
 		.notNull()
 		.default("none"),
 	previewCustomCertResolver: text("previewCustomCertResolver"),
 	previewLimit: integer("previewLimit").default(3),
-	isPreviewDeploymentsActive: boolean("isPreviewDeploymentsActive").default(
-		false,
-	),
+	isPreviewDeploymentsActive: integer("isPreviewDeploymentsActive", {
+		mode: "boolean",
+	}).default(false),
 	// Security: Require collaborator permissions for preview deployments
-	previewRequireCollaboratorPermissions: boolean(
+	previewRequireCollaboratorPermissions: integer(
 		"previewRequireCollaboratorPermissions",
+		{ mode: "boolean" },
 	).default(true),
-	rollbackActive: boolean("rollbackActive").default(false),
+	rollbackActive: integer("rollbackActive", { mode: "boolean" }).default(false),
 	buildArgs: text("buildArgs"),
 	buildSecrets: text("buildSecrets"),
 	memoryReservation: text("memoryReservation"),
@@ -121,21 +92,25 @@ export const applications = pgTable("application", {
 	cpuReservation: text("cpuReservation"),
 	cpuLimit: text("cpuLimit"),
 	title: text("title"),
-	enabled: boolean("enabled"),
+	enabled: integer("enabled", { mode: "boolean" }),
 	subtitle: text("subtitle"),
 	command: text("command"),
-	args: text("args").array(),
+	args: text("args", { mode: "json" }).$type<string[]>(),
 	icon: text("icon"),
 	refreshToken: text("refreshToken").$defaultFn(() => nanoid()),
-	sourceType: sourceType("sourceType").notNull().default("github"),
-	cleanCache: boolean("cleanCache").default(false),
+	sourceType: text("sourceType", {
+		enum: ["docker", "git", "github", "gitlab", "bitbucket", "gitea", "drop"],
+	})
+		.notNull()
+		.default("github"),
+	cleanCache: integer("cleanCache", { mode: "boolean" }).default(false),
 	// Github
 	repository: text("repository"),
 	owner: text("owner"),
 	branch: text("branch"),
 	buildPath: text("buildPath").default("/"),
-	triggerType: triggerType("triggerType").default("push"),
-	autoDeploy: boolean("autoDeploy").$defaultFn(() => true),
+	triggerType: text("triggerType", { enum: ["push", "tag"] }).default("push"),
+	autoDeploy: integer("autoDeploy", { mode: "boolean" }).$defaultFn(() => true),
 	// Gitlab
 	gitlabProjectId: integer("gitlabProjectId"),
 	gitlabRepository: text("gitlabRepository"),
@@ -169,32 +144,61 @@ export const applications = pgTable("application", {
 			onDelete: "set null",
 		},
 	),
-	enableSubmodules: boolean("enableSubmodules").notNull().default(false),
+	enableSubmodules: integer("enableSubmodules", { mode: "boolean" })
+		.notNull()
+		.default(false),
 	dockerfile: text("dockerfile").default("Dockerfile"),
 	dockerContextPath: text("dockerContextPath"),
 	dockerBuildStage: text("dockerBuildStage"),
 	// Drop
 	dropBuildPath: text("dropBuildPath"),
 	// Docker swarm json
-	healthCheckSwarm: json("healthCheckSwarm").$type<HealthCheckSwarm>(),
-	restartPolicySwarm: json("restartPolicySwarm").$type<RestartPolicySwarm>(),
-	placementSwarm: json("placementSwarm").$type<PlacementSwarm>(),
-	updateConfigSwarm: json("updateConfigSwarm").$type<UpdateConfigSwarm>(),
-	rollbackConfigSwarm: json("rollbackConfigSwarm").$type<UpdateConfigSwarm>(),
-	modeSwarm: json("modeSwarm").$type<ServiceModeSwarm>(),
-	labelsSwarm: json("labelsSwarm").$type<LabelsSwarm>(),
-	networkSwarm: json("networkSwarm").$type<NetworkSwarm[]>(),
-	stopGracePeriodSwarm: bigint("stopGracePeriodSwarm", { mode: "bigint" }),
-	endpointSpecSwarm: json("endpointSpecSwarm").$type<EndpointSpecSwarm>(),
-	ulimitsSwarm: json("ulimitsSwarm").$type<UlimitsSwarm>(),
+	healthCheckSwarm: text("healthCheckSwarm", {
+		mode: "json",
+	}).$type<HealthCheckSwarm>(),
+	restartPolicySwarm: text("restartPolicySwarm", {
+		mode: "json",
+	}).$type<RestartPolicySwarm>(),
+	placementSwarm: text("placementSwarm", {
+		mode: "json",
+	}).$type<PlacementSwarm>(),
+	updateConfigSwarm: text("updateConfigSwarm", {
+		mode: "json",
+	}).$type<UpdateConfigSwarm>(),
+	rollbackConfigSwarm: text("rollbackConfigSwarm", {
+		mode: "json",
+	}).$type<UpdateConfigSwarm>(),
+	modeSwarm: text("modeSwarm", { mode: "json" }).$type<ServiceModeSwarm>(),
+	labelsSwarm: text("labelsSwarm", { mode: "json" }).$type<LabelsSwarm>(),
+	networkSwarm: text("networkSwarm", { mode: "json" }).$type<NetworkSwarm[]>(),
+	stopGracePeriodSwarm: blob("stopGracePeriodSwarm", { mode: "bigint" }),
+	endpointSpecSwarm: text("endpointSpecSwarm", {
+		mode: "json",
+	}).$type<EndpointSpecSwarm>(),
+	ulimitsSwarm: text("ulimitsSwarm", { mode: "json" }).$type<UlimitsSwarm>(),
 	//
 	replicas: integer("replicas").default(1).notNull(),
-	applicationStatus: applicationStatus("applicationStatus")
+	applicationStatus: text("applicationStatus", {
+		enum: ["idle", "running", "done", "error"],
+	})
 		.notNull()
 		.default("idle"),
-	buildType: buildType("buildType").notNull().default("nixpacks"),
+	buildType: text("buildType", {
+		enum: [
+			"dockerfile",
+			"heroku_buildpacks",
+			"paketo_buildpacks",
+			"nixpacks",
+			"static",
+			"railpack",
+		],
+	})
+		.notNull()
+		.default("nixpacks"),
 	// Deploy target — Agnost K8s graft (PR 3/5).
-	deployTarget: deployTarget("deployTarget").notNull().default("local"),
+	deployTarget: text("deployTarget", { enum: ["local", "cloud", "k8s"] })
+		.notNull()
+		.default("local"),
 	// K8s-only: target cluster + namespace. When deployTarget !== 'k8s',
 	// these are ignored. k8sClusterId references the existing clusters
 	// table by string id (no FK to keep migration order forgiving).
@@ -203,8 +207,10 @@ export const applications = pgTable("application", {
 	railpackVersion: text("railpackVersion").default("0.15.4"),
 	herokuVersion: text("herokuVersion").default("24"),
 	publishDirectory: text("publishDirectory"),
-	isStaticSpa: boolean("isStaticSpa"),
-	createEnvFile: boolean("createEnvFile").notNull().default(true),
+	isStaticSpa: integer("isStaticSpa", { mode: "boolean" }),
+	createEnvFile: integer("createEnvFile", { mode: "boolean" })
+		.notNull()
+		.default(true),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),

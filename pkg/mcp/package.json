@@ -21,9 +21,9 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.{ts,js,json}",
     "format:check": "prettier --check src/**/*.{ts,js,json}",
-    "type-check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf build",
-    "precommit": "npm run lint && npm run format:check && npm run type-check",
+    "precommit": "npm run lint && npm run format:check && npm run typecheck",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

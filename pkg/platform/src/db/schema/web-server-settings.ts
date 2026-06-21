@@ -1,26 +1,31 @@
 import { relations } from "drizzle-orm";
-import { boolean, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { certificateType } from "./shared";
 
-export const webServerSettings = pgTable("webServerSettings", {
+export const webServerSettings = sqliteTable("webServerSettings", {
 	id: text("id")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	// Web Server Configuration
 	serverIp: text("serverIp"),
-	certificateType: certificateType("certificateType").notNull().default("none"),
-	https: boolean("https").notNull().default(false),
+	certificateType: text("certificateType", {
+		enum: ["letsencrypt", "none", "custom"],
+	})
+		.notNull()
+		.default("none"),
+	https: integer("https", { mode: "boolean" }).notNull().default(false),
 	host: text("host"),
 	letsEncryptEmail: text("letsEncryptEmail"),
 	sshPrivateKey: text("sshPrivateKey"),
-	enableDockerCleanup: boolean("enableDockerCleanup").notNull().default(true),
+	enableDockerCleanup: integer("enableDockerCleanup", { mode: "boolean" })
+		.notNull()
+		.default(true),
 	logCleanupCron: text("logCleanupCron").default("0 0 * * *"),
 	// Metrics Configuration
-	metricsConfig: jsonb("metricsConfig")
+	metricsConfig: text("metricsConfig", { mode: "json" })
 		.$type<{
 			server: {
 				type: "Hanzo Platform" | "Remote";
@@ -66,7 +71,7 @@ export const webServerSettings = pgTable("webServerSettings", {
 				},
 			},
 		}),
-	whitelabelingConfig: jsonb("whitelabelingConfig")
+	whitelabelingConfig: text("whitelabelingConfig", { mode: "json" })
 		.$type<{
 			appName: string | null;
 			appDescription: string | null;
@@ -95,20 +100,30 @@ export const webServerSettings = pgTable("webServerSettings", {
 			metaTitle: null,
 			footerText: null,
 		}),
-	remoteServersOnly: boolean("remoteServersOnly").notNull().default(false),
-	enforceSSO: boolean("enforceSSO").notNull().default(false),
+	remoteServersOnly: integer("remoteServersOnly", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	enforceSSO: integer("enforceSSO", { mode: "boolean" })
+		.notNull()
+		.default(false),
 	// Cache Cleanup Configuration
-	cleanupCacheApplications: boolean("cleanupCacheApplications")
+	cleanupCacheApplications: integer("cleanupCacheApplications", {
+		mode: "boolean",
+	})
 		.notNull()
 		.default(false),
-	cleanupCacheOnPreviews: boolean("cleanupCacheOnPreviews")
+	cleanupCacheOnPreviews: integer("cleanupCacheOnPreviews", { mode: "boolean" })
 		.notNull()
 		.default(false),
-	cleanupCacheOnCompose: boolean("cleanupCacheOnCompose")
+	cleanupCacheOnCompose: integer("cleanupCacheOnCompose", { mode: "boolean" })
 		.notNull()
 		.default(false),
-	createdAt: timestamp("created_at").defaultNow(),
-	updatedAt: timestamp("updated_at").notNull().defaultNow(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(
+		() => new Date(),
+	),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		.notNull()
+		.$defaultFn(() => new Date()),
 });
 
 export const webServerSettingsRelations = relations(

@@ -30,7 +30,6 @@ try {
 			entryPoints: {
 				server: "server/server.ts",
 				migration: "migration.ts",
-				"wait-for-postgres": "wait-for-postgres.ts",
 				"reset-password": "reset-password.ts",
 				"reset-2fa": "reset-2fa.ts",
 				"migrate-auth-secret": "scripts/migrate-auth-secret.ts",

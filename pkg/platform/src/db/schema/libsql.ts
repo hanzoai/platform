@@ -1,12 +1,5 @@
 import { relations } from "drizzle-orm";
-import {
-	bigint,
-	boolean,
-	integer,
-	json,
-	pgTable,
-	text,
-} from "drizzle-orm/pg-core";
+import { blob, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -15,7 +8,6 @@ import { environments } from "./environment";
 import { mounts } from "./mount";
 import { server } from "./server";
 import {
-	applicationStatus,
 	type EndpointSpecSwarm,
 	EndpointSpecSwarmSchema,
 	type HealthCheckSwarm,
@@ -30,7 +22,6 @@ import {
 	RestartPolicySwarmSchema,
 	type ServiceModeSwarm,
 	ServiceModeSwarmSchema,
-	sqldNode,
 	type UpdateConfigSwarm,
 	UpdateConfigSwarmSchema,
 } from "./shared";
@@ -40,7 +31,7 @@ import {
 	generateAppName,
 } from "./utils";
 
-export const libsql = pgTable("libsql", {
+export const libsql = sqliteTable("libsql", {
 	libsqlId: text("libsqlId")
 		.notNull()
 		.primaryKey()
@@ -53,9 +44,13 @@ export const libsql = pgTable("libsql", {
 	description: text("description"),
 	databaseUser: text("databaseUser").notNull(),
 	databasePassword: text("databasePassword").notNull(),
-	sqldNode: sqldNode("sqldNode").notNull().default("primary"),
+	sqldNode: text("sqldNode", { enum: ["primary", "replica"] })
+		.notNull()
+		.default("primary"),
 	sqldPrimaryUrl: text("sqldPrimaryUrl"),
-	enableNamespaces: boolean("enableNamespaces").notNull().default(false),
+	enableNamespaces: integer("enableNamespaces", { mode: "boolean" })
+		.notNull()
+		.default(false),
 	dockerImage: text("dockerImage").notNull(),
 	command: text("command"),
 	env: text("env"),
@@ -68,19 +63,33 @@ export const libsql = pgTable("libsql", {
 	externalPort: integer("externalPort"),
 	externalGRPCPort: integer("externalGRPCPort"),
 	externalAdminPort: integer("externalAdminPort"),
-	applicationStatus: applicationStatus("applicationStatus")
+	applicationStatus: text("applicationStatus", {
+		enum: ["idle", "running", "done", "error"],
+	})
 		.notNull()
 		.default("idle"),
-	healthCheckSwarm: json("healthCheckSwarm").$type<HealthCheckSwarm>(),
-	restartPolicySwarm: json("restartPolicySwarm").$type<RestartPolicySwarm>(),
-	placementSwarm: json("placementSwarm").$type<PlacementSwarm>(),
-	updateConfigSwarm: json("updateConfigSwarm").$type<UpdateConfigSwarm>(),
-	rollbackConfigSwarm: json("rollbackConfigSwarm").$type<UpdateConfigSwarm>(),
-	modeSwarm: json("modeSwarm").$type<ServiceModeSwarm>(),
-	labelsSwarm: json("labelsSwarm").$type<LabelsSwarm>(),
-	networkSwarm: json("networkSwarm").$type<NetworkSwarm[]>(),
-	stopGracePeriodSwarm: bigint("stopGracePeriodSwarm", { mode: "bigint" }),
-	endpointSpecSwarm: json("endpointSpecSwarm").$type<EndpointSpecSwarm>(),
+	healthCheckSwarm: text("healthCheckSwarm", {
+		mode: "json",
+	}).$type<HealthCheckSwarm>(),
+	restartPolicySwarm: text("restartPolicySwarm", {
+		mode: "json",
+	}).$type<RestartPolicySwarm>(),
+	placementSwarm: text("placementSwarm", {
+		mode: "json",
+	}).$type<PlacementSwarm>(),
+	updateConfigSwarm: text("updateConfigSwarm", {
+		mode: "json",
+	}).$type<UpdateConfigSwarm>(),
+	rollbackConfigSwarm: text("rollbackConfigSwarm", {
+		mode: "json",
+	}).$type<UpdateConfigSwarm>(),
+	modeSwarm: text("modeSwarm", { mode: "json" }).$type<ServiceModeSwarm>(),
+	labelsSwarm: text("labelsSwarm", { mode: "json" }).$type<LabelsSwarm>(),
+	networkSwarm: text("networkSwarm", { mode: "json" }).$type<NetworkSwarm[]>(),
+	stopGracePeriodSwarm: blob("stopGracePeriodSwarm", { mode: "bigint" }),
+	endpointSpecSwarm: text("endpointSpecSwarm", {
+		mode: "json",
+	}).$type<EndpointSpecSwarm>(),
 	replicas: integer("replicas").default(1).notNull(),
 	createdAt: text("createdAt")
 		.notNull()
@@ -116,7 +125,7 @@ const createSchema = createInsertSchema(libsql, {
 	databasePassword: z.string().regex(DATABASE_PASSWORD_REGEX, {
 		message: DATABASE_PASSWORD_MESSAGE,
 	}),
-	sqldNode: z.enum(sqldNode.enumValues),
+	sqldNode: z.enum(["primary", "replica"] as const),
 	sqldPrimaryUrl: z.string().nullable(),
 	enableNamespaces: z.boolean().default(false),
 	dockerImage: z
