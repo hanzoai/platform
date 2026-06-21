@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import {
 import { organization } from "./account";
 import { backups } from "./backups";
 
-export const destinations = pgTable("destination", {
+export const destinations = sqliteTable("destination", {
 	destinationId: text("destinationId")
 		.notNull()
 		.primaryKey()
@@ -22,11 +22,13 @@ export const destinations = pgTable("destination", {
 	bucket: text("bucket").notNull(),
 	region: text("region").notNull(),
 	endpoint: text("endpoint").notNull(),
-	additionalFlags: text("additionalFlags").array(),
+	additionalFlags: text("additionalFlags", { mode: "json" }).$type<string[]>(),
 	organizationId: text("organizationId")
 		.notNull()
 		.references(() => organization.id, { onDelete: "cascade" }),
-	createdAt: timestamp("createdAt").notNull().defaultNow(),
+	createdAt: integer("createdAt", { mode: "timestamp_ms" })
+		.notNull()
+		.$defaultFn(() => new Date()),
 });
 
 export const destinationsRelations = relations(

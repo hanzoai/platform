@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -24,15 +24,13 @@ export const deployProviderType = [
 ] as const;
 export type DeployProviderType = (typeof deployProviderType)[number];
 
-export const deployProvider = pgTable("deploy_provider", {
+export const deployProvider = sqliteTable("deploy_provider", {
 	deployProviderId: text("deployProviderId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	name: text("name").notNull(),
-	providerType: text("providerType")
-		.notNull()
-		.$type<DeployProviderType>(),
+	providerType: text("providerType").notNull().$type<DeployProviderType>(),
 
 	// Cloudflare: apiToken, accountId
 	// Vercel: token, teamId
@@ -44,25 +42,26 @@ export const deployProvider = pgTable("deploy_provider", {
 	// Extra credentials stored as JSON for provider-specific fields
 	credentialsJson: text("credentialsJson"),
 
-	isDefault: boolean("isDefault").notNull().default(false),
+	isDefault: integer("isDefault", { mode: "boolean" }).notNull().default(false),
 
 	organizationId: text("organizationId")
 		.notNull()
 		.references(() => organization.id, { onDelete: "cascade" }),
 
-	createdAt: timestamp("createdAt").notNull().defaultNow(),
-	updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+	createdAt: integer("createdAt", { mode: "timestamp_ms" })
+		.notNull()
+		.$defaultFn(() => new Date()),
+	updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
+		.notNull()
+		.$defaultFn(() => new Date()),
 });
 
-export const deployProviderRelations = relations(
-	deployProvider,
-	({ one }) => ({
-		organization: one(organization, {
-			fields: [deployProvider.organizationId],
-			references: [organization.id],
-		}),
+export const deployProviderRelations = relations(deployProvider, ({ one }) => ({
+	organization: one(organization, {
+		fields: [deployProvider.organizationId],
+		references: [organization.id],
 	}),
-);
+}));
 
 // ---------------------------------------------------------------------------
 // Zod schemas

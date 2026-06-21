@@ -33,7 +33,7 @@ import {
 import { db } from "@hanzo/platform/db";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import {
 	createTRPCRouter,
@@ -535,7 +535,7 @@ export const projectRouter = createTRPCRouter({
 						sql`, `,
 					)})`;
 
-		const applyFilter = (col: AnyPgColumn) =>
+		const applyFilter = (col: AnySQLiteColumn) =>
 			isPrivileged ? undefined : buildServiceFilter(col, accessedServices);
 
 		const rows = await db.query.projects.findMany({
@@ -1219,7 +1219,7 @@ export const projectRouter = createTRPCRouter({
 });
 
 function buildServiceFilter(
-	fieldName: AnyPgColumn,
+	fieldName: AnySQLiteColumn,
 	accessedServices: string[],
 ) {
 	return accessedServices.length === 0
