@@ -37,8 +37,16 @@ export async function getServerSideProps(ctx: GetServerSidePropsContext) {
 
 	// The control-plane board shows every service x env for the authenticated
 	// operator; org/env/health filtering is available on /v1/apps for
-	// programmatic callers.
-	const data = await listApps({});
+	// programmatic callers. Wrapped like the REST handlers (pages/api/v1/apps.ts)
+	// so a transient DB blip — or the apps table not yet migrated on a fresh
+	// image — renders an empty board (which AppsBoard handles) instead of a 500.
+	let data: AppsListResponse;
+	try {
+		data = await listApps({});
+	} catch (err) {
+		console.error("[/dashboard/apps] listApps failed", err);
+		data = { apps: [], summary: { total: 0, byDrift: { ok: 0, yellow: 0, red: 0 } } };
+	}
 
 	return {
 		// Plain JSON (no Date instances) — the service serializes timestamps to
