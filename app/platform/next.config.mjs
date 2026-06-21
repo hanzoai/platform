@@ -15,7 +15,14 @@ const nextConfig = {
 		// The Next.js pages router physically serves these handlers under /api/v1/*,
 		// so map the canonical path onto the physical one at request time. Both
 		// /v1/* and /api/v1/* resolve to the same handler.
-		const canonical = [{ source: "/v1/:path*", destination: "/api/v1/:path*" }];
+		//
+		// The apps-lifecycle drift view is documented at the top-level
+		// `platform.hanzo.ai/apps` (docs/APPS_LIFECYCLE.md §6); the page itself
+		// lives under the dashboard layout, so map the canonical URL onto it.
+		const canonical = [
+			{ source: "/v1/:path*", destination: "/api/v1/:path*" },
+			{ source: "/apps", destination: "/dashboard/apps" },
+		];
 
 		// In frontend-only mode, also proxy API calls to the production platform.
 		if (process.env.SKIP_ENV_VALIDATION === "1") {
