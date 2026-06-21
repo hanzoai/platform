@@ -1,22 +1,4 @@
-import { pgEnum } from "drizzle-orm/pg-core";
 import { z } from "zod";
-
-export const applicationStatus = pgEnum("applicationStatus", [
-	"idle",
-	"running",
-	"done",
-	"error",
-]);
-
-export const certificateType = pgEnum("certificateType", [
-	"letsencrypt",
-	"none",
-	"custom",
-]);
-
-export const triggerType = pgEnum("triggerType", ["push", "tag"]);
-
-export const sqldNode = pgEnum("sqldNode", ["primary", "replica"]);
 
 export interface HealthCheckSwarm {
 	Test?: string[] | undefined;

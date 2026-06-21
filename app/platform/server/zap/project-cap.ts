@@ -89,7 +89,7 @@ import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
 import { Status } from "@zap-proto/zap";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { decodeArgs } from "./args";
 import { encodeResult } from "./result";
 import { ProjectMethod } from "./schema/project_zap";
@@ -183,7 +183,7 @@ export function projectRootCap(ctx: ProjectCtx): CallHandler {
 }
 
 function buildServiceFilter(
-	fieldName: AnyPgColumn,
+	fieldName: AnySQLiteColumn,
 	accessedServices: string[],
 ) {
 	return accessedServices.length === 0
@@ -681,7 +681,7 @@ async function dispatch(ctx: ProjectCtx, call: Call): Promise<unknown> {
 							sql`, `,
 						)})`;
 
-			const applyFilter = (col: AnyPgColumn) =>
+			const applyFilter = (col: AnySQLiteColumn) =>
 				isPrivileged ? undefined : buildServiceFilter(col, accessedServices);
 
 			const rows = await db.query.projects.findMany({

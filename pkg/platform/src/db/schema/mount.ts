@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -12,30 +12,30 @@ import { mysql } from "./mysql";
 import { postgres } from "./postgres";
 import { redis } from "./redis";
 
-export const serviceType = pgEnum("serviceType", [
-	"application",
-	"postgres",
-	"mysql",
-	"mariadb",
-	"mongo",
-	"redis",
-	"compose",
-	"libsql",
-]);
-
-export const mountType = pgEnum("mountType", ["bind", "volume", "file"]);
-
-export const mounts = pgTable("mount", {
+export const mounts = sqliteTable("mount", {
 	mountId: text("mountId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
-	type: mountType("type").notNull(),
+	type: text("type", { enum: ["bind", "volume", "file"] }).notNull(),
 	hostPath: text("hostPath"),
 	volumeName: text("volumeName"),
 	filePath: text("filePath"),
 	content: text("content"),
-	serviceType: serviceType("serviceType").notNull().default("application"),
+	serviceType: text("serviceType", {
+		enum: [
+			"application",
+			"postgres",
+			"mysql",
+			"mariadb",
+			"mongo",
+			"redis",
+			"compose",
+			"libsql",
+		],
+	})
+		.notNull()
+		.default("application"),
 	mountPath: text("mountPath").notNull(),
 	applicationId: text("applicationId").references(
 		() => applications.applicationId,

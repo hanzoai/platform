@@ -1,0 +1,210 @@
+# Platform (Dokploy-derived TypeScript app, hanzoai/platform) — persistent
+# production deployment on Kubernetes.
+#
+# WHY A STATEFULSET, NOT A DEPLOYMENT
+# -----------------------------------
+# Platform's datastore is Base SQLite: a single file on disk. A Deployment's
+# pod filesystem is ephemeral — every restart, rollout, or eviction would lose
+# the database. A StatefulSet with a `volumeClaimTemplates`-provisioned PVC
+# gives that one file a stable home that survives pod restarts, node drains,
+# and rollouts. This is the persistent counterpart to the EPHEMERAL DO App
+# Platform preview spec in `.do/app.yaml`.
+#
+# WHY replicas: 1
+# ---------------
+# One SQLite file = one writer. better-sqlite3 + WAL lets many readers run
+# concurrently with the single writer, but two pods cannot share one RWO block
+# volume, and two writers against one SQLite file is corruption. Horizontal
+# scaling requires the per-org-file ("file is the tenant boundary") design,
+# which is tracked as a follow-up and NOT yet built. Until then: one replica.
+# The cron/scheduler logic in the app is likewise only safe at a single
+# instance, which this enforces structurally.
+#
+# Secrets come from `platform-app-secrets`, synced from KMS by the KMSSecret in
+# `k8s/platform-kmssecret.yaml`. Nothing sensitive lives in this manifest.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: platform-app
+  namespace: hanzo
+  labels:
+    app: platform-app
+    app.kubernetes.io/name: platform-app
+    app.kubernetes.io/part-of: hanzo-platform
+spec:
+  serviceName: platform-app
+  replicas: 1
+  revisionHistoryLimit: 10
+  podManagementPolicy: OrderedReady
+  # RollingUpdate on a single replica: the old pod terminates (releasing the
+  # RWO PVC) before the replacement starts and re-attaches it. No two pods ever
+  # hold the volume — or write the SQLite file — at once.
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: platform-app
+  template:
+    metadata:
+      labels:
+        app: platform-app
+        app.kubernetes.io/name: platform-app
+        app.kubernetes.io/part-of: hanzo-platform
+    spec:
+      # Non-root, fixed UID/GID; fsGroup makes the mounted PVC group-writable so
+      # the unprivileged process can create and write the SQLite file + WAL.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      # Give the app time to flush the WAL and close the DB cleanly on rollout.
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: platform-app
+          image: ghcr.io/hanzoai/platform:0.28.5
+          imagePullPolicy: IfNotPresent
+          # `pnpm start` runs `dist/migration.mjs` (applies drizzle migrations,
+          # including the uniqueConfigKey UNIQUE indexes) then `dist/server.mjs`.
+          # The PVC is mounted before the container starts, so migrations land
+          # on persistent storage.
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            # Pin the SQLite file onto the mounted PVC. The image's WORKDIR is
+            # /app and the default is `data/platform.db`, but pin it explicitly
+            # so the location never depends on the working directory.
+            - name: PLATFORM_DB_PATH
+              value: "/app/data/platform.db"
+            - name: PORT
+              value: "3000"
+            - name: NEXTAUTH_URL
+              value: "https://platform.hanzo.ai"
+            - name: NEXT_PUBLIC_APP_URL
+              value: "https://platform.hanzo.ai"
+            - name: IAM_ENDPOINT
+              value: "https://hanzo.id"
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: platform-app-secrets
+                  key: NEXTAUTH_SECRET
+            - name: IAM_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: platform-app-secrets
+                  key: IAM_CLIENT_ID
+            - name: IAM_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: platform-app-secrets
+                  key: IAM_CLIENT_SECRET
+          # Clean-shutdown hygiene: before SIGTERM reaches the app, force a
+          # full WAL checkpoint so the -wal file is folded back into the main
+          # DB and truncated. SQLite recovers an un-checkpointed WAL on the
+          # next open regardless, so this is NOT data-loss prevention — it
+          # keeps the on-disk file self-contained for snapshots/backups taken
+          # right after a rollout. The image has no `sqlite3` CLI, so we drive
+          # the same `better-sqlite3` engine the app uses (a runtime dep,
+          # always present under /app/node_modules). Best-effort: any error
+          # exits 0 so a mid-write DB never blocks pod termination.
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - node
+                  - -e
+                  - |
+                    try {
+                      const Database = require("better-sqlite3");
+                      const db = new Database(process.env.PLATFORM_DB_PATH || "/app/data/platform.db");
+                      db.pragma("wal_checkpoint(TRUNCATE)");
+                      db.close();
+                    } catch (e) {
+                      console.error("preStop wal_checkpoint skipped:", e.message);
+                    }
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          # Migrations run before the HTTP server binds, so give startup headroom
+          # before liveness can kill the pod mid-migration.
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app: platform-app
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # Retain reclaim class: deleting the StatefulSet (or its PVC) leaves the
+        # underlying volume intact. The file IS the database — never let an
+        # accidental `kubectl delete sts` destroy it.
+        storageClassName: do-block-storage-retain
+        resources:
+          requests:
+            storage: 50Gi
+  # Belt-and-suspenders alongside the Retain StorageClass: never auto-delete the
+  # PVC when the StatefulSet is deleted or scaled down.
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platform-app
+  namespace: hanzo
+  labels:
+    app: platform-app
+    app.kubernetes.io/name: platform-app
+    app.kubernetes.io/part-of: hanzo-platform
+spec:
+  type: ClusterIP
+  selector:
+    app: platform-app
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP

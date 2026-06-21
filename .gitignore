@@ -45,3 +45,10 @@ yarn-error.log*
 .dev*
 .pnpm-store/
 .env.backup
+
+# Local Base SQLite datastore (the deployed DB lives on a PVC, never in git)
+*.db
+*.db-shm
+*.db-wal
+pkg/platform/data/
+app/platform/data/
