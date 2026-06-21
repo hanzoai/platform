@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, integer, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -15,21 +15,11 @@ import { mounts } from "./mount";
 import { patch } from "./patch";
 import { schedules } from "./schedule";
 import { server } from "./server";
-import { applicationStatus, triggerType } from "./shared";
+
 import { sshKeys } from "./ssh-key";
 import { APP_NAME_MESSAGE, APP_NAME_REGEX, generateAppName } from "./utils";
-export const sourceTypeCompose = pgEnum("sourceTypeCompose", [
-	"git",
-	"github",
-	"gitlab",
-	"bitbucket",
-	"gitea",
-	"raw",
-]);
 
-export const composeType = pgEnum("composeType", ["docker-compose", "stack"]);
-
-export const compose = pgTable("compose", {
+export const compose = sqliteTable("compose", {
 	composeId: text("composeId")
 		.notNull()
 		.primaryKey()
@@ -42,13 +32,19 @@ export const compose = pgTable("compose", {
 	env: text("env"),
 	composeFile: text("composeFile").notNull().default(""),
 	refreshToken: text("refreshToken").$defaultFn(() => nanoid()),
-	sourceType: sourceTypeCompose("sourceType").notNull().default("github"),
-	composeType: composeType("composeType").notNull().default("docker-compose"),
+	sourceType: text("sourceType", {
+		enum: ["git", "github", "gitlab", "bitbucket", "gitea", "raw"],
+	})
+		.notNull()
+		.default("github"),
+	composeType: text("composeType", { enum: ["docker-compose", "stack"] })
+		.notNull()
+		.default("docker-compose"),
 	// Github
 	repository: text("repository"),
 	owner: text("owner"),
 	branch: text("branch"),
-	autoDeploy: boolean("autoDeploy").$defaultFn(() => true),
+	autoDeploy: integer("autoDeploy", { mode: "boolean" }).$defaultFn(() => true),
 	// Gitlab
 	gitlabProjectId: integer("gitlabProjectId"),
 	gitlabRepository: text("gitlabRepository"),
@@ -75,24 +71,34 @@ export const compose = pgTable("compose", {
 	),
 	command: text("command").notNull().default(""),
 	//
-	enableSubmodules: boolean("enableSubmodules").notNull().default(false),
-	composePath: text("composePath").notNull().default("./docker-compose.yml"),
-	suffix: text("suffix").notNull().default(""),
-	randomize: boolean("randomize").notNull().default(false),
-	isolatedDeployment: boolean("isolatedDeployment").notNull().default(false),
-	// Keep this for backward compatibility since we will not add the prefix anymore to volumes
-	isolatedDeploymentsVolume: boolean("isolatedDeploymentsVolume")
+	enableSubmodules: integer("enableSubmodules", { mode: "boolean" })
 		.notNull()
 		.default(false),
-	triggerType: triggerType("triggerType").default("push"),
-	composeStatus: applicationStatus("composeStatus").notNull().default("idle"),
+	composePath: text("composePath").notNull().default("./docker-compose.yml"),
+	suffix: text("suffix").notNull().default(""),
+	randomize: integer("randomize", { mode: "boolean" }).notNull().default(false),
+	isolatedDeployment: integer("isolatedDeployment", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	// Keep this for backward compatibility since we will not add the prefix anymore to volumes
+	isolatedDeploymentsVolume: integer("isolatedDeploymentsVolume", {
+		mode: "boolean",
+	})
+		.notNull()
+		.default(false),
+	triggerType: text("triggerType", { enum: ["push", "tag"] }).default("push"),
+	composeStatus: text("composeStatus", {
+		enum: ["idle", "running", "done", "error"],
+	})
+		.notNull()
+		.default("idle"),
 	environmentId: text("environmentId")
 		.notNull()
 		.references(() => environments.environmentId, { onDelete: "cascade" }),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
-	watchPaths: text("watchPaths").array(),
+	watchPaths: text("watchPaths", { mode: "json" }).$type<string[]>(),
 	githubId: text("githubId").references(() => github.githubId, {
 		onDelete: "set null",
 	}),

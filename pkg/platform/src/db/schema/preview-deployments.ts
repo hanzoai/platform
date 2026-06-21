@@ -1,15 +1,15 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text } from "drizzle-orm/pg-core";
+import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { applications } from "./application";
 import { deployments } from "./deployment";
 import { domains } from "./domain";
-import { applicationStatus } from "./shared";
+
 import { generateAppName } from "./utils";
 
-export const previewDeployments = pgTable("preview_deployments", {
+export const previewDeployments = sqliteTable("preview_deployments", {
 	previewDeploymentId: text("previewDeploymentId")
 		.notNull()
 		.primaryKey()
@@ -20,7 +20,11 @@ export const previewDeployments = pgTable("preview_deployments", {
 	pullRequestURL: text("pullRequestURL").notNull(),
 	pullRequestTitle: text("pullRequestTitle").notNull(),
 	pullRequestCommentId: text("pullRequestCommentId").notNull(),
-	previewStatus: applicationStatus("previewStatus").notNull().default("idle"),
+	previewStatus: text("previewStatus", {
+		enum: ["idle", "running", "done", "error"],
+	})
+		.notNull()
+		.default("idle"),
 	appName: text("appName")
 		.notNull()
 		.$defaultFn(() => generateAppName("preview"))

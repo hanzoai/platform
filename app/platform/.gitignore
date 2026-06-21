@@ -17,9 +17,11 @@ traefik.yml
 /playwright-report/
 /blob-report/
 e2e/.auth/user.json
-# database
-/prisma/db.sqlite
-/prisma/db.sqlite-journal
+# database — Base SQLite runtime files (the file is the tenant boundary)
+/data
+*.db
+*.db-wal
+*.db-shm
 /logs
 
 # next.js

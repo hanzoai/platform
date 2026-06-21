@@ -1,10 +1,10 @@
 import { relations } from "drizzle-orm";
-import { integer, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { gitProvider } from "./git-provider";
 
-export const gitlab = pgTable("gitlab", {
+export const gitlab = sqliteTable("gitlab", {
 	gitlabId: text("gitlabId")
 		.notNull()
 		.primaryKey()

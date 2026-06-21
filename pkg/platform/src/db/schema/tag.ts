@@ -1,12 +1,12 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, unique } from "drizzle-orm/pg-core";
+import { sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { organization } from "./account";
 import { projects } from "./project";
 
-export const tags = pgTable(
+export const tags = sqliteTable(
 	"tag",
 	{
 		tagId: text("tagId")
@@ -32,7 +32,7 @@ export const tags = pgTable(
 	}),
 );
 
-export const projectTags = pgTable(
+export const projectTags = sqliteTable(
 	"project_tag",
 	{
 		id: text("id")

@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { bigint, integer, json, pgTable, text } from "drizzle-orm/pg-core";
+import { blob, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -8,7 +8,6 @@ import { environments } from "./environment";
 import { mounts } from "./mount";
 import { server } from "./server";
 import {
-	applicationStatus,
 	type EndpointSpecSwarm,
 	EndpointSpecSwarmSchema,
 	type HealthCheckSwarm,
@@ -30,7 +29,7 @@ import {
 } from "./shared";
 import { APP_NAME_MESSAGE, APP_NAME_REGEX, generateAppName } from "./utils";
 
-export const postgres = pgTable("postgres", {
+export const postgres = sqliteTable("postgres", {
 	postgresId: text("postgresId")
 		.notNull()
 		.primaryKey()
@@ -46,28 +45,42 @@ export const postgres = pgTable("postgres", {
 	description: text("description"),
 	dockerImage: text("dockerImage").notNull(),
 	command: text("command"),
-	args: text("args").array(),
+	args: text("args", { mode: "json" }).$type<string[]>(),
 	env: text("env"),
 	memoryReservation: text("memoryReservation"),
 	externalPort: integer("externalPort"),
 	memoryLimit: text("memoryLimit"),
 	cpuReservation: text("cpuReservation"),
 	cpuLimit: text("cpuLimit"),
-	applicationStatus: applicationStatus("applicationStatus")
+	applicationStatus: text("applicationStatus", {
+		enum: ["idle", "running", "done", "error"],
+	})
 		.notNull()
 		.default("idle"),
 
-	healthCheckSwarm: json("healthCheckSwarm").$type<HealthCheckSwarm>(),
-	restartPolicySwarm: json("restartPolicySwarm").$type<RestartPolicySwarm>(),
-	placementSwarm: json("placementSwarm").$type<PlacementSwarm>(),
-	updateConfigSwarm: json("updateConfigSwarm").$type<UpdateConfigSwarm>(),
-	rollbackConfigSwarm: json("rollbackConfigSwarm").$type<UpdateConfigSwarm>(),
-	modeSwarm: json("modeSwarm").$type<ServiceModeSwarm>(),
-	labelsSwarm: json("labelsSwarm").$type<LabelsSwarm>(),
-	networkSwarm: json("networkSwarm").$type<NetworkSwarm[]>(),
-	stopGracePeriodSwarm: bigint("stopGracePeriodSwarm", { mode: "bigint" }),
-	endpointSpecSwarm: json("endpointSpecSwarm").$type<EndpointSpecSwarm>(),
-	ulimitsSwarm: json("ulimitsSwarm").$type<UlimitsSwarm>(),
+	healthCheckSwarm: text("healthCheckSwarm", {
+		mode: "json",
+	}).$type<HealthCheckSwarm>(),
+	restartPolicySwarm: text("restartPolicySwarm", {
+		mode: "json",
+	}).$type<RestartPolicySwarm>(),
+	placementSwarm: text("placementSwarm", {
+		mode: "json",
+	}).$type<PlacementSwarm>(),
+	updateConfigSwarm: text("updateConfigSwarm", {
+		mode: "json",
+	}).$type<UpdateConfigSwarm>(),
+	rollbackConfigSwarm: text("rollbackConfigSwarm", {
+		mode: "json",
+	}).$type<UpdateConfigSwarm>(),
+	modeSwarm: text("modeSwarm", { mode: "json" }).$type<ServiceModeSwarm>(),
+	labelsSwarm: text("labelsSwarm", { mode: "json" }).$type<LabelsSwarm>(),
+	networkSwarm: text("networkSwarm", { mode: "json" }).$type<NetworkSwarm[]>(),
+	stopGracePeriodSwarm: blob("stopGracePeriodSwarm", { mode: "bigint" }),
+	endpointSpecSwarm: text("endpointSpecSwarm", {
+		mode: "json",
+	}).$type<EndpointSpecSwarm>(),
+	ulimitsSwarm: text("ulimitsSwarm", { mode: "json" }).$type<UlimitsSwarm>(),
 	replicas: integer("replicas").default(1).notNull(),
 	createdAt: text("createdAt")
 		.notNull()
