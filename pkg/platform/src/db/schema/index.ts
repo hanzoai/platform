@@ -54,3 +54,4 @@ export * from "./compute-offer";
 export * from "./compute-pool";
 export * from "./doks-cluster";
 export * from "./apps";
+export * from "./apps-drift";
