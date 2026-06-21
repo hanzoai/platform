@@ -24,7 +24,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.1.1",
-		"@types/node": "^24.4.0",
+		"@types/node": "^24.13.2",
 		"dotenv": "16.4.5",
 		"esbuild": "0.20.2",
 		"lint-staged": "^15.5.2",
@@ -47,7 +47,9 @@
 	"pnpm": {
 		"overrides": {
 			"esbuild": "0.20.2",
-			"next": "16.1.6"
+			"next": "16.1.6",
+			"nan": "2.27.0",
+			"react-hook-form": "7.71.2"
 		},
 		"peerDependencyRules": {
 			"ignoreMissing": [

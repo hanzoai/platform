@@ -113,7 +113,7 @@ export const domainsRelations = relations(domains, ({ one }) => ({
 
 const createSchema = createInsertSchema(domains, {
 	...domain.shape,
-	// Override pgEnum so Zod 4 infers only string literals, not numeric enum index
+	// Override the text-enum column so Zod 4 infers only string literals.
 	domainType: z.enum(["compose", "application", "preview"]).optional(),
 });
 

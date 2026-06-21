@@ -13,8 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.0
       - uses: actions/setup-node@v4
         with:
           node-version: 24.4.0
@@ -45,6 +43,8 @@ jobs:
           docker network create --driver overlay platform-network || true
           echo "✅ Docker Swarm initialized"
       
+      - name: Native build toolchain
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++ pkg-config libsecret-1-dev
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter=@hanzo/platform build
       - run: pnpm typecheck
@@ -54,12 +54,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.0
       - uses: actions/setup-node@v4
         with:
           node-version: 20.16.0
           cache: "pnpm"
+      - name: Native build toolchain
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++ pkg-config libsecret-1-dev
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter=@hanzo/platform build
       - run: pnpm test
@@ -69,12 +69,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.0
       - uses: actions/setup-node@v4
         with:
           node-version: 20.16.0
           cache: "pnpm"
+      - name: Native build toolchain
+        run: sudo apt-get update && sudo apt-get install -y python3 make g++ pkg-config libsecret-1-dev
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter=@hanzo/platform build
       - run: pnpm build

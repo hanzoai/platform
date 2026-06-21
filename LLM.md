@@ -45,3 +45,7 @@ Deploy: persistent k8s StatefulSet + 50Gi `do-block-storage-retain` PVC at
 Secrets via KMSSecret → `platform-app-secrets` (`k8s/platform-kmssecret.yaml`).
 `.do/app.yaml` is EPHEMERAL-preview-only (`PLATFORM_DB_PATH=:memory:`); App
 Platform's filesystem does not survive restarts, so it must never hold a real DB.
+
+## Auth (HIP-0111, one way) + Node-24 build
+- Platform login = Hanzo IAM PKCE via **`hanzo.id`** (no Better Auth login, no genericOAuth). The settled flow + files live in `IAM_MIGRATION.md` (CANONICAL header). Don't re-add a `signIn.social`/`signIn.oauth2` button.
+- Node 24 build: keep the pnpm override `nan: 2.27.0` (native deps `ssh2`/`node-pty` won't compile on Node 24 without it).
