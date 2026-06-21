@@ -13,18 +13,7 @@
  */
 
 import { relations, sql } from "drizzle-orm";
-import {
-	boolean,
-	index,
-	integer,
-	jsonb,
-	numeric,
-	pgEnum,
-	pgTable,
-	text,
-	timestamp,
-	uuid,
-} from "drizzle-orm/pg-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -35,45 +24,15 @@ import { user } from "./user";
 // Enums
 // ============================================================================
 
-export const poolStatus = pgEnum("pool_status", [
-	"pending",      // Pool created, awaiting node registration
-	"active",       // Pool is active and accepting leases
-	"maintenance",  // Pool is under maintenance
-	"suspended",    // Pool suspended by admin or compliance
-	"decommissioned" // Pool being shut down
-]);
-
-export const nodeStatus = pgEnum("node_status", [
-	"online",       // Node is healthy and serving workloads
-	"offline",      // Node is unreachable
-	"syncing",      // Node is syncing with network
-	"draining",     // Node is draining workloads before shutdown
-	"maintenance"   // Node under maintenance
-]);
-
-export const nodeType = pgEnum("node_type", [
-	"validator",    // Consensus/validation node
-	"worker",       // General compute worker
-	"storage",      // Storage-optimized node
-	"gpu",          // GPU-enabled node
-	"inference"     // AI inference optimized node
-]);
-
-export const gpuVendor = pgEnum("gpu_vendor", [
-	"nvidia",
-	"amd",
-	"intel",
-	"apple"
-]);
-
 // ============================================================================
 // Compute Pool
 // ============================================================================
 
-export const computePool = pgTable(
+export const computePool = sqliteTable(
 	"compute_pool",
 	{
 		poolId: text("pool_id")
+
 			.primaryKey()
 			.$defaultFn(() => nanoid()),
 
@@ -92,16 +51,20 @@ export const computePool = pgTable(
 
 		// Network identity
 		networkAddress: text("network_address"), // On-chain address for this pool
-		peerId: text("peer_id"),                 // libp2p peer ID for discovery
+		peerId: text("peer_id"), // libp2p peer ID for discovery
 
 		// Status
-		status: poolStatus("status").notNull().default("pending"),
+		status: text("status", {
+			enum: ["pending", "active", "maintenance", "suspended", "decommissioned"],
+		})
+			.notNull()
+			.default("pending"),
 
 		// Geographic distribution
-		regions: text("regions")
-			.array()
+		regions: text("regions", { mode: "json" })
+			.$type<string[]>()
 			.notNull()
-			.default(sql`ARRAY[]::text[]`),
+			.default(sql`'[]'`),
 		primaryRegion: text("primary_region"),
 
 		// Aggregate capacity (computed from nodes)
@@ -121,7 +84,7 @@ export const computePool = pgTable(
 		activeNodes: integer("active_nodes").notNull().default(0),
 
 		// Configuration
-		config: jsonb("config")
+		config: text("config", { mode: "json" })
 			.$type<{
 				// Network settings
 				allowedNetworks?: string[];
@@ -142,24 +105,32 @@ export const computePool = pgTable(
 			.default({}),
 
 		// Compliance and certifications
-		certifications: text("certifications")
-			.array()
-			.default(sql`ARRAY[]::text[]`), // SOC2, HIPAA, etc.
+		certifications: text("certifications", { mode: "json" })
+			.$type<string[]>()
+			.default(sql`'[]'`), // SOC2, HIPAA, etc.
 
 		// Metadata
-		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+		metadata: text("metadata", { mode: "json" }).$type<
+			Record<string, unknown>
+		>(),
 
 		// Timestamps
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-		lastHealthCheck: timestamp("last_health_check", { withTimezone: true }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		lastHealthCheck: integer("last_health_check", { mode: "timestamp_ms" }),
 	},
 	(table) => ({
 		orgIdIdx: index("idx_compute_pool_org").on(table.organizationId),
 		statusIdx: index("idx_compute_pool_status").on(table.status),
 		regionIdx: index("idx_compute_pool_region").on(table.primaryRegion),
 		slugIdx: index("idx_compute_pool_slug").on(table.slug),
-		networkAddressIdx: index("idx_compute_pool_network").on(table.networkAddress),
+		networkAddressIdx: index("idx_compute_pool_network").on(
+			table.networkAddress,
+		),
 	}),
 );
 
@@ -167,7 +138,7 @@ export const computePool = pgTable(
 // Compute Node
 // ============================================================================
 
-export const computeNode = pgTable(
+export const computeNode = sqliteTable(
 	"compute_node",
 	{
 		nodeId: text("node_id")
@@ -185,13 +156,21 @@ export const computeNode = pgTable(
 
 		// Network identity
 		networkAddress: text("network_address"), // On-chain identity
-		peerId: text("peer_id"),                 // libp2p peer ID
+		peerId: text("peer_id"), // libp2p peer ID
 		ipAddress: text("ip_address"),
 		port: integer("port").default(4500),
 
 		// Type and status
-		nodeType: nodeType("node_type").notNull().default("worker"),
-		status: nodeStatus("status").notNull().default("offline"),
+		nodeType: text("node_type", {
+			enum: ["validator", "worker", "storage", "gpu", "inference"],
+		})
+			.notNull()
+			.default("worker"),
+		status: text("status", {
+			enum: ["online", "offline", "syncing", "draining", "maintenance"],
+		})
+			.notNull()
+			.default("offline"),
 
 		// Location
 		region: text("region").notNull(),
@@ -215,7 +194,9 @@ export const computeNode = pgTable(
 
 		// Resources - GPU
 		gpuCount: integer("gpu_count").default(0),
-		gpuVendor: gpuVendor("gpu_vendor"),
+		gpuVendor: text("gpu_vendor", {
+			enum: ["nvidia", "amd", "intel", "apple"],
+		}),
 		gpuModel: text("gpu_model"),
 		gpuMemoryMb: integer("gpu_memory_mb"),
 		gpuComputeCapability: text("gpu_compute_capability"), // CUDA compute capability
@@ -224,40 +205,52 @@ export const computeNode = pgTable(
 		networkBandwidthMbps: integer("network_bandwidth_mbps").default(1000),
 
 		// Utilization (updated periodically)
-		cpuUtilizationPercent: numeric("cpu_utilization_percent", { precision: 5, scale: 2 }).default("0"),
-		memoryUtilizationPercent: numeric("memory_utilization_percent", { precision: 5, scale: 2 }).default("0"),
-		storageUtilizationPercent: numeric("storage_utilization_percent", { precision: 5, scale: 2 }).default("0"),
-		gpuUtilizationPercent: numeric("gpu_utilization_percent", { precision: 5, scale: 2 }).default("0"),
+		cpuUtilizationPercent: text("cpu_utilization_percent").default("0"),
+		memoryUtilizationPercent: text("memory_utilization_percent").default("0"),
+		storageUtilizationPercent: text("storage_utilization_percent").default("0"),
+		gpuUtilizationPercent: text("gpu_utilization_percent").default("0"),
 
 		// Health metrics
 		uptimeSeconds: integer("uptime_seconds").default(0),
-		lastHeartbeat: timestamp("last_heartbeat", { withTimezone: true }),
-		healthScore: numeric("health_score", { precision: 5, scale: 2 }).default("100"), // 0-100
+		lastHeartbeat: integer("last_heartbeat", { mode: "timestamp_ms" }),
+		healthScore: text("health_score").default("100"), // 0-100
 
 		// Software
 		osVersion: text("os_version"),
 		runtimeVersion: text("runtime_version"), // Container runtime version
-		agentVersion: text("agent_version"),     // Hanzo agent version
+		agentVersion: text("agent_version"), // Hanzo agent version
 
 		// Configuration
-		labels: jsonb("labels").$type<Record<string, string>>().default({}),
-		taints: jsonb("taints").$type<Array<{
-			key: string;
-			value: string;
-			effect: "NoSchedule" | "PreferNoSchedule" | "NoExecute";
-		}>>().default([]),
+		labels: text("labels", { mode: "json" })
+			.$type<Record<string, string>>()
+			.default({}),
+		taints: text("taints", { mode: "json" })
+			.$type<
+				Array<{
+					key: string;
+					value: string;
+					effect: "NoSchedule" | "PreferNoSchedule" | "NoExecute";
+				}>
+			>()
+			.default([]),
 
 		// Timestamps
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-		registeredAt: timestamp("registered_at", { withTimezone: true }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		registeredAt: integer("registered_at", { mode: "timestamp_ms" }),
 	},
 	(table) => ({
 		poolIdIdx: index("idx_compute_node_pool").on(table.poolId),
 		statusIdx: index("idx_compute_node_status").on(table.status),
 		typeIdx: index("idx_compute_node_type").on(table.nodeType),
 		regionIdx: index("idx_compute_node_region").on(table.region),
-		networkAddressIdx: index("idx_compute_node_network").on(table.networkAddress),
+		networkAddressIdx: index("idx_compute_node_network").on(
+			table.networkAddress,
+		),
 		heartbeatIdx: index("idx_compute_node_heartbeat").on(table.lastHeartbeat),
 	}),
 );
@@ -291,19 +284,25 @@ export const computeNodeRelations = relations(computeNode, ({ one }) => ({
 
 const createPoolSchema = createInsertSchema(computePool, {
 	name: z.string().min(1).max(100),
-	slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
+	slug: z
+		.string()
+		.min(1)
+		.max(100)
+		.regex(/^[a-z0-9-]+$/),
 	description: z.string().max(1000).optional(),
 	regions: z.array(z.string()).optional(),
 	primaryRegion: z.string().optional(),
 });
 
-export const apiCreateComputePool = createPoolSchema.pick({
-	name: true,
-	slug: true,
-	description: true,
-	regions: true,
-	primaryRegion: true,
-}).required({ name: true, slug: true });
+export const apiCreateComputePool = createPoolSchema
+	.pick({
+		name: true,
+		slug: true,
+		description: true,
+		regions: true,
+		primaryRegion: true,
+	})
+	.required({ name: true, slug: true });
 
 export const apiUpdateComputePool = createPoolSchema
 	.pick({
@@ -331,44 +330,46 @@ const createNodeSchema = createInsertSchema(computeNode, {
 	gpuCount: z.number().int().min(0).optional(),
 });
 
-export const apiRegisterComputeNode = createNodeSchema.pick({
-	poolId: true,
-	name: true,
-	hostname: true,
-	ipAddress: true,
-	port: true,
-	nodeType: true,
-	region: true,
-	datacenter: true,
-	availabilityZone: true,
-	cpuCores: true,
-	cpuModel: true,
-	cpuArchitecture: true,
-	cpuFrequencyMhz: true,
-	memoryMb: true,
-	memoryType: true,
-	storageGb: true,
-	storageType: true,
-	storageIops: true,
-	gpuCount: true,
-	gpuVendor: true,
-	gpuModel: true,
-	gpuMemoryMb: true,
-	gpuComputeCapability: true,
-	networkBandwidthMbps: true,
-	osVersion: true,
-	runtimeVersion: true,
-	agentVersion: true,
-	labels: true,
-	taints: true,
-}).required({
-	poolId: true,
-	name: true,
-	region: true,
-	cpuCores: true,
-	memoryMb: true,
-	storageGb: true,
-});
+export const apiRegisterComputeNode = createNodeSchema
+	.pick({
+		poolId: true,
+		name: true,
+		hostname: true,
+		ipAddress: true,
+		port: true,
+		nodeType: true,
+		region: true,
+		datacenter: true,
+		availabilityZone: true,
+		cpuCores: true,
+		cpuModel: true,
+		cpuArchitecture: true,
+		cpuFrequencyMhz: true,
+		memoryMb: true,
+		memoryType: true,
+		storageGb: true,
+		storageType: true,
+		storageIops: true,
+		gpuCount: true,
+		gpuVendor: true,
+		gpuModel: true,
+		gpuMemoryMb: true,
+		gpuComputeCapability: true,
+		networkBandwidthMbps: true,
+		osVersion: true,
+		runtimeVersion: true,
+		agentVersion: true,
+		labels: true,
+		taints: true,
+	})
+	.required({
+		poolId: true,
+		name: true,
+		region: true,
+		cpuCores: true,
+		memoryMb: true,
+		storageGb: true,
+	});
 
 export const apiUpdateComputeNode = createNodeSchema
 	.pick({

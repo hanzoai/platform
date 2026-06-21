@@ -1,11 +1,10 @@
 import { relations } from "drizzle-orm";
 import {
-	type AnyPgColumn,
-	boolean,
-	pgEnum,
-	pgTable,
+	AnySQLiteColumn,
+	integer,
+	sqliteTable,
 	text,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -17,21 +16,17 @@ import { rollbacks } from "./rollbacks";
 import { schedules } from "./schedule";
 import { server } from "./server";
 import { volumeBackups } from "./volume-backups";
-export const deploymentStatus = pgEnum("deploymentStatus", [
-	"running",
-	"done",
-	"error",
-	"cancelled",
-]);
 
-export const deployments = pgTable("deployment", {
+export const deployments = sqliteTable("deployment", {
 	deploymentId: text("deploymentId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	title: text("title").notNull(),
 	description: text("description"),
-	status: deploymentStatus("status").default("running"),
+	status: text("status", {
+		enum: ["running", "done", "error", "cancelled"],
+	}).default("running"),
 	logPath: text("logPath").notNull(),
 	pid: text("pid"),
 	applicationId: text("applicationId").references(
@@ -44,9 +39,11 @@ export const deployments = pgTable("deployment", {
 	serverId: text("serverId").references(() => server.serverId, {
 		onDelete: "cascade",
 	}),
-	isPreviewDeployment: boolean("isPreviewDeployment").default(false),
+	isPreviewDeployment: integer("isPreviewDeployment", {
+		mode: "boolean",
+	}).default(false),
 	previewDeploymentId: text("previewDeploymentId").references(
-		(): AnyPgColumn => previewDeployments.previewDeploymentId,
+		(): AnySQLiteColumn => previewDeployments.previewDeploymentId,
 		{ onDelete: "cascade" },
 	),
 	createdAt: text("createdAt")
@@ -56,18 +53,21 @@ export const deployments = pgTable("deployment", {
 	finishedAt: text("finishedAt"),
 	errorMessage: text("errorMessage"),
 	scheduleId: text("scheduleId").references(
-		(): AnyPgColumn => schedules.scheduleId,
+		(): AnySQLiteColumn => schedules.scheduleId,
 		{ onDelete: "cascade" },
 	),
-	backupId: text("backupId").references((): AnyPgColumn => backups.backupId, {
-		onDelete: "cascade",
-	}),
+	backupId: text("backupId").references(
+		(): AnySQLiteColumn => backups.backupId,
+		{
+			onDelete: "cascade",
+		},
+	),
 	rollbackId: text("rollbackId").references(
-		(): AnyPgColumn => rollbacks.rollbackId,
+		(): AnySQLiteColumn => rollbacks.rollbackId,
 		{ onDelete: "cascade" },
 	),
 	volumeBackupId: text("volumeBackupId").references(
-		(): AnyPgColumn => volumeBackups.volumeBackupId,
+		(): AnySQLiteColumn => volumeBackups.volumeBackupId,
 		{ onDelete: "cascade" },
 	),
 	buildServerId: text("buildServerId").references(() => server.serverId, {

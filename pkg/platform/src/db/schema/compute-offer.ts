@@ -13,72 +13,28 @@
  */
 
 import { relations, sql } from "drizzle-orm";
-import {
-	boolean,
-	index,
-	integer,
-	jsonb,
-	numeric,
-	pgEnum,
-	pgTable,
-	text,
-	timestamp,
-	uuid,
-} from "drizzle-orm/pg-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { organization } from "./account";
+import { computeNode, computePool } from "./compute-pool";
 import { user } from "./user";
-import { computePool, computeNode, nodeType } from "./compute-pool";
 import { organizationWallet, walletTransactions } from "./wallet";
 
 // ============================================================================
 // Enums
 // ============================================================================
 
-export const offerStatus = pgEnum("offer_status", [
-	"draft",        // Offer being configured
-	"active",       // Offer is live and accepting leases
-	"paused",       // Temporarily not accepting new leases
-	"expired",      // Offer validity period ended
-	"depleted",     // No more capacity available
-	"retired"       // Permanently disabled
-]);
-
-export const pricingModel = pgEnum("pricing_model", [
-	"per_hour",         // Flat hourly rate for the instance
-	"per_resource_hour", // Rate per CPU/GPU/GB-memory per hour
-	"spot",             // Dynamic pricing based on demand
-	"reserved",         // Discounted rate for commitment
-	"auction"           // Bid-based pricing
-]);
-
-export const billingCycle = pgEnum("billing_cycle", [
-	"hourly",
-	"daily",
-	"weekly",
-	"monthly"
-]);
-
-export const leaseStatus = pgEnum("lease_status", [
-	"pending",      // Lease requested, awaiting confirmation
-	"provisioning", // Resources being allocated
-	"active",       // Lease is active
-	"suspended",    // Lease suspended (payment issues, etc)
-	"terminating",  // Lease being terminated
-	"terminated",   // Lease has ended
-	"failed"        // Lease failed to provision
-]);
-
 // ============================================================================
 // Compute Offer
 // ============================================================================
 
-export const computeOffer = pgTable(
+export const computeOffer = sqliteTable(
 	"compute_offer",
 	{
 		offerId: text("offer_id")
+
 			.primaryKey()
 			.$defaultFn(() => nanoid()),
 
@@ -93,64 +49,74 @@ export const computeOffer = pgTable(
 		slug: text("slug").notNull(),
 
 		// Status
-		status: offerStatus("status").notNull().default("draft"),
+		status: text("status", {
+			enum: ["draft", "active", "paused", "expired", "depleted", "retired"],
+		})
+			.notNull()
+			.default("draft"),
 
 		// Resource specification (what you get)
-		resourceSpec: jsonb("resource_spec")
-			.notNull()
-			.$type<{
-				// CPU
-				cpuCores: number;
-				cpuArchitecture?: "x86_64" | "arm64";
-				cpuMinFrequencyMhz?: number;
+		resourceSpec: text("resource_spec", { mode: "json" }).notNull().$type<{
+			// CPU
+			cpuCores: number;
+			cpuArchitecture?: "x86_64" | "arm64";
+			cpuMinFrequencyMhz?: number;
 
-				// Memory
-				memoryMb: number;
+			// Memory
+			memoryMb: number;
 
-				// Storage
-				storageGb: number;
-				storageType?: "nvme" | "ssd" | "hdd";
+			// Storage
+			storageGb: number;
+			storageType?: "nvme" | "ssd" | "hdd";
 
-				// GPU (optional)
-				gpuCount?: number;
-				gpuModel?: string;
-				gpuMemoryMb?: number;
+			// GPU (optional)
+			gpuCount?: number;
+			gpuModel?: string;
+			gpuMemoryMb?: number;
 
-				// Network
-				networkBandwidthMbps?: number;
-				publicIpv4?: boolean;
-				publicIpv6?: boolean;
+			// Network
+			networkBandwidthMbps?: number;
+			publicIpv4?: boolean;
+			publicIpv6?: boolean;
 
-				// Node requirements
-				nodeType?: "validator" | "worker" | "storage" | "gpu" | "inference";
-				regions?: string[];
+			// Node requirements
+			nodeType?: "validator" | "worker" | "storage" | "gpu" | "inference";
+			regions?: string[];
 
-				// Labels/selectors for node matching
-				nodeSelector?: Record<string, string>;
-			}>(),
+			// Labels/selectors for node matching
+			nodeSelector?: Record<string, string>;
+		}>(),
 
 		// Pricing
-		pricingModel: pricingModel("pricing_model").notNull().default("per_hour"),
+		pricingModel: text("pricing_model", {
+			enum: ["per_hour", "per_resource_hour", "spot", "reserved", "auction"],
+		})
+			.notNull()
+			.default("per_hour"),
 		currency: text("currency").notNull().default("USD"),
 
 		// Base prices (in smallest currency unit, e.g., cents)
-		basePrice: numeric("base_price", { precision: 12, scale: 6 }).notNull(), // Per billing cycle
+		basePrice: text("base_price").notNull(), // Per billing cycle
 
 		// Resource-based pricing (for per_resource_hour model)
-		pricePerCpuHour: numeric("price_per_cpu_hour", { precision: 10, scale: 6 }),
-		pricePerGbMemoryHour: numeric("price_per_gb_memory_hour", { precision: 10, scale: 6 }),
-		pricePerGbStorageHour: numeric("price_per_gb_storage_hour", { precision: 10, scale: 6 }),
-		pricePerGpuHour: numeric("price_per_gpu_hour", { precision: 10, scale: 6 }),
-		pricePerGbEgress: numeric("price_per_gb_egress", { precision: 10, scale: 6 }),
+		pricePerCpuHour: text("price_per_cpu_hour"),
+		pricePerGbMemoryHour: text("price_per_gb_memory_hour"),
+		pricePerGbStorageHour: text("price_per_gb_storage_hour"),
+		pricePerGpuHour: text("price_per_gpu_hour"),
+		pricePerGbEgress: text("price_per_gb_egress"),
 
 		// Billing
-		billingCycle: billingCycle("billing_cycle").notNull().default("hourly"),
+		billingCycle: text("billing_cycle", {
+			enum: ["hourly", "daily", "weekly", "monthly"],
+		})
+			.notNull()
+			.default("hourly"),
 		minimumBillingMinutes: integer("minimum_billing_minutes").default(60),
 
 		// Discounts
-		spotDiscount: numeric("spot_discount", { precision: 5, scale: 2 }), // Percentage discount for spot
-		reservedDiscount: numeric("reserved_discount", { precision: 5, scale: 2 }), // For 1-month commitment
-		annualDiscount: numeric("annual_discount", { precision: 5, scale: 2 }), // For 1-year commitment
+		spotDiscount: text("spot_discount"), // Percentage discount for spot
+		reservedDiscount: text("reserved_discount"), // For 1-month commitment
+		annualDiscount: text("annual_discount"), // For 1-year commitment
 
 		// Capacity
 		totalCapacity: integer("total_capacity").notNull().default(1), // Max concurrent leases
@@ -160,16 +126,20 @@ export const computeOffer = pgTable(
 		// Limits
 		minLeaseDurationMinutes: integer("min_lease_duration_minutes").default(60),
 		maxLeaseDurationDays: integer("max_lease_duration_days").default(365),
-		maxConcurrentLeasesPerOrg: integer("max_concurrent_leases_per_org").default(10),
+		maxConcurrentLeasesPerOrg: integer("max_concurrent_leases_per_org").default(
+			10,
+		),
 
 		// Validity
-		validFrom: timestamp("valid_from", { withTimezone: true }).defaultNow(),
-		validUntil: timestamp("valid_until", { withTimezone: true }),
+		validFrom: integer("valid_from", { mode: "timestamp_ms" }).$defaultFn(
+			() => new Date(),
+		),
+		validUntil: integer("valid_until", { mode: "timestamp_ms" }),
 
 		// SLA and guarantees
-		sla: jsonb("sla")
+		sla: text("sla", { mode: "json" })
 			.$type<{
-				uptimeGuarantee?: number;  // Percentage, e.g., 99.9
+				uptimeGuarantee?: number; // Percentage, e.g., 99.9
 				supportResponseHours?: number;
 				refundPolicy?: string;
 				provisioningTimeMinutes?: number;
@@ -177,11 +147,11 @@ export const computeOffer = pgTable(
 			.default({}),
 
 		// Features and restrictions
-		features: text("features")
-			.array()
-			.default(sql`ARRAY[]::text[]`), // e.g., ["ssh-access", "root-access", "custom-image"]
+		features: text("features", { mode: "json" })
+			.$type<string[]>()
+			.default(sql`'[]'`), // e.g., ["ssh-access", "root-access", "custom-image"]
 
-		restrictions: jsonb("restrictions")
+		restrictions: text("restrictions", { mode: "json" })
 			.$type<{
 				allowedRegions?: string[];
 				blockedRegions?: string[];
@@ -192,14 +162,18 @@ export const computeOffer = pgTable(
 			.default({}),
 
 		// Metadata
-		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-		tags: text("tags")
-			.array()
-			.default(sql`ARRAY[]::text[]`),
+		metadata: text("metadata", { mode: "json" }).$type<
+			Record<string, unknown>
+		>(),
+		tags: text("tags", { mode: "json" }).$type<string[]>().default(sql`'[]'`),
 
 		// Timestamps
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => ({
 		poolIdIdx: index("idx_compute_offer_pool").on(table.poolId),
@@ -207,7 +181,9 @@ export const computeOffer = pgTable(
 		pricingIdx: index("idx_compute_offer_pricing").on(table.pricingModel),
 		slugIdx: index("idx_compute_offer_slug").on(table.slug),
 		priceIdx: index("idx_compute_offer_price").on(table.basePrice),
-		capacityIdx: index("idx_compute_offer_capacity").on(table.availableCapacity),
+		capacityIdx: index("idx_compute_offer_capacity").on(
+			table.availableCapacity,
+		),
 	}),
 );
 
@@ -215,7 +191,7 @@ export const computeOffer = pgTable(
 // Compute Lease
 // ============================================================================
 
-export const computeLease = pgTable(
+export const computeLease = sqliteTable(
 	"compute_lease",
 	{
 		leaseId: text("lease_id")
@@ -239,21 +215,34 @@ export const computeLease = pgTable(
 			.references(() => user.id, { onDelete: "cascade" }),
 
 		// Assigned node
-		nodeId: text("node_id")
-			.references(() => computeNode.nodeId, { onDelete: "set null" }),
+		nodeId: text("node_id").references(() => computeNode.nodeId, {
+			onDelete: "set null",
+		}),
 
 		// Identity
 		name: text("name").notNull(),
 
 		// Status
-		status: leaseStatus("status").notNull().default("pending"),
+		status: text("status", {
+			enum: [
+				"pending",
+				"provisioning",
+				"active",
+				"suspended",
+				"terminating",
+				"terminated",
+				"failed",
+			],
+		})
+			.notNull()
+			.default("pending"),
 
 		// On-chain reference
-		networkTxHash: text("network_tx_hash"),   // Transaction that created lease
+		networkTxHash: text("network_tx_hash"), // Transaction that created lease
 		networkLeaseId: text("network_lease_id"), // On-chain lease identifier
 
 		// Resource allocation (snapshot of what was leased)
-		allocatedResources: jsonb("allocated_resources")
+		allocatedResources: text("allocated_resources", { mode: "json" })
 			.notNull()
 			.$type<{
 				cpuCores: number;
@@ -266,7 +255,7 @@ export const computeLease = pgTable(
 			}>(),
 
 		// Pricing snapshot (locked at lease creation)
-		pricingSnapshot: jsonb("pricing_snapshot")
+		pricingSnapshot: text("pricing_snapshot", { mode: "json" })
 			.notNull()
 			.$type<{
 				pricingModel: string;
@@ -281,44 +270,45 @@ export const computeLease = pgTable(
 			}>(),
 
 		// Timing
-		requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
-		provisionedAt: timestamp("provisioned_at", { withTimezone: true }),
-		startedAt: timestamp("started_at", { withTimezone: true }),
-		terminatedAt: timestamp("terminated_at", { withTimezone: true }),
-		expiresAt: timestamp("expires_at", { withTimezone: true }),
+		requestedAt: integer("requested_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		provisionedAt: integer("provisioned_at", { mode: "timestamp_ms" }),
+		startedAt: integer("started_at", { mode: "timestamp_ms" }),
+		terminatedAt: integer("terminated_at", { mode: "timestamp_ms" }),
+		expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
 
 		// Duration
 		requestedDurationMinutes: integer("requested_duration_minutes"),
 		actualDurationSeconds: integer("actual_duration_seconds").default(0),
 
 		// Billing
-		billedAmount: numeric("billed_amount", { precision: 12, scale: 6 }).default("0"),
-		lastBilledAt: timestamp("last_billed_at", { withTimezone: true }),
+		billedAmount: text("billed_amount").default("0"),
+		lastBilledAt: integer("last_billed_at", { mode: "timestamp_ms" }),
 
 		// Wallet link
-		walletId: uuid("wallet_id")
-			.references(() => organizationWallet.walletId, { onDelete: "set null" }),
+		walletId: text("wallet_id").references(() => organizationWallet.walletId, {
+			onDelete: "set null",
+		}),
 
 		// Access credentials (encrypted)
-		accessCredentials: jsonb("access_credentials")
-			.$type<{
-				sshPublicKey?: string;
-				apiEndpoint?: string;
-				apiToken?: string;
-				kubeconfig?: string;
-			}>(),
+		accessCredentials: text("access_credentials", { mode: "json" }).$type<{
+			sshPublicKey?: string;
+			apiEndpoint?: string;
+			apiToken?: string;
+			kubeconfig?: string;
+		}>(),
 
 		// Connection info
-		connectionInfo: jsonb("connection_info")
-			.$type<{
-				ipAddress?: string;
-				port?: number;
-				sshPort?: number;
-				webConsoleUrl?: string;
-			}>(),
+		connectionInfo: text("connection_info", { mode: "json" }).$type<{
+			ipAddress?: string;
+			port?: number;
+			sshPort?: number;
+			webConsoleUrl?: string;
+		}>(),
 
 		// Usage tracking
-		usageMetrics: jsonb("usage_metrics")
+		usageMetrics: text("usage_metrics", { mode: "json" })
 			.$type<{
 				cpuSecondsUsed?: number;
 				memoryGbSecondsUsed?: number;
@@ -333,12 +323,20 @@ export const computeLease = pgTable(
 		terminatedBy: text("terminated_by"), // "user", "system", "provider", "expiry"
 
 		// Metadata
-		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-		labels: jsonb("labels").$type<Record<string, string>>().default({}),
+		metadata: text("metadata", { mode: "json" }).$type<
+			Record<string, unknown>
+		>(),
+		labels: text("labels", { mode: "json" })
+			.$type<Record<string, string>>()
+			.default({}),
 
 		// Timestamps
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => ({
 		offerIdIdx: index("idx_compute_lease_offer").on(table.offerId),
@@ -349,7 +347,9 @@ export const computeLease = pgTable(
 		statusIdx: index("idx_compute_lease_status").on(table.status),
 		walletIdx: index("idx_compute_lease_wallet").on(table.walletId),
 		expiresIdx: index("idx_compute_lease_expires").on(table.expiresAt),
-		networkLeaseIdx: index("idx_compute_lease_network").on(table.networkLeaseId),
+		networkLeaseIdx: index("idx_compute_lease_network").on(
+			table.networkLeaseId,
+		),
 	}),
 );
 
@@ -357,10 +357,12 @@ export const computeLease = pgTable(
 // Compute Usage (granular billing records)
 // ============================================================================
 
-export const computeUsage = pgTable(
+export const computeUsage = sqliteTable(
 	"compute_usage",
 	{
-		usageId: uuid("usage_id").defaultRandom().primaryKey(),
+		usageId: text("usage_id")
+			.$defaultFn(() => crypto.randomUUID())
+			.primaryKey(),
 
 		// Associations
 		leaseId: text("lease_id")
@@ -374,39 +376,46 @@ export const computeUsage = pgTable(
 			.references(() => computeOffer.offerId, { onDelete: "cascade" }),
 
 		// Time period
-		periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
-		periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
+		periodStart: integer("period_start", { mode: "timestamp_ms" }).notNull(),
+		periodEnd: integer("period_end", { mode: "timestamp_ms" }).notNull(),
 		durationSeconds: integer("duration_seconds").notNull(),
 
 		// Resource consumption
-		cpuSeconds: numeric("cpu_seconds", { precision: 12, scale: 6 }).notNull().default("0"),
-		memoryGbSeconds: numeric("memory_gb_seconds", { precision: 12, scale: 6 }).notNull().default("0"),
-		storageGbSeconds: numeric("storage_gb_seconds", { precision: 12, scale: 6 }).notNull().default("0"),
-		gpuSeconds: numeric("gpu_seconds", { precision: 12, scale: 6 }).notNull().default("0"),
-		egressGb: numeric("egress_gb", { precision: 12, scale: 6 }).notNull().default("0"),
+		cpuSeconds: text("cpu_seconds").notNull().default("0"),
+		memoryGbSeconds: text("memory_gb_seconds").notNull().default("0"),
+		storageGbSeconds: text("storage_gb_seconds").notNull().default("0"),
+		gpuSeconds: text("gpu_seconds").notNull().default("0"),
+		egressGb: text("egress_gb").notNull().default("0"),
 
 		// Costs
-		cpuCost: numeric("cpu_cost", { precision: 10, scale: 6 }).notNull().default("0"),
-		memoryCost: numeric("memory_cost", { precision: 10, scale: 6 }).notNull().default("0"),
-		storageCost: numeric("storage_cost", { precision: 10, scale: 6 }).notNull().default("0"),
-		gpuCost: numeric("gpu_cost", { precision: 10, scale: 6 }).notNull().default("0"),
-		egressCost: numeric("egress_cost", { precision: 10, scale: 6 }).notNull().default("0"),
-		baseCost: numeric("base_cost", { precision: 10, scale: 6 }).notNull().default("0"),
-		totalCost: numeric("total_cost", { precision: 10, scale: 6 }).notNull().default("0"),
+		cpuCost: text("cpu_cost").notNull().default("0"),
+		memoryCost: text("memory_cost").notNull().default("0"),
+		storageCost: text("storage_cost").notNull().default("0"),
+		gpuCost: text("gpu_cost").notNull().default("0"),
+		egressCost: text("egress_cost").notNull().default("0"),
+		baseCost: text("base_cost").notNull().default("0"),
+		totalCost: text("total_cost").notNull().default("0"),
 
 		// Billing
-		charged: boolean("charged").notNull().default(false),
-		chargedAt: timestamp("charged_at", { withTimezone: true }),
-		transactionId: uuid("transaction_id")
-			.references(() => walletTransactions.transactionId, { onDelete: "set null" }),
+		charged: integer("charged", { mode: "boolean" }).notNull().default(false),
+		chargedAt: integer("charged_at", { mode: "timestamp_ms" }),
+		transactionId: text("transaction_id").references(
+			() => walletTransactions.transactionId,
+			{ onDelete: "set null" },
+		),
 
 		// Timestamps
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => ({
 		leaseIdIdx: index("idx_compute_usage_lease").on(table.leaseId),
 		orgIdIdx: index("idx_compute_usage_org").on(table.organizationId),
-		periodIdx: index("idx_compute_usage_period").on(table.periodStart, table.periodEnd),
+		periodIdx: index("idx_compute_usage_period").on(
+			table.periodStart,
+			table.periodEnd,
+		),
 		unchargedIdx: index("idx_compute_usage_uncharged").on(table.charged),
 	}),
 );
@@ -415,41 +424,47 @@ export const computeUsage = pgTable(
 // Relations
 // ============================================================================
 
-export const computeOfferRelations = relations(computeOffer, ({ one, many }) => ({
-	pool: one(computePool, {
-		fields: [computeOffer.poolId],
-		references: [computePool.poolId],
+export const computeOfferRelations = relations(
+	computeOffer,
+	({ one, many }) => ({
+		pool: one(computePool, {
+			fields: [computeOffer.poolId],
+			references: [computePool.poolId],
+		}),
+		leases: many(computeLease),
 	}),
-	leases: many(computeLease),
-}));
+);
 
-export const computeLeaseRelations = relations(computeLease, ({ one, many }) => ({
-	offer: one(computeOffer, {
-		fields: [computeLease.offerId],
-		references: [computeOffer.offerId],
+export const computeLeaseRelations = relations(
+	computeLease,
+	({ one, many }) => ({
+		offer: one(computeOffer, {
+			fields: [computeLease.offerId],
+			references: [computeOffer.offerId],
+		}),
+		pool: one(computePool, {
+			fields: [computeLease.poolId],
+			references: [computePool.poolId],
+		}),
+		node: one(computeNode, {
+			fields: [computeLease.nodeId],
+			references: [computeNode.nodeId],
+		}),
+		organization: one(organization, {
+			fields: [computeLease.organizationId],
+			references: [organization.id],
+		}),
+		user: one(user, {
+			fields: [computeLease.userId],
+			references: [user.id],
+		}),
+		wallet: one(organizationWallet, {
+			fields: [computeLease.walletId],
+			references: [organizationWallet.walletId],
+		}),
+		usage: many(computeUsage),
 	}),
-	pool: one(computePool, {
-		fields: [computeLease.poolId],
-		references: [computePool.poolId],
-	}),
-	node: one(computeNode, {
-		fields: [computeLease.nodeId],
-		references: [computeNode.nodeId],
-	}),
-	organization: one(organization, {
-		fields: [computeLease.organizationId],
-		references: [organization.id],
-	}),
-	user: one(user, {
-		fields: [computeLease.userId],
-		references: [user.id],
-	}),
-	wallet: one(organizationWallet, {
-		fields: [computeLease.walletId],
-		references: [organizationWallet.walletId],
-	}),
-	usage: many(computeUsage),
-}));
+);
 
 export const computeUsageRelations = relations(computeUsage, ({ one }) => ({
 	lease: one(computeLease, {
@@ -487,7 +502,9 @@ const resourceSpecSchema = z.object({
 	networkBandwidthMbps: z.number().int().positive().optional(),
 	publicIpv4: z.boolean().optional(),
 	publicIpv6: z.boolean().optional(),
-	nodeType: z.enum(["validator", "worker", "storage", "gpu", "inference"]).optional(),
+	nodeType: z
+		.enum(["validator", "worker", "storage", "gpu", "inference"])
+		.optional(),
 	regions: z.array(z.string()).optional(),
 	nodeSelector: z.record(z.string(), z.string()).optional(),
 });
@@ -501,54 +518,63 @@ const slaSchema = z.object({
 
 const createOfferSchema = createInsertSchema(computeOffer, {
 	name: z.string().min(1).max(100),
-	slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
+	slug: z
+		.string()
+		.min(1)
+		.max(100)
+		.regex(/^[a-z0-9-]+$/),
 	description: z.string().max(2000).optional(),
 	basePrice: z.string().regex(/^\d+(\.\d{1,6})?$/),
 });
 
-export const apiCreateComputeOffer = createOfferSchema.pick({
-	poolId: true,
-	name: true,
-	slug: true,
-	description: true,
-	pricingModel: true,
-	currency: true,
-	basePrice: true,
-	pricePerCpuHour: true,
-	pricePerGbMemoryHour: true,
-	pricePerGbStorageHour: true,
-	pricePerGpuHour: true,
-	pricePerGbEgress: true,
-	billingCycle: true,
-	minimumBillingMinutes: true,
-	spotDiscount: true,
-	reservedDiscount: true,
-	annualDiscount: true,
-	totalCapacity: true,
-	minLeaseDurationMinutes: true,
-	maxLeaseDurationDays: true,
-	maxConcurrentLeasesPerOrg: true,
-	validFrom: true,
-	validUntil: true,
-	features: true,
-	tags: true,
-}).extend({
-	resourceSpec: resourceSpecSchema,
-	sla: slaSchema.optional(),
-	restrictions: z.object({
-		allowedRegions: z.array(z.string()).optional(),
-		blockedRegions: z.array(z.string()).optional(),
-		allowedWorkloadTypes: z.array(z.string()).optional(),
-		requireVerifiedOrg: z.boolean().optional(),
-		minimumOrgAge: z.number().int().min(0).optional(),
-	}).optional(),
-}).required({
-	poolId: true,
-	name: true,
-	slug: true,
-	resourceSpec: true,
-	basePrice: true,
-});
+export const apiCreateComputeOffer = createOfferSchema
+	.pick({
+		poolId: true,
+		name: true,
+		slug: true,
+		description: true,
+		pricingModel: true,
+		currency: true,
+		basePrice: true,
+		pricePerCpuHour: true,
+		pricePerGbMemoryHour: true,
+		pricePerGbStorageHour: true,
+		pricePerGpuHour: true,
+		pricePerGbEgress: true,
+		billingCycle: true,
+		minimumBillingMinutes: true,
+		spotDiscount: true,
+		reservedDiscount: true,
+		annualDiscount: true,
+		totalCapacity: true,
+		minLeaseDurationMinutes: true,
+		maxLeaseDurationDays: true,
+		maxConcurrentLeasesPerOrg: true,
+		validFrom: true,
+		validUntil: true,
+		features: true,
+		tags: true,
+	})
+	.extend({
+		resourceSpec: resourceSpecSchema,
+		sla: slaSchema.optional(),
+		restrictions: z
+			.object({
+				allowedRegions: z.array(z.string()).optional(),
+				blockedRegions: z.array(z.string()).optional(),
+				allowedWorkloadTypes: z.array(z.string()).optional(),
+				requireVerifiedOrg: z.boolean().optional(),
+				minimumOrgAge: z.number().int().min(0).optional(),
+			})
+			.optional(),
+	})
+	.required({
+		poolId: true,
+		name: true,
+		slug: true,
+		resourceSpec: true,
+		basePrice: true,
+	});
 
 export const apiUpdateComputeOffer = createOfferSchema
 	.pick({
@@ -570,22 +596,26 @@ export const apiUpdateComputeOffer = createOfferSchema
 	.extend({
 		offerId: z.string().min(1),
 		sla: slaSchema.optional(),
-		restrictions: z.object({
-			allowedRegions: z.array(z.string()).optional(),
-			blockedRegions: z.array(z.string()).optional(),
-			allowedWorkloadTypes: z.array(z.string()).optional(),
-			requireVerifiedOrg: z.boolean().optional(),
-			minimumOrgAge: z.number().int().min(0).optional(),
-		}).optional(),
+		restrictions: z
+			.object({
+				allowedRegions: z.array(z.string()).optional(),
+				blockedRegions: z.array(z.string()).optional(),
+				allowedWorkloadTypes: z.array(z.string()).optional(),
+				requireVerifiedOrg: z.boolean().optional(),
+				minimumOrgAge: z.number().int().min(0).optional(),
+			})
+			.optional(),
 	});
 
 export const apiCreateComputeLease = z.object({
 	offerId: z.string().min(1),
 	name: z.string().min(1).max(100),
 	durationMinutes: z.number().int().positive().optional(),
-	accessCredentials: z.object({
-		sshPublicKey: z.string().optional(),
-	}).optional(),
+	accessCredentials: z
+		.object({
+			sshPublicKey: z.string().optional(),
+		})
+		.optional(),
 	labels: z.record(z.string(), z.string()).optional(),
 	metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -608,7 +638,9 @@ export const apiSearchOffers = z.object({
 
 	// Pricing
 	maxPricePerHour: z.string().optional(),
-	pricingModel: z.enum(["per_hour", "per_resource_hour", "spot", "reserved", "auction"]).optional(),
+	pricingModel: z
+		.enum(["per_hour", "per_resource_hour", "spot", "reserved", "auction"])
+		.optional(),
 
 	// Features
 	features: z.array(z.string()).optional(),

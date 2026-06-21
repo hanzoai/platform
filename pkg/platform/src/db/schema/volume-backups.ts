@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, integer, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -10,13 +10,13 @@ import { destinations } from "./destination";
 import { libsql } from "./libsql";
 import { mariadb } from "./mariadb";
 import { mongo } from "./mongo";
-import { serviceType } from "./mount";
+
 import { mysql } from "./mysql";
 import { postgres } from "./postgres";
 import { redis } from "./redis";
 import { generateAppName } from "./utils";
 
-export const volumeBackups = pgTable("volume_backup", {
+export const volumeBackups = sqliteTable("volume_backup", {
 	volumeBackupId: text("volumeBackupId")
 		.notNull()
 		.primaryKey()
@@ -24,15 +24,28 @@ export const volumeBackups = pgTable("volume_backup", {
 	name: text("name").notNull(),
 	volumeName: text("volumeName").notNull(),
 	prefix: text("prefix").notNull(),
-	serviceType: serviceType("serviceType").notNull().default("application"),
+	serviceType: text("serviceType", {
+		enum: [
+			"application",
+			"postgres",
+			"mysql",
+			"mariadb",
+			"mongo",
+			"redis",
+			"compose",
+			"libsql",
+		],
+	})
+		.notNull()
+		.default("application"),
 	appName: text("appName")
 		.notNull()
 		.$defaultFn(() => generateAppName("volumeBackup")),
 	serviceName: text("serviceName"),
-	turnOff: boolean("turnOff").notNull().default(false),
+	turnOff: integer("turnOff", { mode: "boolean" }).notNull().default(false),
 	cronExpression: text("cronExpression").notNull(),
 	keepLatestCount: integer("keepLatestCount"),
-	enabled: boolean("enabled"),
+	enabled: integer("enabled", { mode: "boolean" }),
 	applicationId: text("applicationId").references(
 		() => applications.applicationId,
 		{

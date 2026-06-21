@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { organization } from "./account";
@@ -9,20 +9,17 @@ import { github } from "./github";
 import { gitlab } from "./gitlab";
 import { user } from "./user";
 
-export const gitProviderType = pgEnum("gitProviderType", [
-	"github",
-	"gitlab",
-	"bitbucket",
-	"gitea",
-]);
-
-export const gitProvider = pgTable("git_provider", {
+export const gitProvider = sqliteTable("git_provider", {
 	gitProviderId: text("gitProviderId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	name: text("name").notNull(),
-	providerType: gitProviderType("providerType").notNull().default("github"),
+	providerType: text("providerType", {
+		enum: ["github", "gitlab", "bitbucket", "gitea"],
+	})
+		.notNull()
+		.default("github"),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
@@ -32,7 +29,7 @@ export const gitProvider = pgTable("git_provider", {
 	userId: text("userId")
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),
-	sharedWithOrganization: boolean("sharedWithOrganization")
+	sharedWithOrganization: integer("sharedWithOrganization", { mode: "boolean" })
 		.notNull()
 		.default(false),
 });
