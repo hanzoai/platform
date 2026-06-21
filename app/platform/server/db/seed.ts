@@ -18,10 +18,10 @@
  * Run: `pnpm --filter @hanzo/platform-app db:seed`
  */
 
-import { dbUrl } from "@hanzo/platform/db";
+import { dbUrl, ensureSqliteDir, resolveSqlitePath } from "@hanzo/platform/db";
 import { apps, type NewApp } from "@hanzo/platform/db/schema";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import BetterSqlite3 from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 
 /** Managed services. `declaredTag` is the verbatim tag from the service's
  *  operator CR; `null` means no CR declares it yet (control plane / pending
@@ -72,37 +72,43 @@ const rows: NewApp[] = SERVICES.flatMap((svc) =>
 	})),
 );
 
-const seed = async () => {
-	const pg = postgres(dbUrl, { max: 1 });
-	const db = drizzle(pg);
+const seed = (): void => {
+	const dbPath = resolveSqlitePath(dbUrl);
+	ensureSqliteDir(dbPath);
+	const sqlite = new BetterSqlite3(dbPath);
+	sqlite.pragma("foreign_keys = ON");
+	const db = drizzle(sqlite);
 	try {
-		for (const row of rows) {
-			await db
-				.insert(apps)
-				.values(row)
-				.onConflictDoUpdate({
-					target: apps.id,
-					// Only the declared/topology facts this seed owns — never the
-					// reader-owned observed columns (runningTag/latestTag/health/...).
-					set: {
-						org: row.org,
-						app: row.app,
-						env: row.env,
-						repo: row.repo,
-						registry: row.registry,
-						declaredTag: row.declaredTag ?? null,
-						cluster: row.cluster ?? null,
-						namespace: row.namespace ?? null,
-						updatedAt: new Date(),
-					},
-				});
-		}
+		const upsert = sqlite.transaction(() => {
+			for (const row of rows) {
+				db.insert(apps)
+					.values(row)
+					.onConflictDoUpdate({
+						target: apps.id,
+						// Only the declared/topology facts this seed owns — never the
+						// reader-owned observed columns (runningTag/latestTag/health/...).
+						set: {
+							org: row.org,
+							app: row.app,
+							env: row.env,
+							repo: row.repo,
+							registry: row.registry,
+							declaredTag: row.declaredTag ?? null,
+							cluster: row.cluster ?? null,
+							namespace: row.namespace ?? null,
+							updatedAt: new Date(),
+						},
+					})
+					.run();
+			}
+		});
+		upsert();
 		console.log(`Seeded ${rows.length} apps rows`);
 	} catch (error) {
 		console.error("Error seeding apps", error);
 		process.exitCode = 1;
 	} finally {
-		await pg.end();
+		sqlite.close();
 	}
 };
 

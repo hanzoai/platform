@@ -911,7 +911,7 @@ export const settingsRouter = createTRPCRouter({
 	}),
 	health: publicProcedure.query(async () => {
 		try {
-			await db.execute(sql`SELECT 1`);
+			db.get(sql`SELECT 1`);
 			return { status: "ok" };
 		} catch (error) {
 			console.error("Database connection error:", error);
