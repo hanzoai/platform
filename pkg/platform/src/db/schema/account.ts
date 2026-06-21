@@ -1,20 +1,14 @@
 import { relations, sql } from "drizzle-orm";
-import {
-	boolean,
-	index,
-	integer,
-	pgTable,
-	text,
-	timestamp,
-} from "drizzle-orm/pg-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 import { projects } from "./project";
 import { server } from "./server";
 import { ssoProvider } from "./sso";
 import { user } from "./user";
 
-export const account = pgTable("account", {
+export const account = sqliteTable("account", {
 	id: text("id")
+
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	accountId: text("account_id")
@@ -27,13 +21,19 @@ export const account = pgTable("account", {
 	accessToken: text("access_token"),
 	refreshToken: text("refresh_token"),
 	idToken: text("id_token"),
-	accessTokenExpiresAt: timestamp("access_token_expires_at"),
-	refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+	accessTokenExpiresAt: integer("access_token_expires_at", {
+		mode: "timestamp_ms",
+	}),
+	refreshTokenExpiresAt: integer("refresh_token_expires_at", {
+		mode: "timestamp_ms",
+	}),
 	scope: text("scope"),
 	password: text("password"),
-	is2FAEnabled: boolean("is2FAEnabled").notNull().default(false),
-	createdAt: timestamp("created_at").notNull(),
-	updatedAt: timestamp("updated_at").notNull(),
+	is2FAEnabled: integer("is2FAEnabled", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 	resetPasswordToken: text("resetPasswordToken"),
 	resetPasswordExpiresAt: text("resetPasswordExpiresAt"),
 	confirmationToken: text("confirmationToken"),
@@ -47,23 +47,23 @@ export const accountRelations = relations(account, ({ one }) => ({
 	}),
 }));
 
-export const verification = pgTable("verification", {
+export const verification = sqliteTable("verification", {
 	id: text("id").primaryKey(),
 	identifier: text("identifier").notNull(),
 	value: text("value").notNull(),
-	expiresAt: timestamp("expires_at").notNull(),
-	createdAt: timestamp("created_at"),
-	updatedAt: timestamp("updated_at"),
+	expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" }),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" }),
 });
 
-export const organization = pgTable("organization", {
+export const organization = sqliteTable("organization", {
 	id: text("id")
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	name: text("name").notNull(),
 	slug: text("slug").unique(),
 	logo: text("logo"),
-	createdAt: timestamp("created_at").notNull(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 	metadata: text("metadata"),
 	ownerId: text("owner_id")
 		.notNull()
@@ -85,7 +85,7 @@ export const organizationRelations = relations(
 	}),
 );
 
-export const organizationRole = pgTable(
+export const organizationRole = sqliteTable(
 	"organization_role",
 	{
 		id: text("id")
@@ -96,8 +96,12 @@ export const organizationRole = pgTable(
 			.references(() => organization.id, { onDelete: "cascade" }),
 		role: text("role").notNull(),
 		permission: text("permission").notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.$defaultFn(() => new Date())
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" }).$onUpdate(
+			() => new Date(),
+		),
 	},
 	(table) => [
 		index("organizationRole_organizationId_idx").on(table.organizationId),
@@ -115,7 +119,7 @@ export const organizationRoleRelations = relations(
 	}),
 );
 
-export const member = pgTable("member", {
+export const member = sqliteTable("member", {
 	id: text("id")
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
@@ -128,49 +132,69 @@ export const member = pgTable("member", {
 	role: text("role")
 		.notNull()
 		.$type<"owner" | "member" | "admin" | (string & {})>(),
-	createdAt: timestamp("created_at").notNull(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 	teamId: text("team_id"),
-	isDefault: boolean("is_default").notNull().default(false),
+	isDefault: integer("is_default", { mode: "boolean" })
+		.notNull()
+		.default(false),
 	// Permissions
-	canCreateProjects: boolean("canCreateProjects").notNull().default(false),
-	canAccessToSSHKeys: boolean("canAccessToSSHKeys").notNull().default(false),
-	canCreateServices: boolean("canCreateServices").notNull().default(false),
-	canDeleteProjects: boolean("canDeleteProjects").notNull().default(false),
-	canDeleteServices: boolean("canDeleteServices").notNull().default(false),
-	canAccessToDocker: boolean("canAccessToDocker").notNull().default(false),
-	canAccessToAPI: boolean("canAccessToAPI").notNull().default(false),
-	canAccessToGitProviders: boolean("canAccessToGitProviders")
+	canCreateProjects: integer("canCreateProjects", { mode: "boolean" })
 		.notNull()
 		.default(false),
-	canAccessToTraefikFiles: boolean("canAccessToTraefikFiles")
+	canAccessToSSHKeys: integer("canAccessToSSHKeys", { mode: "boolean" })
 		.notNull()
 		.default(false),
-	canDeleteEnvironments: boolean("canDeleteEnvironments")
+	canCreateServices: integer("canCreateServices", { mode: "boolean" })
 		.notNull()
 		.default(false),
-	canCreateEnvironments: boolean("canCreateEnvironments")
+	canDeleteProjects: integer("canDeleteProjects", { mode: "boolean" })
 		.notNull()
 		.default(false),
-	accessedProjects: text("accesedProjects")
-		.array()
+	canDeleteServices: integer("canDeleteServices", { mode: "boolean" })
 		.notNull()
-		.default(sql`ARRAY[]::text[]`),
-	accessedEnvironments: text("accessedEnvironments")
-		.array()
+		.default(false),
+	canAccessToDocker: integer("canAccessToDocker", { mode: "boolean" })
 		.notNull()
-		.default(sql`ARRAY[]::text[]`),
-	accessedServices: text("accesedServices")
-		.array()
+		.default(false),
+	canAccessToAPI: integer("canAccessToAPI", { mode: "boolean" })
 		.notNull()
-		.default(sql`ARRAY[]::text[]`),
-	accessedGitProviders: text("accessedGitProviders")
-		.array()
+		.default(false),
+	canAccessToGitProviders: integer("canAccessToGitProviders", {
+		mode: "boolean",
+	})
 		.notNull()
-		.default(sql`ARRAY[]::text[]`),
-	accessedServers: text("accessedServers")
-		.array()
+		.default(false),
+	canAccessToTraefikFiles: integer("canAccessToTraefikFiles", {
+		mode: "boolean",
+	})
 		.notNull()
-		.default(sql`ARRAY[]::text[]`),
+		.default(false),
+	canDeleteEnvironments: integer("canDeleteEnvironments", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	canCreateEnvironments: integer("canCreateEnvironments", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	accessedProjects: text("accesedProjects", { mode: "json" })
+		.$type<string[]>()
+		.notNull()
+		.default(sql`'[]'`),
+	accessedEnvironments: text("accessedEnvironments", { mode: "json" })
+		.$type<string[]>()
+		.notNull()
+		.default(sql`'[]'`),
+	accessedServices: text("accesedServices", { mode: "json" })
+		.$type<string[]>()
+		.notNull()
+		.default(sql`'[]'`),
+	accessedGitProviders: text("accessedGitProviders", { mode: "json" })
+		.$type<string[]>()
+		.notNull()
+		.default(sql`'[]'`),
+	accessedServers: text("accessedServers", { mode: "json" })
+		.$type<string[]>()
+		.notNull()
+		.default(sql`'[]'`),
 });
 
 export const memberRelations = relations(member, ({ one }) => ({
@@ -184,7 +208,7 @@ export const memberRelations = relations(member, ({ one }) => ({
 	}),
 }));
 
-export const invitation = pgTable("invitation", {
+export const invitation = sqliteTable("invitation", {
 	id: text("id").primaryKey(),
 	organizationId: text("organization_id")
 		.notNull()
@@ -192,12 +216,14 @@ export const invitation = pgTable("invitation", {
 	email: text("email").notNull(),
 	role: text("role").$type<"owner" | "member" | "admin">(),
 	status: text("status").notNull(),
-	expiresAt: timestamp("expires_at").notNull(),
+	expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
 	inviterId: text("inviter_id")
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),
 	teamId: text("team_id"),
-	createdAt: timestamp("created_at").defaultNow().notNull(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" })
+		.$defaultFn(() => new Date())
+		.notNull(),
 });
 
 export const invitationRelations = relations(invitation, ({ one }) => ({
@@ -207,7 +233,7 @@ export const invitationRelations = relations(invitation, ({ one }) => ({
 	}),
 }));
 
-export const twoFactor = pgTable("two_factor", {
+export const twoFactor = sqliteTable("two_factor", {
 	id: text("id").primaryKey(),
 	secret: text("secret").notNull(),
 	backupCodes: text("backup_codes").notNull(),
@@ -216,7 +242,7 @@ export const twoFactor = pgTable("two_factor", {
 		.references(() => user.id, { onDelete: "cascade" }),
 });
 
-export const apikey = pgTable("apikey", {
+export const apikey = sqliteTable("apikey", {
 	id: text("id").primaryKey(),
 	name: text("name"),
 	start: text("start"),
@@ -227,17 +253,17 @@ export const apikey = pgTable("apikey", {
 		.references(() => user.id, { onDelete: "cascade" }),
 	refillInterval: integer("refill_interval"),
 	refillAmount: integer("refill_amount"),
-	lastRefillAt: timestamp("last_refill_at"),
-	enabled: boolean("enabled"),
-	rateLimitEnabled: boolean("rate_limit_enabled"),
+	lastRefillAt: integer("last_refill_at", { mode: "timestamp_ms" }),
+	enabled: integer("enabled", { mode: "boolean" }),
+	rateLimitEnabled: integer("rate_limit_enabled", { mode: "boolean" }),
 	rateLimitTimeWindow: integer("rate_limit_time_window"),
 	rateLimitMax: integer("rate_limit_max"),
 	requestCount: integer("request_count"),
 	remaining: integer("remaining"),
-	lastRequest: timestamp("last_request"),
-	expiresAt: timestamp("expires_at"),
-	createdAt: timestamp("created_at").notNull(),
-	updatedAt: timestamp("updated_at").notNull(),
+	lastRequest: integer("last_request", { mode: "timestamp_ms" }),
+	expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+	createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 	permissions: text("permissions"),
 	metadata: text("metadata"),
 });

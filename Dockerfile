@@ -72,7 +72,8 @@ COPY .env.production ./.env
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
   CMD curl -fs http://localhost:3000/api/trpc/settings.health || exit 1
-CMD ["sh", "-c", "pnpm run wait-for-postgres && exec pnpm start"]
+# SQLite is embedded — no external Postgres to wait for (PR #29).
+CMD ["sh", "-c", "exec pnpm start"]
 
 # ── Target: cloud (light runtime) ─────────────────────────────
 FROM base AS cloud

@@ -1,21 +1,37 @@
-import { dbUrl } from "@hanzo/platform/db";
-import { sql } from "drizzle-orm";
-// Credits to Louistiti from Drizzle Discord: https://discord.com/channels/1043890932593987624/1130802621750448160/1143083373535973406
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { dbUrl, ensureSqliteDir, resolveSqlitePath } from "@hanzo/platform/db";
+import BetterSqlite3 from "better-sqlite3";
 
-const pg = postgres(dbUrl, { max: 1 });
-const db = drizzle(pg);
-
-const clearDb = async (): Promise<void> => {
+/**
+ * SQLite has no schemas to drop, so we drop every user table (and the
+ * drizzle migrations table) instead. FKs are disabled for the duration so
+ * drop order doesn't matter, then re-enabled.
+ */
+const clearDb = (): void => {
+	const dbPath = resolveSqlitePath(dbUrl);
+	ensureSqliteDir(dbPath);
+	const sqlite = new BetterSqlite3(dbPath);
 	try {
-		const tablesQuery = sql<string>`DROP SCHEMA public CASCADE; CREATE SCHEMA public; DROP schema drizzle CASCADE;`;
-		const tables = await db.execute(tablesQuery);
-		console.log(tables);
-		await pg.end();
+		sqlite.pragma("foreign_keys = OFF");
+		const tables = sqlite
+			.prepare(
+				"SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+			)
+			.all() as Array<{ name: string }>;
+
+		const drop = sqlite.transaction(() => {
+			for (const { name } of tables) {
+				sqlite.prepare(`DROP TABLE IF EXISTS "${name}"`).run();
+			}
+		});
+		drop();
+
+		sqlite.pragma("foreign_keys = ON");
+		console.log(`Dropped ${tables.length} tables`);
 	} catch (error) {
 		console.error("Error cleaning database", error);
+		process.exitCode = 1;
 	} finally {
+		sqlite.close();
 	}
 };
 
