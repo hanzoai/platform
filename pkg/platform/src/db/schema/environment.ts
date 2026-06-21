@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { applications } from "./application";
@@ -12,7 +12,7 @@ import { postgres } from "./postgres";
 import { projects } from "./project";
 import { redis } from "./redis";
 
-export const environments = pgTable("environment", {
+export const environments = sqliteTable("environment", {
 	environmentId: text("environmentId")
 		.notNull()
 		.primaryKey()
@@ -26,7 +26,7 @@ export const environments = pgTable("environment", {
 	projectId: text("projectId")
 		.notNull()
 		.references(() => projects.projectId, { onDelete: "cascade" }),
-	isDefault: boolean("isDefault").notNull().default(false),
+	isDefault: integer("isDefault", { mode: "boolean" }).notNull().default(false),
 });
 
 export const environmentRelations = relations(

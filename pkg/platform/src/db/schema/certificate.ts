@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -7,7 +7,7 @@ import { organization } from "./account";
 import { server } from "./server";
 import { generateAppName } from "./utils";
 
-export const certificates = pgTable("certificate", {
+export const certificates = sqliteTable("certificate", {
 	certificateId: text("certificateId")
 		.notNull()
 		.primaryKey()
@@ -19,7 +19,7 @@ export const certificates = pgTable("certificate", {
 		.notNull()
 		.$defaultFn(() => generateAppName("certificate"))
 		.unique(),
-	autoRenew: boolean("autoRenew"),
+	autoRenew: integer("autoRenew", { mode: "boolean" }),
 	organizationId: text("organizationId")
 		.notNull()
 		.references(() => organization.id, { onDelete: "cascade" }),
