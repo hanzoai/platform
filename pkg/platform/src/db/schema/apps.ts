@@ -1,12 +1,5 @@
 import { relations } from "drizzle-orm";
-import {
-	integer,
-	pgEnum,
-	pgTable,
-	text,
-	timestamp,
-	uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { organization } from "./account";
@@ -32,17 +25,21 @@ import { organization } from "./account";
  * `(org, app, env)` is additionally unique so a reader can upsert by tuple.
  */
 
-/** Aggregate health rolled up from probes + drift. */
-export const appHealth = pgEnum("appHealth", ["green", "yellow", "red"]);
+/**
+ * Aggregate health rolled up from probes + drift. SQLite has no native enum;
+ * the value set is declared once here and enforced by the column's `enum`
+ * constraint (drizzle-zod) and the migration's CHECK constraint.
+ */
+export const appHealthValues = ["green", "yellow", "red"] as const;
 
 /**
  * Deployment environment. Mirrors the lifecycle vocabulary in
  * `docs/APPS_LIFECYCLE.md` — `main` is production. (Distinct from the legacy
  * Coolify free-text `env` on `project`; the apps table is semver-governed.)
  */
-export const appEnv = pgEnum("appEnv", ["dev", "test", "main"]);
+export const appEnvValues = ["dev", "test", "main"] as const;
 
-export const apps = pgTable(
+export const apps = sqliteTable(
 	"apps",
 	{
 		/** `<org>/<app>/<env>`, e.g. `hanzoai/iam/main`. */
@@ -51,7 +48,7 @@ export const apps = pgTable(
 		org: text("org").notNull(),
 		/** App / service name, e.g. `iam`. */
 		app: text("app").notNull(),
-		env: appEnv("env").notNull(),
+		env: text("env", { enum: appEnvValues }).notNull(),
 		/** `owner/repo`, e.g. `hanzoai/iam`. */
 		repo: text("repo").notNull(),
 		/** Image registry path, e.g. `ghcr.io/hanzoai/iam`. */
@@ -66,19 +63,19 @@ export const apps = pgTable(
 		releaseUrl: text("release_url"),
 		/** Asset count on the GH Release (0 = release shipped with no binaries). */
 		releaseAssets: integer("release_assets").notNull().default(0),
-		health: appHealth("health"),
+		health: text("health", { enum: appHealthValues }),
 		/** When the readers last observed this row. */
-		lastObserved: timestamp("last_observed", { withTimezone: true }),
+		lastObserved: integer("last_observed", { mode: "timestamp_ms" }),
 		/** Target cluster, e.g. `hanzo-k8s`. */
 		cluster: text("cluster"),
 		/** Target namespace, e.g. `hanzo`. */
 		namespace: text("namespace"),
-		createdAt: timestamp("created_at", { withTimezone: true })
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
 			.notNull()
-			.defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
 			.notNull()
-			.defaultNow(),
+			.$defaultFn(() => new Date()),
 		/** Owning org tenant (multi-tenant installs run their own apps table). */
 		organizationId: text("organizationId").references(() => organization.id, {
 			onDelete: "cascade",
@@ -127,8 +124,8 @@ export const apiFindOneApp = z.object({
 
 export const apiListApps = z.object({
 	org: z.string().optional(),
-	env: z.enum(["dev", "test", "main"]).optional(),
-	health: z.enum(["green", "yellow", "red"]).optional(),
+	env: z.enum(appEnvValues).optional(),
+	health: z.enum(appHealthValues).optional(),
 });
 
 export type App = typeof apps.$inferSelect;

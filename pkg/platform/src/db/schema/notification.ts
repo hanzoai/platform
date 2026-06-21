@@ -1,46 +1,51 @@
 import { relations } from "drizzle-orm";
-import {
-	boolean,
-	integer,
-	jsonb,
-	pgEnum,
-	pgTable,
-	text,
-} from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { organization } from "./account";
 
-export const notificationType = pgEnum("notificationType", [
-	"slack",
-	"telegram",
-	"discord",
-	"email",
-	"resend",
-	"gotify",
-	"ntfy",
-	"mattermost",
-	"pushover",
-	"custom",
-	"lark",
-	"teams",
-]);
-
-export const notifications = pgTable("notification", {
+export const notifications = sqliteTable("notification", {
 	notificationId: text("notificationId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	name: text("name").notNull(),
-	appDeploy: boolean("appDeploy").notNull().default(false),
-	appBuildError: boolean("appBuildError").notNull().default(false),
-	databaseBackup: boolean("databaseBackup").notNull().default(false),
-	volumeBackup: boolean("volumeBackup").notNull().default(false),
-	hanzoRestart: boolean("hanzoRestart").notNull().default(false),
-	dockerCleanup: boolean("dockerCleanup").notNull().default(false),
-	serverThreshold: boolean("serverThreshold").notNull().default(false),
-	notificationType: notificationType("notificationType").notNull(),
+	appDeploy: integer("appDeploy", { mode: "boolean" }).notNull().default(false),
+	appBuildError: integer("appBuildError", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	databaseBackup: integer("databaseBackup", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	volumeBackup: integer("volumeBackup", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	hanzoRestart: integer("hanzoRestart", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	dockerCleanup: integer("dockerCleanup", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	serverThreshold: integer("serverThreshold", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	notificationType: text("notificationType", {
+		enum: [
+			"slack",
+			"telegram",
+			"discord",
+			"email",
+			"resend",
+			"gotify",
+			"ntfy",
+			"mattermost",
+			"pushover",
+			"custom",
+			"lark",
+			"teams",
+		],
+	}).notNull(),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
@@ -65,12 +70,9 @@ export const notifications = pgTable("notification", {
 	ntfyId: text("ntfyId").references(() => ntfy.ntfyId, {
 		onDelete: "cascade",
 	}),
-	mattermostId: text("mattermostId").references(
-		() => mattermost.mattermostId,
-		{
-			onDelete: "cascade",
-		},
-	),
+	mattermostId: text("mattermostId").references(() => mattermost.mattermostId, {
+		onDelete: "cascade",
+	}),
 	customId: text("customId").references(() => custom.customId, {
 		onDelete: "cascade",
 	}),
@@ -88,7 +90,7 @@ export const notifications = pgTable("notification", {
 		.references(() => organization.id, { onDelete: "cascade" }),
 });
 
-export const slack = pgTable("slack", {
+export const slack = sqliteTable("slack", {
 	slackId: text("slackId")
 		.notNull()
 		.primaryKey()
@@ -97,7 +99,7 @@ export const slack = pgTable("slack", {
 	channel: text("channel"),
 });
 
-export const telegram = pgTable("telegram", {
+export const telegram = sqliteTable("telegram", {
 	telegramId: text("telegramId")
 		.notNull()
 		.primaryKey()
@@ -107,16 +109,16 @@ export const telegram = pgTable("telegram", {
 	messageThreadId: text("messageThreadId"),
 });
 
-export const discord = pgTable("discord", {
+export const discord = sqliteTable("discord", {
 	discordId: text("discordId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	webhookUrl: text("webhookUrl").notNull(),
-	decoration: boolean("decoration"),
+	decoration: integer("decoration", { mode: "boolean" }),
 });
 
-export const email = pgTable("email", {
+export const email = sqliteTable("email", {
 	emailId: text("emailId")
 		.notNull()
 		.primaryKey()
@@ -126,20 +128,20 @@ export const email = pgTable("email", {
 	username: text("username").notNull(),
 	password: text("password").notNull(),
 	fromAddress: text("fromAddress").notNull(),
-	toAddresses: text("toAddress").array().notNull(),
+	toAddresses: text("toAddress", { mode: "json" }).$type<string[]>().notNull(),
 });
 
-export const resend = pgTable("resend", {
+export const resend = sqliteTable("resend", {
 	resendId: text("resendId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	apiKey: text("apiKey").notNull(),
 	fromAddress: text("fromAddress").notNull(),
-	toAddresses: text("toAddress").array().notNull(),
+	toAddresses: text("toAddress", { mode: "json" }).$type<string[]>().notNull(),
 });
 
-export const gotify = pgTable("gotify", {
+export const gotify = sqliteTable("gotify", {
 	gotifyId: text("gotifyId")
 		.notNull()
 		.primaryKey()
@@ -147,10 +149,10 @@ export const gotify = pgTable("gotify", {
 	serverUrl: text("serverUrl").notNull(),
 	appToken: text("appToken").notNull(),
 	priority: integer("priority").notNull().default(5),
-	decoration: boolean("decoration"),
+	decoration: integer("decoration", { mode: "boolean" }),
 });
 
-export const ntfy = pgTable("ntfy", {
+export const ntfy = sqliteTable("ntfy", {
 	ntfyId: text("ntfyId")
 		.notNull()
 		.primaryKey()
@@ -161,7 +163,7 @@ export const ntfy = pgTable("ntfy", {
 	priority: integer("priority").notNull().default(3),
 });
 
-export const mattermost = pgTable("mattermost", {
+export const mattermost = sqliteTable("mattermost", {
 	mattermostId: text("mattermostId")
 		.notNull()
 		.primaryKey()
@@ -171,16 +173,16 @@ export const mattermost = pgTable("mattermost", {
 	username: text("username"),
 });
 
-export const custom = pgTable("custom", {
+export const custom = sqliteTable("custom", {
 	customId: text("customId")
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	endpoint: text("endpoint").notNull(),
-	headers: jsonb("headers").$type<Record<string, string>>(),
+	headers: text("headers", { mode: "json" }).$type<Record<string, string>>(),
 });
 
-export const lark = pgTable("lark", {
+export const lark = sqliteTable("lark", {
 	larkId: text("larkId")
 		.notNull()
 		.primaryKey()
@@ -188,7 +190,7 @@ export const lark = pgTable("lark", {
 	webhookUrl: text("webhookUrl").notNull(),
 });
 
-export const pushover = pgTable("pushover", {
+export const pushover = sqliteTable("pushover", {
 	pushoverId: text("pushoverId")
 		.notNull()
 		.primaryKey()
@@ -200,7 +202,7 @@ export const pushover = pgTable("pushover", {
 	expire: integer("expire"),
 });
 
-export const teams = pgTable("teams", {
+export const teams = sqliteTable("teams", {
 	teamsId: text("teamsId")
 		.notNull()
 		.primaryKey()

@@ -26,7 +26,7 @@ import {
 	computePool,
 } from "@hanzo/platform/db/schema/compute-pool";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 // ============================================================================
@@ -827,7 +827,7 @@ export async function scaleDownPool(
 		nodesToRemove = await db.query.provisionedInstance.findMany({
 			where: and(
 				eq(provisionedInstance.poolId, config.poolId),
-				sql`${provisionedInstance.computeNodeId} = ANY(${config.nodeIds})`
+				inArray(provisionedInstance.computeNodeId, config.nodeIds)
 			),
 		});
 	} else {

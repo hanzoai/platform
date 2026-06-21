@@ -1,10 +1,10 @@
 import { relations } from "drizzle-orm";
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 import { organization } from "./account";
 import { user } from "./user";
 
-export const auditLog = pgTable(
+export const auditLog = sqliteTable(
 	"audit_log",
 	{
 		id: text("id")
@@ -21,7 +21,9 @@ export const auditLog = pgTable(
 		resourceId: text("resource_id"),
 		resourceName: text("resource_name"),
 		metadata: text("metadata"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.$defaultFn(() => new Date())
+			.notNull(),
 	},
 	(t) => ({
 		orgIdx: index("auditLog_organizationId_idx").on(t.organizationId),

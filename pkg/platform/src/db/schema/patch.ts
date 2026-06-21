@@ -1,23 +1,23 @@
 import { relations } from "drizzle-orm";
-import { boolean, pgEnum, pgTable, text, unique } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { applications } from "./application";
 import { compose } from "./compose";
 
-export const patchType = pgEnum("patchType", ["create", "update", "delete"]);
-
-export const patch = pgTable(
+export const patch = sqliteTable(
 	"patch",
 	{
 		patchId: text("patchId")
 			.notNull()
 			.primaryKey()
 			.$defaultFn(() => nanoid()),
-		type: patchType("type").notNull().default("update"),
+		type: text("type", { enum: ["create", "update", "delete"] })
+			.notNull()
+			.default("update"),
 		filePath: text("filePath").notNull(),
-		enabled: boolean("enabled").notNull().default(true),
+		enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
 		content: text("content").notNull(),
 		createdAt: text("createdAt")
 			.notNull()

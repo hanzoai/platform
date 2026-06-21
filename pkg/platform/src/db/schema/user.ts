@@ -1,12 +1,6 @@
 import { paths } from "@hanzo/platform/constants";
 import { relations, sql } from "drizzle-orm";
-import {
-	boolean,
-	integer,
-	pgTable,
-	text,
-	timestamp,
-} from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -25,50 +19,63 @@ import { ssoProvider } from "./sso";
 // OLD TABLE
 
 // TEMP
-export const user = pgTable("user", {
+export const user = sqliteTable("user", {
 	id: text("id")
+
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	firstName: text("firstName").notNull().default(""),
 	lastName: text("lastName").notNull().default(""),
-	isRegistered: boolean("isRegistered").notNull().default(false),
+	isRegistered: integer("isRegistered", { mode: "boolean" })
+		.notNull()
+		.default(false),
 	expirationDate: text("expirationDate")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
 	createdAt2: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
-	createdAt: timestamp("created_at").defaultNow(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(
+		() => new Date(),
+	),
 	// Auth
-	twoFactorEnabled: boolean("two_factor_enabled"),
+	twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }),
 	email: text("email").notNull().unique(),
-	emailVerified: boolean("email_verified").notNull(),
+	emailVerified: integer("email_verified", { mode: "boolean" }).notNull(),
 	image: text("image"),
-	banned: boolean("banned"),
+	banned: integer("banned", { mode: "boolean" }),
 	banReason: text("ban_reason"),
-	banExpires: timestamp("ban_expires"),
-	updatedAt: timestamp("updated_at").notNull(),
+	banExpires: integer("ban_expires", { mode: "timestamp_ms" }),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 	// Admin
 	role: text("role").notNull().default("user"),
 	// Metrics
-	enablePaidFeatures: boolean("enablePaidFeatures").notNull().default(false),
-	allowImpersonation: boolean("allowImpersonation").notNull().default(false),
+	enablePaidFeatures: integer("enablePaidFeatures", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	allowImpersonation: integer("allowImpersonation", { mode: "boolean" })
+		.notNull()
+		.default(false),
 	// Enterprise features (always enabled -- no license gating)
-	enableEnterpriseFeatures: boolean("enableEnterpriseFeatures")
+	enableEnterpriseFeatures: integer("enableEnterpriseFeatures", {
+		mode: "boolean",
+	})
 		.notNull()
 		.default(true),
 	licenseKey: text("licenseKey"),
-	isValidEnterpriseLicense: boolean("isValidEnterpriseLicense")
+	isValidEnterpriseLicense: integer("isValidEnterpriseLicense", {
+		mode: "boolean",
+	})
 		.notNull()
 		.default(true),
 	stripeCustomerId: text("stripeCustomerId"),
 	stripeSubscriptionId: text("stripeSubscriptionId"),
 	serversQuantity: integer("serversQuantity").notNull().default(0),
-	trustedOrigins: text("trustedOrigins").array(),
-	bookmarkedTemplates: text("bookmarkedTemplates")
-		.array()
-		.default(sql`ARRAY[]::text[]`),
+	trustedOrigins: text("trustedOrigins", { mode: "json" }).$type<string[]>(),
+	bookmarkedTemplates: text("bookmarkedTemplates", { mode: "json" })
+		.$type<string[]>()
+		.default(sql`'[]'`),
 });
 
 export const usersRelations = relations(user, ({ one, many }) => ({
