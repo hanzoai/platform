@@ -1,18 +1,28 @@
-name: hanzo-platform
+# DigitalOcean App Platform — EPHEMERAL PREVIEW ONLY.
+#
+# App Platform's service filesystem is ephemeral: it is wiped on every restart,
+# redeploy, and horizontal scale event. Platform's datastore is now Base SQLite
+# (a file on disk), so a persistent App-Platform deployment would silently lose
+# all data on the next restart. App Platform has no disk/volume primitive that
+# gives a single SQLite file a stable home across restarts.
+#
+# Therefore this spec is for throwaway preview environments only, and it pins
+# the database to in-memory SQLite (`PLATFORM_DB_PATH=:memory:`) so the
+# ephemerality is explicit and intentional — not an accident waiting to corrupt
+# real data. Each preview boots a fresh empty DB and discards it on teardown.
+#
+# The persistent production deployment is a Kubernetes StatefulSet backed by a
+# PersistentVolumeClaim (`/app/data` → 50Gi PVC). It owns the primary domain
+# platform.hanzo.ai. See `k8s/platform-statefulset.yaml`.
+name: hanzo-platform-preview
 region: nyc
-databases:
-  - engine: PG
-    name: db
-    num_nodes: 1
-    size: db-s-dev-database
-    version: "16"
 services:
   - name: platform
     source_dir: /
     github:
       repo: hanzoai/platform
       branch: main
-      deploy_on_push: true
+      deploy_on_push: false
     dockerfile_path: Dockerfile.cloud
     instance_count: 1
     instance_size_slug: professional-xs
@@ -29,12 +39,12 @@ services:
     envs:
       - key: NODE_ENV
         value: "production"
-      - key: DATABASE_URL
-        scope: RUN_TIME
-        value: ${db.DATABASE_URL}
-      - key: DO_API_TOKEN
-        scope: RUN_TIME
-        type: SECRET
+      # In-memory SQLite: previews are ephemeral by design. No file, no PVC,
+      # nothing to lose on restart. NEVER point this at a file path on App
+      # Platform — that filesystem does not survive a restart, and
+      # resolveSqlitePath would happily open (then lose) the file.
+      - key: PLATFORM_DB_PATH
+        value: ":memory:"
       - key: NEXTAUTH_SECRET
         scope: RUN_TIME
         type: SECRET
@@ -50,7 +60,3 @@ services:
       - key: IAM_CLIENT_SECRET
         scope: RUN_TIME
         type: SECRET
-
-domains:
-  - domain: platform.hanzo.ai
-    type: PRIMARY

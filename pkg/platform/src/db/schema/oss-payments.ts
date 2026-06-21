@@ -5,70 +5,42 @@
  * and manages payment distribution from compute revenue.
  */
 
-import { relations, sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 import {
-	boolean,
 	index,
 	integer,
-	numeric,
-	pgEnum,
-	pgTable,
+	sqliteTable,
 	text,
-	timestamp,
 	uniqueIndex,
-	uuid,
-} from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+} from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import { organization } from "./account";
 import { walletTransactions } from "./wallet";
 
 // Enums
-export const ecosystemEnum = pgEnum("oss_ecosystem", [
-	"npm",
-	"cargo",
-	"pypi",
-	"go",
-]);
-
-export const paymentTypeEnum = pgEnum("oss_payment_type", [
-	"github_sponsors",
-	"open_collective",
-	"ethereum",
-	"bitcoin",
-	"lux",
-	"stripe",
-]);
-
-export const distributionStatusEnum = pgEnum("oss_distribution_status", [
-	"pending",
-	"processing",
-	"completed",
-	"failed",
-]);
-
-export const contributorRoleEnum = pgEnum("oss_contributor_role", [
-	"primary",
-	"maintainer",
-	"contributor",
-]);
 
 // ============================================================================
 // OSS Authors
 // ============================================================================
 
-export const ossAuthors = pgTable(
+export const ossAuthors = sqliteTable(
 	"oss_authors",
 	{
-		authorId: uuid("author_id").defaultRandom().primaryKey(),
+		authorId: text("author_id")
+			.$defaultFn(() => crypto.randomUUID())
+			.primaryKey(),
 		name: text("name").notNull(),
 		email: text("email"),
 		githubUsername: text("github_username").unique(),
-		verified: boolean("verified").notNull().default(false),
-		verificationDate: timestamp("verification_date", { withTimezone: true }),
-		lastActive: timestamp("last_active", { withTimezone: true }),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+		verified: integer("verified", { mode: "boolean" }).notNull().default(false),
+		verificationDate: integer("verification_date", { mode: "timestamp_ms" }),
+		lastActive: integer("last_active", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => ({
 		githubIdx: index("idx_oss_authors_github").on(table.githubUsername),
@@ -76,18 +48,33 @@ export const ossAuthors = pgTable(
 	}),
 );
 
-export const ossPaymentAddresses = pgTable(
+export const ossPaymentAddresses = sqliteTable(
 	"oss_payment_addresses",
 	{
-		addressId: uuid("address_id").defaultRandom().primaryKey(),
-		authorId: uuid("author_id")
+		addressId: text("address_id")
+			.$defaultFn(() => crypto.randomUUID())
+			.primaryKey(),
+		authorId: text("author_id")
 			.notNull()
 			.references(() => ossAuthors.authorId, { onDelete: "cascade" }),
-		addressType: paymentTypeEnum("address_type").notNull(),
+		addressType: text("address_type", {
+			enum: [
+				"github_sponsors",
+				"open_collective",
+				"ethereum",
+				"bitcoin",
+				"lux",
+				"stripe",
+			],
+		}).notNull(),
 		address: text("address").notNull(),
-		verified: boolean("verified").notNull().default(false),
-		preferred: boolean("preferred").notNull().default(false),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		verified: integer("verified", { mode: "boolean" }).notNull().default(false),
+		preferred: integer("preferred", { mode: "boolean" })
+			.notNull()
+			.default(false),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => ({
 		authorIdx: index("idx_oss_payment_addr_author").on(table.authorId),
@@ -103,20 +90,28 @@ export const ossPaymentAddresses = pgTable(
 // OSS Packages
 // ============================================================================
 
-export const ossPackages = pgTable(
+export const ossPackages = sqliteTable(
 	"oss_packages",
 	{
-		packageId: uuid("package_id").defaultRandom().primaryKey(),
+		packageId: text("package_id")
+			.$defaultFn(() => crypto.randomUUID())
+			.primaryKey(),
 		name: text("name").notNull(),
-		ecosystem: ecosystemEnum("ecosystem").notNull(),
+		ecosystem: text("ecosystem", {
+			enum: ["npm", "cargo", "pypi", "go"],
+		}).notNull(),
 		version: text("version"),
 		repositoryUrl: text("repository_url"),
 		homepageUrl: text("homepage_url"),
 		license: text("license"),
 		description: text("description"),
-		lastFetched: timestamp("last_fetched", { withTimezone: true }),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+		lastFetched: integer("last_fetched", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => ({
 		ecosystemIdx: index("idx_oss_packages_ecosystem").on(table.ecosystem),
@@ -127,21 +122,28 @@ export const ossPackages = pgTable(
 	}),
 );
 
-export const ossPackageAuthors = pgTable(
+export const ossPackageAuthors = sqliteTable(
 	"oss_package_authors",
 	{
-		packageId: uuid("package_id")
+		packageId: text("package_id")
 			.notNull()
 			.references(() => ossPackages.packageId, { onDelete: "cascade" }),
-		authorId: uuid("author_id")
+		authorId: text("author_id")
 			.notNull()
 			.references(() => ossAuthors.authorId, { onDelete: "cascade" }),
-		sharePercentage: numeric("share_percentage", { precision: 5, scale: 4 }).notNull(),
-		role: contributorRoleEnum("role").notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		sharePercentage: text("share_percentage").notNull(),
+		role: text("role", {
+			enum: ["primary", "maintainer", "contributor"],
+		}).notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => ({
-		pk: uniqueIndex("idx_oss_pkg_authors_pk").on(table.packageId, table.authorId),
+		pk: uniqueIndex("idx_oss_pkg_authors_pk").on(
+			table.packageId,
+			table.authorId,
+		),
 		packageIdx: index("idx_oss_pkg_authors_package").on(table.packageId),
 		authorIdx: index("idx_oss_pkg_authors_author").on(table.authorId),
 	}),
@@ -151,44 +153,59 @@ export const ossPackageAuthors = pgTable(
 // OSS Projects (tracked projects using OSS)
 // ============================================================================
 
-export const ossProjects = pgTable(
+export const ossProjects = sqliteTable(
 	"oss_projects",
 	{
-		ossProjectId: uuid("oss_project_id").defaultRandom().primaryKey(),
+		ossProjectId: text("oss_project_id")
+			.$defaultFn(() => crypto.randomUUID())
+			.primaryKey(),
 		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organization.id, { onDelete: "cascade" }),
 		name: text("name").notNull(),
 		repositoryUrl: text("repository_url"),
-		lastScan: timestamp("last_scan", { withTimezone: true }),
-		monthlyBudget: numeric("monthly_budget", { precision: 12, scale: 2 }),
-		autoDistribute: boolean("auto_distribute").notNull().default(false),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+		lastScan: integer("last_scan", { mode: "timestamp_ms" }),
+		monthlyBudget: text("monthly_budget"),
+		autoDistribute: integer("auto_distribute", { mode: "boolean" })
+			.notNull()
+			.default(false),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => ({
 		orgIdx: index("idx_oss_projects_org").on(table.organizationId),
 	}),
 );
 
-export const ossProjectDependencies = pgTable(
+export const ossProjectDependencies = sqliteTable(
 	"oss_project_dependencies",
 	{
-		ossProjectId: uuid("oss_project_id")
+		ossProjectId: text("oss_project_id")
 			.notNull()
 			.references(() => ossProjects.ossProjectId, { onDelete: "cascade" }),
-		packageId: uuid("package_id")
+		packageId: text("package_id")
 			.notNull()
 			.references(() => ossPackages.packageId, { onDelete: "cascade" }),
 		version: text("version"),
-		isDirect: boolean("is_direct").notNull(),
+		isDirect: integer("is_direct", { mode: "boolean" }).notNull(),
 		depth: integer("depth").notNull().default(0),
 		usageCount: integer("usage_count").notNull().default(0),
-		firstAdded: timestamp("first_added", { withTimezone: true }).notNull().defaultNow(),
-		lastSeen: timestamp("last_seen", { withTimezone: true }).notNull().defaultNow(),
+		firstAdded: integer("first_added", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		lastSeen: integer("last_seen", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => ({
-		pk: uniqueIndex("idx_oss_proj_deps_pk").on(table.ossProjectId, table.packageId),
+		pk: uniqueIndex("idx_oss_proj_deps_pk").on(
+			table.ossProjectId,
+			table.packageId,
+		),
 		projectIdx: index("idx_oss_proj_deps_project").on(table.ossProjectId),
 		packageIdx: index("idx_oss_proj_deps_package").on(table.packageId),
 	}),
@@ -198,29 +215,38 @@ export const ossProjectDependencies = pgTable(
 // Usage Attribution (compute job -> OSS packages used)
 // ============================================================================
 
-export const ossUsageAttributions = pgTable(
+export const ossUsageAttributions = sqliteTable(
 	"oss_usage_attributions",
 	{
-		attributionId: uuid("attribution_id").defaultRandom().primaryKey(),
-		ossProjectId: uuid("oss_project_id")
+		attributionId: text("attribution_id")
+			.$defaultFn(() => crypto.randomUUID())
+			.primaryKey(),
+		ossProjectId: text("oss_project_id")
 			.notNull()
 			.references(() => ossProjects.ossProjectId, { onDelete: "cascade" }),
-		packageId: uuid("package_id")
+		packageId: text("package_id")
 			.notNull()
 			.references(() => ossPackages.packageId, { onDelete: "cascade" }),
 		computeJobId: text("compute_job_id"),
-		computeCost: numeric("compute_cost", { precision: 12, scale: 6 }).notNull(),
-		attributedShare: numeric("attributed_share", { precision: 8, scale: 6 }).notNull(),
-		attributedAmount: numeric("attributed_amount", { precision: 12, scale: 6 }).notNull(),
-		periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
-		periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
-		processed: boolean("processed").notNull().default(false),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		computeCost: text("compute_cost").notNull(),
+		attributedShare: text("attributed_share").notNull(),
+		attributedAmount: text("attributed_amount").notNull(),
+		periodStart: integer("period_start", { mode: "timestamp_ms" }).notNull(),
+		periodEnd: integer("period_end", { mode: "timestamp_ms" }).notNull(),
+		processed: integer("processed", { mode: "boolean" })
+			.notNull()
+			.default(false),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => ({
 		projectIdx: index("idx_oss_usage_attr_project").on(table.ossProjectId),
 		packageIdx: index("idx_oss_usage_attr_package").on(table.packageId),
-		periodIdx: index("idx_oss_usage_attr_period").on(table.periodStart, table.periodEnd),
+		periodIdx: index("idx_oss_usage_attr_period").on(
+			table.periodStart,
+			table.periodEnd,
+		),
 		unprocessedIdx: index("idx_oss_usage_attr_unprocessed").on(table.processed),
 	}),
 );
@@ -229,24 +255,32 @@ export const ossUsageAttributions = pgTable(
 // Distributions and Payments
 // ============================================================================
 
-export const ossDistributions = pgTable(
+export const ossDistributions = sqliteTable(
 	"oss_distributions",
 	{
-		distributionId: uuid("distribution_id").defaultRandom().primaryKey(),
-		ossProjectId: uuid("oss_project_id")
+		distributionId: text("distribution_id")
+			.$defaultFn(() => crypto.randomUUID())
+			.primaryKey(),
+		ossProjectId: text("oss_project_id")
 			.notNull()
 			.references(() => ossProjects.ossProjectId, { onDelete: "cascade" }),
-		totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+		totalAmount: text("total_amount").notNull(),
 		currency: text("currency").notNull().default("USD"),
-		periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
-		periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
-		status: distributionStatusEnum("status").notNull().default("pending"),
+		periodStart: integer("period_start", { mode: "timestamp_ms" }).notNull(),
+		periodEnd: integer("period_end", { mode: "timestamp_ms" }).notNull(),
+		status: text("status", {
+			enum: ["pending", "processing", "completed", "failed"],
+		})
+			.notNull()
+			.default("pending"),
 		packageCount: integer("package_count").notNull().default(0),
 		authorCount: integer("author_count").notNull().default(0),
 		successCount: integer("success_count").notNull().default(0),
 		failureCount: integer("failure_count").notNull().default(0),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		processedAt: timestamp("processed_at", { withTimezone: true }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		processedAt: integer("processed_at", { mode: "timestamp_ms" }),
 	},
 	(table) => ({
 		projectIdx: index("idx_oss_dist_project").on(table.ossProjectId),
@@ -255,30 +289,45 @@ export const ossDistributions = pgTable(
 	}),
 );
 
-export const ossPayments = pgTable(
+export const ossPayments = sqliteTable(
 	"oss_payments",
 	{
-		paymentId: uuid("payment_id").defaultRandom().primaryKey(),
-		distributionId: uuid("distribution_id")
+		paymentId: text("payment_id")
+			.$defaultFn(() => crypto.randomUUID())
+			.primaryKey(),
+		distributionId: text("distribution_id")
 			.notNull()
-			.references(() => ossDistributions.distributionId, { onDelete: "cascade" }),
-		authorId: uuid("author_id")
+			.references(() => ossDistributions.distributionId, {
+				onDelete: "cascade",
+			}),
+		authorId: text("author_id")
 			.notNull()
 			.references(() => ossAuthors.authorId, { onDelete: "cascade" }),
-		packageId: uuid("package_id")
+		packageId: text("package_id")
 			.notNull()
 			.references(() => ossPackages.packageId, { onDelete: "cascade" }),
-		amount: numeric("amount", { precision: 12, scale: 4 }).notNull(),
-		paymentType: paymentTypeEnum("payment_type").notNull(),
+		amount: text("amount").notNull(),
+		paymentType: text("payment_type", {
+			enum: [
+				"github_sponsors",
+				"open_collective",
+				"ethereum",
+				"bitcoin",
+				"lux",
+				"stripe",
+			],
+		}).notNull(),
 		transactionId: text("transaction_id"),
-		walletTransactionId: uuid("wallet_transaction_id").references(
+		walletTransactionId: text("wallet_transaction_id").references(
 			() => walletTransactions.transactionId,
 			{ onDelete: "set null" },
 		),
 		status: text("status").notNull().default("pending"),
 		errorMessage: text("error_message"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		processedAt: timestamp("processed_at", { withTimezone: true }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		processedAt: integer("processed_at", { mode: "timestamp_ms" }),
 	},
 	(table) => ({
 		distributionIdx: index("idx_oss_payments_dist").on(table.distributionId),
@@ -297,12 +346,15 @@ export const ossAuthorsRelations = relations(ossAuthors, ({ many }) => ({
 	payments: many(ossPayments),
 }));
 
-export const ossPaymentAddressesRelations = relations(ossPaymentAddresses, ({ one }) => ({
-	author: one(ossAuthors, {
-		fields: [ossPaymentAddresses.authorId],
-		references: [ossAuthors.authorId],
+export const ossPaymentAddressesRelations = relations(
+	ossPaymentAddresses,
+	({ one }) => ({
+		author: one(ossAuthors, {
+			fields: [ossPaymentAddresses.authorId],
+			references: [ossAuthors.authorId],
+		}),
 	}),
-}));
+);
 
 export const ossPackagesRelations = relations(ossPackages, ({ many }) => ({
 	packageAuthors: many(ossPackageAuthors),
@@ -311,16 +363,19 @@ export const ossPackagesRelations = relations(ossPackages, ({ many }) => ({
 	payments: many(ossPayments),
 }));
 
-export const ossPackageAuthorsRelations = relations(ossPackageAuthors, ({ one }) => ({
-	package: one(ossPackages, {
-		fields: [ossPackageAuthors.packageId],
-		references: [ossPackages.packageId],
+export const ossPackageAuthorsRelations = relations(
+	ossPackageAuthors,
+	({ one }) => ({
+		package: one(ossPackages, {
+			fields: [ossPackageAuthors.packageId],
+			references: [ossPackages.packageId],
+		}),
+		author: one(ossAuthors, {
+			fields: [ossPackageAuthors.authorId],
+			references: [ossAuthors.authorId],
+		}),
 	}),
-	author: one(ossAuthors, {
-		fields: [ossPackageAuthors.authorId],
-		references: [ossAuthors.authorId],
-	}),
-}));
+);
 
 export const ossProjectsRelations = relations(ossProjects, ({ one, many }) => ({
 	organization: one(organization, {
@@ -332,35 +387,44 @@ export const ossProjectsRelations = relations(ossProjects, ({ one, many }) => ({
 	distributions: many(ossDistributions),
 }));
 
-export const ossProjectDependenciesRelations = relations(ossProjectDependencies, ({ one }) => ({
-	project: one(ossProjects, {
-		fields: [ossProjectDependencies.ossProjectId],
-		references: [ossProjects.ossProjectId],
+export const ossProjectDependenciesRelations = relations(
+	ossProjectDependencies,
+	({ one }) => ({
+		project: one(ossProjects, {
+			fields: [ossProjectDependencies.ossProjectId],
+			references: [ossProjects.ossProjectId],
+		}),
+		package: one(ossPackages, {
+			fields: [ossProjectDependencies.packageId],
+			references: [ossPackages.packageId],
+		}),
 	}),
-	package: one(ossPackages, {
-		fields: [ossProjectDependencies.packageId],
-		references: [ossPackages.packageId],
-	}),
-}));
+);
 
-export const ossUsageAttributionsRelations = relations(ossUsageAttributions, ({ one }) => ({
-	project: one(ossProjects, {
-		fields: [ossUsageAttributions.ossProjectId],
-		references: [ossProjects.ossProjectId],
+export const ossUsageAttributionsRelations = relations(
+	ossUsageAttributions,
+	({ one }) => ({
+		project: one(ossProjects, {
+			fields: [ossUsageAttributions.ossProjectId],
+			references: [ossProjects.ossProjectId],
+		}),
+		package: one(ossPackages, {
+			fields: [ossUsageAttributions.packageId],
+			references: [ossPackages.packageId],
+		}),
 	}),
-	package: one(ossPackages, {
-		fields: [ossUsageAttributions.packageId],
-		references: [ossPackages.packageId],
-	}),
-}));
+);
 
-export const ossDistributionsRelations = relations(ossDistributions, ({ one, many }) => ({
-	project: one(ossProjects, {
-		fields: [ossDistributions.ossProjectId],
-		references: [ossProjects.ossProjectId],
+export const ossDistributionsRelations = relations(
+	ossDistributions,
+	({ one, many }) => ({
+		project: one(ossProjects, {
+			fields: [ossDistributions.ossProjectId],
+			references: [ossProjects.ossProjectId],
+		}),
+		payments: many(ossPayments),
 	}),
-	payments: many(ossPayments),
-}));
+);
 
 export const ossPaymentsRelations = relations(ossPayments, ({ one }) => ({
 	distribution: one(ossDistributions, {

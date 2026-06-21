@@ -1,6 +1,5 @@
-import { pgTable, text } from "drizzle-orm/pg-core";
+import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
-import { nanoid } from "nanoid";
 import { z } from "zod";
 
 /**
@@ -22,7 +21,7 @@ import { z } from "zod";
  * make verification impossible). It is high-entropy, per-runner, and rotated
  * by replacing the row; it never authenticates a human.
  */
-export const arcdRunner = pgTable("arcd_runner", {
+export const arcdRunner = sqliteTable("arcd_runner", {
 	/** Stable runner id, e.g. `evo-1`. Carried in the poll body and HMAC header. */
 	runnerId: text("runnerId").notNull().primaryKey(),
 	/** arcd pool this runner serves, e.g. `hanzoai-linux-amd64`. */
