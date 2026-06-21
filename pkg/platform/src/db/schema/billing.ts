@@ -1,10 +1,5 @@
 import { relations } from "drizzle-orm";
-import {
-	jsonb,
-	pgTable,
-	real,
-	text,
-} from "drizzle-orm/pg-core";
+import { real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -23,7 +18,7 @@ export interface CostItem {
 	diskGb?: number;
 }
 
-export const billingRecord = pgTable("billing_record", {
+export const billingRecord = sqliteTable("billing_record", {
 	billingId: text("billingId")
 		.notNull()
 		.primaryKey()
@@ -31,8 +26,10 @@ export const billingRecord = pgTable("billing_record", {
 	organizationId: text("organizationId")
 		.notNull()
 		.references(() => organization.id, { onDelete: "cascade" }),
-	doksClusterId: text("doksClusterId")
-		.references(() => doksCluster.doksClusterId, { onDelete: "set null" }),
+	doksClusterId: text("doksClusterId").references(
+		() => doksCluster.doksClusterId,
+		{ onDelete: "set null" },
+	),
 	monthlyTotal: real("monthlyTotal").notNull().default(0),
 	subtotal: real("subtotal").notNull().default(0),
 	markup: real("markup").notNull().default(0),
@@ -41,7 +38,10 @@ export const billingRecord = pgTable("billing_record", {
 	calculatedAt: text("calculatedAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
-	items: jsonb("items").$type<CostItem[]>().notNull().default([]),
+	items: text("items", { mode: "json" })
+		.$type<CostItem[]>()
+		.notNull()
+		.default([]),
 });
 
 export const billingRecordRelations = relations(billingRecord, ({ one }) => ({

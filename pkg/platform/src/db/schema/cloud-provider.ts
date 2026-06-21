@@ -12,16 +12,7 @@
  */
 
 import { relations, sql } from "drizzle-orm";
-import {
-	boolean,
-	index,
-	integer,
-	jsonb,
-	pgEnum,
-	pgTable,
-	text,
-	timestamp,
-} from "drizzle-orm/pg-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -32,36 +23,15 @@ import { computeNode, computePool } from "./compute-pool";
 // Enums
 // ============================================================================
 
-export const cloudProviderType = pgEnum("cloud_provider_type", [
-	"digitalocean",
-	"aws",
-	"gcp",
-	"azure",
-	"hetzner",
-	"vultr",
-	"linode",
-]);
-
-export const instanceStatus = pgEnum("instance_status", [
-	"pending",       // Record created, awaiting API call
-	"provisioning",  // Provider is creating the instance
-	"booting",       // Instance created, running cloud-init
-	"registering",   // Node is registering with Platform
-	"running",       // Fully operational
-	"draining",      // Workloads being migrated off
-	"stopping",      // Shutting down
-	"terminated",    // Deleted from provider
-	"failed",        // Provisioning failed
-]);
-
 // ============================================================================
 // Cloud Provider (Credentials & Config)
 // ============================================================================
 
-export const cloudProvider = pgTable(
+export const cloudProvider = sqliteTable(
 	"cloud_provider",
 	{
 		providerId: text("provider_id")
+
 			.primaryKey()
 			.$defaultFn(() => nanoid()),
 
@@ -71,18 +41,28 @@ export const cloudProvider = pgTable(
 			.references(() => organization.id, { onDelete: "cascade" }),
 
 		// Provider identity
-		providerType: cloudProviderType("provider_type").notNull(),
+		providerType: text("provider_type", {
+			enum: [
+				"digitalocean",
+				"aws",
+				"gcp",
+				"azure",
+				"hetzner",
+				"vultr",
+				"linode",
+			],
+		}).notNull(),
 		name: text("name").notNull(),
 		slug: text("slug").notNull(),
 
 		// Encrypted credentials (encrypted at application layer)
-		credentials: jsonb("credentials")
+		credentials: text("credentials", { mode: "json" })
 			.$type<{
-				apiToken?: string;         // DO API token (encrypted)
-				accessKeyId?: string;      // AWS access key
-				secretAccessKey?: string;  // AWS secret (encrypted)
-				projectId?: string;        // GCP project ID
-				region?: string;           // Default region
+				apiToken?: string; // DO API token (encrypted)
+				accessKeyId?: string; // AWS access key
+				secretAccessKey?: string; // AWS secret (encrypted)
+				projectId?: string; // GCP project ID
+				region?: string; // Default region
 			}>()
 			.notNull(),
 
@@ -92,37 +72,45 @@ export const cloudProvider = pgTable(
 		defaultImage: text("default_image").notNull().default("ubuntu-22-04-x64"),
 
 		// VPC/Network configuration
-		vpcConfig: jsonb("vpc_config")
-			.$type<{
-				vpcId?: string;
-				subnetId?: string;
-				securityGroupId?: string;
-			}>(),
+		vpcConfig: text("vpc_config", { mode: "json" }).$type<{
+			vpcId?: string;
+			subnetId?: string;
+			securityGroupId?: string;
+		}>(),
 
 		// SSH key management
-		sshKeyIds: text("ssh_key_ids")
-			.array()
-			.default(sql`ARRAY[]::text[]`),
+		sshKeyIds: text("ssh_key_ids", { mode: "json" })
+			.$type<string[]>()
+			.default(sql`'[]'`),
 
 		// Firewall configuration
 		firewallId: text("firewall_id"),
 
 		// Status
-		isActive: boolean("is_active").notNull().default(true),
-		lastValidated: timestamp("last_validated", { withTimezone: true }),
+		isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+		lastValidated: integer("last_validated", { mode: "timestamp_ms" }),
 		validationError: text("validation_error"),
 
 		// Metadata
-		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+		metadata: text("metadata", { mode: "json" }).$type<
+			Record<string, unknown>
+		>(),
 
 		// Timestamps
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => ({
 		orgIdIdx: index("idx_cloud_provider_org").on(table.organizationId),
 		typeIdx: index("idx_cloud_provider_type").on(table.providerType),
-		slugIdx: index("idx_cloud_provider_slug").on(table.organizationId, table.slug),
+		slugIdx: index("idx_cloud_provider_slug").on(
+			table.organizationId,
+			table.slug,
+		),
 	}),
 );
 
@@ -130,7 +118,7 @@ export const cloudProvider = pgTable(
 // Provisioned Instance (Cloud Instance Tracking)
 // ============================================================================
 
-export const provisionedInstance = pgTable(
+export const provisionedInstance = sqliteTable(
 	"provisioned_instance",
 	{
 		instanceId: text("instance_id")
@@ -143,15 +131,18 @@ export const provisionedInstance = pgTable(
 			.references(() => cloudProvider.providerId, { onDelete: "cascade" }),
 
 		// Pool reference (optional - some instances may be standalone)
-		poolId: text("pool_id")
-			.references(() => computePool.poolId, { onDelete: "set null" }),
+		poolId: text("pool_id").references(() => computePool.poolId, {
+			onDelete: "set null",
+		}),
 
 		// Compute node reference (created after registration)
-		computeNodeId: text("compute_node_id")
-			.references(() => computeNode.nodeId, { onDelete: "set null" }),
+		computeNodeId: text("compute_node_id").references(
+			() => computeNode.nodeId,
+			{ onDelete: "set null" },
+		),
 
 		// Provider-specific IDs
-		externalId: text("external_id"),         // DO droplet ID, AWS instance ID, etc.
+		externalId: text("external_id"), // DO droplet ID, AWS instance ID, etc.
 		externalName: text("external_name").notNull(),
 
 		// Configuration
@@ -161,7 +152,21 @@ export const provisionedInstance = pgTable(
 		vpcId: text("vpc_id"),
 
 		// Status
-		status: instanceStatus("status").notNull().default("pending"),
+		status: text("status", {
+			enum: [
+				"pending",
+				"provisioning",
+				"booting",
+				"registering",
+				"running",
+				"draining",
+				"stopping",
+				"terminated",
+				"failed",
+			],
+		})
+			.notNull()
+			.default("pending"),
 
 		// Networking
 		publicIp: text("public_ip"),
@@ -170,7 +175,9 @@ export const provisionedInstance = pgTable(
 
 		// Bootstrap state
 		registrationToken: text("registration_token"),
-		registrationExpiry: timestamp("registration_expiry", { withTimezone: true }),
+		registrationExpiry: integer("registration_expiry", {
+			mode: "timestamp_ms",
+		}),
 		swarmJoinToken: text("swarm_join_token"),
 
 		// Resource specifications
@@ -180,34 +187,42 @@ export const provisionedInstance = pgTable(
 		gpuCount: integer("gpu_count").default(0),
 
 		// Cost tracking
-		hourlyPrice: text("hourly_price"),      // Stored as string for precision
+		hourlyPrice: text("hourly_price"), // Stored as string for precision
 		monthlyPrice: text("monthly_price"),
 
 		// Tags for organization
-		tags: text("tags")
-			.array()
-			.default(sql`ARRAY[]::text[]`),
+		tags: text("tags", { mode: "json" }).$type<string[]>().default(sql`'[]'`),
 
 		// Error handling
 		lastError: text("last_error"),
 		errorCount: integer("error_count").notNull().default(0),
 
 		// Metadata
-		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+		metadata: text("metadata", { mode: "json" }).$type<
+			Record<string, unknown>
+		>(),
 
 		// Timestamps
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-		provisionedAt: timestamp("provisioned_at", { withTimezone: true }),
-		registeredAt: timestamp("registered_at", { withTimezone: true }),
-		terminatedAt: timestamp("terminated_at", { withTimezone: true }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		provisionedAt: integer("provisioned_at", { mode: "timestamp_ms" }),
+		registeredAt: integer("registered_at", { mode: "timestamp_ms" }),
+		terminatedAt: integer("terminated_at", { mode: "timestamp_ms" }),
 	},
 	(table) => ({
-		providerIdx: index("idx_provisioned_instance_provider").on(table.cloudProviderId),
+		providerIdx: index("idx_provisioned_instance_provider").on(
+			table.cloudProviderId,
+		),
 		poolIdx: index("idx_provisioned_instance_pool").on(table.poolId),
 		nodeIdx: index("idx_provisioned_instance_node").on(table.computeNodeId),
 		statusIdx: index("idx_provisioned_instance_status").on(table.status),
-		externalIdx: index("idx_provisioned_instance_external").on(table.externalId),
+		externalIdx: index("idx_provisioned_instance_external").on(
+			table.externalId,
+		),
 	}),
 );
 
@@ -215,7 +230,7 @@ export const provisionedInstance = pgTable(
 // Scaling Job (Track Async Operations)
 // ============================================================================
 
-export const scalingJob = pgTable(
+export const scalingJob = sqliteTable(
 	"scaling_job",
 	{
 		jobId: text("job_id")
@@ -234,7 +249,7 @@ export const scalingJob = pgTable(
 		jobType: text("job_type").notNull(), // scale_up, scale_down, resize
 
 		// Configuration
-		config: jsonb("config")
+		config: text("config", { mode: "json" })
 			.$type<{
 				count?: number;
 				size?: string;
@@ -247,24 +262,26 @@ export const scalingJob = pgTable(
 
 		// Status
 		status: text("status").notNull().default("pending"), // pending, running, completed, failed
-		progress: integer("progress").notNull().default(0),      // 0-100
+		progress: integer("progress").notNull().default(0), // 0-100
 
 		// Results
-		createdNodeIds: text("created_node_ids")
-			.array()
-			.default(sql`ARRAY[]::text[]`),
-		removedNodeIds: text("removed_node_ids")
-			.array()
-			.default(sql`ARRAY[]::text[]`),
+		createdNodeIds: text("created_node_ids", { mode: "json" })
+			.$type<string[]>()
+			.default(sql`'[]'`),
+		removedNodeIds: text("removed_node_ids", { mode: "json" })
+			.$type<string[]>()
+			.default(sql`'[]'`),
 
 		// Error handling
 		error: text("error"),
-		errorDetails: jsonb("error_details"),
+		errorDetails: text("error_details", { mode: "json" }),
 
 		// Timestamps
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		startedAt: timestamp("started_at", { withTimezone: true }),
-		completedAt: timestamp("completed_at", { withTimezone: true }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		startedAt: integer("started_at", { mode: "timestamp_ms" }),
+		completedAt: integer("completed_at", { mode: "timestamp_ms" }),
 	},
 	(table) => ({
 		poolIdx: index("idx_scaling_job_pool").on(table.poolId),
@@ -276,29 +293,35 @@ export const scalingJob = pgTable(
 // Relations
 // ============================================================================
 
-export const cloudProviderRelations = relations(cloudProvider, ({ one, many }) => ({
-	organization: one(organization, {
-		fields: [cloudProvider.organizationId],
-		references: [organization.id],
+export const cloudProviderRelations = relations(
+	cloudProvider,
+	({ one, many }) => ({
+		organization: one(organization, {
+			fields: [cloudProvider.organizationId],
+			references: [organization.id],
+		}),
+		instances: many(provisionedInstance),
+		scalingJobs: many(scalingJob),
 	}),
-	instances: many(provisionedInstance),
-	scalingJobs: many(scalingJob),
-}));
+);
 
-export const provisionedInstanceRelations = relations(provisionedInstance, ({ one }) => ({
-	cloudProvider: one(cloudProvider, {
-		fields: [provisionedInstance.cloudProviderId],
-		references: [cloudProvider.providerId],
+export const provisionedInstanceRelations = relations(
+	provisionedInstance,
+	({ one }) => ({
+		cloudProvider: one(cloudProvider, {
+			fields: [provisionedInstance.cloudProviderId],
+			references: [cloudProvider.providerId],
+		}),
+		pool: one(computePool, {
+			fields: [provisionedInstance.poolId],
+			references: [computePool.poolId],
+		}),
+		computeNode: one(computeNode, {
+			fields: [provisionedInstance.computeNodeId],
+			references: [computeNode.nodeId],
+		}),
 	}),
-	pool: one(computePool, {
-		fields: [provisionedInstance.poolId],
-		references: [computePool.poolId],
-	}),
-	computeNode: one(computeNode, {
-		fields: [provisionedInstance.computeNodeId],
-		references: [computeNode.nodeId],
-	}),
-}));
+);
 
 export const scalingJobRelations = relations(scalingJob, ({ one }) => ({
 	pool: one(computePool, {
@@ -317,20 +340,26 @@ export const scalingJobRelations = relations(scalingJob, ({ one }) => ({
 
 const createProviderSchema = createInsertSchema(cloudProvider, {
 	name: z.string().min(1).max(100),
-	slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
+	slug: z
+		.string()
+		.min(1)
+		.max(100)
+		.regex(/^[a-z0-9-]+$/),
 });
 
-export const apiConfigureCloudProvider = createProviderSchema.pick({
-	name: true,
-	slug: true,
-	providerType: true,
-	defaultRegion: true,
-	defaultSize: true,
-}).extend({
-	apiToken: z.string().min(1), // Will be encrypted before storage
-	region: z.string().optional(),
-	projectId: z.string().optional(),
-});
+export const apiConfigureCloudProvider = createProviderSchema
+	.pick({
+		name: true,
+		slug: true,
+		providerType: true,
+		defaultRegion: true,
+		defaultSize: true,
+	})
+	.extend({
+		apiToken: z.string().min(1), // Will be encrypted before storage
+		region: z.string().optional(),
+		projectId: z.string().optional(),
+	});
 
 export const apiUpdateCloudProvider = createProviderSchema
 	.pick({

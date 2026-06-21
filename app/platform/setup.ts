@@ -4,7 +4,6 @@ import { promisify } from "node:util";
 
 const execAsync = promisify(exec);
 import { setupDirectories } from "@hanzo/platform/setup/config-paths";
-import { initializePostgres } from "@hanzo/platform/setup/postgres-setup";
 import { initializeRedis } from "@hanzo/platform/setup/redis-setup";
 import {
 	initializeNetwork,
@@ -29,7 +28,6 @@ import {
 		await execAsync("docker pull ghcr.io/hanzoai/ingress:latest");
 		await initializeStandaloneTraefik();
 		await initializeRedis();
-		await initializePostgres();
 		console.log("Hanzo Platform setup completed");
 		exit(0);
 	} catch (e) {

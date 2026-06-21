@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -9,16 +9,8 @@ import { deployments } from "./deployment";
 import { server } from "./server";
 import { user } from "./user";
 import { generateAppName } from "./utils";
-export const shellTypes = pgEnum("shellType", ["bash", "sh"]);
 
-export const scheduleType = pgEnum("scheduleType", [
-	"application",
-	"compose",
-	"server",
-	"platform-server",
-]);
-
-export const schedules = pgTable("schedule", {
+export const schedules = sqliteTable("schedule", {
 	scheduleId: text("scheduleId")
 		.notNull()
 		.primaryKey()
@@ -30,8 +22,14 @@ export const schedules = pgTable("schedule", {
 		.notNull()
 		.$defaultFn(() => generateAppName("schedule")),
 	serviceName: text("serviceName"),
-	shellType: shellTypes("shellType").notNull().default("bash"),
-	scheduleType: scheduleType("scheduleType").notNull().default("application"),
+	shellType: text("shellType", { enum: ["bash", "sh"] })
+		.notNull()
+		.default("bash"),
+	scheduleType: text("scheduleType", {
+		enum: ["application", "compose", "server", "platform-server"],
+	})
+		.notNull()
+		.default("application"),
 	command: text("command").notNull(),
 	script: text("script"),
 	applicationId: text("applicationId").references(
@@ -49,7 +47,7 @@ export const schedules = pgTable("schedule", {
 	userId: text("userId").references(() => user.id, {
 		onDelete: "cascade",
 	}),
-	enabled: boolean("enabled").notNull().default(true),
+	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
 	timezone: text("timezone"),
 	createdAt: text("createdAt")
 		.notNull()

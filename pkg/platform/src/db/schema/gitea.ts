@@ -1,11 +1,11 @@
 import { relations } from "drizzle-orm";
-import { integer, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { gitProvider } from "./git-provider";
 
-export const gitea = pgTable("gitea", {
+export const gitea = sqliteTable("gitea", {
 	giteaId: text("giteaId")
 		.notNull()
 		.primaryKey()
