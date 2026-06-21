@@ -3,13 +3,12 @@ import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
 	schema: "./server/db/schema/index.ts",
-	dialect: "postgresql",
+	dialect: "sqlite",
 	dbCredentials: {
 		url: dbUrl,
 	},
 	out: "drizzle",
 	migrations: {
 		table: "migrations",
-		schema: "public",
 	},
 });

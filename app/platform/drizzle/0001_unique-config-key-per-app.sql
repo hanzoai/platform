@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX `domain_unique_config_key_per_app` ON `domain` (`applicationId`,`uniqueConfigKey`);--> statement-breakpoint
+CREATE UNIQUE INDEX `redirect_unique_config_key_per_app` ON `redirect` (`applicationId`,`uniqueConfigKey`);
