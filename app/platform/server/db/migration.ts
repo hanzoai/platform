@@ -1,20 +1,23 @@
-import { dbUrl } from "@hanzo/platform/db";
-import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import postgres from "postgres";
+import { dbUrl, ensureSqliteDir, resolveSqlitePath } from "@hanzo/platform/db";
+import BetterSqlite3 from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
-const sql = postgres(dbUrl, { max: 1 });
-const db = drizzle(sql);
+export const migration = async (): Promise<void> => {
+	const dbPath = resolveSqlitePath(dbUrl);
+	ensureSqliteDir(dbPath);
+	const sqlite = new BetterSqlite3(dbPath);
+	sqlite.pragma("journal_mode = WAL");
+	sqlite.pragma("foreign_keys = ON");
+	const db = drizzle(sqlite);
 
-export const migration = async () =>
-	await migrate(db, { migrationsFolder: "drizzle" })
-		.then(() => {
-			console.log("Migration complete");
-			sql.end();
-		})
-		.catch((error) => {
-			console.log("Migration failed", error);
-		})
-		.finally(() => {
-			sql.end();
-		});
+	try {
+		migrate(db, { migrationsFolder: "drizzle" });
+		console.log("Migration complete");
+	} catch (error) {
+		console.error("Migration failed", error);
+		throw error;
+	} finally {
+		sqlite.close();
+	}
+};

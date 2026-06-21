@@ -1,10 +1,10 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import { organization } from "./account";
 import { user } from "./user";
 
-export const ssoProvider = pgTable("sso_provider", {
+export const ssoProvider = sqliteTable("sso_provider", {
 	id: text("id").primaryKey(),
 	issuer: text("issuer").notNull(),
 	oidcConfig: text("oidc_config"),
@@ -15,7 +15,9 @@ export const ssoProvider = pgTable("sso_provider", {
 		onDelete: "cascade",
 	}),
 	domain: text("domain").notNull(),
-	createdAt: timestamp("created_at").notNull().defaultNow(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" })
+		.notNull()
+		.$defaultFn(() => new Date()),
 });
 
 export const ssoProviderRelations = relations(ssoProvider, ({ one }) => ({
