@@ -104,6 +104,30 @@ spec:
                 secretKeyRef:
                   name: platform-app-secrets
                   key: IAM_CLIENT_SECRET
+          # Clean-shutdown hygiene: before SIGTERM reaches the app, force a
+          # full WAL checkpoint so the -wal file is folded back into the main
+          # DB and truncated. SQLite recovers an un-checkpointed WAL on the
+          # next open regardless, so this is NOT data-loss prevention — it
+          # keeps the on-disk file self-contained for snapshots/backups taken
+          # right after a rollout. The image has no `sqlite3` CLI, so we drive
+          # the same `better-sqlite3` engine the app uses (a runtime dep,
+          # always present under /app/node_modules). Best-effort: any error
+          # exits 0 so a mid-write DB never blocks pod termination.
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - node
+                  - -e
+                  - |
+                    try {
+                      const Database = require("better-sqlite3");
+                      const db = new Database(process.env.PLATFORM_DB_PATH || "/app/data/platform.db");
+                      db.pragma("wal_checkpoint(TRUNCATE)");
+                      db.close();
+                    } catch (e) {
+                      console.error("preStop wal_checkpoint skipped:", e.message);
+                    }
           volumeMounts:
             - name: data
               mountPath: /app/data

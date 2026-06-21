@@ -23,10 +23,12 @@ export const redirects = sqliteTable("redirect", {
 	// to be a non-null integer that's unique within an app's Traefik router
 	// names. `crypto.randomInt` (not `Math.random`) so the value is not
 	// predictable; uniqueness within an app is enforced by the
-	// `redirect_unique_config_key_per_app` index below.
+	// `redirect_unique_config_key_per_app` index below. `randomInt(min, max)`
+	// is max-EXCLUSIVE, so the ceiling is `2**31` to cover the full unsigned
+	// 31-bit range [0, 2147483647].
 	uniqueConfigKey: integer("uniqueConfigKey")
 		.notNull()
-		.$defaultFn(() => randomInt(0, 2_147_483_647)),
+		.$defaultFn(() => randomInt(0, 2_147_483_648)),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),

@@ -30,14 +30,15 @@ export const domains = sqliteTable("domain", {
 		enum: ["compose", "application", "preview"],
 	}).default("application"),
 	// Postgres `serial` had no SQLite non-PK equivalent. This key only needs
-	// to be a non-null integer that's unique within an app's Traefik router
-	// names. `crypto.randomInt` (not `Math.random`) so the value is not
-	// predictable; uniqueness within an app is enforced by the
-	// `domain_unique_config_key_per_app` index below, not by hoping a 31-bit
-	// random never collides.
+	// to be a non-null integer that's unique within the namespace whose
+	// Traefik router names embed it. `crypto.randomInt` (not `Math.random`)
+	// so the value is not predictable; uniqueness within a namespace is
+	// enforced by the partial indexes below, not by hoping a 31-bit random
+	// never collides. `randomInt(min, max)` is max-EXCLUSIVE, so the ceiling
+	// is `2**31` to cover the full unsigned 31-bit range [0, 2147483647].
 	uniqueConfigKey: integer("uniqueConfigKey")
 		.notNull()
-		.$defaultFn(() => randomInt(0, 2_147_483_647)),
+		.$defaultFn(() => randomInt(0, 2_147_483_648)),
 	createdAt: text("createdAt")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
@@ -64,16 +65,35 @@ export const domains = sqliteTable("domain", {
 		.$type<string[]>()
 		.default(sql`'[]'`),
 }, (table) => ({
-	// `uniqueConfigKey` becomes a Traefik router name suffix for an
-	// application's domains. Two domains under the same application sharing a
-	// key would clobber each other's router — silently. SQLite treats NULL as
-	// distinct, so compose/preview domains (`applicationId IS NULL`) are not
-	// constrained against each other, which is correct: only application
-	// domains contend for application router names.
-	uniqueConfigKeyPerApp: uniqueIndex("domain_unique_config_key_per_app").on(
-		table.applicationId,
-		table.uniqueConfigKey,
-	),
+	// The Traefik router name is `${appName}-${uniqueConfigKey}` (see
+	// utils/docker/domain.ts and utils/traefik/domain.ts). Two domains
+	// resolving to the same `appName` that share a `uniqueConfigKey` would
+	// clobber each other's router — silently. `appName` is determined 1:1 by
+	// exactly one discriminator: application domains by `applicationId`,
+	// compose domains by `composeId` (→ `compose.appName`), preview domains
+	// by `previewDeploymentId` (→ a per-preview random `appName`). Each
+	// discriminator is therefore its own router-name namespace.
+	//
+	// SQLite treats NULL as distinct in a UNIQUE index, so a single
+	// `(applicationId, uniqueConfigKey)` index does NOT constrain the
+	// compose/preview rows (where `applicationId IS NULL`) against each
+	// other — two compose domains under one `composeId`, or two domains under
+	// one preview, could collide. Partial indexes scoped to each
+	// discriminator's non-NULL rows close that hole: every row is constrained
+	// within exactly the namespace whose router name embeds its key.
+	uniqueConfigKeyPerApp: uniqueIndex("domain_unique_config_key_per_app")
+		.on(table.applicationId, table.uniqueConfigKey)
+		.where(sql`${table.applicationId} IS NOT NULL`),
+	uniqueConfigKeyPerCompose: uniqueIndex(
+		"domain_unique_config_key_per_compose",
+	)
+		.on(table.composeId, table.uniqueConfigKey)
+		.where(sql`${table.composeId} IS NOT NULL`),
+	uniqueConfigKeyPerPreview: uniqueIndex(
+		"domain_unique_config_key_per_preview",
+	)
+		.on(table.previewDeploymentId, table.uniqueConfigKey)
+		.where(sql`${table.previewDeploymentId} IS NOT NULL`),
 }));
 
 export const domainsRelations = relations(domains, ({ one }) => ({
