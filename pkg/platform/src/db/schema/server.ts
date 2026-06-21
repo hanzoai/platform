@@ -1,12 +1,5 @@
 import { relations } from "drizzle-orm";
-import {
-	boolean,
-	integer,
-	jsonb,
-	pgEnum,
-	pgTable,
-	text,
-} from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -23,10 +16,8 @@ import { redis } from "./redis";
 import { schedules } from "./schedule";
 import { sshKeys } from "./ssh-key";
 import { generateAppName } from "./utils";
-export const serverStatus = pgEnum("serverStatus", ["active", "inactive"]);
-export const serverType = pgEnum("serverType", ["deploy", "build"]);
 
-export const server = pgTable("server", {
+export const server = sqliteTable("server", {
 	serverId: text("serverId")
 		.notNull()
 		.primaryKey()
@@ -39,18 +30,24 @@ export const server = pgTable("server", {
 	appName: text("appName")
 		.notNull()
 		.$defaultFn(() => generateAppName("server")),
-	enableDockerCleanup: boolean("enableDockerCleanup").notNull().default(false),
+	enableDockerCleanup: integer("enableDockerCleanup", { mode: "boolean" })
+		.notNull()
+		.default(false),
 	createdAt: text("createdAt").notNull(),
 	organizationId: text("organizationId")
 		.notNull()
 		.references(() => organization.id, { onDelete: "cascade" }),
-	serverStatus: serverStatus("serverStatus").notNull().default("active"),
-	serverType: serverType("serverType").notNull().default("deploy"),
+	serverStatus: text("serverStatus", { enum: ["active", "inactive"] })
+		.notNull()
+		.default("active"),
+	serverType: text("serverType", { enum: ["deploy", "build"] })
+		.notNull()
+		.default("deploy"),
 	command: text("command").notNull().default(""),
 	sshKeyId: text("sshKeyId").references(() => sshKeys.sshKeyId, {
 		onDelete: "set null",
 	}),
-	metricsConfig: jsonb("metricsConfig")
+	metricsConfig: text("metricsConfig", { mode: "json" })
 		.$type<{
 			server: {
 				type: "Hanzo" | "Remote";
