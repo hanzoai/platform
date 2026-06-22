@@ -49,3 +49,34 @@ Platform's filesystem does not survive restarts, so it must never hold a real DB
 ## Auth (HIP-0111, one way) + Node-24 build
 - Platform login = Hanzo IAM PKCE via **`hanzo.id`** (no Better Auth login, no genericOAuth). The settled flow + files live in `IAM_MIGRATION.md` (CANONICAL header). Don't re-add a `signIn.social`/`signIn.oauth2` button.
 - Node 24 build: keep the pnpm override `nan: 2.27.0` (native deps `ssh2`/`node-pty` won't compile on Node 24 without it).
+
+## Versioning — ONE line, `v4.x` (HIP-0111)
+There is exactly one version line: **`v4.x`**. `app/platform/package.json`,
+git tags, and the published `ghcr.io/hanzoai/platform` image tag are the SAME
+string. Current: `v4.2.2`.
+
+`v0.28.x` is DEAD. It was the upstream Dokploy app-string (author Mauricio Siu)
+that the fork kept bumping out of habit; `v0.28.9` (#31) was the last one and is
+an ancestor of `main`. Do not cut, tag, or publish `v0.28.x` again. The `v4.2.0`
+/ `v4.2.1` tags were a short auth-branch snapshot taken before the
+Postgres→SQLite merge (#29); their 7 auth commits (Better Auth on `/v1/auth`,
+`signIn.oauth2`) are fully superseded by `main`'s IAM-PKCE flow (see Auth
+section) — `main` is strictly ahead, nothing to back-merge.
+
+Release = bump `app/platform/package.json` version, tag `main` HEAD with the
+same string, let `deploy.yml` build+push the image at that tag. No second
+numbering scheme, ever.
+
+## Build resilience — runners cannot reach Docker Hub
+The arcd runners resolve DNS via 8.8.8.8 and intermittently time out on
+`registry-1.docker.io`; `ghcr.io` is always reachable. Two consequences, both
+fixed and load-bearing — do not revert:
+- `.github/buildkitd.toml` mirrors `docker.io` → `mirror.gcr.io`; every
+  `docker/setup-buildx-action` in `deploy.yml` loads it via `buildkitd-config`.
+- `Dockerfile` has **no `# syntax=` pragma** (it would force a Docker Hub pull of
+  `docker/dockerfile:1`); the built-in buildkit frontend handles
+  `RUN --mount=type=cache` on buildx ≥ v0.34.
+The upstream `dokploy.yml` workflow (pushed `dokploy/dokploy` to Docker Hub,
+synced `dokploy/{mcp,cli,sdk}`) was deleted — it is upstream noise, never a Hanzo
+build. CI jobs that run `pnpm install` need the "Ensure native build toolchain"
+step (node-gyp wants make/gcc/python for `ssh2`/`node-pty`/`bcrypt`).
