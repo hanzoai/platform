@@ -52,11 +52,18 @@ services:
         value: "https://platform.hanzo.ai"
       - key: NEXT_PUBLIC_APP_URL
         value: "https://platform.hanzo.ai"
+      # Hanzo IAM PKCE (HIP-0111): issuer is hanzo.id; platform's own OAuth
+      # client is `hanzo-platform` with redirect_uri ${origin}/auth/callback.
+      # The client_id is public (it travels in the authorize URL) — only the
+      # client_secret is a SECRET. Browser PKCE reads the NEXT_PUBLIC_* pair.
       - key: IAM_ENDPOINT
         value: "https://hanzo.id"
       - key: IAM_CLIENT_ID
-        scope: RUN_TIME
-        type: SECRET
+        value: "hanzo-platform"
+      - key: NEXT_PUBLIC_IAM_SERVER_URL
+        value: "https://hanzo.id"
+      - key: NEXT_PUBLIC_IAM_CLIENT_ID
+        value: "hanzo-platform"
       - key: IAM_CLIENT_SECRET
         scope: RUN_TIME
         type: SECRET
