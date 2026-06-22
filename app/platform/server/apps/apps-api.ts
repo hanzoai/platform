@@ -19,16 +19,22 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@hanzo/platform/db";
 import {
 	type App,
+	appEnv,
+	appHealth,
 	apps,
 	computeDrift,
 	type Drift,
 	type DriftSeverity,
 } from "@hanzo/platform/db/schema";
 
-/** Deployment env vocabulary (matches the `appEnv` pg enum). */
-export type AppEnv = "dev" | "test" | "main";
-/** Aggregate health vocabulary (matches the `appHealth` pg enum). */
-export type AppHealth = "green" | "yellow" | "red";
+// Enum vocabularies derive from the single canonical source — the `appEnv` /
+// `appHealth` pgEnum definitions in `db/schema/apps`. `pgEnum(...).enumValues`
+// is the same tuple the column and the migration are built from, so these
+// types cannot drift out of sync with the DB enum. Don't hand-retype them.
+/** Deployment env vocabulary (`"dev" | "test" | "main"`). */
+export type AppEnv = (typeof appEnv.enumValues)[number];
+/** Aggregate health vocabulary (`"green" | "yellow" | "red"`). */
+export type AppHealth = (typeof appHealth.enumValues)[number];
 
 /** Filters accepted by the list endpoint (all optional, all narrowing). */
 export interface AppsQuery {
@@ -69,6 +75,10 @@ export interface AppView {
 const iso = (d: Date | string | null): string | null =>
 	d == null ? null : d instanceof Date ? d.toISOString() : d;
 
+/** ISO-8601 for NOT NULL timestamp columns (e.g. `updatedAt`). */
+const isoNN = (d: Date | string): string =>
+	d instanceof Date ? d.toISOString() : d;
+
 /** Project a raw `apps` row into the wire DTO, attaching the drift verdict. */
 export const toAppView = (row: App): AppView => ({
 	id: row.id,
@@ -86,7 +96,9 @@ export const toAppView = (row: App): AppView => ({
 	cluster: row.cluster,
 	namespace: row.namespace,
 	lastObserved: iso(row.lastObserved),
-	updatedAt: iso(row.updatedAt) ?? new Date(0).toISOString(),
+	// `updatedAt` is NOT NULL (column has `.notNull().defaultNow()`), so it is
+	// always present — format it directly, no nullable fallback.
+	updatedAt: isoNN(row.updatedAt),
 	drift: computeDrift(row),
 });
 
