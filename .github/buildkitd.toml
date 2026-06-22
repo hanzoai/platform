@@ -1,0 +1,19 @@
+# BuildKit daemon config for the self-hosted arcd runners.
+#
+# Root cause this fixes: the runners resolve DNS via 8.8.8.8 and intermittently
+# time out reaching registry-1.docker.io. Every `docker/build-push-action` job
+# died at "resolve image config for docker.io/docker/dockerfile:1" and on the
+# `FROM node:24.4.0-slim` pull. ghcr.io is always reachable (login succeeds),
+# Docker Hub is not.
+#
+# mirror.gcr.io is Google's pull-through cache for docker.io and is served from
+# the same Google infrastructure the runner's resolver (8.8.8.8) already
+# reaches, so docker.io/library/* (node base) and the buildkit frontend resolve
+# through it instead of the flaky direct path. http2 is disabled on the mirror
+# endpoint because GCR's mirror occasionally resets h2 streams under buildx.
+[registry."docker.io"]
+  mirrors = ["mirror.gcr.io"]
+
+[registry."mirror.gcr.io"]
+  http = false
+  insecure = false
