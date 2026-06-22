@@ -1,4 +1,10 @@
-# syntax=docker/dockerfile:1
+# No `# syntax=` frontend pragma on purpose: it forces buildx to pull
+# docker.io/docker/dockerfile:1 from Docker Hub, which the arcd runners cannot
+# reliably resolve (DNS to registry-1.docker.io via 8.8.8.8 times out). buildx
+# v0.34 / buildkit buildx-stable-1 supports `RUN --mount=type=cache` with the
+# built-in frontend, so the external pull buys nothing and only adds a single
+# point of failure. The node base below resolves through the mirror.gcr.io
+# docker.io mirror configured in .github/buildkitd.toml.
 #
 # Platform — ONE Dockerfile. No base image, no variants. Build a target:
 #   docker build --target platform  .   # app/platform + full PaaS runtime (docker, nixpacks, railpack, buildpacks, rclone)
