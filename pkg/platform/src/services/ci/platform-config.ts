@@ -347,6 +347,12 @@ const ORG_TO_BRAND: Readonly<Record<string, string>> = {
 	hanzoai: "hanzo",
 	luxfi: "lux",
 	zooai: "zoo",
+	// `bootnode` has no self-hosted runners of its own (its GitHub-Actions CI
+	// dead-ends because the arc pools are org-scoped to hanzoai). Its builds run
+	// on the shared in-cluster `hanzo-build-*` arcbuild pool, so map the org to
+	// the `hanzo` brand rather than letting it default to a nonexistent
+	// `bootnode-build-*` pool.
+	bootnode: "hanzo",
 };
 
 /** Pool role segment. The build scheduler dispatches build jobs only. */
