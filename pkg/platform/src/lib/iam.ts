@@ -163,6 +163,16 @@ export const upsertUserFromIam = async (
 		with: { organization: true },
 	});
 
+	// `ctx.user.role` is read on TWO axes by downstream callers and must satisfy
+	// both: project.all / adminProcedure check `=== "owner" || === "admin"`
+	// (membership role), and haveRootAccess checks `=== "admin"` (platform-wide
+	// global-admin). So a global admin (row.role "admin") surfaces as "admin"
+	// (satisfies every check); everyone else gets their org-membership role
+	// ("owner" for their own org), NOT the platform-wide "user". The membership
+	// role must never shadow the global-admin signal.
+	const effectiveRole =
+		row.role === "admin" ? "admin" : member?.role || role;
+
 	return {
 		session: {
 			userId: row.id,
@@ -171,7 +181,7 @@ export const upsertUserFromIam = async (
 		user: {
 			...row,
 			name: [row.firstName, row.lastName].filter(Boolean).join(" "),
-			role: member?.role || role,
+			role: effectiveRole,
 			ownerId: member?.organization?.ownerId || row.id,
 		},
 	};
