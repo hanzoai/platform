@@ -58,6 +58,7 @@ export const ImpersonationBar = () => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [showBar, setShowBar] = useState(false);
 	const { data } = api.user.get.useQuery();
+	const utils = api.useUtils();
 
 	const fetchUsers = async (search?: string) => {
 		try {
@@ -66,26 +67,18 @@ export const ImpersonationBar = () => {
 				return;
 			}
 			setIsLoading(true);
-			const response = await authClient.admin.listUsers({
-				query: {
-					limit: 30,
-					...(search && {
-						searchField: "email",
-						searchOperator: "contains",
-						searchValue: search,
-					}),
-				},
+			// Stage 2: source the list from tRPC (IAM-session authorized), not the
+			// dead Better Auth /v1/auth/admin/list-users endpoint.
+			const response = await utils.user.listForImpersonation.fetch({
+				limit: 30,
+				...(search ? { search } : {}),
 			});
 
-			const filteredUsers = response.data?.users.filter(
-				// @ts-ignore
-				(user) => user.allowImpersonation && data?.user?.email !== user.email,
+			const filteredUsers = response.filter(
+				(user) => data?.user?.email !== user.email,
 			);
-
-			if (!response.error) {
-				// @ts-ignore
-				setUsers(filteredUsers || []);
-			}
+			// @ts-ignore — shape matches the fields the bar reads
+			setUsers(filteredUsers || []);
 		} catch (error) {
 			console.error("Error fetching users:", error);
 			toast.error("Error loading users");
