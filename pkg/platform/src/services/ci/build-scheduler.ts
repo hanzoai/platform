@@ -205,6 +205,8 @@ export interface DirectBuildInput {
 	image: string;
 	dockerfile?: string;
 	context?: string;
+	/** Optional Docker build stage (`--target`) for multi-stage Dockerfiles. */
+	dockerTarget?: string;
 	push?: boolean;
 	/** Build target os/arch (default linux/amd64). Drives the pool + platform. */
 	os?: BuildOS;
@@ -265,6 +267,7 @@ export async function enqueueDirectBuild(
 		image: job.image,
 		dockerfile: input.dockerfile ?? "./Dockerfile",
 		context: input.context ?? ".",
+		dockerTarget: input.dockerTarget,
 		push: input.push ?? true,
 		// Direct builds have no GitHub installation; the completion path keys
 		// deploy config off `.platform.yml` only when this is set, so "" means
