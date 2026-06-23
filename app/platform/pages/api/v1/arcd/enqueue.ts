@@ -42,6 +42,8 @@ interface EnqueueBody {
 	ref?: string;
 	dockerfile?: string;
 	context?: string;
+	/** Docker build stage (`--target`) for multi-stage Dockerfiles. */
+	dockerTarget?: string;
 	os?: "linux" | "darwin" | "windows";
 	arch?: "amd64" | "arm64";
 	organizationId?: string;
@@ -94,6 +96,7 @@ export default async function handler(
 			ref: body.ref,
 			dockerfile: body.dockerfile,
 			context: body.context,
+			dockerTarget: body.dockerTarget,
 			os: body.os,
 			arch: body.arch,
 			organizationId,
