@@ -51,6 +51,11 @@ export interface QueuedBuild {
 	dockerfile: string;
 	/** Docker build context directory. */
 	context: string;
+	/**
+	 * Optional Docker build stage (`--target`) for multi-stage Dockerfiles.
+	 * Empty/undefined builds the final stage. Distinct from `target` (os/arch).
+	 */
+	dockerTarget?: string;
 	/** Whether the runner should push the built image. */
 	push: boolean;
 	/** Installation id the runner echoes back on completion. */
