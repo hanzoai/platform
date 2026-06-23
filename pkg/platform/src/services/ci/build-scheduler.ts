@@ -35,7 +35,9 @@ import {
 } from "./build-job";
 import { buildQueue } from "./build-queue";
 import {
+	type BuildArch,
 	type BuildConfig,
+	type BuildOS,
 	type DispatchMode,
 	type PlatformConfig,
 	parsePlatformConfig,
@@ -184,6 +186,93 @@ function dispatchNative(
 		installationId,
 	});
 	return `native:${job.buildJobId}`;
+}
+
+/**
+ * Spec for a GitHub-App-free direct build. The webhook path derives all of
+ * this from `.platform.yml` at a SHA; this lets an operator (or a repo not
+ * wired to the GitHub App) enqueue a build by stating it explicitly. The
+ * downstream is identical — `createBuildJob` + the native long-poll fabric —
+ * so there is exactly ONE queue and ONE runner protocol, two front doors.
+ */
+export interface DirectBuildInput {
+	/** owner/name — used only to derive the arcd pool's org segment. */
+	repo: string;
+	sha: string;
+	ref?: string;
+	branch?: string;
+	/** Fully-resolved image ref to build + push, e.g. ghcr.io/hanzoai/x:tag. */
+	image: string;
+	dockerfile?: string;
+	context?: string;
+	push?: boolean;
+	/** Build target os/arch (default linux/amd64). Drives the pool + platform. */
+	os?: BuildOS;
+	arch?: BuildArch;
+	organizationId: string;
+}
+
+/**
+ * Enqueue a single build directly onto the native long-poll fabric, WITHOUT a
+ * GitHub App or `.platform.yml`. This is the GitHub-free trigger: it REQUIRES a
+ * live registered arcd runner for the target pool (no workflow_dispatch
+ * fallback — that would re-introduce GitHub), and fails loud if none is live so
+ * a build is never silently stranded. Returns the created build job.
+ *
+ * Idempotent on (repo, sha, target): re-enqueuing the same target returns the
+ * existing job instead of duplicating, matching scheduleBuilds.
+ */
+export async function enqueueDirectBuild(
+	input: DirectBuildInput,
+): Promise<BuildJob> {
+	const os: BuildOS = input.os ?? "linux";
+	const arch: BuildArch = input.arch ?? "amd64";
+	const target = `${os}/${arch}`;
+	const branch = input.branch ?? "main";
+	const ref = input.ref ?? `refs/heads/${branch}`;
+
+	const existing = await findBuildJobByTarget(input.repo, input.sha, target);
+	if (existing) return existing;
+
+	const pool = runnerPoolFor(orgLabel(input.repo), { os, arch });
+	if (!(await poolHasLiveRunner(pool))) {
+		throw new TRPCError({
+			code: "CONFLICT",
+			message: `No live arcd runner for pool ${pool}; cannot dispatch natively (GitHub-free path does not fall back to workflow_dispatch). Start an arcbuild worker for this pool.`,
+		});
+	}
+
+	const job = await createBuildJob({
+		repo: input.repo,
+		sha: input.sha,
+		ref,
+		branch,
+		target,
+		runnerPool: pool,
+		image: input.image,
+		organizationId: input.organizationId,
+		status: "queued",
+		rolloutStatus: "skipped",
+	});
+
+	buildQueue.enqueue(pool, {
+		buildJobId: job.buildJobId,
+		repo: job.repo,
+		sha: job.sha,
+		ref: job.ref,
+		branch: job.branch,
+		target: job.target,
+		image: job.image,
+		dockerfile: input.dockerfile ?? "./Dockerfile",
+		context: input.context ?? ".",
+		push: input.push ?? true,
+		// Direct builds have no GitHub installation; the completion path keys
+		// deploy config off `.platform.yml` only when this is set, so "" means
+		// "build-only, no operator rollout" — exactly right for a manual build.
+		installationId: "",
+	});
+
+	return markBuildRunning(job.buildJobId, `native:${job.buildJobId}`);
 }
 
 /**
