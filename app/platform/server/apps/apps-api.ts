@@ -19,22 +19,23 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@hanzo/platform/db";
 import {
 	type App,
-	appEnv,
-	appHealth,
+	appEnvValues,
+	appHealthValues,
 	apps,
 	computeDrift,
 	type Drift,
 	type DriftSeverity,
 } from "@hanzo/platform/db/schema";
 
-// Enum vocabularies derive from the single canonical source — the `appEnv` /
-// `appHealth` pgEnum definitions in `db/schema/apps`. `pgEnum(...).enumValues`
-// is the same tuple the column and the migration are built from, so these
-// types cannot drift out of sync with the DB enum. Don't hand-retype them.
+// Enum vocabularies derive from the single canonical source — the
+// `appEnvValues` / `appHealthValues` tuples in `db/schema/apps`. They are the
+// same `as const` tuples the SQLite column `{ enum: … }` and the Zod schemas
+// are built from, so these types cannot drift out of sync with the DB enum.
+// Don't hand-retype them.
 /** Deployment env vocabulary (`"dev" | "test" | "main"`). */
-export type AppEnv = (typeof appEnv.enumValues)[number];
+export type AppEnv = (typeof appEnvValues)[number];
 /** Aggregate health vocabulary (`"green" | "yellow" | "red"`). */
-export type AppHealth = (typeof appHealth.enumValues)[number];
+export type AppHealth = (typeof appHealthValues)[number];
 
 /** Filters accepted by the list endpoint (all optional, all narrowing). */
 export interface AppsQuery {
