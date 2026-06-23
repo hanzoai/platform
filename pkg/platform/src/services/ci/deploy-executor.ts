@@ -11,6 +11,7 @@
  * The image is already in ghcr.io/hanzoai/<repo>:<sha> (the build runner
  * pushed it). The executor only records the tag and flips the CR spec.
  */
+import { PatchStrategy, setHeaderOptions } from "@kubernetes/client-node";
 import { TRPCError } from "@trpc/server";
 import { getDefaultClients } from "../k8s/k8s-client";
 import {
@@ -86,17 +87,24 @@ export async function executeDeploy(
 	};
 
 	try {
-		// CustomObjectsApi sends `application/merge-patch+json` for partial CR
-		// bodies, so this patch updates only `.spec.image` and leaves the rest
-		// of the operator-managed Service CR untouched.
-		await clients.custom.patchNamespacedCustomObject({
-			group: OPERATOR_GROUP,
-			version: OPERATOR_VERSION,
-			namespace: target.namespace,
-			plural,
-			name: target.name,
-			body: patch,
-		});
+		// Merge-patch only `.spec.image`, leaving the rest of the
+		// operator-managed Service CR untouched. The Content-Type MUST be set
+		// explicitly: @kubernetes/client-node v1.x defaults patch requests to
+		// JSON-Patch (an array of ops), so a merge object is rejected by the API
+		// server with "cannot unmarshal object into []jsonPatchOp" (a 400).
+		// setHeaderOptions wires `application/merge-patch+json` via middleware —
+		// merge-patch (not strategic-merge, which CRDs do not support).
+		await clients.custom.patchNamespacedCustomObject(
+			{
+				group: OPERATOR_GROUP,
+				version: OPERATOR_VERSION,
+				namespace: target.namespace,
+				plural,
+				name: target.name,
+				body: patch,
+			},
+			setHeaderOptions("Content-Type", PatchStrategy.MergePatch),
+		);
 	} catch (err) {
 		const msg = operatorError(err);
 		await updateBuildJob(job.buildJobId, {
