@@ -142,9 +142,18 @@ export const syncIamOrgMembership = async (
 	const now = new Date();
 	const global = isGlobalAdmin(identity);
 
+	// The IAM `owner` claim is the home-org key. The @hanzo/iam server lib
+	// guarantees it is non-empty (falls back to the configured orgName, else
+	// "unknown"), but fail closed rather than ever key an org on "" — an empty
+	// slug would collapse every tokenless-owner principal into one shared org.
+	const ownerOrg = identity.owner?.trim();
+	if (!ownerOrg) {
+		throw new Error("IAM identity has no owner claim; cannot resolve org");
+	}
+
 	// Home org: the caller's IAM owner. They own it (a Casdoor org member is
 	// the operator of their own platform org). Global admins own it too.
-	const homeOrg = await ensureOrganization(identity.owner, userId, now);
+	const homeOrg = await ensureOrganization(ownerOrg, userId, now);
 	await ensureMembership(userId, homeOrg.id, "owner", now);
 
 	// Global admin ⟺ manage every org. Make them an owner of all known orgs
