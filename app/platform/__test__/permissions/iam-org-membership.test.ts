@@ -188,6 +188,14 @@ describe("syncIamOrgMembership — ordinary user", () => {
 		await syncIamOrgMembership(session(), "hanzo/alice");
 		expect(members.some((m) => m.organizationId === "org-x")).toBe(false);
 	});
+
+	it("fails closed on an empty owner claim (never keys an org on \"\")", async () => {
+		await expect(
+			syncIamOrgMembership(session({ owner: "" }), "hanzo/alice"),
+		).rejects.toThrow(/owner/i);
+		expect(orgs).toHaveLength(0);
+		expect(members).toHaveLength(0);
+	});
 });
 
 describe("syncIamOrgMembership — global admin manages every org", () => {
