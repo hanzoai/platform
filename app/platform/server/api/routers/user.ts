@@ -27,15 +27,15 @@ import {
 	session,
 	user,
 } from "@hanzo/platform/db/schema";
+import {
+	hasPermission,
+	resolvePermissions,
+} from "@hanzo/platform/services/permission";
 import { TRPCError } from "@trpc/server";
 import * as bcrypt from "bcrypt";
 import { and, asc, eq, gt, ne } from "drizzle-orm";
 import { z } from "zod";
 import { audit } from "@/server/api/utils/audit";
-import {
-	hasPermission,
-	resolvePermissions,
-} from "@hanzo/platform/services/permission";
 import {
 	adminProcedure,
 	createTRPCRouter,
@@ -153,14 +153,60 @@ export const userRouter = createTRPCRouter({
 		if (!IS_CLOUD) {
 			return false;
 		}
+		// Stage 2: root access ⟺ IAM global admin, surfaced as the platform-wide
+		// `user.role === "admin"` (set in upsertUserFromIam). This is the same
+		// signal the Better Auth admin plugin authorizes on, so the
+		// impersonation bar it gates can actually call /v1/auth/admin/*.
+		if (ctx.user.role === "admin") {
+			return true;
+		}
+		// Legacy fallback: explicit USER_ADMIN_ID env (kept for self-host setups
+		// that pin a single root user id).
 		if (
-			process.env.USER_ADMIN_ID === ctx.user.id ||
-			ctx.session?.impersonatedBy === process.env.USER_ADMIN_ID
+			(process.env.USER_ADMIN_ID &&
+				process.env.USER_ADMIN_ID === ctx.user.id) ||
+			(process.env.USER_ADMIN_ID &&
+				ctx.session?.impersonatedBy === process.env.USER_ADMIN_ID)
 		) {
 			return true;
 		}
 		return false;
 	}),
+	// Stage 2: the impersonation user list comes from tRPC (verified by the IAM
+	// session), NOT Better Auth's /v1/auth/admin/list-users — that endpoint has
+	// no session under IAM-only identity and 401s. `adminProcedure` restricts it
+	// to platform admins (IAM global admins, role "admin"). Lists across all
+	// orgs the users who opted into impersonation, excluding the caller.
+	listForImpersonation: adminProcedure
+		.input(
+			z
+				.object({ search: z.string().optional(), limit: z.number().optional() })
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const limit = Math.min(input?.limit ?? 30, 100);
+			const rows = await db.query.user.findMany({
+				where: and(eq(user.allowImpersonation, true), ne(user.id, ctx.user.id)),
+				limit,
+			});
+			const search = input?.search?.trim().toLowerCase();
+			const filtered = search
+				? rows.filter(
+						(u) =>
+							u.email.toLowerCase().includes(search) ||
+							`${u.firstName} ${u.lastName}`.toLowerCase().includes(search),
+					)
+				: rows;
+			return filtered.map((u) => ({
+				id: u.id,
+				email: u.email,
+				name: [u.firstName, u.lastName].filter(Boolean).join(" "),
+				lastName: u.lastName,
+				role: u.role,
+				image: u.image,
+				allowImpersonation: u.allowImpersonation,
+			}));
+		}),
 	getBackups: adminProcedure.query(async ({ ctx }) => {
 		const memberResult = await db.query.member.findFirst({
 			where: and(
