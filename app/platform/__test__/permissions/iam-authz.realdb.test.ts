@@ -72,6 +72,25 @@ const identity = (over: Partial<ServerSession> = {}): ServerSession => ({
 		sub: "hanzo/alice",
 		email: "alice@hanzo.ai",
 		name: "Alice Example",
+		owner: "hanzo",
+	} as ServerSession["claims"],
+	...over,
+});
+
+// The AUTHENTIC Casdoor token shape for a real user (verified live against
+// a@hanzo.ai): `sub` is a bare UUID, so @hanzo/iam's ServerSession.owner
+// falls back to "unknown" — the real org lives ONLY in the top-level `owner`
+// claim. Stage 2 must still resolve the correct org from that claim.
+const realUserIdentity = (over: Partial<ServerSession> = {}): ServerSession => ({
+	userId: "b474eaa5-e000-474d-b317-c37bbd9a6945",
+	owner: "unknown",
+	email: "a@hanzo.ai",
+	claims: {
+		sub: "b474eaa5-e000-474d-b317-c37bbd9a6945",
+		email: "a@hanzo.ai",
+		name: "a",
+		owner: "hanzo",
+		isAdmin: true,
 	} as ServerSession["claims"],
 	...over,
 });
@@ -110,6 +129,30 @@ describe("Stage 2 integration (real SQLite, real migrations)", () => {
 		expect(perms.environment.read).toBe(true);
 	});
 
+	it("real Casdoor token (UUID sub) resolves the org from claims.owner, NOT the 'unknown' SDK fallback", async () => {
+		// This is the live a@hanzo.ai shape: sub is a UUID, identity.owner is
+		// "unknown", and the real org is only in claims.owner="hanzo". The org
+		// the user lands in MUST be "hanzo", and the dashboard must not be denied.
+		const { upsertUserFromIam } = await import("@hanzo/platform/lib/iam");
+		const { db } = await import("@hanzo/platform/db");
+		const { eq } = await import("drizzle-orm");
+		const schema = await import("@hanzo/platform/db/schema");
+
+		const session = await upsertUserFromIam(realUserIdentity());
+		expect(session.session.activeOrganizationId).not.toBe("");
+
+		const org = await db.query.organization.findFirst({
+			where: eq(schema.organization.id, session.session.activeOrganizationId),
+		});
+		expect(org?.slug).toBe("hanzo");
+		// never a spurious "unknown" org
+		const unknownOrg = await db.query.organization.findFirst({
+			where: eq(schema.organization.slug, "unknown"),
+		});
+		expect(unknownOrg).toBeUndefined();
+		expect(session.user.role).toBe("owner");
+	});
+
 	it("ordinary user maps to a privileged role -> project.all returns the whole org, not an empty accessedProjects filter", async () => {
 		// project.all returns ALL org projects when role is owner/admin; a plain
 		// member with empty accessedProjects would get []. Assert the role is the
@@ -142,10 +185,24 @@ describe("Stage 2 integration (real SQLite, real migrations)", () => {
 
 		// Seed two more orgs by upserting ordinary users from other IAM orgs.
 		await upsertUserFromIam(
-			identity({ userId: "zoo/bob", owner: "zoo", email: "bob@zoo.ngo" }),
+			identity({
+				userId: "zoo/bob",
+				owner: "zoo",
+				email: "bob@zoo.ngo",
+				claims: { sub: "zoo/bob", email: "bob@zoo.ngo", owner: "zoo" } as any,
+			}),
 		);
 		await upsertUserFromIam(
-			identity({ userId: "lux/carol", owner: "lux", email: "carol@lux.network" }),
+			identity({
+				userId: "lux/carol",
+				owner: "lux",
+				email: "carol@lux.network",
+				claims: {
+					sub: "lux/carol",
+					email: "carol@lux.network",
+					owner: "lux",
+				} as any,
+			}),
 		);
 
 		// z@hanzo.ai is a global admin (matches the real IAM seed: isGlobalAdmin).
@@ -157,6 +214,7 @@ describe("Stage 2 integration (real SQLite, real migrations)", () => {
 				claims: {
 					sub: "hanzo/z",
 					email: "z@hanzo.ai",
+					owner: "hanzo",
 					isGlobalAdmin: true,
 				} as ServerSession["claims"],
 			}),
