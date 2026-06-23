@@ -434,11 +434,16 @@ export async function cancelPipelineRun(
 	taskRunName: string,
 ): Promise<void> {
 	try {
-		await clients.custom.patchNamespacedCustomObject({
-			group: TEKTON_GROUP, version: TEKTON_VERSION,
-			namespace: TEKTON_NAMESPACE, plural: "taskruns", name: taskRunName,
-			body: { spec: { status: "TaskRunCancelled" } },
-		});
+		// Explicit merge-patch Content-Type: client-node v1.x defaults to
+		// JSON-Patch, which rejects this merge object as "[]jsonPatchOp".
+		await clients.custom.patchNamespacedCustomObject(
+			{
+				group: TEKTON_GROUP, version: TEKTON_VERSION,
+				namespace: TEKTON_NAMESPACE, plural: "taskruns", name: taskRunName,
+				body: { spec: { status: "TaskRunCancelled" } },
+			},
+			k8s.setHeaderOptions("Content-Type", k8s.PatchStrategy.MergePatch),
+		);
 	} catch (err) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
