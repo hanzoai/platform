@@ -14,6 +14,7 @@ export * from "./build-job";
 export * from "./build-queue";
 export * from "./build-scheduler";
 export * from "./deploy-executor";
+export * from "./e2e-runner";
 export * from "./github-webhook";
 export * from "./image-ref";
 export * from "./platform-config";
