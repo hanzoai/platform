@@ -66,6 +66,14 @@ export async function completeBuild(
 
 	const succeeded = await markBuildSucceeded(job.buildJobId);
 
+	// GitHub-free direct builds (enqueueDirectBuild) carry no installation id:
+	// there is no `.platform.yml` to read deploy config from, so the build
+	// stands as build-only with no operator rollout. This is the correct
+	// terminal state for a manually-specified build, not an error.
+	if (!input.installationId) {
+		return { status: "succeeded" };
+	}
+
 	// Re-read deploy config from the same ref the build ran against. We do
 	// not trust a cached config — the source of truth is the repo at that SHA.
 	const provider = await resolveProvider(input.installationId);
