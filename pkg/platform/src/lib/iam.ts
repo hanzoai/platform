@@ -1,8 +1,9 @@
 import type { IncomingMessage } from "node:http";
 import { getServerSession, type ServerSession } from "@hanzo/iam/server";
-import { desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../db";
 import * as schema from "../db/schema";
+import { isGlobalAdmin, syncIamOrgMembership } from "./iam-org";
 
 /**
  * Hanzo IAM (HIP-0111) is the SOLE identity provider for the platform.
@@ -91,6 +92,14 @@ export const upsertUserFromIam = async (
 	// so the same IAM principal always maps to the same platform user row.
 	const userId = identity.userId;
 
+	// Stage 2: the user-level `role` column is the platform-wide admin signal
+	// that the Better Auth admin plugin reads (`has-permission`: role "admin"
+	// authorizes every admin endpoint, e.g. /v1/auth/admin/list-users for the
+	// impersonation bar). Derive it from IAM — a global admin gets "admin";
+	// everyone else stays a plain "user". This keeps IAM the single source of
+	// truth for global-admin instead of the stale USER_ADMIN_ID env.
+	const platformRole = isGlobalAdmin(identity) ? "admin" : "user";
+
 	const existing =
 		(await db.query.user.findFirst({
 			where: eq(schema.user.id, userId),
@@ -109,6 +118,7 @@ export const upsertUserFromIam = async (
 					emailVerified: true,
 					isRegistered: true,
 					image: image ?? existing.image,
+					role: platformRole,
 					updatedAt: now,
 				})
 				.where(eq(schema.user.id, existing.id))
@@ -123,6 +133,7 @@ export const upsertUserFromIam = async (
 					emailVerified: true,
 					isRegistered: true,
 					image,
+					role: platformRole,
 					updatedAt: now,
 				})
 				.returning();
@@ -134,21 +145,33 @@ export const upsertUserFromIam = async (
 		throw new Error("IAM user upsert returned no row");
 	}
 
+	// Stage 2: org membership derives from the IAM claims, not Better Auth's
+	// (empty) organization plugin. This ensures the caller's home org +
+	// membership exist (and every org, for a global admin) and yields the
+	// active org so the downstream member-scoped authz checks resolve instead
+	// of failing closed on an empty org set.
+	const { activeOrganizationId, role } = await syncIamOrgMembership(
+		identity,
+		row.id,
+	);
+
 	const member = await db.query.member.findFirst({
-		where: eq(schema.member.userId, row.id),
-		orderBy: desc(schema.member.createdAt),
+		where: and(
+			eq(schema.member.userId, row.id),
+			eq(schema.member.organizationId, activeOrganizationId),
+		),
 		with: { organization: true },
 	});
 
 	return {
 		session: {
 			userId: row.id,
-			activeOrganizationId: member?.organizationId ?? "",
+			activeOrganizationId,
 		},
 		user: {
 			...row,
 			name: [row.firstName, row.lastName].filter(Boolean).join(" "),
-			role: member?.role || row.role || "member",
+			role: member?.role || role,
 			ownerId: member?.organization?.ownerId || row.id,
 		},
 	};
