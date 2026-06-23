@@ -235,6 +235,11 @@ describe("runnerPoolFor", () => {
 			"hanzobot-build-linux-amd64",
 		);
 	});
+	it("routes bootnode (no runners of its own) to the shared hanzo build pool", () => {
+		expect(runnerPoolFor("bootnode", { os: "linux", arch: "amd64" })).toBe(
+			"hanzo-build-linux-amd64",
+		);
+	});
 	it("maps darwin to macos", () => {
 		expect(runnerPoolFor("hanzoai", { os: "darwin", arch: "arm64" })).toBe(
 			"hanzo-build-macos-arm64",
