@@ -99,10 +99,10 @@ export default async function handler(
 		res.status(400).json({ message: "status must be 'success' or 'failed'" });
 		return;
 	}
-	if (!body.installation_id) {
-		res.status(400).json({ message: "Missing installation_id" });
-		return;
-	}
+	// installation_id is OPTIONAL: GitHub-App-driven builds carry it (so the
+	// deploy config can be re-read at completion); GitHub-free direct builds
+	// (enqueueDirectBuild) leave it empty, and completeBuild treats that as
+	// build-only (no operator rollout). Don't reject an empty value.
 
 	// Fold the digest + logs pointer into the persisted build log so the record
 	// is self-contained even before object-storage log offload lands.
@@ -115,7 +115,7 @@ export default async function handler(
 		const result = await completeBuild({
 			buildJobId: body.job_id,
 			outcome: body.status === "success" ? "success" : "failure",
-			installationId: body.installation_id,
+			installationId: body.installation_id ?? "",
 			log,
 			error: body.error,
 		});
