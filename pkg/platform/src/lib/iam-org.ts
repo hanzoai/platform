@@ -33,14 +33,38 @@ const GLOBAL_ADMIN_OWNER = "admin";
 const isTrue = (v: unknown): boolean => v === true || v === "true";
 
 /**
- * Is this identity a global administrator? Two independent signals, either
- * sufficient:
+ * The caller's owning IAM org. The Casdoor token carries `owner` as a
+ * TOP-LEVEL claim (e.g. "hanzo"), but @hanzo/iam's `ServerSession.owner` only
+ * reflects the `sub` prefix and, when `sub` is a bare UUID (as Casdoor issues
+ * for real users), falls back to `orgName ?? "unknown"` — dropping the real
+ * org. So trust the explicit `claims.owner` first, then the SDK-derived
+ * `identity.owner`. This is what keeps a@hanzo.ai in org "hanzo" instead of a
+ * spurious "unknown" org.
+ */
+export const resolveOwnerOrg = (identity: ServerSession): string => {
+	const claimOwner =
+		typeof identity.claims.owner === "string"
+			? identity.claims.owner.trim()
+			: "";
+	if (claimOwner) return claimOwner;
+	const sdkOwner = identity.owner?.trim();
+	if (sdkOwner && sdkOwner !== "unknown") return sdkOwner;
+	return "";
+};
+
+/**
+ * Is this identity a global administrator? Independent signals, any sufficient:
  *   1. the `isGlobalAdmin` JWT claim Casdoor stamps on global admins, and
- *   2. ownership by the reserved `admin` org (the IAM_MIGRATION.md convention).
+ *   2. ownership by the reserved `admin` org (the IAM_MIGRATION.md convention),
+ *      read from the explicit owner claim (robust to the UUID-sub fallback).
+ *
+ * NOTE: Casdoor's `isAdmin` is an ORG-admin flag, NOT global — it is
+ * deliberately not treated as global-admin here (an org admin manages only
+ * their own org; their org-membership role already grants that).
  */
 export const isGlobalAdmin = (identity: ServerSession): boolean =>
 	isTrue(identity.claims.isGlobalAdmin) ||
-	identity.owner === GLOBAL_ADMIN_OWNER;
+	resolveOwnerOrg(identity) === GLOBAL_ADMIN_OWNER;
 
 /**
  * Resolve the platform `organization` row for an IAM org name, creating it on
@@ -142,11 +166,11 @@ export const syncIamOrgMembership = async (
 	const now = new Date();
 	const global = isGlobalAdmin(identity);
 
-	// The IAM `owner` claim is the home-org key. The @hanzo/iam server lib
-	// guarantees it is non-empty (falls back to the configured orgName, else
-	// "unknown"), but fail closed rather than ever key an org on "" — an empty
-	// slug would collapse every tokenless-owner principal into one shared org.
-	const ownerOrg = identity.owner?.trim();
+	// The home-org key — from the explicit `owner` claim (robust to Casdoor's
+	// UUID `sub`, which makes the SDK's identity.owner fall back to "unknown").
+	// Fail closed rather than ever key an org on "" — an empty slug would
+	// collapse every owner-less principal into one shared org.
+	const ownerOrg = resolveOwnerOrg(identity);
 	if (!ownerOrg) {
 		throw new Error("IAM identity has no owner claim; cannot resolve org");
 	}

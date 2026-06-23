@@ -129,7 +129,7 @@ vi.mock("@hanzo/platform/db", () => {
 	};
 });
 
-const { syncIamOrgMembership, isGlobalAdmin } = await import(
+const { syncIamOrgMembership, isGlobalAdmin, resolveOwnerOrg } = await import(
 	"@hanzo/platform/lib/iam-org"
 );
 
@@ -137,7 +137,7 @@ const session = (over: Partial<ServerSession> = {}): ServerSession => ({
 	userId: "hanzo/alice",
 	owner: "hanzo",
 	email: "alice@hanzo.ai",
-	claims: { sub: "hanzo/alice" } as ServerSession["claims"],
+	claims: { sub: "hanzo/alice", owner: "hanzo" } as ServerSession["claims"],
 	...over,
 });
 
@@ -153,8 +153,28 @@ describe("isGlobalAdmin", () => {
 			isGlobalAdmin(session({ claims: { isGlobalAdmin: true } as any })),
 		).toBe(true);
 	});
-	it("true when owned by the reserved admin org", () => {
-		expect(isGlobalAdmin(session({ owner: "admin" }))).toBe(true);
+	it("true when owned by the reserved admin org (via owner claim)", () => {
+		expect(
+			isGlobalAdmin(session({ claims: { owner: "admin" } as any })),
+		).toBe(true);
+	});
+	it("false for an org admin (isAdmin is org-scoped, not global)", () => {
+		expect(
+			isGlobalAdmin(session({ claims: { owner: "hanzo", isAdmin: true } as any })),
+		).toBe(false);
+	});
+	it("uses claims.owner over the SDK fallback when sub is a UUID", () => {
+		// Real Casdoor user token: UUID sub → SDK owner falls back to 'unknown';
+		// the true org is only in claims.owner.
+		expect(
+			resolveOwnerOrg(
+				session({
+					userId: "uuid-1234",
+					owner: "unknown",
+					claims: { sub: "uuid-1234", owner: "hanzo" } as any,
+				}),
+			),
+		).toBe("hanzo");
 	});
 	it("false for an ordinary org user", () => {
 		expect(isGlobalAdmin(session())).toBe(false);
@@ -191,7 +211,10 @@ describe("syncIamOrgMembership — ordinary user", () => {
 
 	it("fails closed on an empty owner claim (never keys an org on \"\")", async () => {
 		await expect(
-			syncIamOrgMembership(session({ owner: "" }), "hanzo/alice"),
+			syncIamOrgMembership(
+				session({ owner: "", claims: { sub: "x" } as any }),
+				"hanzo/alice",
+			),
 		).rejects.toThrow(/owner/i);
 		expect(orgs).toHaveLength(0);
 		expect(members).toHaveLength(0);
