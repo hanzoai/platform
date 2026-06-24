@@ -27,6 +27,41 @@ halt shipping. Contract + schema: `docs/PLATFORM_CI.md`.
   arcd long-poll protocol is the next iteration.
 - Per-repo executor workflow template: `hanzoai/.github/workflow-templates/platform-build.yml`.
 
+## Apps inventory — the "observe" half of the control plane
+
+`platform.hanzo.ai/apps` (the apps-lifecycle drift board, `docs/APPS_LIFECYCLE.md`)
+lists every org's real apps with **declared / running / latest tag + drift +
+health**. The schema (`apps`), drift logic (`apps-drift.ts`), read API
+(`apps-api.ts` → `/v1/apps`), and the board UI (`pages/dashboard/apps.tsx` +
+`components/dashboard/apps/apps-board.tsx`) were all already built; the table was
+EMPTY because nothing populated it (the four specced cron readers were never
+merged; the static `db/seed.ts` is a 16-row hardcoded bootstrap only).
+
+The runtime populator is **`pkg/platform/src/services/apps/inventory.ts`** — one
+cluster pass that unifies `read_declared_tag` + `read_running_tag`:
+- lists operator `Service` CRs (`hanzo.ai/v1`, plural `services`) → `declaredTag`
+  = `spec.image.tag`, `org`/`repo`/`registry` from `spec.image.repository`.
+- reads the live `Deployment` of the same name → `runningTag` (the container
+  whose image repo matches the CR's, so sidecars are ignored) + `health`
+  (green=all ready, yellow=partial/scaled-to-0, red=desired>0 & none ready).
+- `env` from namespace (`hanzo`→main, `hanzo-testnet`→test, `hanzo-devnet`→dev).
+- upserts ONLY observed columns by `<org>/<app>/<env>` id; never clobbers the
+  release-reader columns (`latestTag`/`releaseUrl`/`releaseAssets` — follow-up).
+- resolves `organizationId` by slug/name + brand alias (hanzoai→hanzo …), else
+  the lone org for single-tenant installs.
+
+READ-MOSTLY: lists CRs + Deployments, writes only platform's own SQLite — it
+NEVER mutates a cluster object, so it cannot perturb the control plane. RBAC is
+already granted (`hanzo-paas-sa` ClusterRole: `hanzo.ai/services` list + `apps`
++ `pods`). Driven by `inventory-scheduler.ts` (`startInventoryScheduler`, leading
+run + 60s interval, mirrors `billing-job.ts`), started from `server/server.ts`
+in production (gate: `APPS_INVENTORY_DISABLED=true`). On-demand refresh:
+`POST /v1/apps/sync` (service-token). 55 services observed live in hanzo-k8s.
+
+Lifecycle WRITE (deploy/redeploy = patch the `Service` CR's `spec.image`) is the
+CI `deploy-executor` path; the board is the observe surface only. Cross-cluster
+(lux-k8s/zoo-k8s) = append `ClusterTarget`s with a KMS-loaded kubeconfig.
+
 ## Datastore — Base SQLite (tenancy)
 
 Platform's internal datastore is Base SQLite via better-sqlite3 (`pkg/platform/src/db`).
