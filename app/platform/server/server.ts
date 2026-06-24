@@ -573,6 +573,23 @@ void app.prepare().then(async () => {
 			console.log("Billing jobs started");
 		}
 
+		// Apps-lifecycle inventory: reconcile the `apps` table from the live
+		// operator `Service` CRs + Deployments so platform.hanzo.ai/apps shows
+		// every org's real apps with declared/running/drift/health (turns the
+		// empty deployments view into the live inventory). Read-mostly — lists
+		// CRs/Deployments and writes only platform's own SQLite, never mutating
+		// a cluster object. In-cluster only (needs the hanzo-paas-sa RBAC, which
+		// a dev box lacks); disable with APPS_INVENTORY_DISABLED=true.
+		if (
+			process.env.NODE_ENV === "production" &&
+			process.env.APPS_INVENTORY_DISABLED !== "true"
+		) {
+			const { startInventoryScheduler } = await import(
+				"@hanzo/platform/services/apps/inventory-scheduler"
+			);
+			startInventoryScheduler();
+		}
+
 		// Start ZAP bridge for AI agent/MCP access
 		if (process.env.ZAP_ENABLED !== "false") {
 			createPlatformZapServer();
