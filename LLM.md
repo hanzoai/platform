@@ -56,7 +56,39 @@ already granted (`hanzo-paas-sa` ClusterRole: `hanzo.ai/services` list + `apps`
 + `pods`). Driven by `inventory-scheduler.ts` (`startInventoryScheduler`, leading
 run + 60s interval, mirrors `billing-job.ts`), started from `server/server.ts`
 in production (gate: `APPS_INVENTORY_DISABLED=true`). On-demand refresh:
-`POST /v1/apps/sync` (service-token). 55 services observed live in hanzo-k8s.
+`POST /v1/apps/sync` (service-token).
+
+**DEPLOYED (v4.2.7, live in hanzo-k8s).** Merged via PR #45; image built
+cache-busted on-cluster by the `arcbuild-platform-v427` BuildKit Job (context
+`platform.git#a6831caf0`, target `platform`, `--no-cache`) → `ghcr.io/hanzoai/platform:v4.2.7`,
+because ALL 324 org GitHub runners were offline (the `[self-hosted,linux,amd64]`
+image jobs could not start — GHA-escape scenario; `quality` gate passed first).
+The `paas` Deployment was rolled to v4.2.7 by a direct `kubectl set image`
+(NOT via the operator: the operator is wedged on this Deployment — it wants
+selector `{app.kubernetes.io/instance,name}` but the live Deployment's selector
+is the legacy immutable `{app: paas}`, so every reconcile 422s; this also blocks
+captable/console-worker/hanzo-playground). Boot verified clean (`2/2 Running`,
+0 restarts); scheduler logged `synced 55 apps … hanzo-k8s=55`; `/v1/apps` → 200,
+total=55 (51 hanzoai + grafana/meili/guacamole/hanzobot; envs main=51/test=2/dev=2).
+
+**CR drift fixed:** the `paas` operator CR was reconciled from the stale
+`ghcr.io/hanzoai/paas:v4.1.0` to the live `ghcr.io/hanzoai/platform:v4.2.7`
+(both repo + tag were wrong — the Deployment had been image-patched out-of-band).
+declared==running now.
+
+**Drift column is all-`red` today, by design (not a bug):** `computeDrift`
+flags `no-release` (red) for every row because `latestTag`/`releaseUrl` are null
+— the GHCR/GH-release reader (`read_latest_tag`/`read_release_meta`) is the
+documented follow-up and has not shipped. declared/running/health are accurate;
+once the release reader populates those columns the drift verdict becomes
+meaningful (stale/un-rolled/zero-assets). Do NOT weaken `computeDrift` to hide
+this — it is the honest signal that the release-meta half is unbuilt.
+
+**organizationId today:** the platform DB has ONE org (`slug=admin`), so the
+populator's "lone org owns everything" fallback assigns all 55 rows to it (the
+`hanzoai→hanzo` alias only fires once a matching org is seeded). Per-org scoping
+(`?org=`/`X-Org-Id`, the `org` column, alias resolution) is fully wired for when
+more orgs exist.
 
 Lifecycle WRITE (deploy/redeploy = patch the `Service` CR's `spec.image`) is the
 CI `deploy-executor` path; the board is the observe surface only. Cross-cluster
