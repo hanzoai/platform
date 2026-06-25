@@ -11,6 +11,7 @@ import {
 	PAAS_NAMESPACE,
 	getLiveIndex,
 	listApplicationsInScope,
+	listInventoryContainersForOrg,
 	mapApplicationToContainer,
 	methodNotAllowed,
 	requireParams,
@@ -34,10 +35,18 @@ export default async function handler(
 
 	try {
 		const apps = await listApplicationsInScope(orgId, projectId, environmentId);
-		const live = await getLiveIndex(PAAS_NAMESPACE);
-		const containers = apps.map((app) =>
-			mapApplicationToContainer(app, live[app.appName]),
-		);
+		if (apps.length > 0) {
+			const live = await getLiveIndex(PAAS_NAMESPACE);
+			const containers = apps.map((app) =>
+				mapApplicationToContainer(app, live[app.appName]),
+			);
+			res.status(200).json(containers);
+			return;
+		}
+		// No Dokploy applications in scope: this install deploys through the
+		// operator (apps run as k8s Deployments from universe CRs). Fall back to
+		// the apps-lifecycle inventory so the org's REAL deployments still render.
+		const containers = await listInventoryContainersForOrg(orgId, environmentId);
 		res.status(200).json(containers);
 	} catch (err: any) {
 		const code = err?.code === "NOT_FOUND" ? 404 : 500;

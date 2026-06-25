@@ -25,6 +25,7 @@ import {
 	requireParams,
 	requireServiceToken as requireServiceTokenFor,
 } from "@/server/v1/http";
+import { type AppView, listApps } from "@/server/apps/apps-api";
 
 // Generic /v1 transport helpers live in server/v1/http.ts — re-exported here so
 // the existing container handlers keep importing them from one place.
@@ -184,6 +185,117 @@ export function mapApplicationToContainer(app: any, live?: K8sLiveInfo) {
 	};
 }
 
+// ---------------------------------------------------------------------------
+// Inventory fallback — the console PaaS board over the apps-lifecycle table.
+//
+// The Dokploy `applications` table is empty on installs that deploy through the
+// operator (apps run as k8s Deployments reconciled from universe CRs, not as
+// Dokploy applications). For those, the real per-org app set lives in the
+// `apps` inventory table (declared/running tags, repo, registry, health) that
+// backs /v1/apps. When a scope yields no Dokploy applications, the container
+// endpoints fall back to this inventory so the board still renders the org's
+// REAL deployments as cards.
+//
+// Org scoping: the inventory `org` column is the brand-aliased platform org
+// (e.g. "hanzoai"), not necessarily the customer org slug the console sends in
+// the path. A customer's apps are named `<slug>-*` (maxpower-chat,
+// maxpower-pics), so we match an app to the requested orgId by EITHER the
+// inventory `org` column OR an `<orgId>-`/`<orgId>.` app/repo name prefix. This
+// shows exactly that customer's apps (maxpower-*) and nothing else.
+// ---------------------------------------------------------------------------
+
+/** Map the inventory env vocabulary ("dev"|"test"|"main") to the path env id. */
+function inventoryEnvMatches(appEnv: string, environmentId: string): boolean {
+	// The console passes a PaaS environment id; for inventory-backed installs
+	// there is no Dokploy environment, so PAAS_ENV_ID is set to the inventory
+	// env name directly ("main"/"test"/"dev"). Accept an exact match, and treat
+	// a missing/"production"/"prod" path env as "main" for convenience.
+	const e = environmentId.toLowerCase();
+	if (e === appEnv) return true;
+	if ((e === "production" || e === "prod" || e === "") && appEnv === "main")
+		return true;
+	return false;
+}
+
+/** True iff an inventory app belongs to the requested org/customer. */
+function inventoryAppInOrg(app: AppView, orgId: string): boolean {
+	if (app.org === orgId) return true;
+	const slug = orgId.toLowerCase();
+	const name = app.app.toLowerCase();
+	const repo = app.repo.toLowerCase().split("/").pop() ?? "";
+	return (
+		name === slug ||
+		name.startsWith(slug + "-") ||
+		name.startsWith(slug + ".") ||
+		repo.startsWith(slug + "-")
+	);
+}
+
+/** Inventory health ("green"|"yellow"|"red") → console container status. */
+function mapInventoryStatus(
+	health: string | null | undefined,
+	live?: K8sLiveInfo,
+): string {
+	if (live) {
+		if (live.running) return "running";
+		if ((live.ready ?? 0) === 0 && (live.replicas ?? 0) === 0) return "stopped";
+	}
+	switch (health) {
+		case "green":
+			return "running";
+		case "yellow":
+			return "deploying";
+		case "red":
+			return "failed";
+		default:
+			return "unknown";
+	}
+}
+
+/** Map one inventory AppView (+ live k8s) into the console PaasContainer. */
+export function mapInventoryAppToContainer(
+	app: AppView,
+	live?: K8sLiveInfo,
+	domain?: string,
+) {
+	const tag = app.runningTag || app.declaredTag || "";
+	const image = live?.image || (tag ? `${app.registry}:${tag}` : app.registry);
+	const updatedAt =
+		typeof app.updatedAt === "string" ? app.updatedAt : new Date(0).toISOString();
+	return {
+		id: app.id,
+		name: app.app,
+		image,
+		status: mapInventoryStatus(app.health, live),
+		replicas: typeof live?.replicas === "number" ? live.replicas : undefined,
+		createdAt: app.lastObserved || updatedAt,
+		updatedAt,
+		region: process.env.PAAS_REGION || "do-sfo3",
+		domain,
+	};
+}
+
+/**
+ * List the org's apps from the inventory table as console PaasContainers,
+ * enriched with live k8s state + ingress domains. Used when the Dokploy
+ * `applications` table has nothing in scope.
+ */
+export async function listInventoryContainersForOrg(
+	orgId: string,
+	environmentId: string,
+): Promise<ReturnType<typeof mapInventoryAppToContainer>[]> {
+	const { apps: all } = await listApps({});
+	const scoped = all.filter(
+		(a) => inventoryAppInOrg(a, orgId) && inventoryEnvMatches(a.env, environmentId),
+	);
+	if (scoped.length === 0) return [];
+	const live = await getLiveIndex(PAAS_NAMESPACE);
+	const domains = await getIngressIndex(PAAS_NAMESPACE);
+	return scoped.map((a) =>
+		mapInventoryAppToContainer(a, live[a.app], domains[a.app]),
+	);
+}
+
 export function mapDeploymentToPipelineRun(dep: any) {
 	const startedAt: string =
 		dep.startedAt || dep.createdAt || new Date(0).toISOString();
@@ -282,6 +394,43 @@ export async function getLiveIndex(
 				i.labels["app.kubernetes.io/name"],
 			]) {
 				if (key && !(key in map)) map[key] = info;
+			}
+		}
+		return map;
+	} catch {
+		return {};
+	}
+}
+
+/**
+ * Build a lookup of workload-name -> public domain from the namespace's
+ * Ingresses. An ingress routes a host to a backend Service whose name matches
+ * the app/Deployment name (operator convention), so we key the host by that
+ * service name. Best-effort: returns {} when k8s is unreachable / RBAC missing,
+ * so inventory cards still render (just without a domain).
+ */
+export async function getIngressIndex(
+	namespace: string,
+): Promise<Record<string, string>> {
+	try {
+		const { getDefaultClients } = await import(
+			"@hanzo/platform/services/k8s/k8s-client"
+		);
+		const { listIngresses } = await import(
+			"@hanzo/platform/services/k8s/k8s-ingress"
+		);
+		const clients = getDefaultClients();
+		const items = (await listIngresses(clients, namespace)) as any[];
+		const map: Record<string, string> = {};
+		for (const ing of items) {
+			for (const rule of ing?.spec?.rules ?? []) {
+				const host: string | undefined = rule?.host;
+				if (!host) continue;
+				for (const p of rule?.http?.paths ?? []) {
+					const svc: string | undefined = p?.backend?.service?.name;
+					// First host per service wins (a stable, deterministic pick).
+					if (svc && !(svc in map)) map[svc] = host;
+				}
 			}
 		}
 		return map;
