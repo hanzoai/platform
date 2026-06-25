@@ -9,9 +9,6 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
-import { SignInWithGithub } from "@/components/auth/sign-in-with-github";
-import { SignInWithGoogle } from "@/components/auth/sign-in-with-google";
-import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardDescription, CardTitle } from "@/components/ui/card";
@@ -25,8 +22,17 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { useWhitelabelingPublic } from "@/utils/hooks/use-whitelabeling";
 
+/**
+ * Self-hosted first-run admin setup ONLY (HIP-0111).
+ *
+ * In cloud, identity is Hanzo IAM and there is no platform-local signup —
+ * `getServerSideProps` redirects to `/` (the IAM PKCE entry point) before this
+ * component ever renders. This form exists solely to seed the very first admin
+ * on a fresh self-hosted instance, before IAM is wired. There is no
+ * GitHub/Google social signup (the server has no social provider) and no cloud
+ * email/password account creation.
+ */
 const registerSchema = z
 	.object({
 		name: z.string().min(1, {
@@ -43,26 +49,12 @@ const registerSchema = z
 			.email({
 				message: "Email must be a valid email",
 			}),
-		password: z
-			.string()
-			.min(1, {
-				message: "Password is required",
-			})
-			.refine((password) => password === "" || password.length >= 8, {
-				message: "Password must be at least 8 characters",
-			}),
-		confirmPassword: z
-			.string()
-			.min(1, {
-				message: "Password is required",
-			})
-			.refine(
-				(confirmPassword) =>
-					confirmPassword === "" || confirmPassword.length >= 8,
-				{
-					message: "Password must be at least 8 characters",
-				},
-			),
+		password: z.string().min(8, {
+			message: "Password must be at least 8 characters",
+		}),
+		confirmPassword: z.string().min(1, {
+			message: "Please confirm your password",
+		}),
 	})
 	.refine((data) => data.password === data.confirmPassword, {
 		message: "Passwords do not match",
@@ -71,17 +63,10 @@ const registerSchema = z
 
 type Register = z.infer<typeof registerSchema>;
 
-interface Props {
-	hasAdmin: boolean;
-	isCloud: boolean;
-}
-
-const Register = ({ isCloud }: Props) => {
+const Register = () => {
 	const router = useRouter();
-	const { config: whitelabeling } = useWhitelabelingPublic();
 	const [isError, setIsError] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [data, setData] = useState<any>(null);
 
 	const form = useForm<Register>({
 		defaultValues: {
@@ -99,7 +84,7 @@ const Register = ({ isCloud }: Props) => {
 	}, [form, form.reset, form.formState.isSubmitSuccessful]);
 
 	const onSubmit = async (values: Register) => {
-		const { data, error } = await authClient.signUp.email({
+		const { error } = await authClient.signUp.email({
 			email: values.email,
 			password: values.password,
 			name: values.name,
@@ -110,14 +95,10 @@ const Register = ({ isCloud }: Props) => {
 			setIsError(true);
 			setError(error.message || "An error occurred");
 		} else {
-			toast.success("User registered successfully", {
+			toast.success("Admin created successfully", {
 				duration: 2000,
 			});
-			if (!isCloud) {
-				router.push("/");
-			} else {
-				setData(data);
-			}
+			router.push("/");
 		}
 	};
 	return (
@@ -132,11 +113,10 @@ const Register = ({ isCloud }: Props) => {
 						>
 							<Logo className="size-12" />
 						</Link>
-						{isCloud ? "Sign Up" : "Setup the server"}
+						Setup the server
 					</CardTitle>
 					<CardDescription>
-						Enter your email and password to{" "}
-						{isCloud ? "create an account" : "setup the server"}
+						Create the first administrator account for this server.
 					</CardDescription>
 					<div className="mx-auto w-full max-w-lg bg-transparent">
 						{isError && (
@@ -147,26 +127,7 @@ const Register = ({ isCloud }: Props) => {
 								</span>
 							</div>
 						)}
-						{isCloud && data && (
-							<AlertBlock type="success" className="my-2">
-								<span>
-									Registered successfully, please check your inbox or spam
-									folder to confirm your account.
-								</span>
-							</AlertBlock>
-						)}
 						<CardContent className="p-0">
-							{isCloud && (
-								<div className="flex flex-col">
-									<SignInWithGithub />
-									<SignInWithGoogle />
-								</div>
-							)}
-							{isCloud && (
-								<p className="mb-4 text-center text-xs text-muted-foreground">
-									Or register with email
-								</p>
-							)}
 							<Form {...form}>
 								<form
 									onSubmit={form.handleSubmit(onSubmit)}
@@ -253,21 +214,12 @@ const Register = ({ isCloud }: Props) => {
 											isLoading={form.formState.isSubmitting}
 											className="w-full"
 										>
-											Register
+											Create admin
 										</Button>
 									</div>
 								</form>
 							</Form>
 							<div className="flex flex-row justify-between flex-wrap">
-								{isCloud && (
-									<div className="mt-4 text-center text-sm flex gap-2 text-muted-foreground">
-										Already have account?
-										<Link className="underline" href="/">
-											Sign in
-										</Link>
-									</div>
-								)}
-
 								<div className="mt-4 text-center text-sm flex flex-row justify-center gap-2  text-muted-foreground">
 									Need help?
 									<Link
@@ -293,25 +245,21 @@ Register.getLayout = (page: ReactElement) => {
 	return <OnboardingLayout>{page}</OnboardingLayout>;
 };
 export async function getServerSideProps(context: GetServerSidePropsContext) {
+	// Cloud: identity is Hanzo IAM. There is no platform-local signup — send the
+	// user to the IAM PKCE entry point (`/`). Never render a local password form
+	// or social buttons in cloud.
 	if (IS_CLOUD) {
-		const { user } = await validateRequest(context.req);
-
-		if (user) {
-			return {
-				redirect: {
-					permanent: false,
-					destination: "/dashboard/home",
-				},
-			};
-		}
 		return {
-			props: {
-				isCloud: true,
+			redirect: {
+				permanent: false,
+				destination: "/",
 			},
 		};
 	}
-	const hasAdmin = await isAdminPresent();
 
+	// Self-hosted: the register form seeds the FIRST admin only. Once an admin
+	// exists, registration is closed — go to the sign-in entry point.
+	const hasAdmin = await isAdminPresent();
 	if (hasAdmin) {
 		return {
 			redirect: {
@@ -320,9 +268,18 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 			},
 		};
 	}
+
+	const { user } = await validateRequest(context.req);
+	if (user) {
+		return {
+			redirect: {
+				permanent: false,
+				destination: "/dashboard/home",
+			},
+		};
+	}
+
 	return {
-		props: {
-			isCloud: false,
-		},
+		props: {},
 	};
 }

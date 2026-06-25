@@ -2,13 +2,15 @@ import { ssoClient } from "@better-auth/sso/client";
 import {
 	adminClient,
 	apiKeyClient,
-	genericOAuthClient,
 	inferAdditionalFields,
 	organizationClient,
 	twoFactorClient,
 } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
+// No genericOAuthClient: identity is Hanzo IAM via the @hanzo/iam PKCE flow
+// (HIP-0111), not Better Auth generic-oauth. The residual Better Auth client
+// hosts only the api-key / organization / sso / admin plugins.
 export const authClient = createAuthClient({
 	basePath: "/v1/auth", // canonical /v1/ — never /api/
 	plugins: [
@@ -17,7 +19,6 @@ export const authClient = createAuthClient({
 		apiKeyClient(),
 		ssoClient(),
 		adminClient(),
-		genericOAuthClient(),
 		inferAdditionalFields({
 			user: {
 				lastName: {
