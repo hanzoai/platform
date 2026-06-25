@@ -76,13 +76,28 @@ total=55 (51 hanzoai + grafana/meili/guacamole/hanzobot; envs main=51/test=2/dev
 (both repo + tag were wrong — the Deployment had been image-patched out-of-band).
 declared==running now.
 
-**Drift column is all-`red` today, by design (not a bug):** `computeDrift`
-flags `no-release` (red) for every row because `latestTag`/`releaseUrl` are null
-— the GHCR/GH-release reader (`read_latest_tag`/`read_release_meta`) is the
-documented follow-up and has not shipped. declared/running/health are accurate;
-once the release reader populates those columns the drift verdict becomes
-meaningful (stale/un-rolled/zero-assets). Do NOT weaken `computeDrift` to hide
-this — it is the honest signal that the release-meta half is unbuilt.
+**Release-meta reader — the third tag, now built (v4.2.8).** The drift column
+was all-`red`/`no-release` because `latestTag`/`releaseUrl`/`releaseAssets` were
+never populated (the `read_latest_tag`/`read_release_meta` follow-up). That
+reader now exists: `pkg/platform/src/services/apps/release-reader.ts` reads each
+discovered repo's latest GitHub Release (Octokit, `GH_TOKEN` already in the pod)
+and bulk-writes ONLY those three columns per repo — orthogonal to `inventory.ts`
+(which owns declared/running/health and deliberately omits them on upsert; the
+two readers compose, neither clobbers the other). 404→`NO_RELEASE` (honest
+`no-release`), non-404 re-thrown + per-repo skip so one bad repo can't stall the
+pass; one GitHub call per DISTINCT repo (envs share a repo).
+`inventory-scheduler.ts` now drives BOTH readers (inventory 60s; releases 10m,
+`APPS_RELEASE_INTERVAL_MS`, after the first inventory pass). `/v1/apps/sync`
+runs both passes (skip releases with `?releases=0`). 9 new unit tests; all 38
+apps tests green; pkg typecheck clean.
+
+This turns the board from 55 uniform `no-release` into the REAL mix the cluster
+already shows: `floating-declared` (commerce `1.42.33-billing`, cloud-api
+`sha-*`, chat `sha-dbed3bf`), `stale` (declared behind the latest GH release),
+`zero-assets` (iam `v1.25.2` ships 0 binaries), genuine `no-release`
+(console/chat/billing have NO GH release). Only 36/55 CR tags are even semver —
+the rest were silently red before. Do NOT weaken `computeDrift`; it now has real
+inputs to work with.
 
 **organizationId today:** the platform DB has ONE org (`slug=admin`), so the
 populator's "lone org owns everything" fallback assigns all 55 rows to it (the
