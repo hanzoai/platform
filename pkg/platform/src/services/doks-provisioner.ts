@@ -11,6 +11,7 @@ import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
 import { recordUsageEvent } from "./billing";
+import { requireKmsSecret } from "./kms";
 
 // DigitalOcean droplet pricing in cents-per-hour. Source: DO public
 // pricing as of 2026-06. Used by the usage-event callbacks below so
@@ -67,7 +68,6 @@ async function reportClusterUsage(
 }
 
 const DO_API = "https://api.digitalocean.com/v2";
-const DO_TOKEN = process.env.PAAS_DO_API_TOKEN;
 const DEFAULT_REGION = process.env.PAAS_DEFAULT_REGION || "sfo3";
 const DEFAULT_K8S_VERSION = process.env.PAAS_K8S_VERSION || "1.34.1-do.3";
 const DEFAULT_NODE_SIZE = process.env.PAAS_DEFAULT_NODE_SIZE || "s-2vcpu-4gb";
@@ -76,15 +76,16 @@ const DEFAULT_NODE_COUNT = 2;
 export type DoksCluster = typeof doksCluster.$inferSelect;
 export type DoksNodePool = typeof doksNodePool.$inferSelect;
 
+/**
+ * DigitalOcean API headers. The DO API token's source of truth is KMS; it is
+ * synced via the KMSSecret pipeline into the pod env as `PAAS_DO_API_TOKEN` and
+ * read here through the single KMS funnel — never hardcoded. Reading it lazily
+ * (per call, not at module load) lets a missing token fail loudly at the exact
+ * provisioning call and lets the KMSSecret resync rotate it without a restart.
+ */
 function doHeaders() {
-	if (!DO_TOKEN) {
-		throw new TRPCError({
-			code: "PRECONDITION_FAILED",
-			message: "PAAS_DO_API_TOKEN not configured",
-		});
-	}
 	return {
-		Authorization: `Bearer ${DO_TOKEN}`,
+		Authorization: `Bearer ${requireKmsSecret("PAAS_DO_API_TOKEN")}`,
 		"Content-Type": "application/json",
 	};
 }
