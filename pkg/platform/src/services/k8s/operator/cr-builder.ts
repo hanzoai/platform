@@ -130,11 +130,27 @@ export interface CRMetadataInput {
 	organizationId: string;
 	namespace: string;
 	resourceId: string;
-	paasTicket: string;
+	/**
+	 * Signed PaaS admission ticket, stamped as the `hanzo.ai/paas-ticket`
+	 * annotation. The operator's tenant-mode webhook verifies it and binds the
+	 * CR to the tenant (ticket sub=org, ns=tenant namespace). Every tenant CR
+	 * carries one: datastore CRs build with a placeholder and have the real
+	 * ticket stamped at provision time (`provisionDatastore`); the CI deploy
+	 * path mints and passes it here directly. Optional only to support that
+	 * build-then-stamp sequence — a finished tenant CR is never applied without one.
+	 */
+	paasTicket?: string;
 	source: "platform.hanzo.ai";
 }
 
 function buildMetadata(name: string, kind: OperatorKind, input: CRMetadataInput) {
+	const annotations: Record<string, string> = {
+		[ANNOTATION_TENANT]: input.organizationId,
+		[ANNOTATION_PAAS_SOURCE]: input.source,
+	};
+	if (input.paasTicket) {
+		annotations[ANNOTATION_PAAS_TICKET] = input.paasTicket;
+	}
 	return {
 		name,
 		namespace: input.namespace,
@@ -145,11 +161,7 @@ function buildMetadata(name: string, kind: OperatorKind, input: CRMetadataInput)
 			"hanzo.ai/kind": kind,
 			"hanzo.ai/resource-id": input.resourceId,
 		},
-		annotations: {
-			[ANNOTATION_TENANT]: input.organizationId,
-			[ANNOTATION_PAAS_TICKET]: input.paasTicket,
-			[ANNOTATION_PAAS_SOURCE]: input.source,
-		},
+		annotations,
 	};
 }
 
@@ -295,6 +307,52 @@ export function buildMongoCR(
 			credentialsSecret,
 			serviceAliases: [m.appName, `${m.appName}-mongo`],
 			ports: [{ name: "mongo", containerPort: 27017, protocol: "TCP" }],
+			partOf: `tenant-${meta.organizationId}`,
+		},
+	};
+}
+
+// ---------------------------------------------------------------------------
+// App → Service CR
+// ---------------------------------------------------------------------------
+
+export interface ServiceCROptions {
+	/** Container image to run. */
+	image: ImageSpec;
+	replicas?: number;
+	ports?: ServicePort[];
+	env?: EnvVar[];
+	resources?: ResourceRequirements;
+	ingress?: OperatorServiceSpec["ingress"];
+	autoscaling?: OperatorServiceSpec["autoscaling"];
+}
+
+/**
+ * Build a minimal operator `Service` CR for the CI/CD deploy path.
+ *
+ * Used when a deploy targets a Service CR that does not yet exist: rather than
+ * erroring, the DeployExecutor creates it from the freshly-built image so a
+ * newly-connected repo deploys with zero manual CR. Only `image` is required;
+ * the operator fills in defaults for everything else and reconciles the
+ * Deployment/Service/Ingress.
+ */
+export function buildServiceCR(
+	name: string,
+	meta: CRMetadataInput,
+	opts: ServiceCROptions,
+): CustomResource<OperatorServiceSpec> {
+	return {
+		apiVersion: `${OPERATOR_GROUP}/${OPERATOR_VERSION}`,
+		kind: "Service",
+		metadata: buildMetadata(name, "Service", meta),
+		spec: {
+			image: opts.image,
+			replicas: opts.replicas ?? 1,
+			...(opts.ports ? { ports: opts.ports } : {}),
+			...(opts.env ? { env: opts.env } : {}),
+			...(opts.resources ? { resources: opts.resources } : {}),
+			...(opts.ingress ? { ingress: opts.ingress } : {}),
+			...(opts.autoscaling ? { autoscaling: opts.autoscaling } : {}),
 			partOf: `tenant-${meta.organizationId}`,
 		},
 	};
