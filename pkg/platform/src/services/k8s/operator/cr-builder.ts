@@ -131,10 +131,13 @@ export interface CRMetadataInput {
 	namespace: string;
 	resourceId: string;
 	/**
-	 * Signed PaaS admission ticket. Required for tenant-namespace datastore CRs
-	 * (the operator's tenant-mode webhook validates it). Omitted for first-party
-	 * deploy-target Service CRs, which live outside tenant mode — there is no
-	 * ticket to stamp, so the annotation is simply not set.
+	 * Signed PaaS admission ticket, stamped as the `hanzo.ai/paas-ticket`
+	 * annotation. The operator's tenant-mode webhook verifies it and binds the
+	 * CR to the tenant (ticket sub=org, ns=tenant namespace). Every tenant CR
+	 * carries one: datastore CRs build with a placeholder and have the real
+	 * ticket stamped at provision time (`provisionDatastore`); the CI deploy
+	 * path mints and passes it here directly. Optional only to support that
+	 * build-then-stamp sequence — a finished tenant CR is never applied without one.
 	 */
 	paasTicket?: string;
 	source: "platform.hanzo.ai";
