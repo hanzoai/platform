@@ -11,12 +11,14 @@ import { describe, expect, it } from "vitest";
 import { decodeResult, encodeResult } from "@/server/zap/result";
 import {
 	AddNodePoolParams,
+	AttachClusterParams,
 	ClusterRef,
 	DeleteNodePoolParams,
 	Empty,
 	ProvisionParams,
 	UpdateNodePoolParams,
 	newAddNodePoolParams,
+	newAttachClusterParams,
 	newClusterRef,
 	newDeleteNodePoolParams,
 	newEmpty,
@@ -109,6 +111,15 @@ describe("doks ZAP codec", () => {
 		const input = { doksClusterId: "c-1", poolId: "p-2" };
 		const v = DeleteNodePoolParams.wrap(newDeleteNodePoolParams(input));
 		expect({ doksClusterId: v.doksClusterId, poolId: v.poolId }).toEqual(input);
+	});
+
+	it("roundtrips AttachClusterParams (BYO kubeconfig)", () => {
+		const input = {
+			name: "prod-eu",
+			kubeconfig: "apiVersion: v1\nkind: Config\nclusters: []\n",
+		};
+		const v = AttachClusterParams.wrap(newAttachClusterParams(input));
+		expect({ name: v.name, kubeconfig: v.kubeconfig }).toEqual(input);
 	});
 
 	it("encodes Empty params to a parseable message", () => {
