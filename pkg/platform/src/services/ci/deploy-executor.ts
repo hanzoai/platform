@@ -13,8 +13,9 @@
  */
 import { PatchStrategy, setHeaderOptions } from "@kubernetes/client-node";
 import { TRPCError } from "@trpc/server";
-import { getDefaultClients } from "../k8s/k8s-client";
+import { resolveOrgClusterClients } from "../dedicated-cluster";
 import {
+	buildServiceCR,
 	KIND_TO_PLURAL,
 	OPERATOR_GROUP,
 	OPERATOR_VERSION,
@@ -73,7 +74,12 @@ export async function executeDeploy(
 	}
 
 	const [repository, tag] = parseImageRef(job.image);
-	const clients = getDefaultClients();
+
+	// Multi-cluster bridge — ONE choke point. resolveOrgClusterClients pins the
+	// rollout to the org's selected cluster (dedicated DOKS or attached BYO), else
+	// the shared in-cluster SA. This is what joins the build→deploy pipeline to
+	// the cluster control plane (it previously always hit the shared cluster).
+	const clients = await resolveOrgClusterClients(job.organizationId);
 
 	const crName = `${target.namespace}/${target.name}`;
 	await updateBuildJob(job.buildJobId, {
@@ -106,15 +112,56 @@ export async function executeDeploy(
 			setHeaderOptions("Content-Type", PatchStrategy.MergePatch),
 		);
 	} catch (err) {
-		const msg = operatorError(err);
-		await updateBuildJob(job.buildJobId, {
-			rolloutStatus: "failed",
-			error: `Rollout of ${crName} failed: ${msg}`,
-		});
-		throw new TRPCError({
-			code: "INTERNAL_SERVER_ERROR",
-			message: `Rollout of ${kind}/${target.name} in ${target.namespace} failed: ${msg}`,
-		});
+		// CR absent → create it from the built image so a freshly connected repo
+		// deploys with zero manual CR. Any other error is a genuine failure.
+		if (!isNotFound(err)) {
+			const msg = operatorError(err);
+			await updateBuildJob(job.buildJobId, {
+				rolloutStatus: "failed",
+				error: `Rollout of ${crName} failed: ${msg}`,
+			});
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: `Rollout of ${kind}/${target.name} in ${target.namespace} failed: ${msg}`,
+			});
+		}
+
+		const cr = buildServiceCR(
+			target.name,
+			{
+				organizationId: job.organizationId,
+				namespace: target.namespace,
+				resourceId: target.name,
+				source: "platform.hanzo.ai",
+			},
+			{ image: { repository, tag, pullPolicy: "Always" } },
+		);
+		try {
+			await clients.custom.createNamespacedCustomObject({
+				group: OPERATOR_GROUP,
+				version: OPERATOR_VERSION,
+				namespace: target.namespace,
+				plural,
+				body: cr as unknown as object,
+			});
+		} catch (createErr) {
+			const msg = operatorError(createErr);
+			await updateBuildJob(job.buildJobId, {
+				rolloutStatus: "failed",
+				error: `Create of ${crName} failed: ${msg}`,
+			});
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: `Create of ${kind}/${target.name} in ${target.namespace} failed: ${msg}`,
+			});
+		}
+
+		await updateBuildJob(job.buildJobId, { rolloutStatus: "applied" });
+		return {
+			rolledOut: true,
+			target: crName,
+			reason: `created ${kind}/${target.name} at image ${tag}`,
+		};
 	}
 
 	await updateBuildJob(job.buildJobId, { rolloutStatus: "applied" });
@@ -123,6 +170,13 @@ export async function executeDeploy(
 		target: crName,
 		reason: `patched ${kind}/${target.name} image to ${tag}`,
 	};
+}
+
+/** True when an operator/k8s error means the CR does not exist. */
+function isNotFound(err: unknown): boolean {
+	const e = err as { code?: number; statusCode?: number };
+	if (e.code === 404 || e.statusCode === 404) return true;
+	return operatorError(err).toLowerCase().includes("not found");
 }
 
 function operatorError(err: unknown): string {
