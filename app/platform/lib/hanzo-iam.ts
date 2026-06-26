@@ -117,14 +117,14 @@ class HanzoIAM {
       state: state || crypto.randomUUID(),
     });
 
-    return `${this.iamEndpoint}/oauth/authorize?${params}`;
+    return `${this.iamEndpoint}/v1/iam/oauth/authorize?${params}`;
   }
 
   /**
    * Exchange authorization code for access token
    */
   async exchangeCode(code: string): Promise<HanzoSession> {
-    const response = await fetch(`${this.iamEndpoint}/oauth/token`, {
+    const response = await fetch(`${this.iamEndpoint}/v1/iam/oauth/access_token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -159,7 +159,7 @@ class HanzoIAM {
    * Get user info from access token
    */
   async getUserInfo(accessToken: string): Promise<HanzoUser> {
-    const response = await fetch(`${this.iamEndpoint}/oauth/userinfo`, {
+    const response = await fetch(`${this.iamEndpoint}/v1/iam/oauth/userinfo`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
