@@ -29,6 +29,13 @@
       "when": 1782076854597,
       "tag": "0003_apps_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1782499874922,
+      "tag": "0004_curly_human_fly",
+      "breakpoints": true
     }
   ]
 }
