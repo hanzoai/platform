@@ -1212,6 +1212,13 @@
       "when": 1781672078022,
       "tag": "0172_fork_debt_restore",
       "breakpoints": true
+    },
+    {
+      "idx": 173,
+      "version": "7",
+      "when": 1782502457726,
+      "tag": "0173_byo_cluster_kubeconfig",
+      "breakpoints": true
     }
   ]
 }

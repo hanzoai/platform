@@ -28,7 +28,15 @@ export const doksCluster = pgTable("doks_cluster", {
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
 	name: text("name").notNull(),
+	// DigitalOcean cluster id — present for hanzo-managed (provisioned) clusters,
+	// NULL for externally-attached (BYO) clusters that platform never created.
 	doClusterId: text("doClusterId"),
+	// Encrypted kubeconfig — set ONLY for externally-attached (BYO) clusters,
+	// where platform has no DO API to fetch credentials from. Ciphertext is
+	// produced by services/clusters.ts (symmetricEncrypt, key from
+	// PAAS_SECRET_KEY/BETTER_AUTH_SECRET); plaintext kubeconfig is never stored.
+	// Managed clusters leave this NULL and fetch a fresh kubeconfig from DO.
+	kubeconfigEncrypted: text("kubeconfigEncrypted"),
 	region: text("region").notNull().default("sfo3"),
 	status: doksClusterStatus("status").notNull().default("pending"),
 	endpoint: text("endpoint"),
@@ -107,6 +115,14 @@ export const apiProvisionDoksCluster = createClusterSchema
 		nodeSize: z.string().optional(),
 		nodeCount: z.number().int().min(1).optional(),
 	});
+
+export const apiAttachExternalCluster = z.object({
+	organizationId: z.string().min(1),
+	name: z.string().min(1),
+	// Raw kubeconfig YAML for the BYO cluster. Encrypted at rest by
+	// services/clusters.ts before it ever touches the DB.
+	kubeconfig: z.string().min(1),
+});
 
 export const apiFindOneDoksCluster = createClusterSchema
 	.pick({

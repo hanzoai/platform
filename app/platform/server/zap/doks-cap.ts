@@ -24,6 +24,7 @@ import {
 	getOrgBilling,
 	recordBillingSnapshot,
 } from "@hanzo/platform/services/billing";
+import { attachExternalCluster } from "@hanzo/platform/services/clusters";
 import {
 	addNodePool,
 	deleteDoksCluster,
@@ -48,6 +49,7 @@ import { eq } from "drizzle-orm";
 import { encodeResult } from "./result";
 import {
 	AddNodePoolParams,
+	AttachClusterParams,
 	ClusterRef,
 	DeleteNodePoolParams,
 	DoksMethod,
@@ -223,6 +225,16 @@ async function dispatch(ctx: DoksCtx, call: Call): Promise<unknown> {
 			return getFleetBilling();
 		case DoksMethod.recordSnapshot:
 			return recordBillingSnapshot(ctx.organizationId);
+		case DoksMethod.attachCluster: {
+			// Attach a BYO cluster to the caller's org. Like `provision`, this is
+			// a create scoped to ctx.organizationId — no pre-existing CR to own.
+			const p = AttachClusterParams.wrap(call.payload);
+			return attachExternalCluster({
+				organizationId: ctx.organizationId,
+				name: p.name,
+				kubeconfig: p.kubeconfig,
+			});
+		}
 		default:
 			throw new NotFoundError(`unknown method ${call.method}`);
 	}

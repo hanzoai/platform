@@ -11,9 +11,12 @@
  * The image is already in ghcr.io/hanzoai/<repo>:<sha> (the build runner
  * pushed it). The executor only records the tag and flips the CR spec.
  */
+import { and, db, eq } from "@hanzo/platform/db";
+import { applications } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
-import { getDefaultClients } from "../k8s/k8s-client";
+import { resolveDeployClients } from "../clusters";
 import {
+	buildServiceCR,
 	KIND_TO_PLURAL,
 	OPERATOR_GROUP,
 	OPERATOR_VERSION,
@@ -72,7 +75,12 @@ export async function executeDeploy(
 	}
 
 	const [repository, tag] = parseImageRef(job.image);
-	const clients = getDefaultClients();
+
+	// Multi-cluster bridge — ONE choke point. The deploy target's cluster is the
+	// application's `k8sClusterId`: unset → shared hanzo-k8s (in-cluster SA);
+	// managed → DO kubeconfig; external/BYO → the stored, decrypted kubeconfig.
+	const k8sClusterId = await clusterIdForJob(job);
+	const clients = await resolveDeployClients(k8sClusterId);
 
 	const crName = `${target.namespace}/${target.name}`;
 	await updateBuildJob(job.buildJobId, {
@@ -98,15 +106,56 @@ export async function executeDeploy(
 			body: patch,
 		});
 	} catch (err) {
-		const msg = operatorError(err);
-		await updateBuildJob(job.buildJobId, {
-			rolloutStatus: "failed",
-			error: `Rollout of ${crName} failed: ${msg}`,
-		});
-		throw new TRPCError({
-			code: "INTERNAL_SERVER_ERROR",
-			message: `Rollout of ${kind}/${target.name} in ${target.namespace} failed: ${msg}`,
-		});
+		// CR absent → create it from the built image so a freshly connected repo
+		// deploys with zero manual CR. Any other error is a genuine failure.
+		if (!isNotFound(err)) {
+			const msg = operatorError(err);
+			await updateBuildJob(job.buildJobId, {
+				rolloutStatus: "failed",
+				error: `Rollout of ${crName} failed: ${msg}`,
+			});
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: `Rollout of ${kind}/${target.name} in ${target.namespace} failed: ${msg}`,
+			});
+		}
+
+		const cr = buildServiceCR(
+			target.name,
+			{
+				organizationId: job.organizationId,
+				namespace: target.namespace,
+				resourceId: target.name,
+				source: "platform.hanzo.ai",
+			},
+			{ image: { repository, tag, pullPolicy: "Always" } },
+		);
+		try {
+			await clients.custom.createNamespacedCustomObject({
+				group: OPERATOR_GROUP,
+				version: OPERATOR_VERSION,
+				namespace: target.namespace,
+				plural,
+				body: cr as unknown as object,
+			});
+		} catch (createErr) {
+			const msg = operatorError(createErr);
+			await updateBuildJob(job.buildJobId, {
+				rolloutStatus: "failed",
+				error: `Create of ${crName} failed: ${msg}`,
+			});
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: `Create of ${kind}/${target.name} in ${target.namespace} failed: ${msg}`,
+			});
+		}
+
+		await updateBuildJob(job.buildJobId, { rolloutStatus: "applied" });
+		return {
+			rolledOut: true,
+			target: crName,
+			reason: `created ${kind}/${target.name} at image ${tag}`,
+		};
 	}
 
 	await updateBuildJob(job.buildJobId, { rolloutStatus: "applied" });
@@ -115,6 +164,46 @@ export async function executeDeploy(
 		target: crName,
 		reason: `patched ${kind}/${target.name} image to ${tag}`,
 	};
+}
+
+/**
+ * Resolve which cluster this build deploys to. The target cluster is the
+ * application's `k8sClusterId`: find the application(s) configured for this
+ * build's repo within the same org and read the target. Returns null (→ shared
+ * hanzo-k8s) when there is no app, no configured cluster, or an ambiguous set
+ * of clusters for the repo — never a guess.
+ */
+async function clusterIdForJob(job: BuildJob): Promise<string | null> {
+	const slash = job.repo.indexOf("/");
+	if (slash < 0) return null;
+	const owner = job.repo.slice(0, slash);
+	const repository = job.repo.slice(slash + 1);
+
+	const candidates = await db.query.applications.findMany({
+		where: and(
+			eq(applications.owner, owner),
+			eq(applications.repository, repository),
+		),
+		with: { environment: { with: { project: true } } },
+	});
+
+	const clusterIds = new Set<string>();
+	for (const app of candidates) {
+		if (
+			app.environment?.project?.organizationId === job.organizationId &&
+			app.k8sClusterId
+		) {
+			clusterIds.add(app.k8sClusterId);
+		}
+	}
+	return clusterIds.size === 1 ? [...clusterIds][0]! : null;
+}
+
+/** True when an operator/k8s error means the CR does not exist. */
+function isNotFound(err: unknown): boolean {
+	const e = err as { code?: number; statusCode?: number };
+	if (e.code === 404 || e.statusCode === 404) return true;
+	return operatorError(err).toLowerCase().includes("not found");
 }
 
 function operatorError(err: unknown): string {
