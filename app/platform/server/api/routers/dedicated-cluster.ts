@@ -21,6 +21,7 @@ import {
 	findDoksClusterById,
 } from "@hanzo/platform/services/doks-provisioner";
 import {
+	attachExternalCluster,
 	installClusterBaseline,
 	listOrgClusters,
 	migrateOrgToDedicated,
@@ -78,6 +79,18 @@ export const dedicatedClusterRouter = createTRPCRouter({
 			const organizationId = requireActiveOrg(ctx);
 			await loadOwned(input.doksClusterId, organizationId);
 			return installClusterBaseline(input.doksClusterId);
+		}),
+
+	/**
+	 * Attach an external (bring-your-own) cluster as a deploy target for the
+	 * active org. The org is forced from the session; the kubeconfig is sealed
+	 * at rest. The created cluster is ready to `select` immediately.
+	 */
+	attachExternal: adminProcedure
+		.input(z.object({ name: z.string().min(1), kubeconfig: z.string().min(1) }))
+		.mutation(async ({ input, ctx }) => {
+			const organizationId = requireActiveOrg(ctx);
+			return attachExternalCluster({ ...input, organizationId });
 		}),
 
 	/** List the active org's dedicated clusters. */
