@@ -16,11 +16,14 @@ import { TRPCError } from "@trpc/server";
 import { resolveOrgClusterClients } from "../dedicated-cluster";
 import {
 	buildServiceCR,
+	defaultQuotaForTier,
 	KIND_TO_PLURAL,
 	OPERATOR_GROUP,
 	OPERATOR_VERSION,
 	type OperatorKind,
-} from "../k8s/operator/cr-builder";
+	signPaasTicket,
+	tenantNamespace,
+} from "../k8s/operator";
 import type { BuildJob } from "./build-job";
 import { updateBuildJob } from "./build-job";
 import { parseImageRef } from "./image-ref";
@@ -70,6 +73,26 @@ export async function executeDeploy(
 		throw new TRPCError({
 			code: "BAD_REQUEST",
 			message: `Unsupported operator CRD kind ${target.crd}`,
+		});
+	}
+
+	// Tenant-isolation gate — fail closed. `target.namespace` comes verbatim
+	// from the connected repo's `.platform.yml`. Every org is confined to its
+	// own `tenant-<org>` namespace, so a repo may only ever create or patch a
+	// workload in ITS OWN tenant namespace. Refuse — never silently rewrite —
+	// any other target, so a misconfigured or malicious repo cannot reach into
+	// another tenant's namespace on the shared cluster. (deploy-executor never
+	// targets a system namespace; the per-cluster baseline is applied elsewhere,
+	// so no system-namespace exception is needed here.)
+	const tenantNs = tenantNamespace(job.organizationId);
+	if (target.namespace !== tenantNs) {
+		await updateBuildJob(job.buildJobId, {
+			rolloutStatus: "failed",
+			error: `Refusing cross-tenant deploy: target namespace "${target.namespace}" is not this org's tenant namespace "${tenantNs}"`,
+		});
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: `Deploy target namespace "${target.namespace}" must equal the org tenant namespace "${tenantNs}" (.platform.yml deploy.target.namespace)`,
 		});
 	}
 
@@ -126,12 +149,42 @@ export async function executeDeploy(
 			});
 		}
 
+		// Bind the new workload to the tenant: mint a signed PaaS ticket so the
+		// operator's tenant-mode admission webhook admits this CR for THIS org
+		// only (ticket sub=org, ns=tenant namespace). Without it the operator
+		// cannot bind the created workload to the tenant.
+		let paasTicket: string;
+		try {
+			paasTicket = signPaasTicket({
+				organizationId: job.organizationId,
+				kind,
+				namespace: target.namespace,
+				name: target.name,
+				// The deploy-path Service CR declares no explicit resource requests
+				// (the operator fills defaults); the ticket claims the minimal app
+				// envelope and the operator re-enforces the org's real plan quota on
+				// admission — defense in depth, per docs/OPERATOR_INTEGRATION.md.
+				quota: defaultQuotaForTier("free"),
+			});
+		} catch (signErr) {
+			const msg = operatorError(signErr);
+			await updateBuildJob(job.buildJobId, {
+				rolloutStatus: "failed",
+				error: `Create of ${crName} failed: cannot mint tenant ticket: ${msg}`,
+			});
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: `Cannot mint tenant ticket for ${kind}/${target.name} in ${target.namespace}: ${msg}`,
+			});
+		}
+
 		const cr = buildServiceCR(
 			target.name,
 			{
 				organizationId: job.organizationId,
 				namespace: target.namespace,
 				resourceId: target.name,
+				paasTicket,
 				source: "platform.hanzo.ai",
 			},
 			{ image: { repository, tag, pullPolicy: "Always" } },
