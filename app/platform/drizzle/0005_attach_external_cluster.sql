@@ -1,0 +1,1 @@
+ALTER TABLE `doks_cluster` ADD `kubeconfigEncrypted` text;

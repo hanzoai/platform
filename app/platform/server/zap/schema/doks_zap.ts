@@ -214,6 +214,41 @@ export function newDeleteNodePoolParams(in_: DeleteNodePoolParamsInput): Uint8Ar
 }
 
 
+const attachClusterParamsOff = {
+  name: 0,
+  kubeconfig: 8,
+} as const;
+const attachClusterParamsSize = 16;
+
+/** Zero-copy view into a ZAP-encoded AttachClusterParams message. */
+export class AttachClusterParams extends StructView {
+  /** Parse `b` and return a typed view. Throws on a wire-level check failure (magic, version, size). */
+  static wrap(b: Uint8Array): AttachClusterParams {
+    const root = Message.parse(b).root();
+    return new AttachClusterParams(root.data, root.offset);
+  }
+
+  get name(): string { return this.text(attachClusterParamsOff.name); }
+  get kubeconfig(): string { return this.text(attachClusterParamsOff.kubeconfig); }
+}
+
+/** Field values for newAttachClusterParams. */
+export interface AttachClusterParamsInput {
+  name: string;
+  kubeconfig: string;
+}
+
+/** Build a ZAP-encoded AttachClusterParams message from `in` and return the bytes. */
+export function newAttachClusterParams(in_: AttachClusterParamsInput): Uint8Array {
+  const b = new Builder(256);
+  const ob = b.startObject(attachClusterParamsSize);
+  ob.setText(attachClusterParamsOff.name, in_.name);
+  ob.setText(attachClusterParamsOff.kubeconfig, in_.kubeconfig);
+  ob.finishAsRoot();
+  return b.finish();
+}
+
+
 const emptyOff = {
   _pad: 0,
 } as const;
@@ -265,6 +300,7 @@ export const DoksMethod = {
   orgBilling: 16,
   fleetBilling: 17,
   recordSnapshot: 18,
+  attachCluster: 19,
 } as const;
 
 /** Typed RPC client for the Doks service over a ZAP call channel. */
@@ -546,6 +582,21 @@ export class DoksClient {
     return resp.body;
   }
 
+  async attachCluster(params: Uint8Array): Promise<Uint8Array> {
+    const envelope = buildRequest({
+      method: DoksMethod.attachCluster,
+      promiseID: 0,
+      target: NO_TARGET,
+      cap: this.cap,
+      payload: params,
+    });
+    const resp = await this.channel.call(envelope);
+    if (resp.status !== Status.OK) {
+      throw new Error(`Doks.attachCluster: status ${resp.status}`);
+    }
+    return resp.body;
+  }
+
 }
 
 /** Abstract RPC server for the Doks service. Subclass and implement each method. */
@@ -568,6 +619,7 @@ export abstract class DoksServer {
   abstract orgBilling(params: Uint8Array): Promise<Uint8Array>;
   abstract fleetBilling(params: Uint8Array): Promise<Uint8Array>;
   abstract recordSnapshot(params: Uint8Array): Promise<Uint8Array>;
+  abstract attachCluster(params: Uint8Array): Promise<Uint8Array>;
 
   /** Decode a Call envelope, route by method ordinal, and build the Response envelope. */
   async dispatch(envelope: Uint8Array): Promise<Uint8Array> {
@@ -643,6 +695,10 @@ export abstract class DoksServer {
       }
       case DoksMethod.recordSnapshot: {
         const body = await this.recordSnapshot(call.payload);
+        return buildResponse(Status.OK, call.promiseID, body);
+      }
+      case DoksMethod.attachCluster: {
+        const body = await this.attachCluster(call.payload);
         return buildResponse(Status.OK, call.promiseID, body);
       }
       default:
