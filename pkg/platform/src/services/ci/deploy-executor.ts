@@ -13,13 +13,17 @@
  */
 import { PatchStrategy, setHeaderOptions } from "@kubernetes/client-node";
 import { TRPCError } from "@trpc/server";
-import { getDefaultClients } from "../k8s/k8s-client";
+import { resolveOrgClusterClients } from "../dedicated-cluster";
 import {
+	buildServiceCR,
+	defaultQuotaForTier,
 	KIND_TO_PLURAL,
 	OPERATOR_GROUP,
 	OPERATOR_VERSION,
 	type OperatorKind,
-} from "../k8s/operator/cr-builder";
+	signPaasTicket,
+	tenantNamespace,
+} from "../k8s/operator";
 import type { BuildJob } from "./build-job";
 import { updateBuildJob } from "./build-job";
 import { parseImageRef } from "./image-ref";
@@ -72,8 +76,33 @@ export async function executeDeploy(
 		});
 	}
 
+	// Tenant-isolation gate — fail closed. `target.namespace` comes verbatim
+	// from the connected repo's `.platform.yml`. Every org is confined to its
+	// own `tenant-<org>` namespace, so a repo may only ever create or patch a
+	// workload in ITS OWN tenant namespace. Refuse — never silently rewrite —
+	// any other target, so a misconfigured or malicious repo cannot reach into
+	// another tenant's namespace on the shared cluster. (deploy-executor never
+	// targets a system namespace; the per-cluster baseline is applied elsewhere,
+	// so no system-namespace exception is needed here.)
+	const tenantNs = tenantNamespace(job.organizationId);
+	if (target.namespace !== tenantNs) {
+		await updateBuildJob(job.buildJobId, {
+			rolloutStatus: "failed",
+			error: `Refusing cross-tenant deploy: target namespace "${target.namespace}" is not this org's tenant namespace "${tenantNs}"`,
+		});
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: `Deploy target namespace "${target.namespace}" must equal the org tenant namespace "${tenantNs}" (.platform.yml deploy.target.namespace)`,
+		});
+	}
+
 	const [repository, tag] = parseImageRef(job.image);
-	const clients = getDefaultClients();
+
+	// Multi-cluster bridge — ONE choke point. resolveOrgClusterClients pins the
+	// rollout to the org's selected cluster (dedicated DOKS or attached BYO), else
+	// the shared in-cluster SA. This is what joins the build→deploy pipeline to
+	// the cluster control plane (it previously always hit the shared cluster).
+	const clients = await resolveOrgClusterClients(job.organizationId);
 
 	const crName = `${target.namespace}/${target.name}`;
 	await updateBuildJob(job.buildJobId, {
@@ -106,15 +135,86 @@ export async function executeDeploy(
 			setHeaderOptions("Content-Type", PatchStrategy.MergePatch),
 		);
 	} catch (err) {
-		const msg = operatorError(err);
-		await updateBuildJob(job.buildJobId, {
-			rolloutStatus: "failed",
-			error: `Rollout of ${crName} failed: ${msg}`,
-		});
-		throw new TRPCError({
-			code: "INTERNAL_SERVER_ERROR",
-			message: `Rollout of ${kind}/${target.name} in ${target.namespace} failed: ${msg}`,
-		});
+		// CR absent → create it from the built image so a freshly connected repo
+		// deploys with zero manual CR. Any other error is a genuine failure.
+		if (!isNotFound(err)) {
+			const msg = operatorError(err);
+			await updateBuildJob(job.buildJobId, {
+				rolloutStatus: "failed",
+				error: `Rollout of ${crName} failed: ${msg}`,
+			});
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: `Rollout of ${kind}/${target.name} in ${target.namespace} failed: ${msg}`,
+			});
+		}
+
+		// Bind the new workload to the tenant: mint a signed PaaS ticket so the
+		// operator's tenant-mode admission webhook admits this CR for THIS org
+		// only (ticket sub=org, ns=tenant namespace). Without it the operator
+		// cannot bind the created workload to the tenant.
+		let paasTicket: string;
+		try {
+			paasTicket = signPaasTicket({
+				organizationId: job.organizationId,
+				kind,
+				namespace: target.namespace,
+				name: target.name,
+				// The deploy-path Service CR declares no explicit resource requests
+				// (the operator fills defaults); the ticket claims the minimal app
+				// envelope and the operator re-enforces the org's real plan quota on
+				// admission — defense in depth, per docs/OPERATOR_INTEGRATION.md.
+				quota: defaultQuotaForTier("free"),
+			});
+		} catch (signErr) {
+			const msg = operatorError(signErr);
+			await updateBuildJob(job.buildJobId, {
+				rolloutStatus: "failed",
+				error: `Create of ${crName} failed: cannot mint tenant ticket: ${msg}`,
+			});
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: `Cannot mint tenant ticket for ${kind}/${target.name} in ${target.namespace}: ${msg}`,
+			});
+		}
+
+		const cr = buildServiceCR(
+			target.name,
+			{
+				organizationId: job.organizationId,
+				namespace: target.namespace,
+				resourceId: target.name,
+				paasTicket,
+				source: "platform.hanzo.ai",
+			},
+			{ image: { repository, tag, pullPolicy: "Always" } },
+		);
+		try {
+			await clients.custom.createNamespacedCustomObject({
+				group: OPERATOR_GROUP,
+				version: OPERATOR_VERSION,
+				namespace: target.namespace,
+				plural,
+				body: cr as unknown as object,
+			});
+		} catch (createErr) {
+			const msg = operatorError(createErr);
+			await updateBuildJob(job.buildJobId, {
+				rolloutStatus: "failed",
+				error: `Create of ${crName} failed: ${msg}`,
+			});
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: `Create of ${kind}/${target.name} in ${target.namespace} failed: ${msg}`,
+			});
+		}
+
+		await updateBuildJob(job.buildJobId, { rolloutStatus: "applied" });
+		return {
+			rolledOut: true,
+			target: crName,
+			reason: `created ${kind}/${target.name} at image ${tag}`,
+		};
 	}
 
 	await updateBuildJob(job.buildJobId, { rolloutStatus: "applied" });
@@ -123,6 +223,13 @@ export async function executeDeploy(
 		target: crName,
 		reason: `patched ${kind}/${target.name} image to ${tag}`,
 	};
+}
+
+/** True when an operator/k8s error means the CR does not exist. */
+function isNotFound(err: unknown): boolean {
+	const e = err as { code?: number; statusCode?: number };
+	if (e.code === 404 || e.statusCode === 404) return true;
+	return operatorError(err).toLowerCase().includes("not found");
 }
 
 function operatorError(err: unknown): string {
