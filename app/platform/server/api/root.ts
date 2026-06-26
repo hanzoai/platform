@@ -9,6 +9,7 @@ import { bitbucketRouter } from "./routers/bitbucket";
 import { certificateRouter } from "./routers/certificate";
 // clusterRouter migrated to native @zap-proto/web (server/zap/cluster-cap.ts).
 import { composeRouter } from "./routers/compose";
+import { dedicatedClusterRouter } from "./routers/dedicated-cluster";
 import { deployProviderRouter } from "./routers/deploy-provider";
 import { deploymentRouter } from "./routers/deployment";
 // destinationRouter migrated to native @zap-proto/web (server/zap/destination-cap.ts).
@@ -80,6 +81,8 @@ export const appRouter = createTRPCRouter({
 	// cluster: migrated to native @zap-proto/web — see utils/zap-cluster.ts
 	// (browser) and server/zap/cluster-cap.ts (server). No tRPC cluster router.
 	compose: composeRouter,
+	// Dedicated customer "Hanzo K8S" clusters (launch + lifecycle + targeting).
+	dedicatedCluster: dedicatedClusterRouter,
 	deployProvider: deployProviderRouter,
 	deployment: deploymentRouter,
 	// destination: migrated to native @zap-proto/web — see utils/zap-destination.ts

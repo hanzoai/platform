@@ -48,7 +48,39 @@ export const doksCluster = sqliteTable("doks_cluster", {
 	maintenancePolicy: text("maintenancePolicy", { mode: "json" })
 		.$type<{ startTime: string; day: string }>()
 		.default({ startTime: "04:00", day: "sunday" }),
+	// --- Dedicated-cluster lifecycle (platform control-plane) ---
+	// `status` mirrors DigitalOcean's own cluster state; `phase` is platform's
+	// provisioning lifecycle (DOKS created → operator+baseline installed → ready
+	// as a deploy target). They are orthogonal: a DO-`running` cluster is not a
+	// usable Hanzo target until `phase=ready`.
+	phase: text("phase", {
+		enum: ["requested", "provisioning", "installing", "ready", "error"],
+	})
+		.notNull()
+		.default("requested"),
+	/** hanzo-operator (CRDs + controller) reconciled onto this cluster. */
+	operatorInstalled: integer("operatorInstalled", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	/** Per-tenant baseline (namespaces, PaaS ticket secret, ingress/gateway). */
+	baselineInstalled: integer("baselineInstalled", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	/** This cluster is the org's selected deploy target (≤1 active per org). */
+	active: integer("active", { mode: "boolean" }).notNull().default(false),
+	/** Last baseline-install failure, for surfacing/retry; null when healthy. */
+	baselineError: text("baselineError"),
 });
+
+/** Canonical provisioning-phase vocabulary (single source for code + UI). */
+export const doksPhaseValues = [
+	"requested",
+	"provisioning",
+	"installing",
+	"ready",
+	"error",
+] as const;
+export type DoksPhase = (typeof doksPhaseValues)[number];
 
 export const doksClusterRelations = relations(doksCluster, ({ one, many }) => ({
 	organization: one(organization, {
@@ -145,4 +177,21 @@ export const apiUpdateNodePool = z.object({
 export const apiDeleteNodePool = z.object({
 	doksClusterId: z.string().min(1),
 	poolId: z.string().min(1),
+});
+
+// --- Dedicated-cluster (control-plane) API schemas ---
+
+/** Provision a dedicated Hanzo K8S cluster for an org (same shape as DOKS). */
+export const apiProvisionDedicatedCluster = apiProvisionDoksCluster;
+
+/** Reference a dedicated cluster by id (install baseline / status / select). */
+export const apiDedicatedClusterRef = z.object({
+	doksClusterId: z.string().min(1),
+});
+
+/** Select (or clear) an org's active deploy target. */
+export const apiSelectDeployTarget = z.object({
+	organizationId: z.string().min(1),
+	/** The dedicated cluster to activate; omit/null to revert to the shared cluster. */
+	doksClusterId: z.string().min(1).nullable().optional(),
 });
