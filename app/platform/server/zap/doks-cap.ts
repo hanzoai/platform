@@ -226,8 +226,10 @@ async function dispatch(ctx: DoksCtx, call: Call): Promise<unknown> {
 		case DoksMethod.recordSnapshot:
 			return recordBillingSnapshot(ctx.organizationId);
 		case DoksMethod.attachCluster: {
-			// Attach a BYO cluster to the caller's org. Like `provision`, this is
-			// a create scoped to ctx.organizationId — no pre-existing CR to own.
+			// Attach a BYO cluster to the caller's org. Admin-gated to mirror its
+			// tRPC twin `attachExternal` (adminProcedure) — attaching org-owned
+			// cluster infrastructure is an org-admin action, not a member one.
+			requireAdmin(ctx);
 			const p = AttachClusterParams.wrap(call.payload);
 			return attachExternalCluster({
 				organizationId: ctx.organizationId,
