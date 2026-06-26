@@ -1,20 +1,21 @@
 /**
  * Platform-native CI/CD — barrel.
  *
- * Webhook → BuildScheduler → arcd → DeployExecutor. This module is the
- * platform's escape hatch from GitHub Actions as a single point of failure:
- * platform owns the build+deploy system-of-record (the buildJob table), the
- * deploy decision, and the rollout, dispatching build work to self-hosted
- * arcd runner pools.
+ * Webhook / direct-trigger → BuildScheduler → Kaniko build Job → build-watcher
+ * → DeployExecutor → e2e Job → publish Job. Platform owns the build+deploy+test
+ * +publish system-of-record (the buildJob table), the deploy decision, and the
+ * rollout, executing every stage as an in-cluster Job on its own runner pool —
+ * never via GitHub Actions.
  */
 
-export * from "./arcd-runner";
 export * from "./build-completion";
 export * from "./build-job";
-export * from "./build-queue";
 export * from "./build-scheduler";
+export * from "./build-watcher";
 export * from "./deploy-executor";
 export * from "./e2e-runner";
 export * from "./github-webhook";
 export * from "./image-ref";
+export * from "./kaniko-job";
 export * from "./platform-config";
+export * from "./publish-job";

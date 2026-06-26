@@ -2,15 +2,15 @@
  * Direct build enqueue — POST /v1/arcd/enqueue
  *
  * The GitHub-App-free trigger for platform-native CI. The webhook path
- * (/v1/github-webhook) derives a build from `.platform.yml` at a SHA; this
- * route lets an operator (or a repo not wired to the GitHub App) enqueue a
- * build by stating it explicitly. The downstream is identical — it reuses
- * `enqueueDirectBuild` → `createBuildJob` + the native long-poll fabric — so
- * there is exactly ONE queue and ONE arcd protocol, two front doors.
+ * (/v1/github-webhook) derives a build from `hanzo.yml` at a SHA; this route
+ * lets an operator (or a repo not wired to the GitHub App) enqueue a build by
+ * stating it explicitly. The downstream is identical — it reuses
+ * `enqueueDirectBuild` → `createBuildJob` + the in-cluster Kaniko build muscle
+ * → the build-watcher → deploy/test/publish — so there is exactly ONE build
+ * path, two front doors.
  *
- * This is the canonical "no GitHub builders" path: it dispatches ONLY natively
- * (it requires a live registered arcd runner for the target pool) and never
- * falls back to workflow_dispatch, so a build can be driven entirely through
+ * This is the canonical "no GitHub builders" path: it launches a Kaniko Job on
+ * platform's own runner pool, so a build can be driven entirely through the
  * platform without GitHub Actions.
  *
  * Auth: the shared machine-to-machine bearer token PLATFORM_BUILD_CALLBACK_TOKEN
