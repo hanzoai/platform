@@ -590,6 +590,20 @@ void app.prepare().then(async () => {
 			startInventoryScheduler();
 		}
 
+		// Build-watcher — the CI pipeline's heartbeat: polls in-cluster Kaniko
+		// build Jobs and advances each buildJob through deploy → test → publish
+		// (no callback, no human polling). In-cluster only (needs hanzo-paas-sa
+		// RBAC to read Jobs/pods); disable with BUILD_WATCHER_DISABLED=true.
+		if (
+			process.env.NODE_ENV === "production" &&
+			process.env.BUILD_WATCHER_DISABLED !== "true"
+		) {
+			const { startBuildWatcher } = await import(
+				"@hanzo/platform/services/ci/build-watcher"
+			);
+			startBuildWatcher();
+		}
+
 		// Start ZAP bridge for AI agent/MCP access
 		if (process.env.ZAP_ENABLED !== "false") {
 			createPlatformZapServer();
