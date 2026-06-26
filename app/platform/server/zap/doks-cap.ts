@@ -24,6 +24,7 @@ import {
 	getOrgBilling,
 	recordBillingSnapshot,
 } from "@hanzo/platform/services/billing";
+import { attachExternalCluster } from "@hanzo/platform/services/dedicated-cluster";
 import {
 	addNodePool,
 	deleteDoksCluster,
@@ -48,6 +49,7 @@ import { eq } from "drizzle-orm";
 import { encodeResult } from "./result";
 import {
 	AddNodePoolParams,
+	AttachClusterParams,
 	ClusterRef,
 	DeleteNodePoolParams,
 	DoksMethod,
@@ -138,6 +140,7 @@ export function doksRootCap(ctx: DoksCtx): CallHandler {
 async function dispatch(ctx: DoksCtx, call: Call): Promise<unknown> {
 	switch (call.method) {
 		case DoksMethod.provision: {
+			requireAdmin(ctx);
 			const p = ProvisionParams.wrap(call.payload);
 			return provisionDoksCluster({
 				organizationId: p.organizationId || ctx.organizationId,
@@ -223,6 +226,18 @@ async function dispatch(ctx: DoksCtx, call: Call): Promise<unknown> {
 			return getFleetBilling();
 		case DoksMethod.recordSnapshot:
 			return recordBillingSnapshot(ctx.organizationId);
+		case DoksMethod.attachCluster: {
+			// Attach a BYO cluster to the caller's org. Admin-gated to mirror its
+			// tRPC twin `attachExternal` (adminProcedure) — attaching org-owned
+			// cluster infrastructure is an org-admin action, not a member one.
+			requireAdmin(ctx);
+			const p = AttachClusterParams.wrap(call.payload);
+			return attachExternalCluster({
+				organizationId: ctx.organizationId,
+				name: p.name,
+				kubeconfig: p.kubeconfig,
+			});
+		}
 		default:
 			throw new NotFoundError(`unknown method ${call.method}`);
 	}
