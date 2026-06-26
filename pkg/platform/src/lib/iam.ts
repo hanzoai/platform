@@ -87,12 +87,13 @@ export const getIamServerSession = async (
 	if (!sub) return null;
 
 	const parts = sub.split("/");
+	// `parts[0]` is `string | undefined` under noUncheckedIndexedAccess even when
+	// `length > 1`; coalesce so the org prefix wins when present, otherwise fall
+	// back to the `owner` claim, then "unknown". Behavior identical to the prior
+	// nested ternary — just expressed so the compiler sees a definite `string`.
 	const owner =
-		parts.length > 1
-			? parts[0]
-			: typeof claims.owner === "string"
-				? claims.owner
-				: "unknown";
+		(parts.length > 1 ? parts[0] : undefined) ??
+		(typeof claims.owner === "string" ? claims.owner : "unknown");
 
 	return {
 		userId: sub,
