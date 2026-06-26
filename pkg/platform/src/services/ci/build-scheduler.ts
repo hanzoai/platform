@@ -3,50 +3,38 @@
  *
  * Flow (one call per accepted webhook):
  *   1. Authenticate the delivery against the provider's installation id.
- *   2. Fetch `.platform.yml` from the repo at the triggering SHA.
+ *   2. Fetch `hanzo.yml` from the repo at the triggering SHA.
  *   3. Validate it; enqueue one `buildJob` row per matrix entry, keyed
  *      uniquely by (repo, sha, target).
- *   4. Dispatch each job to its arcd runner pool.
+ *   4. Dispatch each job to the build muscle.
  *
- * arcd dispatch — native long-poll (default) with workflow_dispatch fallback:
- *   Platform owns a native long-poll protocol. When a build's pool has a live
- *   registered arcd runner (an `arcd_runner` row with a recent `lastSeen`), the
- *   scheduler enqueues the job onto the in-process long-poll fabric
- *   (`buildQueue`); the runner pulls it via POST /v1/arcd/poll, builds, pushes
- *   to GHCR, and reports back via POST /v1/arcd/complete. No GitHub Actions hop.
- *
- *   The legacy `workflow_dispatch` path remains for migration: it is used when
- *   the repo's `.platform.yml` sets `build.dispatch: workflow_dispatch`, when
- *   the WORKFLOW_DISPATCH_FALLBACK env forces it, or transparently when a
- *   `native` pool has NO live runner yet (so a build is never stranded). As
- *   runners self-register over the new protocol, pools flip to native with no
- *   config change. Platform owns the system-of-record (this module + the
- *   buildJob table) and the deploy decision regardless of dispatch path.
+ * Dispatch — ONE way: the in-cluster Kaniko Job (`kaniko-job.launchBuildJob`).
+ * Platform builds on its OWN runner pool and is the system-of-record (this
+ * module + the buildJob table) and the deploy decision. There is no GitHub
+ * Actions path and no `workflow_dispatch` fallback — the prior fallback pointed
+ * at offline GitHub runners and silently no-op'd, so it was removed. A build
+ * either launches a Kaniko Job in-cluster or fails loud.
  */
 import { authGithub } from "@hanzo/platform/utils/providers/github";
 import { TRPCError } from "@trpc/server";
+import { Octokit } from "octokit";
 import { findGithubByInstallationId } from "../github";
-import { poolHasLiveRunner } from "./arcd-runner";
 import type { BuildJob } from "./build-job";
 import {
 	createBuildJob,
 	findBuildJobByTarget,
-	markBuildRunning,
+	updateBuildJob,
 } from "./build-job";
-import { buildQueue } from "./build-queue";
+import { launchBuildJob } from "./kaniko-job";
 import {
 	type BuildArch,
 	type BuildConfig,
 	type BuildOS,
-	type DispatchMode,
 	type PlatformConfig,
 	parsePlatformConfig,
 	resolveTag,
 	runnerPoolFor,
 } from "./platform-config";
-
-/** Canonical reusable workflow filename platform dispatches build jobs to. */
-const PLATFORM_BUILD_WORKFLOW = "platform-build.yml";
 
 export interface ScheduleInput {
 	/** GitHub App installation id from the webhook payload. */
@@ -95,11 +83,25 @@ async function resolveProvider(
  */
 const CONFIG_NAMES = ["hanzo.yml", ".platform.yml"] as const;
 
+/** Decode + parse a base64 GitHub `getContent` file response. */
+function parseContentResponse(
+	data: { content?: string; encoding?: string },
+	where: string,
+): PlatformConfig {
+	if (!data.content || data.encoding !== "base64") {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `${where} is not a regular file`,
+		});
+	}
+	const text = Buffer.from(data.content, "base64").toString("utf8");
+	return parsePlatformConfig(text);
+}
+
 /**
- * Fetch the repo's platform config at a specific ref, trying each name in
- * `CONFIG_NAMES` order. Returns the parsed + validated config, or null when
- * the repo has not opted in (no config file under any name). Any other failure
- * (bad YAML, schema violation, API error) throws.
+ * Fetch the repo's platform config at a specific ref via the GitHub App,
+ * trying each name in `CONFIG_NAMES` order. Returns null when the repo has not
+ * opted in (no config under any name). Any other failure throws.
  */
 export async function fetchPlatformConfig(
 	provider: ResolvedProvider["provider"],
@@ -122,18 +124,13 @@ export async function fetchPlatformConfig(
 				path,
 				ref,
 			});
-			const data = res.data as { content?: string; encoding?: string };
-			if (!data.content || data.encoding !== "base64") {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: `${path} in ${repo}@${ref} is not a regular file`,
-				});
-			}
-			const text = Buffer.from(data.content, "base64").toString("utf8");
-			return parsePlatformConfig(text);
+			return parseContentResponse(
+				res.data as { content?: string; encoding?: string },
+				`${path} in ${repo}@${ref}`,
+			);
 		} catch (err) {
 			const e = err as { status?: number };
-			if (e.status === 404) continue; // not under this name — try the next
+			if (e.status === 404) continue;
 			if (err instanceof TRPCError) throw err;
 			throw new TRPCError({
 				code: "BAD_REQUEST",
@@ -141,62 +138,95 @@ export async function fetchPlatformConfig(
 			});
 		}
 	}
-	return null; // no config under any candidate name → repo not opted in
+	return null;
 }
 
 /**
- * Decide how a job reaches its runner. `workflow_dispatch` wins when the repo
- * pins it, when WORKFLOW_DISPATCH_FALLBACK forces it globally, or when a
- * `native` pool has no live runner yet (transparent fallback so a build is
- * never stranded). Otherwise `native`.
+ * Fetch the repo's platform config using the pod's `GH_TOKEN` — no GitHub App
+ * required. This is how the App-free paths (the direct `/v1/arcd/enqueue`
+ * trigger and the build-watcher's post-build deploy decision) read deploy /
+ * e2e / publish intent: one credential, the same the release-reader uses.
+ * Returns null when the repo has no config (build-only). Throws on bad config.
  */
-export async function resolveDispatchMode(
-	build: BuildConfig,
-	pool: string,
-	now: number = Date.now(),
-): Promise<DispatchMode> {
-	if (build.dispatch === "workflow_dispatch") return "workflow_dispatch";
-	if (process.env.WORKFLOW_DISPATCH_FALLBACK === "true") {
-		return "workflow_dispatch";
+export async function fetchPlatformConfigByToken(
+	repo: string,
+	ref: string,
+): Promise<PlatformConfig | null> {
+	const [owner, name] = repo.split("/");
+	if (!owner || !name) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Invalid repo "${repo}"; expected owner/name`,
+		});
 	}
-	return (await poolHasLiveRunner(pool, now)) ? "native" : "workflow_dispatch";
+	const octokit = new Octokit({ auth: process.env.GH_TOKEN });
+	for (const path of CONFIG_NAMES) {
+		try {
+			const res = await octokit.rest.repos.getContent({
+				owner,
+				repo: name,
+				path,
+				ref,
+			});
+			return parseContentResponse(
+				res.data as { content?: string; encoding?: string },
+				`${path} in ${repo}@${ref}`,
+			);
+		} catch (err) {
+			const e = err as { status?: number };
+			if (e.status === 404) continue;
+			if (err instanceof TRPCError) throw err;
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: `Failed to read ${path} from ${repo}@${ref}: ${(err as Error).message}`,
+			});
+		}
+	}
+	return null;
+}
+
+/** Build-target arch from a target key (`linux/amd64`, `web:linux/amd64`). */
+function archOf(target: string): BuildArch {
+	return target.split("/").pop() === "arm64" ? "arm64" : "amd64";
 }
 
 /**
- * Dispatch a single build job natively: enqueue it onto the long-poll fabric
- * for its pool. An arcd runner pulls it via POST /v1/arcd/poll. Returns the
- * dispatch correlation id (`native:<buildJobId>`).
+ * Dispatch one queued build to the build muscle: launch its Kaniko Job and
+ * transition the row to `running`, recording the Job name (the build-watcher
+ * polls it) and a `kaniko:<jobName>` correlation id.
  */
-function dispatchNative(
+async function dispatchBuild(
 	job: BuildJob,
-	build: BuildConfig,
-	installationId: string,
-): string {
-	buildQueue.enqueue(job.runnerPool, {
-		buildJobId: job.buildJobId,
+	gitRef: string,
+	opts: { dockerfile?: string; context?: string; dockerTarget?: string },
+): Promise<BuildJob> {
+	const launch = await launchBuildJob({
 		repo: job.repo,
-		sha: job.sha,
-		ref: job.ref,
-		branch: job.branch,
-		target: job.target,
+		gitRef,
 		image: job.image,
-		dockerfile: build.dockerfile,
-		context: build.context,
-		push: build.push,
-		installationId,
+		dockerfile: opts.dockerfile,
+		context: opts.context,
+		dockerTarget: opts.dockerTarget,
+		arch: archOf(job.target),
+		buildJobId: job.buildJobId,
 	});
-	return `native:${job.buildJobId}`;
+	return updateBuildJob(job.buildJobId, {
+		status: "running",
+		dispatchId: `kaniko:${launch.jobName}`,
+		buildJobName: launch.jobName,
+		startedAt: new Date().toISOString(),
+	});
 }
 
 /**
  * Spec for a GitHub-App-free direct build. The webhook path derives all of
- * this from `.platform.yml` at a SHA; this lets an operator (or a repo not
- * wired to the GitHub App) enqueue a build by stating it explicitly. The
- * downstream is identical — `createBuildJob` + the native long-poll fabric —
- * so there is exactly ONE queue and ONE runner protocol, two front doors.
+ * this from `hanzo.yml` at a SHA; this lets an operator (or a repo not wired to
+ * the GitHub App) enqueue a build by stating it explicitly. The downstream is
+ * identical — `createBuildJob` + the Kaniko build muscle — so there is exactly
+ * ONE build path, two front doors.
  */
 export interface DirectBuildInput {
-	/** owner/name — used only to derive the arcd pool's org segment. */
+	/** owner/name — used to derive the arcd pool's org segment + git context. */
 	repo: string;
 	sha: string;
 	ref?: string;
@@ -215,14 +245,9 @@ export interface DirectBuildInput {
 }
 
 /**
- * Enqueue a single build directly onto the native long-poll fabric, WITHOUT a
- * GitHub App or `.platform.yml`. This is the GitHub-free trigger: it REQUIRES a
- * live registered arcd runner for the target pool (no workflow_dispatch
- * fallback — that would re-introduce GitHub), and fails loud if none is live so
- * a build is never silently stranded. Returns the created build job.
- *
- * Idempotent on (repo, sha, target): re-enqueuing the same target returns the
- * existing job instead of duplicating, matching scheduleBuilds.
+ * Enqueue a single build directly, WITHOUT a GitHub App or webhook. Creates the
+ * buildJob row and launches its Kaniko Job in-cluster. Idempotent on
+ * (repo, sha, target): re-enqueuing the same target returns the existing job.
  */
 export async function enqueueDirectBuild(
 	input: DirectBuildInput,
@@ -236,104 +261,30 @@ export async function enqueueDirectBuild(
 	const existing = await findBuildJobByTarget(input.repo, input.sha, target);
 	if (existing) return existing;
 
-	const pool = runnerPoolFor(orgLabel(input.repo), { os, arch });
-	if (!(await poolHasLiveRunner(pool))) {
-		throw new TRPCError({
-			code: "CONFLICT",
-			message: `No live arcd runner for pool ${pool}; cannot dispatch natively (GitHub-free path does not fall back to workflow_dispatch). Start an arcbuild worker for this pool.`,
-		});
-	}
-
 	const job = await createBuildJob({
 		repo: input.repo,
 		sha: input.sha,
 		ref,
 		branch,
 		target,
-		runnerPool: pool,
+		runnerPool: runnerPoolFor(orgLabel(input.repo), { os, arch }),
 		image: input.image,
 		organizationId: input.organizationId,
 		status: "queued",
 		rolloutStatus: "skipped",
 	});
 
-	buildQueue.enqueue(pool, {
-		buildJobId: job.buildJobId,
-		repo: job.repo,
-		sha: job.sha,
-		ref: job.ref,
-		branch: job.branch,
-		target: job.target,
-		image: job.image,
-		dockerfile: input.dockerfile ?? "./Dockerfile",
-		context: input.context ?? ".",
+	return dispatchBuild(job, ref, {
+		dockerfile: input.dockerfile,
+		context: input.context,
 		dockerTarget: input.dockerTarget,
-		push: input.push ?? true,
-		// Direct builds have no GitHub installation; the completion path keys
-		// deploy config off `.platform.yml` only when this is set, so "" means
-		// "build-only, no operator rollout" — exactly right for a manual build.
-		installationId: "",
 	});
-
-	return markBuildRunning(job.buildJobId, `native:${job.buildJobId}`);
-}
-
-/**
- * Dispatch a single build job to its arcd runner pool via workflow_dispatch.
- * Returns a dispatch correlation id. GitHub's dispatch endpoint returns 204
- * with no run id, so we correlate on (repo, sha, target) which is carried as
- * a workflow input and echoed back by the build workflow on completion.
- */
-async function dispatchWorkflow(
-	provider: ResolvedProvider["provider"],
-	job: BuildJob,
-	build: BuildConfig,
-): Promise<string> {
-	const [owner, name] = job.repo.split("/");
-	if (!owner || !name) {
-		throw new Error(`Invalid repo "${job.repo}": expected "owner/name" format`);
-	}
-	const octokit = authGithub(provider);
-	const dispatchId = `${job.repo}@${job.sha}#${job.target}`;
-	await octokit.rest.actions.createWorkflowDispatch({
-		owner,
-		repo: name,
-		workflow_id: PLATFORM_BUILD_WORKFLOW,
-		ref: job.branch,
-		inputs: {
-			"build-job-id": job.buildJobId,
-			target: job.target,
-			"runner-pool": job.runnerPool,
-			image: job.image,
-			dockerfile: build.dockerfile,
-			context: build.context,
-			push: String(build.push),
-		},
-	});
-	return dispatchId;
-}
-
-/**
- * Dispatch one job by the resolved mode. Returns the correlation id stored on
- * the buildJob row (`native:<id>` or `repo@sha#target`).
- */
-async function dispatchBuild(
-	provider: ResolvedProvider["provider"],
-	job: BuildJob,
-	build: BuildConfig,
-	installationId: string,
-): Promise<string> {
-	const mode = await resolveDispatchMode(build, job.runnerPool);
-	if (mode === "native") {
-		return dispatchNative(job, build, installationId);
-	}
-	return dispatchWorkflow(provider, job, build);
 }
 
 /**
  * Schedule all builds for a triggering commit. Idempotent on (repo, sha,
  * target): a re-delivery of the same webhook does not enqueue duplicates.
- * Returns null when the repo has no `.platform.yml` (it stays on GHA).
+ * Returns null when the repo has no `hanzo.yml` (it opted out).
  */
 export async function scheduleBuilds(
 	input: ScheduleInput,
@@ -378,13 +329,12 @@ export async function scheduleBuilds(
 				status: "queued",
 				rolloutStatus: "skipped",
 			});
-			const dispatchId = await dispatchBuild(
-				provider,
-				job,
-				build,
-				input.installationId,
+			jobs.push(
+				await dispatchBuild(job, input.ref, {
+					dockerfile: build.dockerfile,
+					context: build.context,
+				}),
 			);
-			jobs.push(await markBuildRunning(job.buildJobId, dispatchId));
 		}
 	}
 
