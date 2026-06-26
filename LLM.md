@@ -162,3 +162,79 @@ The upstream `dokploy.yml` workflow (pushed `dokploy/dokploy` to Docker Hub,
 synced `dokploy/{mcp,cli,sdk}`) was deleted — it is upstream noise, never a Hanzo
 build. CI jobs that run `pnpm install` need the "Ensure native build toolchain"
 step (node-gyp wants make/gcc/python for `ssh2`/`node-pty`/`bcrypt`).
+
+## Control plane = platform.hanzo.ai (estate registration + PaaS-driven deploy)
+Headless via two service-token REST surfaces (Bearer = `PAAS_SERVICE_TOKEN` /
+`PLATFORM_SERVICE_TOKEN`, constant-time check in `server/v1/http.ts`). No OIDC.
+Live DB = SQLite `/app/data/platform.db` (PVC `paas-app-db`, ns hanzo pod `paas-*`
+container `-c paas`; only `node`+better-sqlite3, no `sqlite3` bin). Seeds persist
+via the `replicate`→S3 sidecar. Org = `ah7E1dvZROQai5LTnAGsr` (admin, single-tenant,
+== `DEFAULT_BUILD_ORG_ID`).
+- OBSERVE — `GET /v1/apps` (apps table: declared/running/latest/drift). Reconciler
+  `services/apps/inventory.ts#syncInventory` scans ONLY `DEFAULT_TARGETS=hanzo-k8s`
+  operator `hanzo.ai/v1 services` CRs → 62 rows. Cross-cluster estate is registered
+  by seeding `apps` rows directly (identical shape to `syncTarget`); the reconciler
+  never touches non-hanzo clusters, so they persist. Registered the live web/app
+  tier: +12 lux-k8s (`luxfi/lux-*` v2.0.0 + `app-lux-finance/market`), +4 zoo-k8s
+  (`zoo-industries`,`zoo-bot` green; `zoo-ngo`,`zoo-zips` red/down) = 78 total.
+  Greens are declaredTag==runningTag (zero version drift); ALL 78 still `drift=red`
+  via the `no-release` flag — repos ship images but no semver GH Releases ("all-red
+  rationale"); only per-repo CI release publishing clears it, never the control plane.
+- DRIVE — `POST /v1/org/{org}/project/{proj}/env/{env}/container/{id}/redeploy`
+  → `findApplicationById` → `resolveDeploymentName`(ns hanzo) → `restartWorkload`
+  (rolling restart, `hanzo-paas-sa` RBAC `apps/deployments:patch` via
+  `hanzo-paas-workload-manager`). Drive surface is EMPTY by default
+  (application/project/environment = 0 rows) — seed the chain to register a
+  container. Proof (low-risk `pricing`/`pricing.hanzo.ai`): seeded `app-pricing-001`,
+  POST redeploy → `{ok:true}`, deploy gen 3→4, new RS rev4 + new pods, 45/45 health
+  checks 200 (zero downtime), zero manual kubectl. This is the canonical
+  PaaS-driven deploy — never `kubectl rollout restart` by hand again.
+
+## Dedicated customer clusters — launch a customer's own "Hanzo K8S"
+Platform can provision an org its OWN DOKS cluster, install the hanzo-operator +
+per-tenant baseline, and make it the org's deploy target. Built on the existing
+DOKS/operator primitives — NOT a parallel stack.
+
+- SECRETS — DO token + PaaS-ticket secret come from KMS ONLY, via the one funnel
+  `pkg/platform/src/services/kms.ts` (`requireKmsSecret`). Mechanism is the
+  canonical KMSSecret→pod-env: both keys (`PAAS_DO_API_TOKEN`,
+  `OPERATOR_PAAS_SHARED_SECRET`) are in `k8s/platform-kmssecret.yaml`.
+  `doks-provisioner.ts#doHeaders` now reads the DO token through this funnel
+  (was a bare `process.env`). The per-cluster KUBECONFIG is NEVER stored — it is
+  derived on demand from DO (`getDoksKubeconfig`) using the KMS DO token, so the
+  feature adds zero secrets to keep.
+- SERVICE — `pkg/platform/src/services/dedicated-cluster.ts`. Pure (unit-tested):
+  `buildClusterBaseline` (hanzo-system + tenant ns → operator bundle →
+  `operator-paas-shared-secret` → ingress/gateway Service CRs, in dependency
+  order), `nextPhase` (total lifecycle reducer requested→provisioning→installing
+  →ready/error), `clusterTargetFromRecord` + `redactTarget`. Thin IO:
+  `provisionDedicatedCluster` (KMS-gates the DO token BEFORE any paid call, then
+  reuses `provisionDoksCluster`), `installClusterBaseline` (on-demand kubeconfig →
+  `createK8sClients` → idempotent create-or-replace apply; marks
+  operatorInstalled/baselineInstalled/phase), `selectDeployTarget` (≤1 active/org),
+  `resolveOrgClusterTarget` (THE bridge → existing `ClusterTarget`; dedicated when
+  active+ready+running else shared `DEFAULT_TARGETS[0]`), `migrateOrgToDedicated`.
+- DB — `doks_cluster` gained `phase`/`operatorInstalled`/`baselineInstalled`/
+  `active`/`baselineError` (migration `drizzle/0004_curly_human_fly.sql`, applies
+  clean over 0000-0003). `phase` (platform lifecycle) is orthogonal to `status`
+  (DO state): a DO-`running` cluster is not a usable target until `phase=ready`.
+- SURFACE — tRPC `dedicatedCluster` router (`server/api/routers/dedicated-cluster.ts`,
+  mounted in root.ts; `adminProcedure` + active-org scoped + per-cluster ownership):
+  provision/installBaseline/list/get/select/migrate/target. REST mirror
+  (service-token, headless): `GET|POST /v1/org/{orgId}/cluster`,
+  `GET|POST /v1/org/{orgId}/cluster/select`,
+  `POST /v1/org/{orgId}/cluster/{clusterId}/install-baseline`. `target`/`select`/
+  `migrate` return `redactTarget` — the kubeconfig is NEVER returned.
+- END-TO-END — provision (KMS DO token) → poll DO status → installBaseline (fetch
+  kubeconfig on demand → apply operator+baseline) → select/migrate flips `active`
+  → `resolveOrgClusterTarget(org)` now returns the dedicated `ClusterTarget`.
+- TESTS — `__test__/operator/dedicated-cluster.test.ts` (20, green): baseline wire
+  shape, phase reducer totality, target mapping, kubeconfig redaction, and the KMS
+  gate (provision REFUSES without the KMS DO token, proven before any DO call).
+- DEFERRED (cloud-embedding/CLI wave, by design): wiring `inventory.syncInventory`
+  + the CI `deploy-executor` to CALL `resolveOrgClusterTarget` per-org (the single
+  integration point exists; consumers still default to shared hanzo-k8s); bulk
+  re-apply of an org's EXISTING CRs onto the new cluster on migrate (new deploys
+  already retarget); the full operator controller bundle apply is wired
+  (`applyManifestBundle` fetch+loadAllYaml+create/replace) but not exercised against
+  a live cluster in CI (the pure baseline CONTRACT is what's unit-tested).
