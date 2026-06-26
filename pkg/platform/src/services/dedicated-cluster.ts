@@ -33,6 +33,7 @@
 import { db } from "@hanzo/platform/db";
 import {
 	type DoksPhase,
+	type apiAttachExternalCluster,
 	type apiProvisionDedicatedCluster,
 	doksCluster,
 } from "@hanzo/platform/db/schema";
@@ -48,13 +49,18 @@ import {
 	provisionDoksCluster,
 	type DoksCluster,
 } from "./doks-provisioner";
-import { createK8sClients, type K8sClients } from "./k8s/k8s-client";
+import {
+	createK8sClients,
+	getDefaultClients,
+	type K8sClients,
+} from "./k8s/k8s-client";
 import {
 	OPERATOR_GROUP,
 	OPERATOR_VERSION,
 	tenantNamespace,
 } from "./k8s/operator";
 import { requireKmsSecret } from "./kms";
+import { openSecret, sealSecret } from "./secret-box";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -343,6 +349,70 @@ export async function provisionDedicatedCluster(
 	return { ...cluster, phase: "provisioning" };
 }
 
+/**
+ * Attach an external (bring-your-own) Kubernetes cluster as a deploy target for
+ * an org. Platform never provisioned this one: there is no DigitalOcean cluster
+ * behind it (`doClusterId` stays NULL), so its kubeconfig is the one credential
+ * platform must keep — sealed (AES-256-GCM, services/secret-box), never
+ * plaintext.
+ *
+ * The kubeconfig is validated (must parse + expose a server endpoint) before it
+ * is sealed and persisted. The record lands `status=running`, `phase=ready` (a
+ * BYO cluster is already up), so it can be selected immediately as the org's
+ * deploy target; `active` stays false until the org selects it. The returned
+ * record omits the ciphertext.
+ */
+export async function attachExternalCluster(
+	input: z.infer<typeof apiAttachExternalCluster>,
+): Promise<Omit<DoksCluster, "kubeconfigEncrypted">> {
+	const org = await db.query.organization.findFirst({
+		where: (o, { eq: eqOp }) => eqOp(o.id, input.organizationId),
+	});
+	if (!org) {
+		throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+	}
+
+	// Validate the kubeconfig parses and capture its endpoint. createK8sClients
+	// (loadFromString) throws on a malformed kubeconfig.
+	let endpoint: string | null = null;
+	try {
+		endpoint =
+			createK8sClients(input.kubeconfig).kc.getCurrentCluster()?.server ?? null;
+	} catch (err) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Invalid kubeconfig: ${(err as Error).message}`,
+		});
+	}
+
+	const inserted = await db
+		.insert(doksCluster)
+		.values({
+			name: input.name,
+			doClusterId: null,
+			kubeconfigEncrypted: sealSecret(input.kubeconfig),
+			region: "external",
+			status: "running",
+			phase: "ready",
+			endpoint,
+			organizationId: input.organizationId,
+			tags: ["external", "byo"],
+		})
+		.returning()
+		.then((rows) => rows[0]);
+
+	if (!inserted) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to save cluster record",
+		});
+	}
+
+	// Never hand the ciphertext back to callers.
+	const { kubeconfigEncrypted: _omit, ...safe } = inserted;
+	return safe;
+}
+
 /** Idempotent namespace apply (ignores AlreadyExists). */
 async function ensureNamespace(
 	clients: K8sClients,
@@ -554,10 +624,25 @@ export async function selectDeployTarget(
 }
 
 /**
- * Resolve the operator/inventory target for an org: its active, ready dedicated
- * cluster when one exists (kubeconfig fetched on demand), else the shared
- * cluster. THIS is the single function both the operator-apply path and the
- * inventory reader call to know "where do this org's workloads live".
+ * Resolve a cluster record's kubeconfig on demand. Managed (DOKS) clusters
+ * derive it fresh from DigitalOcean; external (BYO) clusters — which have no
+ * `doClusterId` — decrypt the kubeconfig stored at attach time. One resolver,
+ * so every consumer (target resolution, baseline install) is BYO-aware.
+ */
+export async function clusterKubeconfig(
+	record: Pick<DoksCluster, "doksClusterId" | "doClusterId" | "kubeconfigEncrypted">,
+): Promise<string> {
+	if (record.kubeconfigEncrypted) {
+		return openSecret(record.kubeconfigEncrypted);
+	}
+	return getDoksKubeconfig(record.doksClusterId);
+}
+
+/**
+ * Resolve the operator/inventory target for an org: its active, ready cluster
+ * (dedicated DOKS or attached BYO) when one exists, else the shared cluster.
+ * THIS is the single function both the operator-apply path and the inventory
+ * reader call to know "where do this org's workloads live".
  */
 export async function resolveOrgClusterTarget(
 	organizationId: string,
@@ -567,10 +652,25 @@ export async function resolveOrgClusterTarget(
 			andOp(eqOp(c.organizationId, organizationId), eqOp(c.active, true)),
 	});
 	if (active && active.phase === "ready" && active.status === "running") {
-		const kubeconfig = await getDoksKubeconfig(active.doksClusterId);
+		const kubeconfig = await clusterKubeconfig(active);
 		return clusterTargetFromRecord(active, kubeconfig);
 	}
 	return DEFAULT_TARGETS[0]!;
+}
+
+/**
+ * The ONE choke point a targeted deploy goes through: resolve the org's active
+ * cluster target and hand back typed K8s clients pinned to it — a remote cluster
+ * when the org has one selected, else the shared in-cluster SA. Used by the CI
+ * deploy executor so a rollout lands on the org's own cluster.
+ */
+export async function resolveOrgClusterClients(
+	organizationId: string,
+): Promise<K8sClients> {
+	const target = await resolveOrgClusterTarget(organizationId);
+	return target.kubeconfig
+		? createK8sClients(target.kubeconfig)
+		: getDefaultClients();
 }
 
 export interface MigrationPlan {
