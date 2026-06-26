@@ -46,6 +46,12 @@ struct DeleteNodePoolParams {
   poolId        text @8
 }
 
+# Attach an external (bring-your-own) cluster: a display name + raw kubeconfig.
+struct AttachClusterParams {
+  name       text @0
+  kubeconfig text @8
+}
+
 # Empty params for parameterless methods.
 struct Empty {
   _pad u8 @0
@@ -83,4 +89,7 @@ interface Doks {
   orgBilling(params: Empty) returns (result: Result)
   fleetBilling(params: Empty) returns (result: Result)
   recordSnapshot(params: Empty) returns (result: Result)
+
+  # BYO cluster attach (appended last so ordinals 1-18 stay stable)
+  attachCluster(params: AttachClusterParams) returns (result: Result)
 }
