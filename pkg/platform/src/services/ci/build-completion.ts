@@ -1,38 +1,55 @@
 /**
- * build-completion — closes the loop after an arcd runner finishes a build.
+ * build-completion — the post-build orchestrator.
  *
- * The platform-build workflow (running on an arcd runner) calls back into
- * platform with the build-job id, outcome, and image digest once the image
- * has been built and pushed to GHCR. This module records that outcome and,
- * on success, hands the job to the DeployExecutor.
+ * When a build Job terminates, `completeBuild` records the outcome and, on
+ * success, drives the rest of the pipeline: DEPLOY (operator CR patch) → TEST
+ * (e2e Job) → PUBLISH (npm/pypi Job). It is the single shared brain used by
+ * BOTH the build-watcher (which polls the Kaniko Job and calls in when it
+ * finishes) and the `/v1/build-callback` REST hook (for an external builder
+ * that reports its own result).
  *
- * This is the completion side of the arcd-protocol decision: since arcd jobs
- * are dispatched via workflow_dispatch (fire-and-forget from platform's view),
- * the build reports its own terminal status back here. No polling of GitHub's
- * run API is required.
+ * Deploy / e2e / publish intent is read from the repo's `hanzo.yml` via the
+ * pod's `GH_TOKEN` — no GitHub App required, so the App-free direct-build path
+ * gets a full build→deploy→test→publish lifecycle too. The source of truth is
+ * always the repo at that ref; nothing is trusted from a cached config.
+ *
+ * `reconcilePostBuild` is the idempotent follow-up the watcher ticks for a
+ * succeeded row until its e2e + publish sub-stages reach a terminal state:
+ *   - e2e queued → poll the e2e Job → passed/failed; a passing e2e releases a
+ *     publish that was gated behind it; a failing e2e skips publish.
+ *   - publish queued → poll the publish Job → published/failed.
  */
 
-import { authGithub } from "@hanzo/platform/utils/providers/github";
 import { TRPCError } from "@trpc/server";
-import { findGithubByInstallationId } from "../github";
 import {
 	appendBuildLog,
+	type BuildJob,
 	findBuildJobById,
 	markBuildFailed,
 	markBuildSucceeded,
+	updateBuildJob,
 } from "./build-job";
-import { fetchPlatformConfig } from "./build-scheduler";
+import { fetchPlatformConfigByToken } from "./build-scheduler";
 import { type DeployResult, executeDeploy } from "./deploy-executor";
+import { runE2e } from "./e2e-runner";
+import { readJobStatus } from "./kaniko-job";
+import type { PublishConfig } from "./platform-config";
+import { launchPublishJob } from "./publish-job";
+
+/** Namespace the platform launches its CI Jobs into. */
+const CI_NAMESPACE = "hanzo";
 
 export interface BuildCompletionInput {
 	buildJobId: string;
 	outcome: "success" | "failure";
-	/** Installation id used to re-read deploy config on success. */
-	installationId: string;
+	/** Image digest recorded on success (build evidence). */
+	digest?: string;
 	/** Optional final log tail to persist. */
 	log?: string;
 	/** Optional error message on failure. */
 	error?: string;
+	/** Accepted for REST back-compat; config is read via GH_TOKEN, so unused. */
+	installationId?: string;
 }
 
 export interface BuildCompletionResult {
@@ -52,9 +69,7 @@ export async function completeBuild(
 		});
 	}
 
-	if (input.log) {
-		await appendBuildLog(job.buildJobId, input.log);
-	}
+	if (input.log) await appendBuildLog(job.buildJobId, input.log);
 
 	if (input.outcome === "failure") {
 		await markBuildFailed(
@@ -64,39 +79,110 @@ export async function completeBuild(
 		return { status: "failed" };
 	}
 
+	if (input.digest) {
+		await updateBuildJob(job.buildJobId, { imageDigest: input.digest });
+	}
 	const succeeded = await markBuildSucceeded(job.buildJobId);
-
-	// GitHub-free direct builds (enqueueDirectBuild) carry no installation id:
-	// there is no `.platform.yml` to read deploy config from, so the build
-	// stands as build-only with no operator rollout. This is the correct
-	// terminal state for a manually-specified build, not an error.
-	if (!input.installationId) {
-		return { status: "succeeded" };
-	}
-
-	// Re-read deploy config from the same ref the build ran against. We do
-	// not trust a cached config — the source of truth is the repo at that SHA.
-	const provider = await resolveProvider(input.installationId);
-	const config = await fetchPlatformConfig(provider, job.repo, job.sha);
-	if (!config) {
-		// .platform.yml vanished between dispatch and completion: nothing to
-		// deploy, but the build itself stands.
-		return { status: "succeeded" };
-	}
-
-	const deploy = await executeDeploy(succeeded, config.deploy);
+	const deploy = await initPostBuild(succeeded);
 	return { status: "succeeded", deploy };
 }
 
-async function resolveProvider(installationId: string) {
-	const row = await findGithubByInstallationId(installationId);
-	if (!row) {
-		throw new TRPCError({
-			code: "NOT_FOUND",
-			message: `No GitHub provider for installation ${installationId}`,
+/**
+ * On build success: roll out (if `deploy:`), launch e2e (if `e2e:` and a real
+ * deploy happened), and arm publish (if `publish:`). Each sub-stage's state is
+ * stamped on the row so `reconcilePostBuild` can advance it idempotently and
+ * the board reflects the true pipeline position.
+ */
+async function initPostBuild(job: BuildJob): Promise<DeployResult | undefined> {
+	const config = await fetchPlatformConfigByToken(job.repo, job.branch);
+
+	let deploy: DeployResult | undefined;
+	if (config?.deploy) {
+		deploy = await executeDeploy(job, config.deploy);
+	} else {
+		await updateBuildJob(job.buildJobId, { rolloutStatus: "skipped" });
+	}
+	const deployed = deploy?.rolledOut ?? false;
+
+	// e2e runs against the LIVE service, so it only fires after a real rollout.
+	if (config?.e2e && deployed) {
+		const e2e = await runE2e({
+			spec: config.e2e.spec,
+			baseDomain: config.e2e.baseDomain,
+			ref: config.e2e.ref,
+		});
+		await updateBuildJob(job.buildJobId, {
+			e2eJobName: e2e.jobName,
+			e2eStatus: "queued",
+		});
+	} else {
+		await updateBuildJob(job.buildJobId, { e2eStatus: "skipped" });
+	}
+
+	// Publish (library/SDK repos). Gate behind e2e only when e2e actually runs.
+	if (config?.publish) {
+		const gateOnE2e = Boolean(config.e2e && deployed);
+		await updateBuildJob(job.buildJobId, {
+			publishSpec: JSON.stringify(config.publish),
+			publishStatus: gateOnE2e ? "pending" : "queued",
+		});
+		if (!gateOnE2e) {
+			await launchPublish(job, config.publish);
+		}
+	} else {
+		await updateBuildJob(job.buildJobId, { publishStatus: "skipped" });
+	}
+
+	return deploy;
+}
+
+/** Launch the publish Job and record its name. */
+async function launchPublish(
+	job: BuildJob,
+	publish: PublishConfig,
+): Promise<void> {
+	const pub = await launchPublishJob({
+		repo: job.repo,
+		branch: job.branch,
+		publish,
+		buildJobId: job.buildJobId,
+	});
+	await updateBuildJob(job.buildJobId, {
+		publishStatus: "queued",
+		publishJobName: pub.jobName,
+	});
+}
+
+/**
+ * Idempotently advance a succeeded build's e2e + publish sub-stages. Safe to
+ * call every tick: it only acts on `queued`/`pending` sub-states and no-ops
+ * once both are terminal.
+ */
+export async function reconcilePostBuild(job: BuildJob): Promise<void> {
+	// e2e in flight → poll it.
+	if (job.e2eStatus === "queued" && job.e2eJobName) {
+		const o = await readJobStatus(CI_NAMESPACE, job.e2eJobName);
+		if (!o.done) return;
+		await updateBuildJob(job.buildJobId, {
+			e2eStatus: o.succeeded ? "passed" : "failed",
+		});
+		if (job.publishStatus === "pending" && job.publishSpec) {
+			if (o.succeeded) {
+				await launchPublish(job, JSON.parse(job.publishSpec) as PublishConfig);
+			} else {
+				// Never publish a build whose e2e failed.
+				await updateBuildJob(job.buildJobId, { publishStatus: "skipped" });
+			}
+		}
+		return;
+	}
+
+	// publish in flight → poll it.
+	if (job.publishStatus === "queued" && job.publishJobName) {
+		const o = await readJobStatus(CI_NAMESPACE, job.publishJobName);
+		if (!o.done) return;
+		await updateBuildJob(job.buildJobId, {
+			publishStatus: o.succeeded ? "published" : "failed",
 		});
 	}
-	// Validate creds resolve before handing to fetchPlatformConfig.
-	authGithub(row as Parameters<typeof authGithub>[0]);
-	return row as Parameters<typeof authGithub>[0];
 }

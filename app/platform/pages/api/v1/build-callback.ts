@@ -53,10 +53,6 @@ export default async function handler(
 		res.status(400).json({ message: "outcome must be 'success' or 'failure'" });
 		return;
 	}
-	if (!body.installationId) {
-		res.status(400).json({ message: "Missing installationId" });
-		return;
-	}
 
 	try {
 		const result = await completeBuild({
