@@ -70,6 +70,12 @@ export const doksCluster = sqliteTable("doks_cluster", {
 	active: integer("active", { mode: "boolean" }).notNull().default(false),
 	/** Last baseline-install failure, for surfacing/retry; null when healthy. */
 	baselineError: text("baselineError"),
+	// External (bring-your-own) cluster credential. Set ONLY for attached BYO
+	// clusters, where there is no DigitalOcean cluster to derive a kubeconfig
+	// from on demand (doClusterId is NULL). Stored as AES-256-GCM ciphertext via
+	// services/secret-box — never plaintext. Managed clusters leave this NULL and
+	// fetch a fresh kubeconfig from DO each time.
+	kubeconfigEncrypted: text("kubeconfigEncrypted"),
 });
 
 /** Canonical provisioning-phase vocabulary (single source for code + UI). */
@@ -194,4 +200,12 @@ export const apiSelectDeployTarget = z.object({
 	organizationId: z.string().min(1),
 	/** The dedicated cluster to activate; omit/null to revert to the shared cluster. */
 	doksClusterId: z.string().min(1).nullable().optional(),
+});
+
+/** Attach an external (bring-your-own) Kubernetes cluster as a deploy target. */
+export const apiAttachExternalCluster = z.object({
+	organizationId: z.string().min(1),
+	name: z.string().min(1),
+	/** Raw kubeconfig YAML; sealed (AES-256-GCM) before it touches the DB. */
+	kubeconfig: z.string().min(1),
 });
