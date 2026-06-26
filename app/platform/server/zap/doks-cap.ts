@@ -140,6 +140,7 @@ export function doksRootCap(ctx: DoksCtx): CallHandler {
 async function dispatch(ctx: DoksCtx, call: Call): Promise<unknown> {
 	switch (call.method) {
 		case DoksMethod.provision: {
+			requireAdmin(ctx);
 			const p = ProvisionParams.wrap(call.payload);
 			return provisionDoksCluster({
 				organizationId: p.organizationId || ctx.organizationId,
