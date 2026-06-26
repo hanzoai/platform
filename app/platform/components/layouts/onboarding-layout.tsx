@@ -12,9 +12,10 @@ interface Props {
 export const OnboardingLayout = ({ children }: Props) => {
 	const { config: whitelabeling } = useWhitelabelingPublic();
 	const appName = whitelabeling?.appName || "Dokploy";
+	const customDescription = whitelabeling?.appDescription;
 	const appDescription =
-		whitelabeling?.appDescription ||
-		"\u201CThe Open Source alternative to Netlify, Vercel, Heroku.\u201D";
+		customDescription ||
+		"\u201CThe Open Source alternative to Amazon, Azure, and Google Cloud.\u201D";
 	const logoUrl =
 		whitelabeling?.loginLogoUrl || whitelabeling?.logoUrl || undefined;
 
@@ -39,6 +40,12 @@ export const OnboardingLayout = ({ children }: Props) => {
 				<div className="relative z-20 mt-auto">
 					<blockquote className="space-y-2">
 						<p className="text-lg text-primary">{appDescription}</p>
+						{!customDescription && (
+							<p className="text-sm text-muted-foreground">
+								Open Source AI cloud powered by Proof of AI — that pays the
+								OSS developers it runs on.
+							</p>
+						)}
 					</blockquote>
 				</div>
 			</div>
