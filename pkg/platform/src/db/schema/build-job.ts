@@ -46,10 +46,18 @@ export const buildJob = sqliteTable("build_job", {
 		.notNull()
 		.default("queued"),
 	/**
-	 * Identifier returned by the build dispatch (GitHub workflow run id when
-	 * dispatched via workflow_dispatch). Used to correlate completion.
+	 * Identifier returned by the build dispatch. The single dispatch path is the
+	 * in-cluster Kaniko Job (`kaniko:<jobName>`); platform builds on its own
+	 * cluster, never via GitHub Actions. Used to correlate completion.
 	 */
 	dispatchId: text("dispatchId"),
+	/**
+	 * Name of the in-cluster Kaniko build Job that builds + pushes this image.
+	 * The build-watcher reads this Job's status to advance the row.
+	 */
+	buildJobName: text("buildJobName"),
+	/** Image digest (`sha256:…`) the Kaniko build wrote to /dev/termination-log. */
+	imageDigest: text("imageDigest"),
 	/** Append-only build log (MVP: stored inline; large logs move to object storage). */
 	logs: text("logs").notNull().default(""),
 	/** Human-readable failure reason when status=failed. */
@@ -62,6 +70,28 @@ export const buildJob = sqliteTable("build_job", {
 		.default("skipped"),
 	/** Name of the operator CR the rollout targeted (kind=Service). */
 	rolloutTarget: text("rolloutTarget"),
+	/** Name of the in-cluster Playwright e2e Job fired after a successful deploy. */
+	e2eJobName: text("e2eJobName"),
+	/**
+	 * End-to-end test outcome. `queued` while the Job runs; `passed`/`failed`
+	 * once it terminates; `skipped` when the repo declares no `e2e:` block or
+	 * the build did not deploy. Null until the build succeeds.
+	 */
+	e2eStatus: text("e2eStatus", {
+		enum: ["queued", "passed", "failed", "skipped"],
+	}),
+	/** Name of the in-cluster publish Job (npm/pypi) for library/SDK repos. */
+	publishJobName: text("publishJobName"),
+	/**
+	 * Publish outcome. `pending` = waiting on e2e to pass before publishing;
+	 * `queued` = publish Job launched; `published`/`failed` once it terminates;
+	 * `skipped` when the repo declares no `publish:` block. Null until success.
+	 */
+	publishStatus: text("publishStatus", {
+		enum: ["pending", "queued", "published", "failed", "skipped"],
+	}),
+	/** Resolved `publish:` config (JSON) captured at build success, so the e2e→publish handoff needs no re-fetch. */
+	publishSpec: text("publishSpec"),
 	attempt: integer("attempt").notNull().default(0),
 	createdAt: text("createdAt")
 		.notNull()
