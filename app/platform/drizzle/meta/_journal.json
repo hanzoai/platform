@@ -43,6 +43,13 @@
       "when": 1782503615087,
       "tag": "0005_attach_external_cluster",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1782506817440,
+      "tag": "0006_build_pipeline_columns",
+      "breakpoints": true
     }
   ]
 }
