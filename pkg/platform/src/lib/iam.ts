@@ -1,6 +1,8 @@
 import type { IncomingMessage } from "node:http";
-import { getServerSession, type ServerSession } from "@hanzo/iam/server";
+import { OIDC_PATHS } from "@hanzo/iam/paths";
+import { getBearerToken, type ServerSession } from "@hanzo/iam/server";
 import { and, eq } from "drizzle-orm";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { db } from "../db";
 import * as schema from "../db/schema";
 import { isGlobalAdmin, syncIamOrgMembership } from "./iam-org";
@@ -8,21 +10,37 @@ import { isGlobalAdmin, syncIamOrgMembership } from "./iam-org";
 /**
  * Hanzo IAM (HIP-0111) is the SOLE identity provider for the platform.
  *
- * One way to answer "who is calling?" on the server: verify the IAM access
- * token (Bearer header or the `hanzo_iam_access_token` cookie) against the
- * issuer's JWKS and resolve it onto the local data model. No platform-local
- * passwords, no Better Auth sessions — IAM owns every credential interaction.
+ * Browser-vs-server URL split (the SPOF-safe topology). The browser runs the
+ * @hanzo/iam PKCE flow against the PUBLIC issuer `https://hanzo.id` (the
+ * Cloudflare edge), so every token it mints carries `iss=https://hanzo.id`.
+ * The SERVER, however, must NOT egress to that edge: Cloudflare's WAF 403s the
+ * pod, and an in-cluster service depending on the edge is precisely the fleet
+ * SPOF we removed. So the server verifies the token against the IN-CLUSTER IAM
+ * JWKS (`iam.hanzo.svc`, never CF) while PINNING the canonical public issuer.
  *
- * Issuer is `https://hanzo.id` (the per-brand OIDC issuer), exactly like the
- * console — the proven prod path. The `@hanzo/iam` SDK drives
- * `/v1/iam/oauth/{authorize,token,userinfo,logout}` + `/v1/iam/.well-known/jwks`
- * off that origin. client_id `hanzo-platform`. Never `/api/`.
+ * `@hanzo/iam`'s discovery-driven `getServerSession` cannot express this split:
+ * it derives the issuer from whichever host it discovers against, and the
+ * in-cluster host advertises `issuer=https://hanzo.ai`, which never matches a
+ * hanzo.id-minted token (→ `session sync failed (401)`). So we pin issuer +
+ * audience here and fetch JWKS off the in-cluster `serverUrl`. Token extraction
+ * (`getBearerToken`) and the JWKS path (`OIDC_PATHS`) stay canonical @hanzo/iam.
+ * client_id `hanzo-platform`. Never `/api/`.
  */
 export const IAM = {
+	// Where the SERVER fetches JWKS — in-cluster in prod (bypasses the CF edge);
+	// defaults to the public origin for local dev.
 	serverUrl: (
 		process.env.IAM_SERVER_URL ||
 		process.env.IAM_URL ||
 		process.env.IAM_ENDPOINT ||
+		"https://hanzo.id"
+	).replace(/\/$/, ""),
+	// The canonical public issuer every browser-minted token carries. Pinned
+	// independently of `serverUrl` so the server can read JWKS in-cluster while
+	// still demanding `iss=https://hanzo.id`.
+	issuer: (
+		process.env.IAM_ISSUER ||
+		process.env.iamIssuer ||
 		"https://hanzo.id"
 	).replace(/\/$/, ""),
 	clientId:
@@ -31,15 +49,59 @@ export const IAM = {
 		"hanzo-platform",
 } as const;
 
+// One cached remote JWKS key set, fetched from the SERVER origin (in-cluster),
+// NOT the issuer host. `jose` lazily fetches, caches, and rotates keys by `kid`.
+const jwks = createRemoteJWKSet(new URL(`${IAM.serverUrl}${OIDC_PATHS.jwks}`));
+
 /**
  * Resolve the IAM session for an inbound request. Reads the Bearer token or
- * the `hanzo_iam_access_token` cookie, verifies it against `hanzo.id`'s
- * JWKS, and fails closed on a bad audience. Returns `null` when no valid
- * token is present.
+ * the `hanzo_iam_access_token` cookie, verifies its signature against the
+ * in-cluster JWKS, and pins issuer (`https://hanzo.id`) + audience
+ * (`hanzo-platform`) — failing closed on any mismatch. Returns `null` when no
+ * valid token is present.
  */
-export const getIamServerSession = (
+export const getIamServerSession = async (
 	request: IncomingMessage,
-): Promise<ServerSession | null> => getServerSession(request, IAM);
+): Promise<ServerSession | null> => {
+	const token = getBearerToken(request);
+	if (!token) return null;
+
+	let claims: ServerSession["claims"];
+	try {
+		const { payload } = await jwtVerify(token, jwks, {
+			issuer: IAM.issuer,
+			audience: IAM.clientId,
+			clockTolerance: 30,
+		});
+		claims = payload as unknown as ServerSession["claims"];
+	} catch {
+		return null;
+	}
+
+	// IAM subject is "org/username"; some tokens carry owner+name instead of sub.
+	const sub =
+		claims.sub ||
+		(typeof claims.owner === "string" && typeof claims.name === "string"
+			? `${claims.owner}/${claims.name}`
+			: undefined);
+	if (!sub) return null;
+
+	const parts = sub.split("/");
+	// `parts[0]` is `string | undefined` under noUncheckedIndexedAccess even when
+	// `length > 1`; coalesce so the org prefix wins when present, otherwise fall
+	// back to the `owner` claim, then "unknown". Behavior identical to the prior
+	// nested ternary — just expressed so the compiler sees a definite `string`.
+	const owner =
+		(parts.length > 1 ? parts[0] : undefined) ??
+		(typeof claims.owner === "string" ? claims.owner : "unknown");
+
+	return {
+		userId: sub,
+		owner,
+		email: typeof claims.email === "string" ? claims.email : undefined,
+		claims,
+	};
+};
 
 /**
  * The `{ session, user }` shape every `validateRequest` caller expects. Keeps
