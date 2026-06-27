@@ -15,9 +15,11 @@
  * at offline GitHub runners and silently no-op'd, so it was removed. A build
  * either launches a Kaniko Job in-cluster or fails loud.
  */
-import { authGithub } from "@hanzo/platform/utils/providers/github";
+import {
+	appEnvOctokit,
+	authGithub,
+} from "@hanzo/platform/utils/providers/github";
 import { TRPCError } from "@trpc/server";
-import { Octokit } from "octokit";
 import { findGithubByInstallationId } from "../github";
 import type { BuildJob } from "./build-job";
 import {
@@ -142,11 +144,13 @@ export async function fetchPlatformConfig(
 }
 
 /**
- * Fetch the repo's platform config using the pod's `GH_TOKEN` — no GitHub App
- * required. This is how the App-free paths (the direct `/v1/arcd/enqueue`
- * trigger and the build-watcher's post-build deploy decision) read deploy /
- * e2e / publish intent: one credential, the same the release-reader uses.
- * Returns null when the repo has no config (build-only). Throws on bad config.
+ * Fetch the repo's platform config WITHOUT a webhook installation context —
+ * for the App-free paths (the direct `/v1/arcd/enqueue` trigger and the
+ * build-watcher's post-build deploy decision). Authenticates as the platform's
+ * own GitHub App installation via `appEnvOctokit` (the `GITHUB_APP_*` env,
+ * synced from KMS `hanzo/platform`), replacing the rate-limited `GH_TOKEN` PAT
+ * — the same App credential the release-reader uses. Returns null when the repo
+ * has no config (build-only). Throws on bad config.
  */
 export async function fetchPlatformConfigByToken(
 	repo: string,
@@ -159,7 +163,7 @@ export async function fetchPlatformConfigByToken(
 			message: `Invalid repo "${repo}"; expected owner/name`,
 		});
 	}
-	const octokit = new Octokit({ auth: process.env.GH_TOKEN });
+	const octokit = appEnvOctokit();
 	for (const path of CONFIG_NAMES) {
 		try {
 			const res = await octokit.rest.repos.getContent({
