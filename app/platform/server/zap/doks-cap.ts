@@ -24,7 +24,10 @@ import {
 	getOrgBilling,
 	recordBillingSnapshot,
 } from "@hanzo/platform/services/billing";
-import { attachExternalCluster } from "@hanzo/platform/services/dedicated-cluster";
+import {
+	attachExternalCluster,
+	provisionDedicatedCluster,
+} from "@hanzo/platform/services/dedicated-cluster";
 import {
 	addNodePool,
 	deleteDoksCluster,
@@ -36,7 +39,6 @@ import {
 	listDoksClusters,
 	listNodeSizes,
 	listRegions,
-	provisionDoksCluster,
 	syncDoksFleet,
 	updateNodePool,
 	upgradeToHA,
@@ -142,8 +144,13 @@ async function dispatch(ctx: DoksCtx, call: Call): Promise<unknown> {
 		case DoksMethod.provision: {
 			requireAdmin(ctx);
 			const p = ProvisionParams.wrap(call.payload);
-			return provisionDoksCluster({
-				organizationId: p.organizationId || ctx.organizationId,
+			// Force the org from the authenticated session — NEVER trust the
+			// client-supplied organizationId (a paid, org-owned cluster must not be
+			// billable to / injectable into another tenant). Mirrors attachCluster
+			// and the tRPC twin. provisionDedicatedCluster gates the KMS DO token
+			// and seeds the provisioning phase so the lifecycle is transport-agnostic.
+			return provisionDedicatedCluster({
+				organizationId: ctx.organizationId,
 				region: p.region,
 				ha: p.ha,
 				...(p.nodeSize ? { nodeSize: p.nodeSize } : {}),
