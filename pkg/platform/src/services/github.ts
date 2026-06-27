@@ -12,13 +12,21 @@ import { authGithub } from "../utils/providers/github";
 import { updatePreviewDeployment } from "./preview-deployment";
 
 export type Github = typeof github.$inferSelect;
-export const createGithub = async (
+export const createGithub = (
 	input: z.infer<typeof apiCreateGithub>,
 	organizationId: string,
 	userId: string,
 ) => {
-	return await db.transaction(async (tx) => {
-		const newGitProvider = await tx
+	// better-sqlite3 (Hanzo Base) transactions are SYNCHRONOUS: the callback
+	// must not return a promise. Execute each statement with `.get()` instead of
+	// `await`, and keep the body sync. An async callback returns a promise,
+	// which better-sqlite3 rejects ("Transaction function cannot return a
+	// promise") AFTER it has already rolled the first insert back — the orphaned
+	// continuation then inserts `github` against a vanished `git_provider`
+	// parent ("FOREIGN KEY constraint failed", surfacing as an unhandled
+	// rejection). A sync transaction commits both rows atomically.
+	return db.transaction((tx) => {
+		const newGitProvider = tx
 			.insert(gitProvider)
 			.values({
 				providerType: "github",
@@ -27,7 +35,7 @@ export const createGithub = async (
 				userId: userId,
 			} as any)
 			.returning()
-			.then((response) => response[0]);
+			.get();
 
 		if (!newGitProvider) {
 			throw new TRPCError({
@@ -36,14 +44,14 @@ export const createGithub = async (
 			});
 		}
 
-		return await tx
+		return tx
 			.insert(github)
 			.values({
 				...input,
-				gitProviderId: newGitProvider?.gitProviderId,
+				gitProviderId: newGitProvider.gitProviderId,
 			} as any)
 			.returning()
-			.then((response) => response[0]);
+			.get();
 	});
 };
 
