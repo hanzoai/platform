@@ -17,8 +17,8 @@ importers:
   .:
     dependencies:
       '@hanzo/iam':
-        specifier: ^0.11.0
-        version: 0.11.0(react@18.2.0)
+        specifier: ^0.13.1
+        version: 0.13.1(react@18.2.0)
       '@hanzo/ui':
         specifier: link:../ui/pkg/ui
         version: link:../ui/pkg/ui
@@ -706,8 +706,8 @@ importers:
         specifier: ^8.4.1
         version: 8.4.1
       '@hanzo/iam':
-        specifier: ^0.11.0
-        version: 0.11.0(react@18.2.0)
+        specifier: ^0.13.1
+        version: 0.13.1(react@18.2.0)
       '@kubernetes/client-node':
         specifier: ^1.4.0
         version: 1.4.0
@@ -1641,8 +1641,8 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
-  '@hanzo/iam@0.11.0':
-    resolution: {integrity: sha512-AGTYSl+En0Ci3UTBJs/kJ1MjxIAKOW9pMwLD6QCFLsBZIZCp1JljESepTEs4aBLifK0L3h/j3ya53ZyU3dSXjA==}
+  '@hanzo/iam@0.13.1':
+    resolution: {integrity: sha512-MAqXY7jL5pcPkaUE0Qb/ePL2WKvk3p6EQDLHGZENj+/gbNKs7e/9qG+nmRlPMFVcwXPk+suzkBAEyIMT2EiJ8w==}
     engines: {node: '>=18'}
     peerDependencies:
       react: '>=17'
@@ -10923,7 +10923,7 @@ snapshots:
       protobufjs: 7.6.4
       yargs: 17.7.3
 
-  '@hanzo/iam@0.11.0(react@18.2.0)':
+  '@hanzo/iam@0.13.1(react@18.2.0)':
     dependencies:
       jose: 6.2.3
       libphonenumber-js: 1.13.7
