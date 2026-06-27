@@ -26,15 +26,17 @@
  *   - It is read-only against GitHub and writes only platform's own SQLite, so
  *     like the inventory reader it cannot perturb the control plane.
  *
- * Auth: a GitHub token from `GH_TOKEN` (already present in the platform pod,
- * the same credential the CI build path uses). With no token it runs
- * unauthenticated (low rate limit) — fine for a dev box; in-cluster it is
- * always authenticated.
+ * Auth: the platform's own GitHub App installation (`appEnvOctokit`), which
+ * mints a short-lived installation token per request from the `GITHUB_APP_*`
+ * env (synced from KMS `hanzo/platform`) — replacing the rate-limited `GH_TOKEN`
+ * PAT. It falls back to `GH_TOKEN`, then unauthenticated, so a dev box with
+ * neither still runs (low anonymous limit); in-cluster it is App-authenticated.
  */
 
 import { db, eq } from "@hanzo/platform/db";
 import { apps } from "@hanzo/platform/db/schema";
-import { Octokit } from "octokit";
+import { appEnvOctokit } from "@hanzo/platform/utils/providers/github";
+import type { Octokit } from "octokit";
 
 /** A single repo's resolved release facts (null = no release found). */
 export interface ReleaseMeta {
@@ -93,9 +95,13 @@ export function releaseMetaFrom(
 	};
 }
 
-/** Construct the reader's Octokit (token-authenticated when `GH_TOKEN` is set). */
-export function makeOctokit(token = process.env.GH_TOKEN): Octokit {
-	return token ? new Octokit({ auth: token }) : new Octokit();
+/**
+ * Construct the reader's Octokit — authenticated as the platform's own GitHub
+ * App installation when the `GITHUB_APP_*` env is present, else falling back to
+ * the `GH_TOKEN` PAT, else unauthenticated. See `appEnvOctokit`.
+ */
+export function makeOctokit(): Octokit {
+	return appEnvOctokit();
 }
 
 /**
