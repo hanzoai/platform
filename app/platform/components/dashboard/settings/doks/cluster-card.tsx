@@ -2,9 +2,11 @@ import {
 	ChevronDown,
 	ChevronUp,
 	Download,
+	Layers,
 	Loader2,
 	MoreHorizontal,
 	PlusIcon,
+	Rocket,
 	Shield,
 	Trash2,
 } from "lucide-react";
@@ -48,6 +50,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { api } from "@/utils/api";
 import { doks } from "@/utils/zap";
 
 const STATUS_VARIANTS: Record<
@@ -60,6 +63,25 @@ const STATUS_VARIANTS: Record<
 	error: "destructive",
 	deleting: "outline",
 	deleted: "outline",
+};
+
+const PHASE_VARIANTS: Record<
+	string,
+	"default" | "secondary" | "destructive" | "outline"
+> = {
+	requested: "secondary",
+	provisioning: "secondary",
+	installing: "secondary",
+	ready: "default",
+	error: "destructive",
+};
+
+const PHASE_LABELS: Record<string, string> = {
+	requested: "Baseline pending",
+	provisioning: "Provisioning",
+	installing: "Installing baseline",
+	ready: "Ready",
+	error: "Error",
 };
 
 interface ClusterCardProps {
@@ -82,9 +104,14 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 	const [editPoolCount, setEditPoolCount] = useState(2);
 	const [editPoolSize, setEditPoolSize] = useState("");
 
+	// A bring-your-own (external) cluster has no DigitalOcean cluster behind it.
+	// DO-only affordances (cost, kubeconfig download, HA, node-pool management)
+	// don't apply; its lifecycle is attach → install baseline → select.
+	const isExternal = !cluster.doClusterId;
+
 	const { data: cost } = doks.clusterCost.useQuery(
 		{ doksClusterId: cluster.doksClusterId },
-		{ enabled: !!cluster.doksClusterId },
+		{ enabled: !!cluster.doksClusterId && !isExternal },
 	);
 
 	const { data: nodeSizes } = doks.listNodeSizes.useQuery(undefined, {
@@ -95,6 +122,14 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 		doks.delete.useMutation();
 	const { mutateAsync: upgradeToHA, isPending: upgrading } =
 		doks.upgradeToHA.useMutation();
+
+	// Dedicated-cluster lifecycle (org-scoped, tRPC): install the operator +
+	// per-tenant baseline, and select/clear this cluster as the org's deploy
+	// target. These complete a cluster from "exists" to "deployable + active".
+	const { mutateAsync: installBaseline, isPending: installingBaseline } =
+		api.dedicatedCluster.installBaseline.useMutation();
+	const { mutateAsync: selectTarget, isPending: selecting } =
+		api.dedicatedCluster.select.useMutation();
 	const { mutateAsync: addNodePool, isPending: addingPool } =
 		doks.addNodePool.useMutation();
 	const { mutateAsync: updateNodePool, isPending: updatingPool } =
@@ -145,6 +180,36 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 			onUpdate();
 		} catch (error: any) {
 			toast.error(error?.message || "Failed to upgrade to HA");
+		}
+	};
+
+	const handleInstallBaseline = async () => {
+		try {
+			await installBaseline({ doksClusterId: cluster.doksClusterId });
+			toast.success("Operator + baseline installed — cluster is ready");
+			onUpdate();
+		} catch (error: any) {
+			toast.error(error?.message || "Failed to install baseline");
+		}
+	};
+
+	const handleSelectTarget = async () => {
+		try {
+			await selectTarget({ doksClusterId: cluster.doksClusterId });
+			toast.success(`Deploys now target "${cluster.name}"`);
+			onUpdate();
+		} catch (error: any) {
+			toast.error(error?.message || "Failed to select deploy target");
+		}
+	};
+
+	const handleClearTarget = async () => {
+		try {
+			await selectTarget({ doksClusterId: null });
+			toast.success("Reverted to the shared cluster");
+			onUpdate();
+		} catch (error: any) {
+			toast.error(error?.message || "Failed to clear deploy target");
 		}
 	};
 
@@ -206,16 +271,31 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 	};
 
 	const statusVariant = STATUS_VARIANTS[cluster.status] || "secondary";
+	const phaseVariant = PHASE_VARIANTS[cluster.phase] || "secondary";
+	const phaseLabel = PHASE_LABELS[cluster.phase] || cluster.phase;
+	const isRunning = cluster.status === "running";
+	const isReady = cluster.phase === "ready";
+	// Baseline can be (re)installed once the cluster is up; "installing" is the
+	// only phase where another install is already in flight.
+	const canInstallBaseline = isRunning && cluster.phase !== "installing";
 
 	return (
 		<Card className="border">
 			<CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap pb-3">
 				<div className="flex flex-col gap-1">
-					<div className="flex items-center gap-3">
+					<div className="flex items-center gap-3 flex-wrap">
 						<CardTitle className="text-lg">
 							{cluster.name || cluster.doksClusterId}
 						</CardTitle>
 						<Badge variant={statusVariant}>{cluster.status}</Badge>
+						<Badge variant={phaseVariant}>{phaseLabel}</Badge>
+						{isExternal && <Badge variant="outline">BYO</Badge>}
+						{cluster.active && (
+							<Badge variant="default" className="gap-1">
+								<Rocket className="size-3" />
+								Deploy target
+							</Badge>
+						)}
 						{cluster.ha && (
 							<Badge variant="outline" className="gap-1">
 								<Shield className="size-3" />
@@ -223,6 +303,11 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 							</Badge>
 						)}
 					</div>
+					{cluster.phase === "error" && cluster.baselineError && (
+						<span className="text-xs text-destructive max-w-md truncate">
+							{cluster.baselineError}
+						</span>
+					)}
 					<div className="flex items-center gap-4 text-sm text-muted-foreground">
 						<span>Region: {cluster.region}</span>
 						<span>K8s: {cluster.k8sVersion}</span>
@@ -238,15 +323,64 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 					</div>
 				</div>
 				<div className="flex items-center gap-2">
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={handleDownloadKubeconfig}
-						disabled={cluster.status !== "running"}
-					>
-						<Download className="mr-1.5 size-3.5" />
-						Kubeconfig
-					</Button>
+					{/* Deploy-target selection — only a ready cluster can take deploys. */}
+					{isReady &&
+						(cluster.active ? (
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleClearTarget}
+								disabled={selecting}
+							>
+								{selecting ? (
+									<Loader2 className="mr-1.5 size-3.5 animate-spin" />
+								) : (
+									<Rocket className="mr-1.5 size-3.5" />
+								)}
+								Stop targeting
+							</Button>
+						) : (
+							<Button
+								variant="default"
+								size="sm"
+								onClick={handleSelectTarget}
+								disabled={selecting}
+							>
+								{selecting ? (
+									<Loader2 className="mr-1.5 size-3.5 animate-spin" />
+								) : (
+									<Rocket className="mr-1.5 size-3.5" />
+								)}
+								Use as deploy target
+							</Button>
+						))}
+					{/* Install/repair the operator + baseline before the cluster is usable. */}
+					{canInstallBaseline && !isReady && (
+						<Button
+							variant="default"
+							size="sm"
+							onClick={handleInstallBaseline}
+							disabled={installingBaseline}
+						>
+							{installingBaseline ? (
+								<Loader2 className="mr-1.5 size-3.5 animate-spin" />
+							) : (
+								<Layers className="mr-1.5 size-3.5" />
+							)}
+							Install baseline
+						</Button>
+					)}
+					{!isExternal && (
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={handleDownloadKubeconfig}
+							disabled={!isRunning}
+						>
+							<Download className="mr-1.5 size-3.5" />
+							Kubeconfig
+						</Button>
+					)}
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
 							<Button variant="ghost" className="h-8 w-8 p-0">
@@ -256,7 +390,20 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
 							<DropdownMenuLabel>Actions</DropdownMenuLabel>
-							{!cluster.ha && cluster.status === "running" && (
+							{isReady && (
+								<DialogAction
+									title="Reinstall baseline"
+									description="Re-apply the hanzo-operator + per-tenant baseline (namespaces, PaaS ticket secret, ingress + gateway) onto this cluster. Idempotent."
+									type="default"
+									onClick={handleInstallBaseline}
+								>
+									<DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+										<Layers className="mr-2 size-3.5" />
+										Reinstall baseline
+									</DropdownMenuItem>
+								</DialogAction>
+							)}
+							{!isExternal && !cluster.ha && isRunning && (
 								<DialogAction
 									title="Upgrade to HA"
 									description="This will upgrade the cluster control plane to High Availability. This action cannot be reversed."
@@ -271,8 +418,12 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 							)}
 							<DropdownMenuSeparator />
 							<DialogAction
-								title="Delete Cluster"
-								description={`Are you sure you want to delete cluster "${cluster.name || cluster.doksClusterId}"? This will destroy all workloads and cannot be undone.`}
+								title={isExternal ? "Detach Cluster" : "Delete Cluster"}
+								description={
+									isExternal
+										? `Detach cluster "${cluster.name || cluster.doksClusterId}"? Platform stops targeting it; your external cluster and its workloads are left untouched.`
+										: `Are you sure you want to delete cluster "${cluster.name || cluster.doksClusterId}"? This will destroy all workloads and cannot be undone.`
+								}
 								type="destructive"
 								onClick={handleDeleteCluster}
 							>
@@ -281,7 +432,7 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 									className="text-destructive"
 								>
 									<Trash2 className="mr-2 size-3.5" />
-									Delete Cluster
+									{isExternal ? "Detach Cluster" : "Delete Cluster"}
 								</DropdownMenuItem>
 							</DialogAction>
 						</DropdownMenuContent>
@@ -290,21 +441,31 @@ export const ClusterCard = ({ cluster, onUpdate }: ClusterCardProps) => {
 			</CardHeader>
 
 			<CardContent className="pt-0">
-				{/* Node Pools Toggle */}
-				<button
-					type="button"
-					className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors w-full py-2 border-t"
-					onClick={() => setExpanded(!expanded)}
-				>
-					{expanded ? (
-						<ChevronUp className="size-4" />
-					) : (
-						<ChevronDown className="size-4" />
-					)}
-					Node Pools ({cluster.nodePools?.length || 0})
-				</button>
+				{isExternal ? (
+					/* BYO clusters have no DO-managed node pools; show their endpoint. */
+					<div className="text-sm text-muted-foreground py-2 border-t">
+						External endpoint:{" "}
+						<span className="font-mono text-xs text-foreground">
+							{cluster.endpoint || "—"}
+						</span>
+					</div>
+				) : (
+					/* Node Pools Toggle (DO-managed clusters only) */
+					<button
+						type="button"
+						className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors w-full py-2 border-t"
+						onClick={() => setExpanded(!expanded)}
+					>
+						{expanded ? (
+							<ChevronUp className="size-4" />
+						) : (
+							<ChevronDown className="size-4" />
+						)}
+						Node Pools ({cluster.nodePools?.length || 0})
+					</button>
+				)}
 
-				{expanded && (
+				{!isExternal && expanded && (
 					<div className="mt-2 space-y-3">
 						{cluster.nodePools && cluster.nodePools.length > 0 ? (
 							<Table>
