@@ -3,6 +3,7 @@ import {
 	type apiCreateGithub,
 	github,
 	gitProvider,
+	organization,
 } from "@hanzo/platform/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
@@ -81,6 +82,69 @@ export const findGithubByInstallationId = async (installationId: string) => {
 			gitProvider: true,
 		},
 	});
+};
+
+/**
+ * Idempotently materialize the platform's OWN GitHub App provider row from the
+ * environment (declared state synced from KMS `hanzo/platform`), so the webhook
+ * build path (`scheduleBuilds` → `resolveProvider` →
+ * `findGithubByInstallationId`) resolves a provider and mints App installation
+ * tokens instead of relying on the rate-limited `GH_TOKEN` PAT.
+ *
+ * Driven entirely by env — the same `GITHUB_APP_*` credentials the App-token
+ * readers use, plus `DEFAULT_BUILD_ORG_ID` for the owning org. A no-op when the
+ * credentials are absent (dev box) or the provider already exists (re-run
+ * safe). Never throws: a failure here must not crash control-plane boot — it
+ * only leaves the webhook build path needing manual provider configuration.
+ */
+export const ensureGithubAppProvider = async (): Promise<void> => {
+	const githubAppId = process.env.GITHUB_APP_ID;
+	const githubPrivateKey = process.env.GITHUB_APP_PRIVATE_KEY;
+	const githubInstallationId = process.env.GITHUB_APP_INSTALLATION_ID;
+	const organizationId = process.env.DEFAULT_BUILD_ORG_ID;
+	if (
+		!githubAppId ||
+		!githubPrivateKey ||
+		!githubInstallationId ||
+		!organizationId
+	) {
+		return; // not configured — nothing to seed
+	}
+
+	try {
+		const existing = await findGithubByInstallationId(githubInstallationId);
+		if (existing) return; // already provisioned (idempotent)
+
+		const org = await db.query.organization.findFirst({
+			where: eq(organization.id, organizationId),
+			columns: { id: true, ownerId: true },
+		});
+		if (!org) {
+			console.warn(
+				`[github-app] DEFAULT_BUILD_ORG_ID ${organizationId} not found; skipping App provider seed`,
+			);
+			return;
+		}
+
+		await createGithub(
+			{
+				name: "hanzoai",
+				githubAppName: process.env.GITHUB_APP_NAME ?? "hanzo-cloud-app",
+				githubAppId: Number(githubAppId),
+				githubClientId: process.env.GITHUB_APP_CLIENT_ID,
+				githubInstallationId,
+				githubPrivateKey,
+				githubWebhookSecret: process.env.GITHUB_APP_WEBHOOK_SECRET ?? null,
+			},
+			org.id,
+			org.ownerId,
+		);
+		console.log(
+			`[github-app] seeded GitHub App provider (app ${githubAppId}, installation ${githubInstallationId}) for org ${org.id}`,
+		);
+	} catch (err) {
+		console.error("[github-app] provider seed failed (non-fatal)", err);
+	}
 };
 
 export const updateGithub = async (
