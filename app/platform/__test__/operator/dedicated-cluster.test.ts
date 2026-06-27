@@ -8,26 +8,32 @@
  * Field changes to buildClusterBaseline are breaking changes to what a freshly
  * provisioned cluster receives, so they are pinned here.
  */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import {
+	attachExternalCluster,
+	type BaselineObject,
+	type BaselineSecret,
+	type BaselineServiceCR,
+	buildClusterBaseline,
+	clusterKubeconfig,
+	clusterTargetFromRecord,
+	nextPhase,
+	OPERATOR_MANIFEST_URL,
+	OPERATOR_NAMESPACE,
+	PAAS_TICKET_SECRET,
+	provisionDedicatedCluster,
+	redactCluster,
+	redactTarget,
+	resolveOrgClusterTarget,
+} from "@hanzo/platform/services/dedicated-cluster";
 
 import {
 	KmsSecretMissingError,
 	kmsSecret,
 	requireKmsSecret,
 } from "@hanzo/platform/services/kms";
-import {
-	OPERATOR_MANIFEST_URL,
-	OPERATOR_NAMESPACE,
-	PAAS_TICKET_SECRET,
-	type BaselineObject,
-	type BaselineSecret,
-	type BaselineServiceCR,
-	buildClusterBaseline,
-	clusterTargetFromRecord,
-	nextPhase,
-	provisionDedicatedCluster,
-	redactTarget,
-} from "@hanzo/platform/services/dedicated-cluster";
+import { sealSecret } from "@hanzo/platform/services/secret-box";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const ORG = "org-acme";
 const SECRET = "x".repeat(32);
@@ -130,7 +136,12 @@ describe("nextPhase (lifecycle reducer)", () => {
 	});
 
 	it("sends any phase to error on failure", () => {
-		for (const p of ["requested", "provisioning", "installing", "ready"] as const) {
+		for (const p of [
+			"requested",
+			"provisioning",
+			"installing",
+			"ready",
+		] as const) {
 			expect(nextPhase(p, "failed")).toBe("error");
 		}
 	});
@@ -142,6 +153,12 @@ describe("nextPhase (lifecycle reducer)", () => {
 
 	it("re-installs the baseline from ready (idempotent reconcile)", () => {
 		expect(nextPhase("ready", "baselineStarted")).toBe("installing");
+	});
+
+	it("starts the baseline from requested (BYO attach entry point)", () => {
+		// An attached BYO cluster never passes through DO `provisioning`; its first
+		// baseline install transitions requested → installing.
+		expect(nextPhase("requested", "baselineStarted")).toBe("installing");
 	});
 
 	it("is total: illegal transitions leave the phase unchanged", () => {
@@ -188,6 +205,92 @@ describe("redactTarget (never leak the kubeconfig)", () => {
 			namespaces: { hanzo: "main" },
 		});
 		expect(view.dedicated).toBe(false);
+	});
+});
+
+describe("redactCluster (never leak the sealed kubeconfig)", () => {
+	it("drops kubeconfigEncrypted and keeps every other field", () => {
+		const row = {
+			doksClusterId: "c-1",
+			name: "byo",
+			organizationId: ORG,
+			phase: "ready",
+			active: true,
+			kubeconfigEncrypted: "v1:secret:tag:ciphertext",
+		};
+		const safe = redactCluster(row);
+		expect(safe).toEqual({
+			doksClusterId: "c-1",
+			name: "byo",
+			organizationId: ORG,
+			phase: "ready",
+			active: true,
+		});
+		expect("kubeconfigEncrypted" in safe).toBe(false);
+		expect(JSON.stringify(safe)).not.toContain("ciphertext");
+	});
+
+	it("strips the (null) ciphertext column from a managed cluster row", () => {
+		// A managed DOKS row still carries the column, just null — redactCluster
+		// removes the key entirely so the shape is uniform across managed + BYO.
+		const row = {
+			doksClusterId: "c-2",
+			name: "managed",
+			active: false,
+			kubeconfigEncrypted: null,
+		};
+		const safe = redactCluster(row);
+		expect(safe).toEqual({
+			doksClusterId: "c-2",
+			name: "managed",
+			active: false,
+		});
+		expect("kubeconfigEncrypted" in safe).toBe(false);
+	});
+});
+
+describe("clusterKubeconfig (BYO-aware resolver)", () => {
+	let original: string | undefined;
+	beforeEach(() => {
+		original = process.env.PAAS_SECRET_KEY;
+		process.env.PAAS_SECRET_KEY = "test-cluster-kubeconfig-key-0123456789";
+	});
+	afterEach(() => {
+		if (original === undefined) delete process.env.PAAS_SECRET_KEY;
+		else process.env.PAAS_SECRET_KEY = original;
+	});
+
+	it("decrypts the sealed kubeconfig for an attached BYO cluster", async () => {
+		const kubeconfig = "apiVersion: v1\nkind: Config\nclusters: []\n";
+		const record = {
+			doksClusterId: "byo-1",
+			doClusterId: null,
+			kubeconfigEncrypted: sealSecret(kubeconfig),
+		};
+		await expect(clusterKubeconfig(record)).resolves.toBe(kubeconfig);
+	});
+});
+
+describe("resolveOrgClusterTarget (operator/inventory bridge)", () => {
+	it("falls back to the shared cluster when the org has no active cluster", async () => {
+		// The mocked db returns no active cluster (findFirst → undefined), so the
+		// resolver must hand back the shared target (no kubeconfig → not dedicated).
+		const target = await resolveOrgClusterTarget("org-without-dedicated");
+		expect(redactTarget(target).dedicated).toBe(false);
+		expect(target.kubeconfig).toBeUndefined();
+	});
+});
+
+describe("attachExternalCluster (BYO attach)", () => {
+	it("rejects when the organization does not exist", async () => {
+		// The mocked db returns no organization (findFirst → undefined).
+		await expect(
+			attachExternalCluster({
+				organizationId: "ghost-org",
+				name: "byo",
+				kubeconfig: "apiVersion: v1\nkind: Config\n",
+			}),
+		).rejects.toThrow(/Organization not found/);
 	});
 });
 
