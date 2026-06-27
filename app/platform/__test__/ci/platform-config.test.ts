@@ -196,26 +196,6 @@ describe("images (hanzo.yml multi-image)", () => {
 	});
 });
 
-describe("build.dispatch", () => {
-	it("defaults to native when omitted", () => {
-		const cfg = parsePlatformConfig(VALID);
-		expect(cfg.builds[0]!.dispatch).toBe("native");
-	});
-	it("accepts an explicit workflow_dispatch", () => {
-		const cfg = parsePlatformConfig(
-			VALID.replace("push: true", "push: true\n  dispatch: workflow_dispatch"),
-		);
-		expect(cfg.builds[0]!.dispatch).toBe("workflow_dispatch");
-	});
-	it("rejects an unknown dispatch mode", () => {
-		expect(() =>
-			parsePlatformConfig(
-				VALID.replace("push: true", "push: true\n  dispatch: carrier-pigeon"),
-			),
-		).toThrow(PlatformConfigError);
-	});
-});
-
 describe("runnerPoolFor", () => {
 	it("maps hanzoai/linux/amd64 to the real ARC pool hanzo-build-linux-amd64", () => {
 		expect(runnerPoolFor("hanzoai", { os: "linux", arch: "amd64" })).toBe(

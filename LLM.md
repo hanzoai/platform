@@ -9,23 +9,34 @@
 
 ## Platform-native CI/CD (GHA escape)
 
-Platform owns the build+deploy lifecycle so a GitHub Actions outage cannot
-halt shipping. Contract + schema: `docs/PLATFORM_CI.md`.
+Platform owns the FULL build → deploy → test → publish lifecycle so a GitHub
+Actions outage cannot halt shipping. ONE conductor (the `paas` pod), ONE build
+path (an in-cluster Kaniko Job), ONE heartbeat (the build-watcher). No GHA, no
+`workflow_dispatch`, no external runner registration. Contract + schema:
+`docs/PLATFORM_CI.md`.
 
-- Webhook: `app/platform/pages/api/v1/github-webhook.ts` (HMAC per installation).
-- Build callback: `app/platform/pages/api/v1/build-callback.ts` (bearer token).
-- Service layer: `pkg/platform/src/services/ci/` — `platform-config` (`.platform.yml`
-  parser + in-house validator), `github-webhook` (decoder + HMAC), `build-job`
-  (DB CRUD), `build-scheduler` (dispatch to arcd via `workflow_dispatch`),
-  `deploy-executor` (merge-patch operator `Service` CR `.spec.image`),
-  `build-completion` (callback → deploy).
-- DB: `build_job` table (`pkg/platform/src/db/schema/build-job.ts`,
-  migration `drizzle/0170_platform_native_ci.sql`).
+- Triggers: `app/platform/pages/api/v1/github-webhook.ts` (HMAC per
+  installation) and `app/platform/pages/api/v1/arcd/enqueue.ts` (service-token,
+  GitHub-free direct build). `build-callback.ts` is an optional external-builder
+  completion hook (bearer token).
+- Service layer: `pkg/platform/src/services/ci/` — `platform-config` (`hanzo.yml`
+  parser + validator, now incl. `e2e:` + `publish:`), `github-webhook`,
+  `build-job` (DB CRUD), `build-scheduler` (dispatch via `launchBuildJob`),
+  `kaniko-job` (the build muscle — Kaniko Job + outcome read), `build-watcher`
+  (the heartbeat: polls Kaniko Jobs, drives the pipeline), `build-completion`
+  (post-build orchestrator: deploy → e2e → publish, App-free config via
+  `GH_TOKEN`), `deploy-executor` (merge-patch operator `Service` CR
+  `.spec.image`), `e2e-runner` (Playwright Job), `publish-job` (npm/pypi Job,
+  KMS tokens).
+- DB: `build_job` table (`pkg/platform/src/db/schema/build-job.ts`); migration
+  `drizzle/0005_build_pipeline_columns.sql` adds `buildJobName`/`imageDigest`/
+  `e2e*`/`publish*` and drops the dead `arcd_runner` table.
 - tRPC: `buildJob` router (org-scoped list/one/logs/trigger).
-- arcd decision: dispatch to existing pools via `workflow_dispatch` (arcd
-  unchanged); platform owns the system-of-record + deploy decision. Native
-  arcd long-poll protocol is the next iteration.
-- Per-repo executor workflow template: `hanzoai/.github/workflow-templates/platform-build.yml`.
+- Build muscle: Kaniko (`gcr.io/kaniko-project/executor`) git-context
+  `git://github.com/<repo>.git#<ref>` → GHCR, on `runner-pool-32g` +
+  `dedicated=ci-runner`. The RETIRED long-poll/`workflow_dispatch` external-runner
+  surface (build-queue, arcd-runner, `/v1/arcd/poll`+`/complete`) was removed —
+  it pointed at offline GitHub runners and silently no-op'd.
 
 ## Apps inventory — the "observe" half of the control plane
 
