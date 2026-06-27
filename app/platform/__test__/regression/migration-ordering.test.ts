@@ -63,25 +63,20 @@ describe("drizzle migration ordering", () => {
 		}
 	});
 
-	it("hanzo_rebrand at index 149 with idempotent column creation", () => {
-		const entry = journal.entries.find((e) => e.tag === "0149_hanzo_rebrand");
-		expect(entry).toBeDefined();
-		expect(entry!.idx).toBe(149);
+	// The Postgres→SQLite consolidation (commit db9ce6190) folded the historical
+	// 173 Postgres migrations — including the former hanzo_rebrand (0149) and
+	// futuristic_bullseye (0148) steps — into the SQLite baseline 0000. Guard
+	// that the rebrand schema (whitelabelingConfig) survived the consolidation.
+	it("consolidated baseline carries the whitelabeling schema", () => {
+		const baseline = journal.entries.find((e) => e.tag === "0000_spotty_spot");
+		expect(baseline).toBeDefined();
+		expect(baseline!.idx).toBe(0);
 
 		const sql = fs.readFileSync(
-			path.join(DRIZZLE_DIR, "0149_hanzo_rebrand.sql"),
+			path.join(DRIZZLE_DIR, "0000_spotty_spot.sql"),
 			"utf-8",
 		);
-		expect(sql).toContain("IF NOT EXISTS");
 		expect(sql).toContain("whitelabelingConfig");
-	});
-
-	it("futuristic_bullseye at index 148", () => {
-		const entry = journal.entries.find(
-			(e) => e.tag === "0148_futuristic_bullseye",
-		);
-		expect(entry).toBeDefined();
-		expect(entry!.idx).toBe(148);
 	});
 
 	it("tags match their file prefix numbers", () => {
