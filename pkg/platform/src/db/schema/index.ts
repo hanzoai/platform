@@ -1,7 +1,6 @@
 export * from "./account";
 export * from "./ai";
 export * from "./application";
-export * from "./arcd-runner";
 export * from "./audit-log";
 export * from "./backups";
 // Hanzo-specific schemas
