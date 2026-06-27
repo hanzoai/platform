@@ -32,10 +32,11 @@
 
 import { db } from "@hanzo/platform/db";
 import {
-	type DoksPhase,
 	type apiAttachExternalCluster,
 	type apiProvisionDedicatedCluster,
+	type DoksPhase,
 	doksCluster,
+	type doksNodePool,
 } from "@hanzo/platform/db/schema";
 import * as k8s from "@kubernetes/client-node";
 import { TRPCError } from "@trpc/server";
@@ -44,10 +45,10 @@ import type { z } from "zod";
 import type { AppEnv, ClusterTarget } from "./apps/inventory";
 import { DEFAULT_TARGETS } from "./apps/inventory";
 import {
+	type DoksCluster,
 	findDoksClusterById,
 	getDoksKubeconfig,
 	provisionDoksCluster,
-	type DoksCluster,
 } from "./doks-provisioner";
 import {
 	createK8sClients,
@@ -249,7 +250,10 @@ export function nextPhase(current: DoksPhase, event: PhaseEvent): DoksPhase {
 		case "doksRunning":
 			return current === "provisioning" ? "installing" : current;
 		case "baselineStarted":
-			return current === "installing" ||
+			// `requested` is the BYO entry point: an attached cluster never went
+			// through DO `provisioning`, so its first baseline install starts here.
+			return current === "requested" ||
+				current === "installing" ||
 				current === "ready" ||
 				current === "error"
 				? "installing"
@@ -306,16 +310,46 @@ export function redactTarget(target: ClusterTarget): ClusterTargetView {
 	};
 }
 
+/**
+ * Strip the sealed kubeconfig from a cluster row before it crosses the API
+ * boundary. The ciphertext is a secret artifact (offline-attackable); no client
+ * — UI, console, automation — ever needs it. PURE. Every row-returning service
+ * function and handler funnels through this so the rule is enforced in one place.
+ */
+export function redactCluster<
+	T extends { kubeconfigEncrypted?: string | null },
+>(cluster: T): Omit<T, "kubeconfigEncrypted"> {
+	const { kubeconfigEncrypted: _omit, ...safe } = cluster;
+	return safe;
+}
+
 // ---------------------------------------------------------------------------
 // IO: provisioning + baseline install (thin composition over primitives)
 // ---------------------------------------------------------------------------
 
-/** All dedicated clusters owned by an org. */
+/**
+ * A cluster row safe to return to clients: node pools included (so the
+ * multi-cluster UI renders each card without an N+1 fetch), and the sealed BYO
+ * kubeconfig ciphertext EXCLUDED — a secret artifact never leaves the server.
+ */
+export type DoksClusterWithPools = Omit<DoksCluster, "kubeconfigEncrypted"> & {
+	nodePools: (typeof doksNodePool.$inferSelect)[];
+};
+
+/**
+ * All clusters owned by an org (dedicated DOKS + attached BYO). Excludes
+ * soft-deleted records (status `deleted`) and the sealed kubeconfig ciphertext;
+ * the latter is dropped at the query level so it can never be serialized to a
+ * client through this list.
+ */
 export async function listOrgClusters(
 	organizationId: string,
-): Promise<DoksCluster[]> {
+): Promise<DoksClusterWithPools[]> {
 	return db.query.doksCluster.findMany({
-		where: (c, { eq: eqOp }) => eqOp(c.organizationId, organizationId),
+		where: (c, { and: andOp, eq: eqOp, ne: neOp }) =>
+			andOp(eqOp(c.organizationId, organizationId), neOp(c.status, "deleted")),
+		columns: { kubeconfigEncrypted: false },
+		with: { nodePools: true },
 	});
 }
 
@@ -339,14 +373,17 @@ async function setPhase(
  */
 export async function provisionDedicatedCluster(
 	input: z.infer<typeof apiProvisionDedicatedCluster>,
-): Promise<DoksCluster> {
+): Promise<Omit<DoksCluster, "kubeconfigEncrypted">> {
 	// Fail fast and loud if the DO token is not KMS-provisioned — never proceed
 	// to create a paid cluster with a missing/hardcoded credential.
 	requireKmsSecret("PAAS_DO_API_TOKEN");
 
 	const cluster = await provisionDoksCluster(input);
-	await setPhase(cluster.doksClusterId, nextPhase("requested", "provisionStarted"));
-	return { ...cluster, phase: "provisioning" };
+	await setPhase(
+		cluster.doksClusterId,
+		nextPhase("requested", "provisionStarted"),
+	);
+	return redactCluster({ ...cluster, phase: "provisioning" as const });
 }
 
 /**
@@ -357,10 +394,12 @@ export async function provisionDedicatedCluster(
  * plaintext.
  *
  * The kubeconfig is validated (must parse + expose a server endpoint) before it
- * is sealed and persisted. The record lands `status=running`, `phase=ready` (a
- * BYO cluster is already up), so it can be selected immediately as the org's
- * deploy target; `active` stays false until the org selects it. The returned
- * record omits the ciphertext.
+ * is sealed and persisted. The record lands `status=running` (the BYO cluster is
+ * already up) but `phase=requested`: a BYO cluster is NOT a usable deploy target
+ * until the hanzo-operator + per-tenant baseline are installed onto it
+ * (`installClusterBaseline`), exactly like a freshly provisioned DOKS cluster.
+ * `active` stays false until the org selects it. The returned record omits the
+ * ciphertext.
  */
 export async function attachExternalCluster(
 	input: z.infer<typeof apiAttachExternalCluster>,
@@ -369,7 +408,10 @@ export async function attachExternalCluster(
 		where: (o, { eq: eqOp }) => eqOp(o.id, input.organizationId),
 	});
 	if (!org) {
-		throw new TRPCError({ code: "NOT_FOUND", message: "Organization not found" });
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Organization not found",
+		});
 	}
 
 	// Validate the kubeconfig parses and capture its endpoint. createK8sClients
@@ -393,7 +435,7 @@ export async function attachExternalCluster(
 			kubeconfigEncrypted: sealSecret(input.kubeconfig),
 			region: "external",
 			status: "running",
-			phase: "ready",
+			phase: "requested",
 			endpoint,
 			organizationId: input.organizationId,
 			tags: ["external", "byo"],
@@ -409,8 +451,7 @@ export async function attachExternalCluster(
 	}
 
 	// Never hand the ciphertext back to callers.
-	const { kubeconfigEncrypted: _omit, ...safe } = inserted;
-	return safe;
+	return redactCluster(inserted);
 }
 
 /** Idempotent namespace apply (ignores AlreadyExists). */
@@ -438,7 +479,10 @@ async function ensureSecret(
 		type: "Opaque",
 	};
 	try {
-		await clients.core.createNamespacedSecret({ namespace: obj.namespace, body });
+		await clients.core.createNamespacedSecret({
+			namespace: obj.namespace,
+			body,
+		});
 	} catch (err) {
 		if (!isConflict(err)) throw err;
 		await clients.core.replaceNamespacedSecret({
@@ -529,33 +573,36 @@ export async function applyClusterBaseline(
 }
 
 /**
- * Install the hanzo-operator + per-tenant baseline onto a provisioned dedicated
- * cluster. Resolves the cluster's kubeconfig ON DEMAND (derived from DO with the
- * KMS DO token — nothing stored), builds the baseline (pure), and applies it.
+ * Install the hanzo-operator + per-tenant baseline onto a running cluster —
+ * managed DOKS or attached BYO alike. The kubeconfig is resolved through the
+ * BYO-aware `clusterKubeconfig`: a managed cluster derives it ON DEMAND from DO
+ * (KMS DO token, nothing stored); an attached BYO cluster decrypts the sealed
+ * kubeconfig it was attached with. Builds the baseline (pure) and applies it.
  *
  * Advances the lifecycle to `ready` on success, or records `baselineError` and
  * phase `error` on failure (so the UI can surface + the caller can retry).
  */
 export async function installClusterBaseline(
 	doksClusterId: string,
-): Promise<DoksCluster> {
+): Promise<Omit<DoksCluster, "kubeconfigEncrypted">> {
 	const record = await findDoksClusterById(doksClusterId);
 	if (record.status !== "running") {
 		throw new TRPCError({
 			code: "PRECONDITION_FAILED",
-			message: `Cluster ${doksClusterId} is "${record.status}", not "running" — wait for the DOKS cluster to come up before installing the baseline`,
+			message: `Cluster ${doksClusterId} is "${record.status}", not "running" — wait for the cluster to come up before installing the baseline`,
 		});
 	}
 
-	// Move to `installing` from whatever the actual phase is: first install comes
-	// from `provisioning` (doksRunning); a re-install/reconcile comes from
-	// `ready`/`error`/`installing` (baselineStarted). The reducer is the authority.
+	// Move to `installing` from whatever the actual phase is: a managed cluster's
+	// first install comes from `provisioning` (doksRunning); a BYO cluster's first
+	// install and every re-install/reconcile come from `requested`/`ready`/
+	// `error`/`installing` (baselineStarted). The reducer is the authority.
 	const startEvent =
 		record.phase === "provisioning" ? "doksRunning" : "baselineStarted";
 	await setPhase(doksClusterId, nextPhase(record.phase, startEvent)); // → installing
 
 	try {
-		const kubeconfig = await getDoksKubeconfig(doksClusterId);
+		const kubeconfig = await clusterKubeconfig(record);
 		const clients = createK8sClients(kubeconfig);
 		const objects = buildClusterBaseline({
 			organizationId: record.organizationId,
@@ -568,12 +615,12 @@ export async function installClusterBaseline(
 			baselineInstalled: true,
 			baselineError: null,
 		});
-		return {
+		return redactCluster({
 			...record,
-			phase: "ready",
+			phase: "ready" as const,
 			operatorInstalled: true,
 			baselineInstalled: true,
-		};
+		});
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
 		await setPhase(doksClusterId, "error", { baselineError: message });
@@ -630,7 +677,10 @@ export async function selectDeployTarget(
  * so every consumer (target resolution, baseline install) is BYO-aware.
  */
 export async function clusterKubeconfig(
-	record: Pick<DoksCluster, "doksClusterId" | "doClusterId" | "kubeconfigEncrypted">,
+	record: Pick<
+		DoksCluster,
+		"doksClusterId" | "doClusterId" | "kubeconfigEncrypted"
+	>,
 ): Promise<string> {
 	if (record.kubeconfigEncrypted) {
 		return openSecret(record.kubeconfigEncrypted);
@@ -723,7 +773,10 @@ function isConflict(err: unknown): boolean {
 	const e = err as {
 		statusCode?: number;
 		code?: number;
-		response?: { statusCode?: number; body?: { reason?: string; code?: number } };
+		response?: {
+			statusCode?: number;
+			body?: { reason?: string; code?: number };
+		};
 		body?: { reason?: string; code?: number };
 		message?: string;
 	};
