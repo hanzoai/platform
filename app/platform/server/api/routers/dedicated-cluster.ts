@@ -17,19 +17,20 @@ import {
 	apiProvisionDedicatedCluster,
 } from "@hanzo/platform/db/schema";
 import {
-	type DoksCluster,
-	findDoksClusterById,
-} from "@hanzo/platform/services/doks-provisioner";
-import {
 	attachExternalCluster,
 	installClusterBaseline,
 	listOrgClusters,
 	migrateOrgToDedicated,
 	provisionDedicatedCluster,
+	redactCluster,
 	redactTarget,
 	resolveOrgClusterTarget,
 	selectDeployTarget,
 } from "@hanzo/platform/services/dedicated-cluster";
+import {
+	type DoksCluster,
+	findDoksClusterById,
+} from "@hanzo/platform/services/doks-provisioner";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, createTRPCRouter } from "@/server/api/trpc";
@@ -82,9 +83,10 @@ export const dedicatedClusterRouter = createTRPCRouter({
 		}),
 
 	/**
-	 * Attach an external (bring-your-own) cluster as a deploy target for the
-	 * active org. The org is forced from the session; the kubeconfig is sealed
-	 * at rest. The created cluster is ready to `select` immediately.
+	 * Attach an external (bring-your-own) cluster for the active org. The org is
+	 * forced from the session; the kubeconfig is sealed at rest. The cluster
+	 * lands `phase=requested` — run `installBaseline` to put the operator +
+	 * per-tenant baseline on it before it can be selected as a deploy target.
 	 */
 	attachExternal: adminProcedure
 		.input(z.object({ name: z.string().min(1), kubeconfig: z.string().min(1) }))
@@ -98,11 +100,13 @@ export const dedicatedClusterRouter = createTRPCRouter({
 		return listOrgClusters(requireActiveOrg(ctx));
 	}),
 
-	/** Get one dedicated cluster (org-scoped). */
+	/** Get one cluster (org-scoped). Sealed kubeconfig redacted. */
 	get: adminProcedure
 		.input(apiDedicatedClusterRef)
 		.query(async ({ input, ctx }) => {
-			return loadOwned(input.doksClusterId, requireActiveOrg(ctx));
+			return redactCluster(
+				await loadOwned(input.doksClusterId, requireActiveOrg(ctx)),
+			);
 		}),
 
 	/** Select the active deploy target (a dedicated cluster, or null = shared). */
