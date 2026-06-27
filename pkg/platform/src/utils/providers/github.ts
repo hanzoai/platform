@@ -5,8 +5,8 @@ import { findGithubById, type Github } from "@hanzo/platform/services/github";
 import type { InferResultType } from "@hanzo/platform/types/with";
 import { createAppAuth } from "@octokit/auth-app";
 import { TRPCError } from "@trpc/server";
-import type { z } from "zod";
 import { Octokit } from "octokit";
+import type { z } from "zod";
 
 export const authGithub = (githubProvider: Github): Octokit => {
 	if (!haveGithubRequirements(githubProvider)) {
@@ -38,6 +38,42 @@ export const getGithubToken = async (
 	};
 
 	return installation.token;
+};
+
+/**
+ * Octokit authenticated as the platform's OWN GitHub App installation, built
+ * from the App credentials in the environment (`GITHUB_APP_ID` /
+ * `GITHUB_APP_PRIVATE_KEY` / `GITHUB_APP_INSTALLATION_ID`, synced from KMS
+ * `hanzo/platform`). This is the App-token path for the control plane's
+ * "App-free" GitHub readers — release metadata and App-free repo-config reads —
+ * that previously authenticated with a single rate-limited PAT (`GH_TOKEN`).
+ *
+ * `createAppAuth` mints and transparently refreshes a short-lived installation
+ * token (App JWT → `POST /app/installations/{id}/access_tokens`) per request,
+ * raising the shared read limit to the installation's own 5000/hr and scoping
+ * access to exactly the installation's repos.
+ *
+ * Fallbacks, in order, so every environment still runs:
+ *   1. App installation token  (in-cluster: creds present)
+ *   2. `GH_TOKEN` PAT          (legacy / transitional)
+ *   3. unauthenticated         (dev box with neither — low anonymous limit)
+ */
+export const appEnvOctokit = (): Octokit => {
+	const appId = process.env.GITHUB_APP_ID;
+	const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
+	const installationId = process.env.GITHUB_APP_INSTALLATION_ID;
+	if (appId && privateKey && installationId) {
+		return new Octokit({
+			authStrategy: createAppAuth,
+			auth: {
+				appId: Number(appId),
+				privateKey,
+				installationId: Number(installationId),
+			},
+		});
+	}
+	const token = process.env.GH_TOKEN;
+	return token ? new Octokit({ auth: token }) : new Octokit();
 };
 
 /**
