@@ -25,20 +25,6 @@ export interface MatrixEntry {
 	arch: BuildArch;
 }
 
-/**
- * How a build job reaches a runner:
- *   - `native`           — enqueue onto platform's long-poll fabric; an arcd
- *                          runner pulls it via POST /v1/arcd/poll. The default.
- *   - `workflow_dispatch`— the legacy GHA path; platform calls GitHub's
- *                          workflow_dispatch API. Opt-in fallback for repos
- *                          that have not migrated their runners to long-poll.
- *
- * Even under `native`, a pool with NO live registered runner transparently
- * falls back to `workflow_dispatch` so a build is never stranded — the
- * `native` choice is "prefer long-poll", not "long-poll or nothing".
- */
-export type DispatchMode = "native" | "workflow_dispatch";
-
 export interface BuildConfig {
 	/** Image name (multi-image `images:` form); empty for the legacy `build:` form. */
 	name: string;
@@ -49,8 +35,6 @@ export interface BuildConfig {
 	/** Tag template; only `{{git.sha}}` and `{{git.branch}}` are supported. */
 	tagPattern: string;
 	push: boolean;
-	/** Runner dispatch mode. Defaults to `native` (long-poll). */
-	dispatch: DispatchMode;
 }
 
 export interface DeployTarget {
@@ -70,6 +54,37 @@ export interface DeployConfig {
 	target: DeployTarget;
 }
 
+/**
+ * Optional end-to-end test stage. After a successful deploy the platform fires
+ * the universe Playwright suite as an in-cluster Job against the live service
+ * and records pass/fail on the build row. Reported, not hard-gated, by default.
+ */
+export interface E2eConfig {
+	/** Playwright spec(s) relative to universe/e2e, e.g. `tests/00-health.spec.ts`. */
+	spec: string;
+	/** Base domain under test (E2E_BASE_DOMAIN). Defaults to hanzo.ai. */
+	baseDomain?: string;
+	/** universe git ref to test from. Defaults to main. */
+	ref?: string;
+}
+
+/**
+ * Optional publish stage for library / SDK repos. After build (and, when
+ * configured, a passing e2e) the platform runs an in-cluster Job that publishes
+ * the package to npm and/or PyPI. Registry tokens come from KMS-synced secrets
+ * (`npm-token` / `pypi-token`) mounted into the Job — never hardcoded.
+ */
+export interface PublishConfig {
+	/** Publish to npm (`npm publish`). */
+	npm: boolean;
+	/** Publish to PyPI (`uv build` + `uv publish`). */
+	pypi: boolean;
+	/** Sub-directory of the repo holding the package. Defaults to `.`. */
+	packageDir: string;
+	/** Build + validate the package but do NOT upload — proves the stage safely. */
+	dryRun: boolean;
+}
+
 export interface PlatformConfig {
 	/**
 	 * One or more images to build. The legacy `build:` block yields a single
@@ -78,6 +93,8 @@ export interface PlatformConfig {
 	 */
 	builds: BuildConfig[];
 	deploy?: DeployConfig;
+	e2e?: E2eConfig;
+	publish?: PublishConfig;
 }
 
 const VALID_OS: readonly BuildOS[] = ["linux", "darwin", "windows"];
@@ -123,6 +140,70 @@ function optionalString(
 	return v;
 }
 
+/** An optional string field: undefined when absent, else a non-empty string. */
+function optionalStringOrUndef(
+	obj: Record<string, unknown>,
+	key: string,
+	path: string,
+): string | undefined {
+	const v = obj[key];
+	if (v === undefined) return undefined;
+	if (typeof v !== "string" || v.length === 0) {
+		throw new PlatformConfigError(
+			`${path}.${key}, when present, must be a non-empty string`,
+		);
+	}
+	return v;
+}
+
+/** A boolean field that defaults to false; rejects non-boolean values. */
+function boolField(
+	obj: Record<string, unknown>,
+	key: string,
+	path: string,
+): boolean {
+	const v = obj[key];
+	if (v === undefined) return false;
+	if (typeof v !== "boolean") {
+		throw new PlatformConfigError(`${path}.${key} must be a boolean`);
+	}
+	return v;
+}
+
+/** Parse + validate the optional `e2e:` block. */
+function parseE2e(raw: unknown): E2eConfig | undefined {
+	if (raw === undefined) return undefined;
+	if (!isObject(raw)) {
+		throw new PlatformConfigError("e2e, when present, must be a mapping");
+	}
+	return {
+		spec: requireString(raw, "spec", "e2e"),
+		baseDomain: optionalStringOrUndef(raw, "baseDomain", "e2e"),
+		ref: optionalStringOrUndef(raw, "ref", "e2e"),
+	};
+}
+
+/** Parse + validate the optional `publish:` block. */
+function parsePublish(raw: unknown): PublishConfig | undefined {
+	if (raw === undefined) return undefined;
+	if (!isObject(raw)) {
+		throw new PlatformConfigError("publish, when present, must be a mapping");
+	}
+	const npm = boolField(raw, "npm", "publish");
+	const pypi = boolField(raw, "pypi", "publish");
+	if (!npm && !pypi) {
+		throw new PlatformConfigError(
+			"publish requires at least one of npm: true or pypi: true",
+		);
+	}
+	return {
+		npm,
+		pypi,
+		packageDir: optionalStringOrUndef(raw, "packageDir", "publish") ?? ".",
+		dryRun: boolField(raw, "dryRun", "publish"),
+	};
+}
+
 /** Parse + de-duplicate a matrix list. `def` supplies the default when absent. */
 function parseMatrix(
 	rawMatrix: unknown,
@@ -164,15 +245,6 @@ function parseMatrix(
 	return matrix;
 }
 
-function parseDispatch(raw: unknown, path: string): DispatchMode {
-	if (raw !== undefined && raw !== "native" && raw !== "workflow_dispatch") {
-		throw new PlatformConfigError(
-			`${path}.dispatch must be one of native, workflow_dispatch (got ${JSON.stringify(raw)})`,
-		);
-	}
-	return (raw as DispatchMode | undefined) ?? "native";
-}
-
 /** Legacy single `build:` block → one BuildConfig. */
 function parseBuildBlock(build: Record<string, unknown>): BuildConfig {
 	const image = requireString(build, "image", "build");
@@ -192,7 +264,6 @@ function parseBuildBlock(build: Record<string, unknown>): BuildConfig {
 		image,
 		tagPattern: optionalString(build, "tag-pattern", "{{git.sha}}"),
 		push: build.push === undefined ? true : build.push === true,
-		dispatch: parseDispatch(build.dispatch, "build"),
 	};
 }
 
@@ -227,7 +298,6 @@ function parseImageEntry(entry: unknown, i: number): BuildConfig {
 		image: repo,
 		tagPattern: `{{git.sha}}-amd64-${suffix}`,
 		push: entry.push === undefined ? true : entry.push === true,
-		dispatch: parseDispatch(entry.dispatch, at),
 	};
 }
 
@@ -288,7 +358,12 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig {
 		// runner / GitOps. The platform only performs the operator-CR rollout, so
 		// a `services:`-only deploy is build-only here (deploy left undefined).
 		if (d.target === undefined && (d.services !== undefined || d.cluster !== undefined)) {
-			return { builds, deploy: undefined };
+			return {
+				builds,
+				deploy: undefined,
+				e2e: parseE2e(raw.e2e),
+				publish: parsePublish(raw.publish),
+			};
 		}
 		if (!isObject(d.target)) {
 			throw new PlatformConfigError(
@@ -320,7 +395,12 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig {
 		};
 	}
 
-	return { builds, deploy };
+	return {
+		builds,
+		deploy,
+		e2e: parseE2e(raw.e2e),
+		publish: parsePublish(raw.publish),
+	};
 }
 
 /** Parse + validate `.platform.yml` text. Throws `PlatformConfigError` on bad input. */
