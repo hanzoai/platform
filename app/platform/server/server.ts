@@ -573,6 +573,17 @@ void app.prepare().then(async () => {
 			console.log("Billing jobs started");
 		}
 
+		// GitHub App provider: idempotently materialize the platform's own
+		// provider row from the KMS-synced `GITHUB_APP_*` env so the webhook
+		// build path resolves a provider and mints App tokens instead of a PAT.
+		// Non-fatal; a no-op when the App creds are absent or already seeded.
+		if (process.env.NODE_ENV === "production") {
+			const { ensureGithubAppProvider } = await import(
+				"@hanzo/platform/services/github"
+			);
+			await ensureGithubAppProvider();
+		}
+
 		// Apps-lifecycle inventory: reconcile the `apps` table from the live
 		// operator `Service` CRs + Deployments so platform.hanzo.ai/apps shows
 		// every org's real apps with declared/running/drift/health (turns the
