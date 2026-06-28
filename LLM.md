@@ -11,7 +11,7 @@
 
 Platform owns the FULL build → deploy → test → publish lifecycle so a GitHub
 Actions outage cannot halt shipping. ONE conductor (the `paas` pod), ONE build
-path (an in-cluster Kaniko Job), ONE heartbeat (the build-watcher). No GHA, no
+path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
 `workflow_dispatch`, no external runner registration. Contract + schema:
 `docs/PLATFORM_CI.md`.
 
@@ -22,8 +22,8 @@ path (an in-cluster Kaniko Job), ONE heartbeat (the build-watcher). No GHA, no
 - Service layer: `pkg/platform/src/services/ci/` — `platform-config` (`hanzo.yml`
   parser + validator, now incl. `e2e:` + `publish:`), `github-webhook`,
   `build-job` (DB CRUD), `build-scheduler` (dispatch via `launchBuildJob`),
-  `kaniko-job` (the build muscle — Kaniko Job + outcome read), `build-watcher`
-  (the heartbeat: polls Kaniko Jobs, drives the pipeline), `build-completion`
+  `buildkit-job` (the build muscle — BuildKit Job + outcome read), `build-watcher`
+  (the heartbeat: polls BuildKit Jobs, drives the pipeline), `build-completion`
   (post-build orchestrator: deploy → e2e → publish, App-free config via
   `GH_TOKEN`), `deploy-executor` (merge-patch operator `Service` CR
   `.spec.image`), `e2e-runner` (Playwright Job), `publish-job` (npm/pypi Job,
@@ -32,11 +32,25 @@ path (an in-cluster Kaniko Job), ONE heartbeat (the build-watcher). No GHA, no
   `drizzle/0005_build_pipeline_columns.sql` adds `buildJobName`/`imageDigest`/
   `e2e*`/`publish*` and drops the dead `arcd_runner` table.
 - tRPC: `buildJob` router (org-scoped list/one/logs/trigger).
-- Build muscle: Kaniko (`gcr.io/kaniko-project/executor`) git-context
-  `git://github.com/<repo>.git#<ref>` → GHCR, on `runner-pool-32g` +
-  `dedicated=ci-runner`. The RETIRED long-poll/`workflow_dispatch` external-runner
+- Build muscle: BuildKit (`moby/buildkit:v0.16.0`, `buildctl-daemonless.sh`,
+  `--frontend=dockerfile.v0`) — the PROVEN contract that already builds
+  commerce/chat/cloud on this cluster — over an HTTPS git context
+  `https://github.com/<repo>.git#<ref>` → `--output=type=image,…,push=true` to
+  GHCR, privileged, on `runner-pool-32g` + `dedicated=ci-runner` (git auth from
+  `console-git-token` via `GIT_AUTH_TOKEN`, GHCR push cred from `kaniko-ghcr` at
+  `/root/.docker`). The RETIRED long-poll/`workflow_dispatch` external-runner
   surface (build-queue, arcd-runner, `/v1/arcd/poll`+`/complete`) was removed —
   it pointed at offline GitHub runners and silently no-op'd.
+- PROVEN LIVE (v4.4.4): `POST /v1/arcd/enqueue` for `hanzoai/pricing` created a
+  `build_job` row → platform launched the BuildKit Job (`build-pricing-*`,
+  `managed-by=platform`) → pushed `ghcr.io/hanzoai/pricing:v1.1.2` → the
+  build-watcher flipped the row to `succeeded`. The auto-deploy leg
+  (build-completion → deploy-executor) correctly REFUSED via the tenant gate
+  (pricing's `hanzo.yml` targets system ns `hanzo` ≠ the build org's
+  `tenant-<org>`); system services deploy by patching the operator `Service` CR
+  (`kubectl patch services.hanzo.ai/<svc> .spec.image.tag`) → operator rolls it.
+  The fully-autonomous build→deploy→e2e one-shot is for TENANT apps whose
+  `hanzo.yml` targets their own tenant namespace.
 
 ## Apps inventory — the "observe" half of the control plane
 
@@ -146,7 +160,7 @@ Platform's filesystem does not survive restarts, so it must never hold a real DB
 ## Versioning — ONE line, `v4.x` (HIP-0111)
 There is exactly one version line: **`v4.x`**. `app/platform/package.json`,
 git tags, and the published `ghcr.io/hanzoai/platform` image tag are the SAME
-string. Current: `v4.2.2`.
+string. Current: `v4.4.4`.
 
 `v0.28.x` is DEAD. It was the upstream Dokploy app-string (author Mauricio Siu)
 that the fork kept bumping out of habit; `v0.28.9` (#31) was the last one and is
