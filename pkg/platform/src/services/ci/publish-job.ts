@@ -13,7 +13,7 @@
  * hardcoded and never leave the Job. `dryRun` builds + validates the package
  * without uploading, so the stage is provable without burning a version.
  *
- * Decomplected like `kaniko-job` / `e2e-runner`: this module owns ONLY "shape +
+ * Decomplected like `buildkit-job` / `e2e-runner`: this module owns ONLY "shape +
  * launch the publish Job"; the Job owns publishing; the watcher owns advancing
  * the row. It reuses the platform batch client — one k8s seam.
  */
