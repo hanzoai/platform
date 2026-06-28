@@ -1,8 +1,8 @@
 /**
  * build-watcher — the autonomous heartbeat of the platform CI pipeline.
  *
- * Kaniko build Jobs cannot call back, so platform watches them: each tick it
- * reads every `running` buildJob's Kaniko Job and, when one terminates, hands
+ * BuildKit build Jobs cannot call back, so platform watches them: each tick it
+ * reads every `running` buildJob's BuildKit Job and, when one terminates, hands
  * it to `completeBuild` (success → deploy → test → publish). It then ticks the
  * e2e + publish sub-stages of already-succeeded rows via `reconcilePostBuild`
  * until they reach a terminal state. This is what makes a push flow all the way
@@ -17,7 +17,7 @@
  */
 import { type BuildJob, listBuildJobs } from "./build-job";
 import { completeBuild, reconcilePostBuild } from "./build-completion";
-import { readBuildOutcome } from "./kaniko-job";
+import { readBuildOutcome } from "./buildkit-job";
 
 const CI_NAMESPACE = "hanzo";
 
@@ -30,9 +30,9 @@ const INTERVAL_MS = Number.parseInt(
 let started = false;
 let ticking = false;
 
-/** Advance one `running` build whose Kaniko Job has terminated. */
+/** Advance one `running` build whose BuildKit Job has terminated. */
 async function advanceRunning(job: BuildJob): Promise<void> {
-	if (!job.buildJobName) return; // not dispatched to a Kaniko Job (shouldn't happen)
+	if (!job.buildJobName) return; // not dispatched to a BuildKit Job (shouldn't happen)
 	const outcome = await readBuildOutcome(CI_NAMESPACE, job.buildJobName);
 	if (!outcome.done) return;
 	await completeBuild({
