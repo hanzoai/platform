@@ -1,7 +1,7 @@
 /**
  * Platform-native CI/CD — barrel.
  *
- * Webhook / direct-trigger → BuildScheduler → Kaniko build Job → build-watcher
+ * Webhook / direct-trigger → BuildScheduler → BuildKit build Job → build-watcher
  * → DeployExecutor → e2e Job → publish Job. Platform owns the build+deploy+test
  * +publish system-of-record (the buildJob table), the deploy decision, and the
  * rollout, executing every stage as an in-cluster Job on its own runner pool —
@@ -16,6 +16,6 @@ export * from "./deploy-executor";
 export * from "./e2e-runner";
 export * from "./github-webhook";
 export * from "./image-ref";
-export * from "./kaniko-job";
+export * from "./buildkit-job";
 export * from "./platform-config";
 export * from "./publish-job";
