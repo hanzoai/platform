@@ -1,15 +1,16 @@
 import {
+	buildBuildkitJob,
 	buildJobName,
-	buildKanikoJob,
-	kanikoArgs,
-} from "@hanzo/platform/services/ci/kaniko-job";
+	buildkitArgs,
+} from "@hanzo/platform/services/ci/buildkit-job";
 import { describe, expect, it } from "vitest";
 
 /**
- * kaniko-job is the single build muscle. These tests pin the Kaniko Job
- * contract (git context, destination, digest file, auth secrets, runner pool)
- * that the hand-applied build Jobs proved — so bridging the scheduler to it
- * produces the SAME build a human would have applied by hand.
+ * buildkit-job is the single build muscle. These tests pin the BuildKit Job
+ * contract (dockerfile.v0 frontend, HTTPS git context, image output, auth
+ * secrets, runner pool, privileged) that the hand-applied build Jobs proved —
+ * so bridging the scheduler to it produces the SAME build a human would have
+ * applied by hand to build commerce/chat/cloud on this cluster.
  */
 describe("buildJobName", () => {
 	it("is RFC1123-safe and <=63 chars", () => {
@@ -26,59 +27,66 @@ describe("buildJobName", () => {
 	});
 });
 
-describe("kanikoArgs", () => {
-	it("emits the proven git-context build contract", () => {
-		const args = kanikoArgs({
+describe("buildkitArgs", () => {
+	it("emits the proven dockerfile.v0 git-context build contract", () => {
+		const args = buildkitArgs({
 			repo: "hanzoai/pricing",
 			gitRef: "refs/heads/main",
 			image: "ghcr.io/hanzoai/pricing:v1.2.3",
 			buildJobId: "j1",
 		});
+		expect(args[0]).toBe("build");
+		expect(args).toContain("--frontend=dockerfile.v0");
 		expect(args).toContain(
-			"--context=git://github.com/hanzoai/pricing.git#refs/heads/main",
+			"--opt=context=https://github.com/hanzoai/pricing.git#refs/heads/main",
 		);
-		expect(args).toContain("--destination=ghcr.io/hanzoai/pricing:v1.2.3");
-		expect(args).toContain("--dockerfile=Dockerfile");
-		expect(args).toContain("--digest-file=/dev/termination-log");
-		expect(args).toContain("--custom-platform=linux/amd64");
+		expect(args).toContain("--opt=filename=Dockerfile");
+		expect(args).toContain("--opt=platform=linux/amd64");
+		expect(args).toContain(
+			"--output=type=image,name=ghcr.io/hanzoai/pricing:v1.2.3,push=true",
+		);
+		expect(args).toContain("--secret=id=GIT_AUTH_TOKEN,env=GIT_AUTH_TOKEN");
+		expect(args).toContain("--progress=plain");
 		// no sub-path or target for a root-context, single-stage build
-		expect(args.some((a) => a.startsWith("--context-sub-path"))).toBe(false);
-		expect(args.some((a) => a.startsWith("--target="))).toBe(false);
+		expect(args.some((a) => a.startsWith("--opt=context-subdir"))).toBe(false);
+		expect(args.some((a) => a.startsWith("--opt=target="))).toBe(false);
 	});
 
 	it("strips a leading ./ from the dockerfile", () => {
-		const args = kanikoArgs({
+		const args = buildkitArgs({
 			repo: "o/r",
 			gitRef: "main",
 			image: "i:t",
 			dockerfile: "./Dockerfile.production",
 			buildJobId: "j",
 		});
-		expect(args).toContain("--dockerfile=Dockerfile.production");
+		expect(args).toContain("--opt=filename=Dockerfile.production");
 	});
 
-	it("adds --context-sub-path and --target when set", () => {
-		const args = kanikoArgs({
+	it("adds context-subdir, target, and build-args when set", () => {
+		const args = buildkitArgs({
 			repo: "o/r",
 			gitRef: "main",
 			image: "i:t",
 			context: "services/api",
 			dockerTarget: "runtime",
+			buildArgs: { VERSION: "1.2.3" },
 			buildJobId: "j",
 		});
-		expect(args).toContain("--context-sub-path=services/api");
-		expect(args).toContain("--target=runtime");
+		expect(args).toContain("--opt=context-subdir=services/api");
+		expect(args).toContain("--opt=target=runtime");
+		expect(args).toContain("--opt=build-arg:VERSION=1.2.3");
 	});
 
-	it("targets arm64 platform when arch=arm64", () => {
-		const args = kanikoArgs({
+	it("targets the arm64 platform when arch=arm64", () => {
+		const args = buildkitArgs({
 			repo: "o/r",
 			gitRef: "main",
 			image: "i:t",
 			arch: "arm64",
 			buildJobId: "j",
 		});
-		expect(args).toContain("--custom-platform=linux/arm64");
+		expect(args).toContain("--opt=platform=linux/arm64");
 	});
 });
 
@@ -88,8 +96,8 @@ type EnvRef = {
 	valueFrom?: { secretKeyRef: { name: string; key: string; optional?: boolean } };
 };
 
-describe("buildKanikoJob", () => {
-	const job = buildKanikoJob({
+describe("buildBuildkitJob", () => {
+	const job = buildBuildkitJob({
 		repo: "hanzoai/pricing",
 		gitRef: "refs/heads/main",
 		image: "ghcr.io/hanzoai/pricing:t",
@@ -98,8 +106,10 @@ describe("buildKanikoJob", () => {
 	const pod = job.spec.template.spec;
 	const container = pod.containers[0]!;
 
-	it("uses the kaniko executor and CI runner pool", () => {
-		expect(container.image).toBe("gcr.io/kaniko-project/executor:latest");
+	it("runs the privileged BuildKit executor on the CI runner pool", () => {
+		expect(container.image).toBe("moby/buildkit:v0.16.0");
+		expect(container.command).toEqual(["buildctl-daemonless.sh"]);
+		expect(container.securityContext.privileged).toBe(true);
 		expect(pod.nodeSelector["doks.digitalocean.com/node-pool"]).toBe(
 			"runner-pool-32g",
 		);
@@ -108,11 +118,11 @@ describe("buildKanikoJob", () => {
 
 	it("wires git + registry auth from the canonical secrets", () => {
 		const gitEnv = (container.env as EnvRef[]).find(
-			(e) => e.name === "GIT_PASSWORD",
+			(e) => e.name === "GIT_AUTH_TOKEN",
 		);
 		expect(gitEnv?.valueFrom?.secretKeyRef.name).toBe("console-git-token");
 		expect(pod.volumes[0]!.secret.secretName).toBe("kaniko-ghcr");
-		expect(container.volumeMounts[0]!.mountPath).toBe("/kaniko/.docker");
+		expect(container.volumeMounts[0]!.mountPath).toBe("/root/.docker");
 	});
 
 	it("does not mount a service account token into the build pod", () => {
