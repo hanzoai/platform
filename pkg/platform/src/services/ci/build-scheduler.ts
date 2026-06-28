@@ -8,12 +8,12 @@
  *      uniquely by (repo, sha, target).
  *   4. Dispatch each job to the build muscle.
  *
- * Dispatch — ONE way: the in-cluster Kaniko Job (`kaniko-job.launchBuildJob`).
+ * Dispatch — ONE way: the in-cluster BuildKit Job (`buildkit-job.launchBuildJob`).
  * Platform builds on its OWN runner pool and is the system-of-record (this
  * module + the buildJob table) and the deploy decision. There is no GitHub
  * Actions path and no `workflow_dispatch` fallback — the prior fallback pointed
  * at offline GitHub runners and silently no-op'd, so it was removed. A build
- * either launches a Kaniko Job in-cluster or fails loud.
+ * either launches a BuildKit Job in-cluster or fails loud.
  */
 import {
 	appEnvOctokit,
@@ -27,7 +27,7 @@ import {
 	findBuildJobByTarget,
 	updateBuildJob,
 } from "./build-job";
-import { launchBuildJob } from "./kaniko-job";
+import { launchBuildJob } from "./buildkit-job";
 import {
 	type BuildArch,
 	type BuildConfig,
@@ -195,9 +195,9 @@ function archOf(target: string): BuildArch {
 }
 
 /**
- * Dispatch one queued build to the build muscle: launch its Kaniko Job and
+ * Dispatch one queued build to the build muscle: launch its BuildKit Job and
  * transition the row to `running`, recording the Job name (the build-watcher
- * polls it) and a `kaniko:<jobName>` correlation id.
+ * polls it) and a `buildkit:<jobName>` correlation id.
  */
 async function dispatchBuild(
 	job: BuildJob,
@@ -216,7 +216,7 @@ async function dispatchBuild(
 	});
 	return updateBuildJob(job.buildJobId, {
 		status: "running",
-		dispatchId: `kaniko:${launch.jobName}`,
+		dispatchId: `buildkit:${launch.jobName}`,
 		buildJobName: launch.jobName,
 		startedAt: new Date().toISOString(),
 	});
@@ -226,7 +226,7 @@ async function dispatchBuild(
  * Spec for a GitHub-App-free direct build. The webhook path derives all of
  * this from `hanzo.yml` at a SHA; this lets an operator (or a repo not wired to
  * the GitHub App) enqueue a build by stating it explicitly. The downstream is
- * identical — `createBuildJob` + the Kaniko build muscle — so there is exactly
+ * identical — `createBuildJob` + the BuildKit build muscle — so there is exactly
  * ONE build path, two front doors.
  */
 export interface DirectBuildInput {
@@ -250,7 +250,7 @@ export interface DirectBuildInput {
 
 /**
  * Enqueue a single build directly, WITHOUT a GitHub App or webhook. Creates the
- * buildJob row and launches its Kaniko Job in-cluster. Idempotent on
+ * buildJob row and launches its BuildKit Job in-cluster. Idempotent on
  * (repo, sha, target): re-enqueuing the same target returns the existing job.
  */
 export async function enqueueDirectBuild(
