@@ -4,7 +4,7 @@
  * When a build Job terminates, `completeBuild` records the outcome and, on
  * success, drives the rest of the pipeline: DEPLOY (operator CR patch) → TEST
  * (e2e Job) → PUBLISH (npm/pypi Job). It is the single shared brain used by
- * BOTH the build-watcher (which polls the Kaniko Job and calls in when it
+ * BOTH the build-watcher (which polls the BuildKit Job and calls in when it
  * finishes) and the `/v1/build-callback` REST hook (for an external builder
  * that reports its own result).
  *
@@ -32,7 +32,7 @@ import {
 import { fetchPlatformConfigByToken } from "./build-scheduler";
 import { type DeployResult, executeDeploy } from "./deploy-executor";
 import { runE2e } from "./e2e-runner";
-import { readJobStatus } from "./kaniko-job";
+import { readJobStatus } from "./buildkit-job";
 import type { PublishConfig } from "./platform-config";
 import { launchPublishJob } from "./publish-job";
 

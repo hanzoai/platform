@@ -1,33 +1,36 @@
 /**
- * kaniko-job — the build muscle.
+ * buildkit-job — the build muscle.
  *
- * Platform's ONE way to build a container image: an in-cluster Kaniko Job. The
+ * Platform's ONE way to build a container image: an in-cluster BuildKit Job. The
  * BuildScheduler resolves what to build (image ref, dockerfile, context) and
  * this module launches the Job that clones the repo, builds the image, and
  * pushes it to GHCR — on our own runner pool, never via GitHub Actions.
  *
  * Decomplected exactly like `e2e-runner`: this module owns ONLY "shape + launch
- * the build Job" and "read its outcome"; Kaniko owns building; the build-watcher
- * owns advancing the buildJob row. It reuses the platform's batch client — the
- * same k8s seam that drives e2e Jobs and operator-CR deploys.
+ * the build Job" and "read its outcome"; BuildKit owns building; the
+ * build-watcher owns advancing the buildJob row. It reuses the platform's batch
+ * client — the same k8s seam that drives e2e Jobs and operator-CR deploys.
  *
- * The Job spec mirrors the proven, hand-applied build Jobs (e.g. the
- * `platform-build-*` / `<repo>-build-*` Jobs): Kaniko executor, a git context
- * `git://github.com/<repo>.git#<ref>`, push to `--destination`, the image digest
- * written to /dev/termination-log via `--digest-file`, git auth from
- * `console-git-token`, registry auth from `kaniko-ghcr`, scheduled onto the
- * `dedicated=ci-runner` pool. Bridging the scheduler to this is what makes
- * platform-native builds REAL — no human applying Job YAML by hand.
+ * The Job spec mirrors the PROVEN, hand-applied build Jobs that already build
+ * commerce/chat/cloud on this cluster (`<repo>-build-<sha>`): a privileged
+ * `moby/buildkit` pod running `buildctl-daemonless.sh build` with the
+ * `dockerfile.v0` frontend over an HTTPS git context, pushing to
+ * `--output=type=image,…,push=true`. Git auth comes from `console-git-token`
+ * (the `GIT_AUTH_TOKEN` env BuildKit reads for an authenticated git context),
+ * registry auth from `kaniko-ghcr` mounted at `/root/.docker`, scheduled onto
+ * the `runner-pool-32g` CI pool (tainted `dedicated=ci-runner`). Bridging the
+ * scheduler to this is what makes platform-native builds REAL — no human
+ * applying Job YAML by hand.
  */
 import { TRPCError } from "@trpc/server";
 import { getDefaultClients } from "../k8s/k8s-client";
 import type { BuildArch } from "./platform-config";
 
-/** Kaniko executor image — the canonical in-cluster builder. */
-const KANIKO_IMAGE = "gcr.io/kaniko-project/executor:latest";
-/** Secret (key `token`) used to clone private repos. */
+/** BuildKit executor image — the canonical in-cluster builder (proven contract). */
+const BUILDKIT_IMAGE = "moby/buildkit:v0.16.0";
+/** Secret (key `token`) used to clone private repos via the git context. */
 const GIT_SECRET = "console-git-token";
-/** Secret (key `config.json`) holding the GHCR push credential, mounted at /kaniko/.docker. */
+/** Secret (key `config.json`) holding the GHCR push credential, mounted at /root/.docker. */
 const DOCKER_CONFIG_SECRET = "kaniko-ghcr";
 /** CI runner taint the build Jobs tolerate. */
 const CI_TOLERATION = {
@@ -50,18 +53,18 @@ export interface BuildResources {
 }
 
 const DEFAULT_RESOURCES: BuildResources = {
-	requests: { cpu: "2", memory: "8Gi", "ephemeral-storage": "24Gi" },
-	limits: { cpu: "6", memory: "14Gi", "ephemeral-storage": "60Gi" },
+	requests: { cpu: "2", memory: "6Gi", "ephemeral-storage": "24Gi" },
+	limits: { cpu: "8", memory: "16Gi", "ephemeral-storage": "60Gi" },
 };
 
 export interface BuildJobLaunchInput {
 	/** `owner/name` — the source repository. */
 	repo: string;
 	/**
-	 * Git context fragment Kaniko clones + checks out: a full ref
-	 * (`refs/heads/main`, `refs/tags/v1.2.3`) — the ref the triggering SHA is
-	 * the tip of. Builds track the ref tip; (repo, sha, target) idempotency
-	 * dedupes re-triggers.
+	 * Git context fragment BuildKit clones + checks out: a full ref
+	 * (`refs/heads/main`, `refs/tags/v1.2.3`) or a SHA — the ref the triggering
+	 * commit is the tip of. Builds track the ref tip; (repo, sha, target)
+	 * idempotency dedupes re-triggers.
 	 */
 	gitRef: string;
 	/** Fully-resolved destination image, e.g. `ghcr.io/hanzoai/pricing:<tag>`. */
@@ -70,8 +73,10 @@ export interface BuildJobLaunchInput {
 	dockerfile?: string;
 	/** Build context sub-path within the repo. Default `.` (repo root). */
 	context?: string;
-	/** Optional Docker build stage (`--target`) for multi-stage Dockerfiles. */
+	/** Optional Docker build stage (`--opt=target=`) for multi-stage Dockerfiles. */
 	dockerTarget?: string;
+	/** Optional `--opt=build-arg:KEY=VAL` pairs (e.g. `{ VERSION: "1.2.3" }`). */
+	buildArgs?: Record<string, string>;
 	/** Target architecture. Drives node pool + image platform. Default amd64. */
 	arch?: BuildArch;
 	/** Stable correlation id (the buildJob id) baked into the Job name + labels. */
@@ -93,7 +98,7 @@ export interface BuildOutcome {
 	/** The Job has reached a terminal state (succeeded or failed). */
 	done: boolean;
 	succeeded: boolean;
-	/** Image digest from /dev/termination-log, when the build wrote one. */
+	/** Image digest, when an external builder reported one via /v1/build-callback. */
 	digest?: string;
 	/** Failure detail when `done && !succeeded`. */
 	reason?: string;
@@ -119,29 +124,39 @@ export function buildJobName(repo: string, buildJobId: string): string {
 	return `build-${name}-${id}`.slice(0, 63).replace(/-$/, "");
 }
 
-/** Kaniko args for a build — pure, so the integration test can assert the contract. */
-export function kanikoArgs(input: BuildJobLaunchInput): string[] {
+/**
+ * `buildctl-daemonless.sh` args for a build — pure, so the unit test can assert
+ * the contract. Mirrors the proven hand-applied BuildKit Jobs: dockerfile.v0
+ * frontend, HTTPS git context, image output pushed to GHCR.
+ */
+export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	const dockerfile = (input.dockerfile ?? "Dockerfile").replace(/^\.\//, "");
-	const context = input.context ?? ".";
 	const arch = input.arch ?? "amd64";
 	const args = [
-		`--context=git://github.com/${input.repo}.git#${input.gitRef}`,
-		`--dockerfile=${dockerfile}`,
-		`--destination=${input.image}`,
-		`--custom-platform=linux/${arch}`,
-		"--cache=false",
-		"--single-snapshot",
-		"--cleanup",
-		"--verbosity=info",
-		"--digest-file=/dev/termination-log",
+		"build",
+		"--frontend=dockerfile.v0",
+		`--opt=context=https://github.com/${input.repo}.git#${input.gitRef}`,
+		`--opt=filename=${dockerfile}`,
+		`--opt=platform=linux/${arch}`,
 	];
-	if (context !== ".") args.splice(2, 0, `--context-sub-path=${context}`);
-	if (input.dockerTarget) args.splice(2, 0, `--target=${input.dockerTarget}`);
+	if (input.context && input.context !== ".") {
+		args.push(`--opt=context-subdir=${input.context}`);
+	}
+	if (input.dockerTarget) args.push(`--opt=target=${input.dockerTarget}`);
+	for (const [k, v] of Object.entries(input.buildArgs ?? {})) {
+		args.push(`--opt=build-arg:${k}=${v}`);
+	}
+	args.push(
+		"--secret=id=GIT_AUTH_TOKEN,env=GIT_AUTH_TOKEN",
+		"--secret=id=gh_token,env=GH_TOKEN",
+		`--output=type=image,name=${input.image},push=true`,
+		"--progress=plain",
+	);
 	return args;
 }
 
-/** Build the Kaniko Job object — pure (no IO), so its shape is unit-testable. */
-export function buildKanikoJob(input: BuildJobLaunchInput) {
+/** Build the BuildKit Job object — pure (no IO), so its shape is unit-testable. */
+export function buildBuildkitJob(input: BuildJobLaunchInput) {
 	const namespace = input.namespace ?? "hanzo";
 	const arch = input.arch ?? "amd64";
 	const name = buildJobName(input.repo, input.buildJobId);
@@ -172,21 +187,29 @@ export function buildKanikoJob(input: BuildJobLaunchInput) {
 					tolerations: [CI_TOLERATION],
 					containers: [
 						{
-							name: "kaniko",
-							image: KANIKO_IMAGE,
-							args: kanikoArgs(input),
+							name: "build",
+							image: BUILDKIT_IMAGE,
+							command: ["buildctl-daemonless.sh"],
+							args: buildkitArgs(input),
+							securityContext: { privileged: true },
 							env: [
-								{ name: "GIT_USERNAME", value: "x-access-token" },
 								{
-									name: "GIT_PASSWORD",
+									name: "GIT_AUTH_TOKEN",
 									valueFrom: {
 										secretKeyRef: { name: GIT_SECRET, key: "token" },
 									},
 								},
+								{
+									name: "GH_TOKEN",
+									valueFrom: {
+										secretKeyRef: { name: GIT_SECRET, key: "token" },
+									},
+								},
+								{ name: "DOCKER_CONFIG", value: "/root/.docker" },
 							],
 							resources,
 							volumeMounts: [
-								{ mountPath: "/kaniko/.docker", name: "docker-config" },
+								{ mountPath: "/root/.docker", name: "docker-config" },
 							],
 						},
 					],
@@ -213,7 +236,7 @@ export function buildKanikoJob(input: BuildJobLaunchInput) {
 export async function launchBuildJob(
 	input: BuildJobLaunchInput,
 ): Promise<BuildJobLaunch> {
-	const job = buildKanikoJob(input);
+	const job = buildBuildkitJob(input);
 	const namespace = input.namespace ?? "hanzo";
 	const clients = getDefaultClients();
 	try {
@@ -267,9 +290,10 @@ export async function readJobStatus(
 }
 
 /**
- * Read a build Job's terminal outcome. On success the Kaniko-written image
- * digest is recovered from the build pod's termination message
- * (`--digest-file=/dev/termination-log`) as build evidence.
+ * Read a build Job's terminal outcome. The image is its own evidence — the
+ * pushed `ghcr.io/<repo>:<tag>` either exists or it doesn't; BuildKit does not
+ * write a digest into the pod, so the in-cluster path leaves `digest` unset (an
+ * external builder may supply one via /v1/build-callback).
  */
 export async function readBuildOutcome(
 	namespace: string,
@@ -277,39 +301,10 @@ export async function readBuildOutcome(
 ): Promise<BuildOutcome> {
 	const status = await readJobStatus(namespace, jobName);
 	if (!status.done) return { done: false, succeeded: false };
-	if (status.succeeded) {
-		return {
-			done: true,
-			succeeded: true,
-			digest: await readDigest(namespace, jobName),
-		};
-	}
+	if (status.succeeded) return { done: true, succeeded: true };
 	return {
 		done: true,
 		succeeded: false,
-		reason: `Kaniko Job ${jobName} failed (backoff exhausted)`,
+		reason: `BuildKit Job ${jobName} failed (backoff exhausted)`,
 	};
-}
-
-/** Recover the image digest from the build pod's terminated container message. */
-async function readDigest(
-	namespace: string,
-	jobName: string,
-): Promise<string | undefined> {
-	const clients = getDefaultClients();
-	try {
-		const pods = await clients.core.listNamespacedPod({
-			namespace,
-			labelSelector: `job-name=${jobName}`,
-		});
-		for (const pod of pods.items) {
-			for (const cs of pod.status?.containerStatuses ?? []) {
-				const msg = cs.state?.terminated?.message?.trim();
-				if (msg?.startsWith("sha256:")) return msg;
-			}
-		}
-	} catch {
-		// best-effort — the digest is evidence, not control flow.
-	}
-	return undefined;
 }

@@ -47,12 +47,12 @@ export const buildJob = sqliteTable("build_job", {
 		.default("queued"),
 	/**
 	 * Identifier returned by the build dispatch. The single dispatch path is the
-	 * in-cluster Kaniko Job (`kaniko:<jobName>`); platform builds on its own
+	 * in-cluster BuildKit Job (`buildkit:<jobName>`); platform builds on its own
 	 * cluster, never via GitHub Actions. Used to correlate completion.
 	 */
 	dispatchId: text("dispatchId"),
 	/**
-	 * Name of the in-cluster Kaniko build Job that builds + pushes this image.
+	 * Name of the in-cluster BuildKit build Job that builds + pushes this image.
 	 * The build-watcher reads this Job's status to advance the row.
 	 */
 	buildJobName: text("buildJobName"),
