@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="platform" width="880"></p>
+
 <div align="center">
   <a href="https://hanzo.ai">
     <img src=".github/sponsors/logo.png" alt="Hanzo - Open Source Alternative to Vercel, Heroku and Netlify." width="100%"  />
