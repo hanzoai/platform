@@ -4,7 +4,7 @@ import {
 	extractCommitMessage,
 	extractHash,
 	getProviderByHeader,
-} from "@/pages/api/deploy/[refreshToken]";
+} from "@/pages/api/v1/deploy/[refreshToken]";
 
 describe("Soft Serve Webhook", () => {
 	const mockSoftServeHeaders = {

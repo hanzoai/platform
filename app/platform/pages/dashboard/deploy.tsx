@@ -58,7 +58,7 @@ const DeployPage = () => {
 
   // Load compose file from repo
   const loadFromRepo = async (path: string) => {
-    const response = await fetch(`/api/repo/file?path=${path}`);
+    const response = await fetch(`/v1/repo/file?path=${path}`);
     const content = await response.text();
     setYamlContent(content);
     parseYaml(content);

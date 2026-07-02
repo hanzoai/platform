@@ -10,7 +10,7 @@
 #
 # The router's `receiveNotification` procedure is intentionally NOT migrated: it
 # is a PUBLIC server-to-server webhook (remote monitoring agents POST to
-# `/api/trpc/notification.receiveNotification` with a body-carried token, NOT a
+# `/v1/trpc/notification.receiveNotification` with a body-carried token, NOT a
 # browser session). It stays a tRPC HTTP endpoint; moving it onto this
 # session-minted WS would break remote metrics callbacks.
 #
