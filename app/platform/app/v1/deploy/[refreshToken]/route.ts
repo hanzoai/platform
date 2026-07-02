@@ -6,7 +6,8 @@
  * single home `server/deploy/webhook.ts`; this route folds the request into that
  * `(headers, body)` contract, runs the source-type gating, and enqueues.
  */
-import { IS_CLOUD, shouldDeploy } from "@hanzo/platform";
+import { IS_CLOUD } from "@hanzo/platform/constants";
+import { shouldDeploy } from "@hanzo/platform/utils/watch-paths/should-deploy";
 import { db } from "@hanzo/platform/db";
 import { eq } from "drizzle-orm";
 import { applications } from "@/server/db/schema";
