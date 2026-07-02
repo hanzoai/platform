@@ -87,13 +87,13 @@ export function UseKeyboardNav({ forPage }: { forPage: Page }) {
 
 	const sp = useSearchParams();
 	const router = useRouter();
-	const pathname = usePathname();
+	const pathname = usePathname() ?? "";
 
 	const shortcuts = SHORTCUTS[forPage];
 
 	const updateSearchParam = useCallback(
 		(name: string, value: string) => {
-			const params = new URLSearchParams(sp.toString());
+			const params = new URLSearchParams(sp?.toString());
 			params.set(name, value);
 
 			return params.toString();
