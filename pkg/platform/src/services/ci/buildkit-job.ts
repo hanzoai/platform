@@ -149,6 +149,11 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	args.push(
 		"--secret=id=GIT_AUTH_TOKEN,env=GIT_AUTH_TOKEN",
 		"--secret=id=gh_token,env=GH_TOKEN",
+		// Materialized ~/.netrc (see buildBuildkitJob's command wrapper) so a
+		// Dockerfile that clones private repos with `--mount=type=secret,id=netrc`
+		// authenticates. Same credential (console-git-token) as the git context —
+		// one credential, one way.
+		"--secret=id=netrc,src=/tmp/netrc",
 		`--output=type=image,name=${input.image},push=true`,
 		"--progress=plain",
 	);
@@ -189,8 +194,16 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 						{
 							name: "build",
 							image: BUILDKIT_IMAGE,
-							command: ["buildctl-daemonless.sh"],
-							args: buildkitArgs(input),
+							// Wrap buildctl to first materialize ~/.netrc from the
+							// GIT_AUTH_TOKEN env, so Dockerfiles cloning private repos
+							// via `--mount=type=secret,id=netrc` authenticate. `$0` is a
+							// placeholder; buildctl's real args ride `"$@"`.
+							command: ["/bin/sh", "-c"],
+							args: [
+								'printf "machine github.com login x-access-token password %s\\n" "$GIT_AUTH_TOKEN" > /tmp/netrc && exec buildctl-daemonless.sh "$@"',
+								"buildctl-daemonless.sh",
+								...buildkitArgs(input),
+							],
 							securityContext: { privileged: true },
 							env: [
 								{
