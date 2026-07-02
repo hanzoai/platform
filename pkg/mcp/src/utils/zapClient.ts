@@ -143,7 +143,7 @@ export async function zapHealth(): Promise<boolean> {
 
 /**
  * Mapping of MCP API paths to ZAP tool names.
- * When the MCP server would call `GET /api/project.getAll`, it can instead
+ * When the MCP server would call `GET /v1/trpc/project.getAll`, it can instead
  * call `zapCall("platform.list_projects", { organizationId })`.
  */
 export const MCP_TO_ZAP_MAP: Record<string, string> = {
