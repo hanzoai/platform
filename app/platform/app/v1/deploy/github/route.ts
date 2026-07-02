@@ -6,18 +6,20 @@
  * configured to auto-deploy. Payload parsing helpers are shared from
  * `server/deploy/webhook.ts`.
  */
+import { IS_CLOUD } from "@hanzo/platform/constants";
+import { db } from "@hanzo/platform/db";
 import {
-	checkUserRepositoryPermissions,
-	createPreviewDeployment,
 	createSecurityBlockedComment,
 	findGithubById,
+} from "@hanzo/platform/services/github";
+import {
+	createPreviewDeployment,
 	findPreviewDeploymentByApplicationId,
 	findPreviewDeploymentsByPullRequestId,
-	IS_CLOUD,
 	removePreviewDeployment,
-	shouldDeploy,
-} from "@hanzo/platform";
-import { db } from "@hanzo/platform/db";
+} from "@hanzo/platform/services/preview-deployment";
+import { checkUserRepositoryPermissions } from "@hanzo/platform/utils/providers/github";
+import { shouldDeploy } from "@hanzo/platform/utils/watch-paths/should-deploy";
 import { Webhooks } from "@octokit/webhooks";
 import { and, eq } from "drizzle-orm";
 import { applications, compose, github } from "@/server/db/schema";
