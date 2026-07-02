@@ -890,7 +890,7 @@ function SidebarLogo() {
 }
 
 function MobileCloser() {
-	const pathname = usePathname();
+	const pathname = usePathname() ?? "";
 	const { setOpenMobile, isMobile } = useSidebar();
 
 	useEffect(() => {
@@ -918,7 +918,7 @@ export default function Page({ children }: Props) {
 		setIsLoaded(true);
 	}, []);
 
-	const pathname = usePathname();
+	const pathname = usePathname() ?? "";
 	const { data: auth } = api.user.get.useQuery();
 	const { data: hanzoVersion } = api.settings.getHanzoVersion.useQuery();
 
