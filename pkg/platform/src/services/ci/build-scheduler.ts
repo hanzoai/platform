@@ -325,6 +325,10 @@ export async function scheduleBuilds(
 					? input.ref.slice("refs/tags/".length)
 					: undefined,
 			});
+			// Empty resolved tag = a {{git.tag}} repo on a NON-tag push (branch).
+			// Skip: such repos publish ONLY on a v* tag (semver-only, one way).
+			// Never push `image:` with a bare/empty tag.
+			if (!tag) continue;
 			const job = await createBuildJob({
 				repo: input.repo,
 				sha: input.sha,
