@@ -257,7 +257,7 @@ export function RegisterOidcDialog({
 												Callback URL (configure in your IdP)
 											</p>
 											<p className="mt-0.5 break-all font-mono">
-												{baseURL}/api/auth/sso/callback/
+												{baseURL}/v1/auth/sso/callback/
 												{watchedProviderId?.trim() || "..."}
 											</p>
 										</div>
