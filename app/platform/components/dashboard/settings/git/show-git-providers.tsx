@@ -56,7 +56,7 @@ export const ShowGitProviders = () => {
 		gitlabId: string,
 		gitlabUrl: string,
 	) => {
-		const redirectUri = `${url}/api/providers/gitlab/callback?gitlabId=${gitlabId}`;
+		const redirectUri = `${url}/v1/providers/gitlab/callback?gitlabId=${gitlabId}`;
 		const scope = "api read_user read_repository";
 		const authUrl = `${gitlabUrl}/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scopes=${encodeURIComponent(scope)}`;
 		return authUrl;
