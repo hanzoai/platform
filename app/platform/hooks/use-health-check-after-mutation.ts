@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
-const HEALTH_CHECK_URL = "/api/health";
+const HEALTH_CHECK_URL = "/v1/health";
 
 export interface UseHealthCheckAfterMutationOptions {
 	/**
