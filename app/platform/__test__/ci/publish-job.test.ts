@@ -9,6 +9,8 @@ import { describe, expect, it } from "vitest";
 const cfg = (over: Partial<PublishConfig> = {}): PublishConfig => ({
 	npm: false,
 	pypi: false,
+	cargo: false,
+	cargoCrates: [],
 	packageDir: ".",
 	dryRun: false,
 	...over,
@@ -47,6 +49,32 @@ describe("publishScript", () => {
 		expect(s).toContain("npm publish");
 		expect(s).toContain("uv build");
 	});
+
+	it("publishes a single crate to crates.io with the registry token", () => {
+		const s = publishScript(cfg({ cargo: true }));
+		expect(s).toContain("sh.rustup.rs");
+		expect(s).toContain('cargo publish --no-verify --token "${CARGO_REGISTRY_TOKEN:-}"');
+		expect(s).toContain("for c in .; do");
+		expect(s).not.toContain("--dry-run");
+	});
+
+	it("publishes a cargo workspace bottom-up in the declared crate order", () => {
+		const s = publishScript(
+			cfg({ cargo: true, cargoCrates: ["hanzo-kernels", "hanzo-ml", "hanzo-nn"] }),
+		);
+		expect(s).toContain("for c in hanzo-kernels hanzo-ml hanzo-nn; do");
+	});
+
+	it("treats an already-published crate as a skip, not a failure", () => {
+		const s = publishScript(cfg({ cargo: true }));
+		expect(s).toContain("already (uploaded|exists)|is already uploaded");
+	});
+
+	it("dry-runs cargo without uploading", () => {
+		const s = publishScript(cfg({ cargo: true, dryRun: true }));
+		expect(s).toContain("cargo publish --no-verify --dry-run");
+		expect(s).not.toContain('--token "${CARGO_REGISTRY_TOKEN');
+	});
 });
 
 describe("publishJobName", () => {
@@ -75,9 +103,12 @@ describe("buildPublishJobObject", () => {
 	it("mounts registry tokens as OPTIONAL KMS-synced secrets (never hardcoded)", () => {
 		const npm = env.find((e) => e.name === "NPM_TOKEN");
 		const pypi = env.find((e) => e.name === "PYPI_TOKEN");
+		const cargo = env.find((e) => e.name === "CARGO_REGISTRY_TOKEN");
 		expect(npm?.valueFrom?.secretKeyRef.name).toBe("npm-token");
 		expect(npm?.valueFrom?.secretKeyRef.optional).toBe(true);
 		expect(pypi?.valueFrom?.secretKeyRef.name).toBe("pypi-token");
+		expect(cargo?.valueFrom?.secretKeyRef.name).toBe("cargo-token");
+		expect(cargo?.valueFrom?.secretKeyRef.optional).toBe(true);
 		// no plaintext token value anywhere in the spec
 		expect(JSON.stringify(job)).not.toMatch(/_authToken=[A-Za-z0-9]/);
 	});
