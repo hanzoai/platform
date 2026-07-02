@@ -37,7 +37,7 @@ export async function getServerSideProps(ctx: GetServerSidePropsContext) {
 
 	// The control-plane board shows every service x env for the authenticated
 	// operator; org/env/health filtering is available on /v1/apps for
-	// programmatic callers. Wrapped like the REST handlers (pages/api/v1/apps.ts)
+	// programmatic callers. Wrapped like the REST handlers (app/v1/apps/route.ts)
 	// so a transient DB blip — or the apps table not yet migrated on a fresh
 	// image — renders an empty board (which AppsBoard handles) instead of a 500.
 	let data: AppsListResponse;
