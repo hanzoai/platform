@@ -108,9 +108,9 @@ export const HANZO_CLOUD_CONFIG = {
 
     // Webhook endpoints for deployment events
     webhooks: {
-      deploymentStarted: "/api/webhooks/deployment-started",
-      deploymentCompleted: "/api/webhooks/deployment-completed",
-      deploymentFailed: "/api/webhooks/deployment-failed",
+      deploymentStarted: "/v1/webhooks/deployment-started",
+      deploymentCompleted: "/v1/webhooks/deployment-completed",
+      deploymentFailed: "/v1/webhooks/deployment-failed",
     },
   },
 };

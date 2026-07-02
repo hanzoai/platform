@@ -54,11 +54,11 @@ const links =
 					false: splitLink({
 						condition: (op) => op.input instanceof FormData,
 						true: httpLink({
-							url: `${getBaseUrl()}/api/trpc`,
+							url: `${getBaseUrl()}/v1/trpc`,
 							transformer: superjson,
 						}),
 						false: httpBatchLink({
-							url: `${getBaseUrl()}/api/trpc`,
+							url: `${getBaseUrl()}/v1/trpc`,
 							transformer: superjson,
 						}),
 					}),
@@ -66,7 +66,7 @@ const links =
 			]
 		: [
 				httpBatchLink({
-					url: `${getBaseUrl()}/api/trpc`,
+					url: `${getBaseUrl()}/v1/trpc`,
 					transformer: superjson,
 				}),
 			];

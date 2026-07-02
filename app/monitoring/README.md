@@ -19,7 +19,7 @@ METRICS_CONFIG='{
     "port": 3001,
     "type": "Remote | Hanzo",
     "token": "metrics",
-    "urlCallback": "http://localhost:3000/api/trpc/notification.receiveNotification",
+    "urlCallback": "http://localhost:3000/v1/trpc/notification.receiveNotification",
     "retentionDays": 7,
     "cronJob": "0 0 * * *",
     "thresholds": {
