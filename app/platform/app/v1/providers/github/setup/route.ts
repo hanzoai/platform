@@ -1,4 +1,4 @@
-import { createGithub } from "@hanzo/platform";
+import { createGithub } from "@hanzo/platform/services/github";
 import { db } from "@hanzo/platform/db";
 import { eq } from "drizzle-orm";
 import { Octokit } from "octokit";
