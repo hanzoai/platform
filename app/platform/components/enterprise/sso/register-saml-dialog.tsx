@@ -169,7 +169,7 @@ export function RegisterSamlDialog({
 				return `<?xml version="1.0" encoding="UTF-8"?>
 <md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="${baseURL}">
     <md:SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
-        <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="${baseURL}/api/auth/sso/saml2/callback/${providerId}" index="1"/>
+        <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="${baseURL}/v1/auth/sso/saml2/callback/${providerId}" index="1"/>
     </md:SPSSODescriptor>
 </md:EntityDescriptor>`;
 			};
@@ -181,7 +181,7 @@ export function RegisterSamlDialog({
 				samlConfig: {
 					entryPoint: data.entryPoint,
 					cert: data.cert,
-					callbackUrl: `${baseURL}/api/auth/sso/saml2/callback/${data.providerId}`,
+					callbackUrl: `${baseURL}/v1/auth/sso/saml2/callback/${data.providerId}`,
 					audience: baseURL,
 					idpMetadata: data.idpMetadataXml?.trim()
 						? { metadata: data.idpMetadataXml.trim() }
@@ -255,7 +255,7 @@ export function RegisterSamlDialog({
 												Callback URL (configure in your IdP)
 											</p>
 											<p className="mt-0.5 break-all font-mono">
-												{baseURL}/api/auth/sso/saml2/callback/
+												{baseURL}/v1/auth/sso/saml2/callback/
 												{watchedProviderId?.trim() || "..."}
 											</p>
 										</div>

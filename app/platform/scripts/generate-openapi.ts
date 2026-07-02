@@ -22,8 +22,8 @@ async function generateOpenAPI() {
 		const openApiDocument = generateOpenApiDocument(appRouter, {
 			title: "Hanzo Platform API",
 			version: "1.0.0",
-			baseUrl: "https://your-dokploy-instance.com/api",
-			docsUrl: "https://docs.hanzo.ai/api",
+			baseUrl: "https://platform.hanzo.ai/v1",
+			docsUrl: "https://docs.hanzo.ai/v1",
 			tags: [
 				"admin",
 				"docker",

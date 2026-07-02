@@ -7,7 +7,7 @@
  * Actions as a single point of failure: platform owns the build+deploy
  * lifecycle, dispatching build work to self-hosted arcd runner pools.
  *
- * Distinct from /api/deploy/github (Dokploy app-redeploy webhook). That route
+ * Distinct from /v1/deploy/github (Dokploy app-redeploy webhook). That route
  * redeploys already-defined platform *applications*; THIS route builds and
  * rolls out *services from source* per the repo's `.platform.yml`.
  *
