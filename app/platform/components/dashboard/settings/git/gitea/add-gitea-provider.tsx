@@ -66,7 +66,7 @@ export const AddGiteaProvider = () => {
 		typeof urlObj === "string" ? urlObj : (urlObj as any)?.url || "";
 
 	const { mutateAsync, error, isError } = api.gitea.create.useMutation();
-	const webhookUrl = `${baseUrl}/api/providers/gitea/callback`;
+	const webhookUrl = `${baseUrl}/v1/providers/gitea/callback`;
 
 	const form = useForm({
 		defaultValues: {
