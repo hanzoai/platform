@@ -4,7 +4,8 @@
  * Same contract as /v1/deploy/{refreshToken} but for compose stacks. Payload
  * parsing is shared from `server/deploy/webhook.ts`.
  */
-import { IS_CLOUD, shouldDeploy } from "@hanzo/platform";
+import { IS_CLOUD } from "@hanzo/platform/constants";
+import { shouldDeploy } from "@hanzo/platform/utils/watch-paths/should-deploy";
 import { db } from "@hanzo/platform/db";
 import { eq } from "drizzle-orm";
 import { compose } from "@/server/db/schema";
