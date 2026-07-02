@@ -2,7 +2,7 @@
  * Gitea OAuth helpers shared by the /v1/providers/gitea/{authorize,callback}
  * route handlers. Not a route itself (no route.ts) — a plain module.
  */
-import { findGiteaById } from "@hanzo/platform";
+import { findGiteaById } from "@hanzo/platform/services/gitea";
 
 export interface Gitea {
 	giteaId: string;

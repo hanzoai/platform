@@ -10,6 +10,18 @@ const nextConfig = {
 		ignoreBuildErrors: true,
 	},
 	transpilePackages: ["@hanzo/platform", "@hanzo/ui"],
+	// Native node modules must never enter the webpack bundle — they ship a
+	// prebuilt `.node` binary webpack cannot parse. The App Router /v1 routes are
+	// server-only and reach these transitively through @hanzo/platform (e.g.
+	// setup/server-audit → ssh2), so mark them external and let them load at
+	// runtime via require().
+	serverExternalPackages: [
+		"ssh2",
+		"node-pty",
+		"bcrypt",
+		"cpu-features",
+		"better-sqlite3",
+	],
 	async rewrites() {
 		// The /v1/* surface is served NATIVELY by App Router route handlers under
 		// app/v1/** — the URL IS the file path, with no rewrite indirection. The
