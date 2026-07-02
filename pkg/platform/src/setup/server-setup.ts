@@ -77,7 +77,7 @@ export const serverSetup = async (
 
 			const baseUrl = await getHanzoUrl();
 			const token = generateToken();
-			const urlCallback = `${baseUrl}/api/trpc/notification.receiveNotification`;
+			const urlCallback = `${baseUrl}/v1/trpc/notification.receiveNotification`;
 
 			// Update server with monitoring configuration
 			await updateServerById(serverId, {
