@@ -11,17 +11,14 @@ const nextConfig = {
 	},
 	transpilePackages: ["@hanzo/platform", "@hanzo/ui"],
 	async rewrites() {
-		// Canonical request path is /v1/* (no /api/ prefix, per platform convention).
-		// The Next.js pages router physically serves these handlers under /api/v1/*,
-		// so map the canonical path onto the physical one at request time. Both
-		// /v1/* and /api/v1/* resolve to the same handler.
+		// The /v1/* surface is served NATIVELY by App Router route handlers under
+		// app/v1/** — the URL IS the file path, with no rewrite indirection. The
+		// only rewrite is the apps-lifecycle drift board: the canonical
+		// `platform.hanzo.ai/apps` (docs/APPS_LIFECYCLE.md §6) maps onto the page
+		// that lives under the dashboard layout.
 		//
-		// The apps-lifecycle drift view is documented at the top-level
-		// `platform.hanzo.ai/apps` (docs/APPS_LIFECYCLE.md §6); the page itself
-		// lives under the dashboard layout, so map the canonical URL onto it.
-		// In frontend-only mode there is no local backend, so proxy the canonical
-		// /v1/* surface straight to the production platform. This must precede the
-		// local /v1 → /api/v1 rewrite so it wins the match.
+		// In frontend-only mode there is no local backend, so proxy the /v1/*
+		// surface straight to the production platform.
 		if (process.env.SKIP_ENV_VALIDATION === "1") {
 			const target = process.env.PLATFORM_API_URL || "https://platform.hanzo.ai";
 			return [
@@ -30,10 +27,7 @@ const nextConfig = {
 			];
 		}
 
-		return [
-			{ source: "/v1/:path*", destination: "/api/v1/:path*" },
-			{ source: "/apps", destination: "/dashboard/apps" },
-		];
+		return [{ source: "/apps", destination: "/dashboard/apps" }];
 	},
 	async headers() {
 		return [
