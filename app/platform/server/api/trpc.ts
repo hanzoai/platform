@@ -18,6 +18,7 @@ import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
 import type { Session, User } from "better-auth";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { toNodeLikeRequest } from "@/server/v1/request";
 
 type Resource = keyof typeof statements;
 type ActionOf<R extends Resource> = (typeof statements)[R][number];
@@ -79,6 +80,44 @@ export const createTRPCContext = async (opts: CreateNextContextOptions) => {
 	return createInnerTRPCContext({
 		req,
 		res,
+		// @ts-ignore
+		session: session
+			? {
+					...session,
+					activeOrganizationId: session.activeOrganizationId || "",
+				}
+			: null,
+		// @ts-ignore
+		user: user
+			? {
+					...user,
+					email: user.email,
+					role: user.role as "owner" | "member" | "admin",
+					id: user.id,
+					ownerId: user.ownerId,
+				}
+			: null,
+	});
+};
+
+/**
+ * App Router (fetch) context factory. The tRPC + openapi HTTP surfaces are
+ * served by App Router route handlers that receive a WHATWG `Request`, whereas
+ * `validateRequest` and several procedures (visor/settings/sso) read a
+ * Node-`IncomingMessage`-shaped `ctx.req`. `toNodeLikeRequest` bridges the two
+ * once, so identity resolution and procedure code stay byte-for-byte identical
+ * to the pages-router path. There is no `res` in the fetch model; no procedure
+ * reads `ctx.res`, so a minimal stand-in preserves the context type.
+ */
+export const createFetchContext = async (req: Request) => {
+	const nodeReq = toNodeLikeRequest(req);
+	const { session, user } = await validateRequest(
+		nodeReq as unknown as CreateNextContextOptions["req"],
+	);
+
+	return createInnerTRPCContext({
+		req: nodeReq as unknown as CreateNextContextOptions["req"],
+		res: undefined as unknown as CreateNextContextOptions["res"],
 		// @ts-ignore
 		session: session
 			? {
