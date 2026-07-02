@@ -188,7 +188,7 @@ export const settingsRouter = createTRPCRouter({
 				newPorts = ports.filter((port) => port.targetPort !== 8080);
 			}
 
-			// Run in background so the request returns immediately; client polls /api/health.
+			// Run in background so the request returns immediately; client polls /v1/health.
 			// Avoids proxy timeouts (520) while Traefik is recreated.
 			void writeTraefikSetup({
 				env: preparedEnv,
@@ -754,7 +754,7 @@ export const settingsRouter = createTRPCRouter({
 			const envs = prepareEnvironmentVariables(input.env);
 			const ports = await readPorts("platform-traefik", input?.serverId);
 
-			// Run in background so the request returns immediately; client polls /api/health.
+			// Run in background so the request returns immediately; client polls /v1/health.
 			void writeTraefikSetup({
 				env: envs,
 				additionalPorts: ports,
@@ -1033,7 +1033,7 @@ export const settingsRouter = createTRPCRouter({
 				}
 				const preparedEnv = prepareEnvironmentVariables(env);
 
-				// Run in background so the request returns immediately; client polls /api/health.
+				// Run in background so the request returns immediately; client polls /v1/health.
 				void writeTraefikSetup({
 					env: preparedEnv,
 					additionalPorts: input.additionalPorts,
