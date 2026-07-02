@@ -60,6 +60,8 @@ build:
 		expect(cfg.publish).toEqual({
 			npm: true,
 			pypi: false,
+			cargo: false,
+			cargoCrates: [],
 			packageDir: ".",
 			dryRun: false,
 		});
@@ -72,8 +74,24 @@ build:
 		expect(cfg.publish).toEqual({
 			npm: false,
 			pypi: true,
+			cargo: false,
+			cargoCrates: [],
 			packageDir: "sdk/python",
 			dryRun: true,
+		});
+	});
+
+	it("parses cargo publish with an ordered workspace crate list", () => {
+		const cfg = parsePlatformConfig(
+			`${base}publish:\n  cargo: true\n  cargoCrates:\n    - hanzo-kernels\n    - hanzo-ml\n`,
+		);
+		expect(cfg.publish).toEqual({
+			npm: false,
+			pypi: false,
+			cargo: true,
+			cargoCrates: ["hanzo-kernels", "hanzo-ml"],
+			packageDir: ".",
+			dryRun: false,
 		});
 	});
 
@@ -85,10 +103,10 @@ build:
 		expect(cfg.publish?.pypi).toBe(true);
 	});
 
-	it("rejects a publish block with neither target", () => {
+	it("rejects a publish block with no target", () => {
 		expect(() =>
 			parsePlatformConfig(`${base}publish:\n  dryRun: true\n`),
-		).toThrow(/at least one of npm: true or pypi: true/);
+		).toThrow(/at least one of npm: true, pypi: true or cargo: true/);
 	});
 
 	it("rejects a non-boolean npm flag", () => {
