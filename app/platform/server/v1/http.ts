@@ -1,21 +1,23 @@
 /**
- * Generic helpers for the platform /v1 REST surface.
+ * Generic helpers for the platform /v1 REST surface (App Router).
  *
- * These are transport-level primitives shared by every /v1 handler — service
- * token auth, method gating, dynamic-param narrowing. They are deliberately
- * domain-free: the PaaS container API (server/paas/container-api.ts) and the
- * apps-lifecycle API (server/apps/apps-api.ts) both consume them so there is
- * exactly one implementation of "is this caller authorized" and "is this method
- * allowed" across /v1.
+ * These are transport-level primitives shared by every /v1 route handler —
+ * service-token auth, method gating, param/query/header reads. They are
+ * deliberately domain-free: the PaaS container API (server/paas/container-api.ts)
+ * and the apps-lifecycle API (server/apps/apps-api.ts) both consume them so there
+ * is exactly one implementation of "is this caller authorized" and "is this
+ * method allowed" across /v1.
+ *
+ * Fetch-native: /v1 is served by App Router route handlers, so these operate on
+ * the WHATWG `Request` and return / build `Response` objects. No pages-router
+ * `NextApiRequest`/`res` anywhere.
  *
  * Auth model: a shared service bearer token. /v1 is a machine-to-machine +
  * read-mostly surface; the platform backend cannot validate IAM user tokens, so
  * callers (the console/UI server, external automation) send
- * `Authorization: Bearer ${PLATFORM_SERVICE_TOKEN}`. Mirrors the pattern in
- * pages/api/v1/build-callback.ts.
+ * `Authorization: Bearer ${PLATFORM_SERVICE_TOKEN}`.
  */
 import { timingSafeEqual } from "node:crypto";
-import type { NextApiRequest, NextApiResponse } from "next";
 
 /** Constant-time string compare; false on length mismatch (no early exit). */
 export function safeEqual(a: string, b: string): boolean {
@@ -26,9 +28,16 @@ export function safeEqual(a: string, b: string): boolean {
 }
 
 /**
- * Validate the shared service token against one of the accepted env vars. On
- * failure, writes the error response and returns false; returns true when the
- * caller is authenticated.
+ * Result of a service-token check. On failure the caller returns `response`
+ * verbatim; on success it proceeds. A discriminated union keeps the "write the
+ * error and stop" contract explicit without a res object to mutate.
+ */
+export type ServiceTokenResult =
+	| { ok: true }
+	| { ok: false; response: Response };
+
+/**
+ * Validate the shared service token against one of the accepted env vars.
  *
  * `envVars` lets a surface accept a service-specific token while keeping the
  * generic platform token as a fallback (first non-empty configured value wins
@@ -36,79 +45,49 @@ export function safeEqual(a: string, b: string): boolean {
  * `["PAAS_SERVICE_TOKEN", "PLATFORM_SERVICE_TOKEN"]`.
  */
 export function requireServiceToken(
-	req: NextApiRequest,
-	res: NextApiResponse,
+	req: Request,
 	envVars: readonly string[] = ["PLATFORM_SERVICE_TOKEN"],
-): boolean {
+): ServiceTokenResult {
 	const expected = envVars
 		.map((name) => process.env[name])
 		.find((v): v is string => !!v);
 	if (!expected) {
-		res.status(500).json({
-			message: `Service token is not configured on the server (set one of: ${envVars.join(", ")})`,
-		});
-		return false;
+		return {
+			ok: false,
+			response: Response.json(
+				{
+					message: `Service token is not configured on the server (set one of: ${envVars.join(", ")})`,
+				},
+				{ status: 500 },
+			),
+		};
 	}
-	const header = req.headers.authorization ?? "";
+	const header = req.headers.get("authorization") ?? "";
 	const prefix = "Bearer ";
 	const provided = header.startsWith(prefix) ? header.slice(prefix.length) : "";
 	if (!provided || !safeEqual(provided, expected)) {
-		res.status(401).json({ message: "Unauthorized" });
-		return false;
+		return {
+			ok: false,
+			response: Response.json({ message: "Unauthorized" }, { status: 401 }),
+		};
 	}
-	return true;
+	return { ok: true };
 }
 
 /** 405 with an `Allow` header listing the permitted methods. */
-export function methodNotAllowed(
-	req: NextApiRequest,
-	res: NextApiResponse,
-	allowed: string[],
-): void {
-	res.setHeader("Allow", allowed);
-	res.status(405).json({ message: `Method ${req.method} not allowed` });
+export function methodNotAllowed(allowed: string[]): Response {
+	return Response.json(
+		{ message: "Method not allowed" },
+		{ status: 405, headers: { Allow: allowed.join(", ") } },
+	);
 }
 
-/**
- * Boundary validator for dynamic route params. Each named param in `req.query`
- * may be string | string[] | undefined; this narrows them to plain strings and
- * 400s on any missing one. Returns the typed record, or null after writing the
- * error response (caller should `return`).
- */
-export function requireParams<K extends string>(
-	req: NextApiRequest,
-	res: NextApiResponse,
-	names: readonly K[],
-): Record<K, string> | null {
-	const out = {} as Record<K, string>;
-	for (const name of names) {
-		const raw = req.query[name];
-		const value = Array.isArray(raw) ? raw[0] : raw;
-		if (!value) {
-			res.status(400).json({ message: `Missing path parameter: ${name}` });
-			return null;
-		}
-		out[name] = value;
-	}
-	return out;
+/** Read a single query-string value, or undefined. */
+export function queryValue(req: Request, name: string): string | undefined {
+	return new URL(req.url).searchParams.get(name) ?? undefined;
 }
 
-/** Read a single query-string value (first of an array), or undefined. */
-export function queryValue(
-	req: NextApiRequest,
-	name: string,
-): string | undefined {
-	const raw = req.query[name];
-	const value = Array.isArray(raw) ? raw[0] : raw;
-	return value || undefined;
-}
-
-/** Read a header value (first of an array), or undefined. */
-export function headerValue(
-	req: NextApiRequest,
-	name: string,
-): string | undefined {
-	const raw = req.headers[name.toLowerCase()];
-	const value = Array.isArray(raw) ? raw[0] : raw;
-	return value || undefined;
+/** Read a header value, or undefined. */
+export function headerValue(req: Request, name: string): string | undefined {
+	return req.headers.get(name) ?? undefined;
 }
