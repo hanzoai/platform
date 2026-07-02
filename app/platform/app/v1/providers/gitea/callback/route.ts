@@ -1,4 +1,4 @@
-import { updateGitea } from "@hanzo/platform";
+import { updateGitea } from "@hanzo/platform/services/gitea";
 import {
 	findGitea,
 	type Gitea,
