@@ -320,6 +320,10 @@ export async function scheduleBuilds(
 			const tag = resolveTag(build.tagPattern, {
 				sha: input.sha,
 				branch: input.branch,
+				// Feed {{git.tag}} from a tag push (refs/tags/vX.Y.Z → X.Y.Z).
+				tag: input.ref?.startsWith("refs/tags/")
+					? input.ref.slice("refs/tags/".length)
+					: undefined,
 			});
 			const job = await createBuildJob({
 				repo: input.repo,
