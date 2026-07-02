@@ -638,7 +638,7 @@ impl TrpcBridge {
         procedure: &str,
         input: &I,
     ) -> Result<O, BridgeError> {
-        let url = format!("{}/api/trpc/{}", self.base_url, procedure);
+        let url = format!("{}/v1/trpc/{}", self.base_url, procedure);
 
         let response = self.client
             .post(&url)

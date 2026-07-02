@@ -6,7 +6,7 @@
 //
 // Only `receiveNotification` remains: it is a PUBLIC server-to-server webhook
 // that remote monitoring agents POST to over tRPC HTTP
-// (`/api/trpc/notification.receiveNotification`) with a body-carried token (NOT
+// (`/v1/trpc/notification.receiveNotification`) with a body-carried token (NOT
 // a browser session cookie). It cannot move onto the session-minted ZAP WS
 // without breaking remote metrics callbacks, so it stays here as the sole
 // publicProcedure.
