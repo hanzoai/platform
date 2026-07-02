@@ -8,7 +8,8 @@
  * the App Router routes fold their `Request` headers into that shape before
  * calling in.
  */
-import { type Bitbucket, getBitbucketHeaders } from "@hanzo/platform";
+import type { Bitbucket } from "@hanzo/platform/services/bitbucket";
+import { getBitbucketHeaders } from "@hanzo/platform/utils/providers/bitbucket";
 
 /** A plain, lowercased-key header bag (Node `IncomingMessage.headers` shape). */
 export type WebhookHeaders = Record<string, string | string[] | undefined>;

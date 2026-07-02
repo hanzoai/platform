@@ -1,4 +1,4 @@
-import { validateRequest } from "@hanzo/platform";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import { appRouter } from "@/server/api/root";
 import { createFetchContext } from "@/server/api/trpc";
 import { asIncomingMessage } from "@/server/v1/request";
