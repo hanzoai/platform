@@ -127,16 +127,16 @@ await routeApplicationDeployment(application, {
 
 ### Deployment API
 
-- `POST /api/deploy/cloud` - Deploy to Hanzo Cloud
-- `GET /api/deployments/{id}` - Get deployment status
-- `GET /api/deployments/{id}/logs` - Stream deployment logs
-- `DELETE /api/deployments/{id}` - Cancel deployment
+- `POST /v1/deploy/cloud` - Deploy to Hanzo Cloud
+- `GET /v1/deployments/{id}` - Get deployment status
+- `GET /v1/deployments/{id}/logs` - Stream deployment logs
+- `DELETE /v1/deployments/{id}` - Cancel deployment
 
 ### Webhook Endpoints
 
-- `/api/webhooks/deployment-started`
-- `/api/webhooks/deployment-completed`
-- `/api/webhooks/deployment-failed`
+- `/v1/webhooks/deployment-started`
+- `/v1/webhooks/deployment-completed`
+- `/v1/webhooks/deployment-failed`
 
 ## Features Comparison
 
