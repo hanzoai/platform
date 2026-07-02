@@ -83,7 +83,7 @@ export const deploymentFunction = inngest.createFunction(
 );
 
 app.use(async (c, next) => {
-	if (c.req.path === "/health" || c.req.path === "/api/inngest") {
+	if (c.req.path === "/health" || c.req.path === "/v1/inngest") {
 		return next();
 	}
 
@@ -202,7 +202,7 @@ app.get("/jobs", async (c) => {
 // Serve Inngest functions endpoint
 app.on(
 	["GET", "POST", "PUT"],
-	"/api/inngest",
+	"/v1/inngest",
 	serveInngest({
 		client: inngest,
 		functions: [deploymentFunction],
