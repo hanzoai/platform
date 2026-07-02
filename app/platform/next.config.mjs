@@ -19,21 +19,21 @@ const nextConfig = {
 		// The apps-lifecycle drift view is documented at the top-level
 		// `platform.hanzo.ai/apps` (docs/APPS_LIFECYCLE.md §6); the page itself
 		// lives under the dashboard layout, so map the canonical URL onto it.
-		const canonical = [
-			{ source: "/v1/:path*", destination: "/api/v1/:path*" },
-			{ source: "/apps", destination: "/dashboard/apps" },
-		];
-
-		// In frontend-only mode, also proxy API calls to the production platform.
+		// In frontend-only mode there is no local backend, so proxy the canonical
+		// /v1/* surface straight to the production platform. This must precede the
+		// local /v1 → /api/v1 rewrite so it wins the match.
 		if (process.env.SKIP_ENV_VALIDATION === "1") {
 			const target = process.env.PLATFORM_API_URL || "https://platform.hanzo.ai";
 			return [
-				...canonical,
-				{ source: "/api/:path*", destination: `${target}/api/:path*` },
+				{ source: "/v1/:path*", destination: `${target}/v1/:path*` },
+				{ source: "/apps", destination: "/dashboard/apps" },
 			];
 		}
 
-		return canonical;
+		return [
+			{ source: "/v1/:path*", destination: "/api/v1/:path*" },
+			{ source: "/apps", destination: "/dashboard/apps" },
+		];
 	},
 	async headers() {
 		return [
