@@ -8,7 +8,7 @@
  * cluster-ref op verifies the cluster belongs to the active org.
  *
  * This is the tRPC half of the surface; the REST mirror (service-token, for the
- * console/automation) lives under pages/api/v1/org/[orgId]/cluster/*. Both call
+ * console/automation) lives under app/v1/org/[orgId]/cluster/*. Both call
  * the same `services/dedicated-cluster` functions — one implementation.
  */
 
