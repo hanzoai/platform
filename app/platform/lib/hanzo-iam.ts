@@ -219,21 +219,57 @@ class HanzoIAM {
   }
 
   /**
-   * Sync user data with Hanzo IAM
+   * Sync user data with Hanzo IAM via the canonical bootstrap upsert.
+   *
+   * POST /v1/iam/admin/users/upsert — idempotent, keyed by (owner, name),
+   * gated by a service token (Authorization: Bearer). Best-effort: never
+   * throws, so a sync failure cannot break the login flow.
    */
   private async syncUserData(user: any): Promise<void> {
-    await fetch(`${this.iamEndpoint}/api/users/${user.id}/sync`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Client-Id": this.clientId,
-        "X-Client-Secret": this.clientSecret,
-      },
-      body: JSON.stringify({
-        lastLogin: new Date(),
-        application: "platform.hanzo.ai",
-      }),
-    });
+    const serviceToken =
+      process.env.IAM_SERVICE_TOKEN ||
+      process.env.HANZO_API_KEY ||
+      process.env.KMS_SERVICE_TOKEN;
+    if (!serviceToken) {
+      // No service credential wired — skip rather than send an unauthenticated
+      // request that would 401.
+      return;
+    }
+
+    // Resolve (owner, name): the upsert is keyed by tenant slug + username.
+    const primaryOrg = user.organizations?.[0];
+    const owner = primaryOrg?.slug || primaryOrg?.name || "hanzo";
+    const rawId: string = String(user.id ?? "");
+    const name = rawId.includes("/") ? rawId.split("/").pop()! : rawId;
+    if (!name) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${this.iamEndpoint}/v1/iam/admin/users/upsert`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceToken}`,
+        },
+        body: JSON.stringify({
+          owner,
+          name,
+          email: user.email,
+          displayName: user.name,
+          emailVerified: user.metadata?.emailVerified ?? true,
+          signupApplication: "platform",
+          properties: { lastLogin: new Date().toISOString() },
+        }),
+      });
+      if (!res.ok) {
+        console.error(
+          `[hanzo-iam] user upsert failed (status ${res.status}) for ${owner}/${name}`,
+        );
+      }
+    } catch (err) {
+      console.error("[hanzo-iam] user upsert request failed:", err);
+    }
   }
 
   /**
