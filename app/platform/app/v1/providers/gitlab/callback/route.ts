@@ -1,4 +1,4 @@
-import { findGitlabById, updateGitlab } from "@hanzo/platform";
+import { findGitlabById, updateGitlab } from "@hanzo/platform/services/gitlab";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
