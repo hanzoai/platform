@@ -78,7 +78,7 @@ impl TrpcBridge {
         I: Serialize + std::fmt::Debug,
         O: DeserializeOwned,
     {
-        let url = format!("{}/api/trpc/{}", self.base_url, procedure);
+        let url = format!("{}/v1/trpc/{}", self.base_url, procedure);
         let input_json = serde_json::to_string(&TrpcInput { input: Some(input) })?;
 
         debug!(procedure, %url, "Calling tRPC query");
@@ -101,7 +101,7 @@ impl TrpcBridge {
         I: Serialize + std::fmt::Debug,
         O: DeserializeOwned,
     {
-        let url = format!("{}/api/trpc/{}", self.base_url, procedure);
+        let url = format!("{}/v1/trpc/{}", self.base_url, procedure);
 
         debug!(procedure, %url, "Calling tRPC mutation");
 

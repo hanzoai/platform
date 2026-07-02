@@ -4,7 +4,7 @@ import {
 	extractImageName,
 	extractImageTag,
 	extractImageTagFromRequest,
-} from "@/pages/api/deploy/[refreshToken]";
+} from "@/pages/api/v1/deploy/[refreshToken]";
 
 describe("GitHub Webhook Skip CI", () => {
 	const mockGithubHeaders = {
