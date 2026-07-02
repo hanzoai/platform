@@ -30,13 +30,13 @@ export const AddGithubProvider = () => {
 		const url = document.location.origin;
 		const manifest = JSON.stringify(
 			{
-				redirect_url: `${origin}/api/providers/github/setup?organizationId=${activeOrganization?.id ?? ""}&userId=${session?.user?.id ?? ""}`,
+				redirect_url: `${origin}/v1/providers/github/setup?organizationId=${activeOrganization?.id ?? ""}&userId=${session?.user?.id ?? ""}`,
 				name: `Hanzo Platform-${format(new Date(), "yyyy-MM-dd")}-${randomString()}`,
 				url: origin,
 				hook_attributes: {
-					url: `${url}/api/deploy/github`,
+					url: `${url}/v1/deploy/github`,
 				},
-				callback_urls: [`${origin}/api/providers/github/setup`],
+				callback_urls: [`${origin}/v1/providers/github/setup`],
 				public: false,
 				request_oauth_on_install: true,
 				default_permissions: {
