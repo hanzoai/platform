@@ -445,8 +445,8 @@ export const SSOSettings = () => {
 									<p className="break-all rounded-md bg-muted px-2 py-1.5 font-mono text-xs">
 										{baseURL || "{baseURL}"}
 										{detailsProvider.samlConfig
-											? "/api/auth/sso/saml2/callback/"
-											: "/api/auth/sso/callback/"}
+											? "/v1/auth/sso/saml2/callback/"
+											: "/v1/auth/sso/callback/"}
 										{detailsProvider.providerId}
 									</p>
 									{!baseURL && (
