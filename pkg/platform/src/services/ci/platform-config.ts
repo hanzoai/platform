@@ -79,6 +79,14 @@ export interface PublishConfig {
 	npm: boolean;
 	/** Publish to PyPI (`uv build` + `uv publish`). */
 	pypi: boolean;
+	/** Publish to crates.io (`cargo publish --no-verify`, dependency order). */
+	cargo: boolean;
+	/**
+	 * Ordered crate dirs (relative to `packageDir`) for a cargo workspace, published
+	 * bottom-up; already-uploaded versions are skipped, not fatal. Empty = the single
+	 * crate at `packageDir`. Ignored unless `cargo` is true.
+	 */
+	cargoCrates: string[];
 	/** Sub-directory of the repo holding the package. Defaults to `.`. */
 	packageDir: string;
 	/** Build + validate the package but do NOT upload — proves the stage safely. */
@@ -183,6 +191,23 @@ function parseE2e(raw: unknown): E2eConfig | undefined {
 	};
 }
 
+/** Optional list-of-strings field; absent or empty yields []. Each entry must be a string. */
+function parseStringList(obj: object, key: string, path: string): string[] {
+	const raw = (obj as Record<string, unknown>)[key];
+	if (raw === undefined) return [];
+	if (!Array.isArray(raw)) {
+		throw new PlatformConfigError(
+			`${path}.${key}, when present, must be a list`,
+		);
+	}
+	return raw.map((v, i) => {
+		if (typeof v !== "string") {
+			throw new PlatformConfigError(`${path}.${key}[${i}] must be a string`);
+		}
+		return v;
+	});
+}
+
 /** Parse + validate the optional `publish:` block. */
 function parsePublish(raw: unknown): PublishConfig | undefined {
 	if (raw === undefined) return undefined;
@@ -191,14 +216,17 @@ function parsePublish(raw: unknown): PublishConfig | undefined {
 	}
 	const npm = boolField(raw, "npm", "publish");
 	const pypi = boolField(raw, "pypi", "publish");
-	if (!npm && !pypi) {
+	const cargo = boolField(raw, "cargo", "publish");
+	if (!npm && !pypi && !cargo) {
 		throw new PlatformConfigError(
-			"publish requires at least one of npm: true or pypi: true",
+			"publish requires at least one of npm: true, pypi: true or cargo: true",
 		);
 	}
 	return {
 		npm,
 		pypi,
+		cargo,
+		cargoCrates: parseStringList(raw, "cargoCrates", "publish"),
 		packageDir: optionalStringOrUndef(raw, "packageDir", "publish") ?? ".",
 		dryRun: boolField(raw, "dryRun", "publish"),
 	};
@@ -285,7 +313,11 @@ function parseImageEntry(entry: unknown, i: number): BuildConfig {
 	}
 	const context = optionalString(entry, "context", ".");
 	// Default Dockerfile sits under the build context, matching the cicd runner.
-	const dockerfile = optionalString(entry, "dockerfile", `${context}/Dockerfile`);
+	const dockerfile = optionalString(
+		entry,
+		"dockerfile",
+		`${context}/Dockerfile`,
+	);
 	// Per-image deterministic tag: `<sha>-<arch>-<suffix>` (suffix defaults to name).
 	const suffix = optionalString(entry, "tag-suffix", name);
 	return {
@@ -357,7 +389,10 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig {
 		// Deployment-style rollout (`services:`, hanzo.yml) owned by the cicd
 		// runner / GitOps. The platform only performs the operator-CR rollout, so
 		// a `services:`-only deploy is build-only here (deploy left undefined).
-		if (d.target === undefined && (d.services !== undefined || d.cluster !== undefined)) {
+		if (
+			d.target === undefined &&
+			(d.services !== undefined || d.cluster !== undefined)
+		) {
 			return {
 				builds,
 				deploy: undefined,
