@@ -9,9 +9,11 @@
  * running `npm publish` / `twine upload` by hand.
  *
  * Registry tokens come from KMS-synced secrets mounted into the Job
- * (`npm-token` → NPM_TOKEN, `pypi-token` → PYPI_TOKEN); they are NEVER
- * hardcoded and never leave the Job. `dryRun` builds + validates the package
- * without uploading, so the stage is provable without burning a version.
+ * (`npm-token` → NPM_TOKEN, `pypi-token` → PYPI_TOKEN, `cargo-token` →
+ * CARGO_REGISTRY_TOKEN); they are NEVER hardcoded and never leave the Job.
+ * `dryRun` builds + validates the package without uploading, so the stage is
+ * provable without burning a version. Targets: npm, PyPI, and crates.io (cargo,
+ * multi-crate workspaces published bottom-up via `cargoCrates`).
  *
  * Decomplected like `buildkit-job` / `e2e-runner`: this module owns ONLY "shape +
  * launch the publish Job"; the Job owns publishing; the watcher owns advancing
@@ -28,6 +30,7 @@ const GIT_SECRET = "console-git-token";
 /** KMS-synced registry token secrets (key `token`); optional so dry-runs work pre-seed. */
 const NPM_TOKEN_SECRET = "npm-token";
 const PYPI_TOKEN_SECRET = "pypi-token";
+const CARGO_TOKEN_SECRET = "cargo-token";
 const CI_TOLERATION = {
 	effect: "NoSchedule",
 	key: "dedicated",
@@ -103,6 +106,28 @@ export function publishScript(publish: PublishConfig): string {
 				: 'uv publish --token "${PYPI_TOKEN:-}"',
 		);
 	}
+	if (publish.cargo) {
+		const crates = publish.cargoCrates.length
+			? publish.cargoCrates.join(" ")
+			: ".";
+		lines.push(
+			"# --- cargo (crates.io) ---",
+			"apt-get update -qq && apt-get install -y -qq curl build-essential >/dev/null",
+			"curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable",
+			'export PATH="$HOME/.cargo/bin:$PATH"',
+			// Bottom-up over the workspace crates; a crate already at this version is a
+			// skip (not fatal), matching cargo's "already uploaded" contract. `set +e`
+			// so an already-published leaf can't abort the rest (the bash -e trap).
+			`for c in ${crates}; do`,
+			'  ( cd "$c" && set +e',
+			publish.dryRun
+				? "    out=$(cargo publish --no-verify --dry-run 2>&1); rc=$?"
+				: '    out=$(cargo publish --no-verify --token "${CARGO_REGISTRY_TOKEN:-}" 2>&1); rc=$?',
+			'    echo "$out"',
+			`    if [ "$rc" -ne 0 ] && ! echo "$out" | grep -qiE 'already (uploaded|exists)|is already uploaded'; then exit "$rc"; fi ) || exit $?`,
+			"done",
+		);
+	}
 	return lines.join("\n");
 }
 
@@ -145,7 +170,9 @@ export function buildPublishJobObject(input: PublishJobInput) {
 								{ name: "PACKAGE_DIR", value: input.publish.packageDir },
 								{
 									name: "GIT_AUTH_TOKEN",
-									valueFrom: { secretKeyRef: { name: GIT_SECRET, key: "token" } },
+									valueFrom: {
+										secretKeyRef: { name: GIT_SECRET, key: "token" },
+									},
 								},
 								{
 									name: "NPM_TOKEN",
@@ -162,6 +189,16 @@ export function buildPublishJobObject(input: PublishJobInput) {
 									valueFrom: {
 										secretKeyRef: {
 											name: PYPI_TOKEN_SECRET,
+											key: "token",
+											optional: true,
+										},
+									},
+								},
+								{
+									name: "CARGO_REGISTRY_TOKEN",
+									valueFrom: {
+										secretKeyRef: {
+											name: CARGO_TOKEN_SECRET,
 											key: "token",
 											optional: true,
 										},
