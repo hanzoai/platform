@@ -11,24 +11,23 @@
  * `Authorization: Bearer ${PAAS_SERVICE_TOKEN}` on every call. It deliberately
  * does NOT use the IAM/better-auth session: the platform backend cannot validate
  * IAM user tokens, and the console operator is already authenticated on its own
- * side. The pattern mirrors pages/api/v1/build-callback.ts.
+ * side. The pattern mirrors app/v1/build-callback/route.ts.
  *
  * These handlers are additive — they introduce a new /v1 surface and never touch
  * existing Dokploy routes, services, or data.
  */
-import type { NextApiRequest, NextApiResponse } from "next";
 import { eq } from "drizzle-orm";
 import { db } from "@hanzo/platform/db";
 import { applications } from "@hanzo/platform/db/schema";
 import {
 	methodNotAllowed,
-	requireParams,
+	type ServiceTokenResult,
 	requireServiceToken as requireServiceTokenFor,
 } from "@/server/v1/http";
 
 // Generic /v1 transport helpers live in server/v1/http.ts — re-exported here so
-// the existing container handlers keep importing them from one place.
-export { methodNotAllowed, requireParams };
+// the container route handlers keep importing them from one place.
+export { methodNotAllowed };
 
 /**
  * Namespace where platform-managed workloads actually run. The live workloads
@@ -43,11 +42,8 @@ export const PAAS_NAMESPACE = process.env.PAAS_K8S_NAMESPACE || "hanzo";
 // platform service token.
 // ---------------------------------------------------------------------------
 
-export function requireServiceToken(
-	req: NextApiRequest,
-	res: NextApiResponse,
-): boolean {
-	return requireServiceTokenFor(req, res, [
+export function requireServiceToken(req: Request): ServiceTokenResult {
+	return requireServiceTokenFor(req, [
 		"PAAS_SERVICE_TOKEN",
 		"PLATFORM_SERVICE_TOKEN",
 	]);
