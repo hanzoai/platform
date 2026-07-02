@@ -21,7 +21,7 @@ export const getGiteaOAuthUrl = (
 		return "#";
 	}
 
-	const redirectUri = `${baseUrl}/api/providers/gitea/callback`;
+	const redirectUri = `${baseUrl}/v1/providers/gitea/callback`;
 	const scopes = "read:repository read:user read:organization";
 
 	return `${giteaUrl}/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(

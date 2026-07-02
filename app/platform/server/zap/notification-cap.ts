@@ -13,7 +13,7 @@
 //
 // NOT migrated: the router's `receiveNotification` procedure. It is a PUBLIC
 // server-to-server webhook (remote monitoring agents POST to
-// `/api/trpc/notification.receiveNotification` with a body-carried token, NOT a
+// `/v1/trpc/notification.receiveNotification` with a body-carried token, NOT a
 // browser session); it remains a tRPC HTTP endpoint in the slimmed router.
 //
 // Inputs ride the shared Args carrier (decodeArgs); results the shared Result
