@@ -32,7 +32,8 @@ export interface BuildConfig {
 	dockerfile: string;
 	context: string;
 	image: string;
-	/** Tag template; only `{{git.sha}}` and `{{git.branch}}` are supported. */
+	/** Tag template; `{{git.sha}}`, `{{git.branch}}`, `{{git.tag}}` supported.
+	 * `{{git.tag}}` = the pushed v* git tag minus its leading `v` (semver). */
 	tagPattern: string;
 	push: boolean;
 }
@@ -458,9 +459,14 @@ export function runnerPoolFor(
 /** Resolve a tag-pattern template against the triggering git context. */
 export function resolveTag(
 	tagPattern: string,
-	ctx: { sha: string; branch: string },
+	ctx: { sha: string; branch: string; tag?: string },
 ): string {
+	// {{git.tag}} = the pushed git tag as a SEMVER image tag: strip the leading
+	// `v` (vX.Y.Z git tag → X.Y.Z image tag, our one-way semver policy). Empty on
+	// a non-tag push, so a repo pinning {{git.tag}} publishes only on a v* tag.
+	const semver = (ctx.tag ?? "").replace(/^v/, "").replace(/[^a-zA-Z0-9._-]/g, "-");
 	return tagPattern
 		.replaceAll("{{git.sha}}", ctx.sha)
-		.replaceAll("{{git.branch}}", ctx.branch.replace(/[^a-zA-Z0-9._-]/g, "-"));
+		.replaceAll("{{git.branch}}", ctx.branch.replace(/[^a-zA-Z0-9._-]/g, "-"))
+		.replaceAll("{{git.tag}}", semver);
 }
