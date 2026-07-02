@@ -243,4 +243,12 @@ describe("resolveTag", () => {
 			resolveTag("br-{{git.branch}}", { sha: "x", branch: "feat/foo bar" }),
 		).toBe("br-feat-foo-bar");
 	});
+	it("substitutes git.tag as semver (strips leading v)", () => {
+		expect(
+			resolveTag("{{git.tag}}", { sha: "x", branch: "v1.46.14", tag: "v1.46.14" }),
+		).toBe("1.46.14");
+	});
+	it("git.tag is empty on a non-tag push", () => {
+		expect(resolveTag("{{git.tag}}", { sha: "x", branch: "main" })).toBe("");
+	});
 });
