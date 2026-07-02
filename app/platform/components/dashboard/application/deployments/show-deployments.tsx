@@ -225,7 +225,7 @@ export const ShowDeployments = ({
 							<span>Webhook URL: </span>
 							<div className="flex flex-row items-center gap-2">
 								<span className="break-all text-muted-foreground">
-									{`${url}/api/deploy${
+									{`${url}/v1/deploy${
 										type === "compose" ? "/compose" : ""
 									}/${refreshToken}`}
 								</span>
