@@ -12,6 +12,7 @@
  */
 import { completeBuild } from "@hanzo/platform/services/ci";
 import type { NextApiRequest, NextApiResponse } from "next";
+import { safeEqual } from "@/server/v1/http";
 
 interface CallbackBody {
 	buildJobId?: string;
@@ -38,8 +39,10 @@ export default async function handler(
 		});
 		return;
 	}
-	const auth = req.headers.authorization;
-	if (auth !== `Bearer ${expected}`) {
+	// Constant-time bearer check (no early-exit on the token — timingSafeEqual).
+	const header = req.headers.authorization ?? "";
+	const provided = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+	if (!provided || !safeEqual(provided, expected)) {
 		res.status(401).json({ message: "Invalid callback token" });
 		return;
 	}
