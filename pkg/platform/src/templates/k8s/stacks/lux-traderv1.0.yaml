@@ -1,0 +1,94 @@
+# Lux Trader — the net-agnostic 0x9999 trading bot (ghcr.io/luxfi/trader). Drives
+# sporadic two-sided flow on a market to exercise the book. A CLI bot with NO metrics
+# server, so it has no probe endpoint — deployment health is its live signal. The
+# signer mnemonic is delivered by a KMSSecret sync ({{iid}}-bot-secrets), NEVER a
+# plaintext env. Singleton (two traders on one account would self-trade / fight flow).
+apiVersion: secrets.lux.network/v1alpha1
+kind: KMSSecret
+metadata:
+  name: {{iid}}-kms-sync
+  namespace: {{namespace}}
+spec:
+  hostAPI: https://kms.hanzo.ai
+  resyncInterval: 60
+  authentication:
+    universalAuth:
+      credentialsRef:
+        secretName: bot-kms-auth
+        secretNamespace: {{namespace}}
+      secretsScope:
+        projectSlug: trader
+        envSlug: production
+        secretsPath: /orgs/{{namespace}}/traders/{{iid}}
+  managedSecretReference:
+    secretName: {{iid}}-bot-secrets
+    secretNamespace: {{namespace}}
+    secretType: Opaque
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{iid}}
+  namespace: {{namespace}}
+  labels:
+    app: {{iid}}
+    component: trader-bot
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{iid}}
+  template:
+    metadata:
+      labels:
+        app: {{iid}}
+        component: trader-bot
+      annotations:
+        secrets.lux.network/auto-reload: "true"
+        secrets.lux.network/managed-secret: "{{iid}}-bot-secrets"
+    spec:
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: ghcr-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: trader
+          image: {{registry.imageUrl}}
+          imagePullPolicy: IfNotPresent
+          # The `bot` command drives sporadic two-sided flow; base/quote come from env.
+          args: ["--base", "$(TRADER_BASE)", "--quote", "$(TRADER_QUOTE)", "bot"]
+          env:
+            - name: {{variables.0.name}}
+              value: "{{variables.0.value}}"
+            - name: {{variables.1.name}}
+              value: "{{variables.1.value}}"
+            - name: {{variables.2.name}}
+              value: "{{variables.2.value}}"
+            - name: {{variables.3.name}}
+              value: "{{variables.3.value}}"
+          # LUX_MNEMONIC (and any signer key) ride the KMS-synced secret.
+          envFrom:
+            - secretRef:
+                name: {{iid}}-bot-secrets
+                optional: true
+          resources:
+            requests:
+              memory: {{podConfig.memoryRequest}}{{podConfig.memoryRequestType}}
+              cpu: {{podConfig.cpuRequest}}{{podConfig.cpuRequestType}}
+            limits:
+              memory: {{podConfig.memoryLimit}}{{podConfig.memoryLimitType}}
+              cpu: {{podConfig.cpuLimit}}{{podConfig.cpuLimitType}}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

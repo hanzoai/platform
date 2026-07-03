@@ -758,6 +758,132 @@ export const stackRegistry: StackCategory[] = [
 		],
 	},
 	// -----------------------------------------------------------------
+	// Trading Bots — the Lux DEX market-maker + trader. One-click deploy of the
+	// ghcr.io/luxfi/{maker,trader} bots; the console's Trading module deploys the
+	// same images as git apps (BuildKit), these are the image-based stack form.
+	// The signer key/mnemonic ride a KMSSecret sync ({{iid}}-bot-secrets), never
+	// a plaintext env — the templates carry NO secret values.
+	// -----------------------------------------------------------------
+	{
+		category: "Trading Bots",
+		templates: [
+			{
+				name: "Lux Market Maker",
+				description:
+					"Continuous Kraken-oracle market maker — pegs a 2-sided book to the live CEX mid per market and requotes on a fixed cadence. Exposes live peg-error metrics on :2112.",
+				manifest: "lux-market-makerv1.0.yaml",
+				version: "1.0",
+				isLatest: true,
+				type: "deployment",
+				config: {
+					visibleSections: ["general", "networking", "podConfig"],
+					visibleFields: [
+						"name",
+						"networking.containerPort",
+						"podConfig.cpuRequest",
+						"podConfig.cpuRequestType",
+						"podConfig.cpuLimit",
+						"podConfig.cpuLimitType",
+						"podConfig.memoryRequest",
+						"podConfig.memoryRequestType",
+						"podConfig.memoryLimit",
+						"podConfig.memoryLimitType",
+					],
+					disabledFields: ["networking.containerPort"],
+					defaultValues: {
+						repoOrRegistry: "registry",
+						"registry.imageUrl": "ghcr.io/luxfi/maker:latest",
+						"networking.containerPort": 2112,
+						"networking.tcpProxy.enabled": false,
+						"podConfig.restartPolicy": "Always",
+						"podConfig.cpuRequest": 50,
+						"podConfig.cpuRequestType": "millicores",
+						"podConfig.cpuLimit": 500,
+						"podConfig.cpuLimitType": "millicores",
+						"podConfig.memoryRequest": 128,
+						"podConfig.memoryRequestType": "mebibyte",
+						"podConfig.memoryLimit": 512,
+						"podConfig.memoryLimitType": "mebibyte",
+						"storageConfig.enabled": false,
+						"probes.readiness.enabled": true,
+						"probes.liveness.enabled": true,
+						"probes.startup.enabled": false,
+						"deploymentConfig.desiredReplicas": 1,
+						"deploymentConfig.cpuMetric.enabled": false,
+						"deploymentConfig.memoryMetric.enabled": false,
+					},
+					secrets: {},
+					variables: {
+						// The 6 coherence knobs the maker reads (12-factor). RPC + markets
+						// are per-network; the signer key rides the KMS secret, not here.
+						COHERENCE_RPC:
+							"http://luxd-0.luxd-headless.lux-testnet.svc:9640/v1/bc/C/rpc",
+						COHERENCE_MARKETS: "",
+						COHERENCE_SPREAD_BPS: "10",
+						COHERENCE_REQUOTE: "90s",
+						COHERENCE_ARB_BAND_BPS: "10",
+						COHERENCE_PROBE: "0s",
+					},
+				},
+			},
+			{
+				name: "Lux Trader",
+				description:
+					"Net-agnostic 0x9999 trading bot — drives sporadic two-sided flow on a market to exercise the book. A CLI bot (no metrics server); deployment health is its live signal.",
+				manifest: "lux-traderv1.0.yaml",
+				version: "1.0",
+				isLatest: true,
+				type: "deployment",
+				config: {
+					visibleSections: ["general", "podConfig"],
+					visibleFields: [
+						"name",
+						"podConfig.cpuRequest",
+						"podConfig.cpuRequestType",
+						"podConfig.cpuLimit",
+						"podConfig.cpuLimitType",
+						"podConfig.memoryRequest",
+						"podConfig.memoryRequestType",
+						"podConfig.memoryLimit",
+						"podConfig.memoryLimitType",
+					],
+					disabledFields: [],
+					defaultValues: {
+						repoOrRegistry: "registry",
+						"registry.imageUrl": "ghcr.io/luxfi/trader:latest",
+						"networking.containerPort": 0,
+						"networking.tcpProxy.enabled": false,
+						"podConfig.restartPolicy": "Always",
+						"podConfig.cpuRequest": 50,
+						"podConfig.cpuRequestType": "millicores",
+						"podConfig.cpuLimit": 500,
+						"podConfig.cpuLimitType": "millicores",
+						"podConfig.memoryRequest": 128,
+						"podConfig.memoryRequestType": "mebibyte",
+						"podConfig.memoryLimit": 512,
+						"podConfig.memoryLimitType": "mebibyte",
+						"storageConfig.enabled": false,
+						"probes.readiness.enabled": false,
+						"probes.liveness.enabled": false,
+						"probes.startup.enabled": false,
+						"deploymentConfig.desiredReplicas": 1,
+						"deploymentConfig.cpuMetric.enabled": false,
+						"deploymentConfig.memoryMetric.enabled": false,
+					},
+					secrets: {},
+					variables: {
+						// The trader's 4 knobs (the mnemonic rides the KMS secret, not here).
+						LUX_RPC:
+							"http://luxd-0.luxd-headless.lux-testnet.svc:9640/v1/bc/C/rpc",
+						TRADER_BASE: "",
+						TRADER_QUOTE: "",
+						TRADER_ROUNDS: "0",
+					},
+				},
+			},
+		],
+	},
+	// -----------------------------------------------------------------
 	// AI Workflows
 	// -----------------------------------------------------------------
 	{
