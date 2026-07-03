@@ -17,6 +17,7 @@
  */
 import { runE2e } from "@hanzo/platform/services/ci";
 import type { NextApiRequest, NextApiResponse } from "next";
+import { safeEqual } from "@/server/v1/http";
 
 interface RunBody {
 	spec?: string;
@@ -42,7 +43,10 @@ export default async function handler(
 		});
 		return;
 	}
-	if (req.headers.authorization !== `Bearer ${expected}`) {
+	// Constant-time bearer check (no early-exit on the token — timingSafeEqual).
+	const header = req.headers.authorization ?? "";
+	const provided = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+	if (!provided || !safeEqual(provided, expected)) {
 		res.status(401).json({ message: "Invalid token" });
 		return;
 	}
