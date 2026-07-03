@@ -11,6 +11,7 @@
  * user-facing one — it does not use the IAM session.
  */
 import { completeBuild } from "@hanzo/platform/services/ci";
+import { safeEqual } from "@/server/v1/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,7 +32,10 @@ export async function POST(req: Request) {
 			{ status: 500 },
 		);
 	}
-	if (req.headers.get("authorization") !== `Bearer ${expected}`) {
+	// Constant-time bearer check (no early-exit on the token — timingSafeEqual).
+	const header = req.headers.get("authorization") ?? "";
+	const provided = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+	if (!provided || !safeEqual(provided, expected)) {
 		return Response.json({ message: "Invalid callback token" }, { status: 401 });
 	}
 
