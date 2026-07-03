@@ -1,0 +1,136 @@
+# Lux Market Maker — the continuous Kraken-oracle market maker (ghcr.io/luxfi/maker,
+# MAKER_MODE=coherence). Pegs a 2-sided book to the live CEX mid for each configured
+# market and requotes on a fixed cadence; exposes Prometheus metrics + /healthz on
+# :2112. Singleton (two makers on one account would fight the book). The signer key
+# is delivered by a KMSSecret sync ({{iid}}-bot-secrets), NEVER a plaintext env.
+apiVersion: secrets.lux.network/v1alpha1
+kind: KMSSecret
+metadata:
+  name: {{iid}}-kms-sync
+  namespace: {{namespace}}
+spec:
+  hostAPI: https://kms.hanzo.ai
+  resyncInterval: 60
+  authentication:
+    universalAuth:
+      credentialsRef:
+        secretName: bot-kms-auth
+        secretNamespace: {{namespace}}
+      secretsScope:
+        projectSlug: maker
+        envSlug: production
+        secretsPath: /orgs/{{namespace}}/makers/{{iid}}
+  managedSecretReference:
+    secretName: {{iid}}-bot-secrets
+    secretNamespace: {{namespace}}
+    secretType: Opaque
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{iid}}
+  namespace: {{namespace}}
+  labels:
+    app: {{iid}}
+    component: coherence-maker
+spec:
+  # Singleton: two makers sharing an account would fight the book + double-spend the
+  # vault. Recreate stops the old pod before the new one starts.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{iid}}
+  template:
+    metadata:
+      labels:
+        app: {{iid}}
+        component: coherence-maker
+      annotations:
+        secrets.lux.network/auto-reload: "true"
+        secrets.lux.network/managed-secret: "{{iid}}-bot-secrets"
+    spec:
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: ghcr-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: maker
+          image: {{registry.imageUrl}}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{networking.containerPort}}
+              name: metrics
+          env:
+            - name: MAKER_MODE
+              value: "coherence"
+            - name: COHERENCE_METRICS_ADDR
+              value: ":{{networking.containerPort}}"
+            - name: {{variables.0.name}}
+              value: "{{variables.0.value}}"
+            - name: {{variables.1.name}}
+              value: "{{variables.1.value}}"
+            - name: {{variables.2.name}}
+              value: "{{variables.2.value}}"
+            - name: {{variables.3.name}}
+              value: "{{variables.3.value}}"
+            - name: {{variables.4.name}}
+              value: "{{variables.4.value}}"
+            - name: {{variables.5.name}}
+              value: "{{variables.5.value}}"
+          # The signer key + mnemonic ride the KMS-synced secret ({{iid}}-bot-secrets):
+          # COHERENCE_MAKER_KEY / LUX_MNEMONIC / COHERENCE_TAKER_KEY as applicable.
+          envFrom:
+            - secretRef:
+                name: {{iid}}-bot-secrets
+                optional: true
+          resources:
+            requests:
+              memory: {{podConfig.memoryRequest}}{{podConfig.memoryRequestType}}
+              cpu: {{podConfig.cpuRequest}}{{podConfig.cpuRequestType}}
+            limits:
+              memory: {{podConfig.memoryLimit}}{{podConfig.memoryLimitType}}
+              cpu: {{podConfig.cpuLimit}}{{podConfig.cpuLimitType}}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{iid}}
+  namespace: {{namespace}}
+  labels:
+    app: {{iid}}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{networking.containerPort}}
+      targetPort: metrics
+      name: metrics
+  selector:
+    app: {{iid}}
