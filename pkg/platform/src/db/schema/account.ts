@@ -68,6 +68,14 @@ export const organization = sqliteTable("organization", {
 	ownerId: text("owner_id")
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),
+	/**
+	 * Reseller parent org. The org tree derives from this column: a NULL parent
+	 * is a top-level (Hanzo-direct or reseller-root) org; a set parent makes this
+	 * org a sub-tenant of the reseller. A reseller sees/provisions only its own
+	 * sub-tree (`parentOrgId = <reseller>` transitively); a Hanzo global admin
+	 * sees all. Self-reference on `organization.id`.
+	 */
+	parentOrgId: text("parent_org_id"),
 });
 
 export const organizationRelations = relations(

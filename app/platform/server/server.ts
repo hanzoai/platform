@@ -584,6 +584,35 @@ void app.prepare().then(async () => {
 			await ensureGithubAppProvider();
 		}
 
+		// White-label reseller foundation seed: idempotently upsert the package
+		// catalog (backs GET /v1/packages), the service-template deploy map (backs
+		// provisionPackage), and the existing brands (hanzo/lux/zoo/pars) as tenant
+		// records (backs GET /v1/brand?host=). Data-driven, never hardcoded — the
+		// board's honest-404s light up from these rows. Non-fatal; disable with
+		// WHITELABEL_SEED_DISABLED=true.
+		if (
+			process.env.NODE_ENV === "production" &&
+			process.env.WHITELABEL_SEED_DISABLED !== "true"
+		) {
+			try {
+				const { seedWhitelabelFoundation } = await import(
+					"@hanzo/platform/services/whitelabel"
+				);
+				const report = await seedWhitelabelFoundation();
+				console.log(
+					`White-label seed: ${report.packages} packages, ` +
+						`${report.serviceTemplates} service templates, ` +
+						`brands=[${report.brandsSeeded.join(",")}]` +
+						(report.brandsSkipped.length
+							? ` skipped=[${report.brandsSkipped.join(",")}]`
+							: "") +
+						`, ${report.domainsBound} domain bindings`,
+				);
+			} catch (seedErr) {
+				console.error("White-label seed failed (non-fatal):", seedErr);
+			}
+		}
+
 		// Apps-lifecycle inventory: reconcile the `apps` table from the live
 		// operator `Service` CRs + Deployments so platform.hanzo.ai/apps shows
 		// every org's real apps with declared/running/drift/health (turns the

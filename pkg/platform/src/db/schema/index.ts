@@ -53,3 +53,9 @@ export * from "./wallet";
 export * from "./web-server-settings";
 export * from "./apps";
 export * from "./apps-drift";
+// White-label reseller foundation
+export * from "./package";
+export * from "./tenant-package";
+export * from "./whitelabel-domain";
+export * from "./org-brand";
+export * from "./service-template";
