@@ -107,6 +107,27 @@ export interface PlatformConfig {
 
 const VALID_OS: readonly BuildOS[] = ["linux", "darwin", "windows"];
 const VALID_ARCH: readonly BuildArch[] = ["amd64", "arm64"];
+
+/**
+ * Arches the platform can currently BUILD — the ONE place that knows which
+ * arches have a live runner pool. Distinct from `VALID_ARCH` (which arches a
+ * config may *declare*): a config may name arm64, but the platform will not
+ * *build* it while arm64 is paused.
+ *
+ * arm64 is PAUSED (2026-04-27): DOKS offers no arm64 droplets, so an arm64
+ * build Job targets a non-existent node pool (`runner-pool-arm64`, 0 nodes) and
+ * pends forever — wedging the build queue. amd64 is the canonical build path
+ * until DigitalOcean ships arm64. To resume arm64: provision the arm64 runner
+ * pool, add it to buildkit-job's `ARCH_NODE_POOL`, then re-add "arm64" here —
+ * every dual-arch repo then resumes arm64 automatically.
+ */
+export const BUILDABLE_ARCHES: readonly BuildArch[] = ["amd64"];
+
+/** True when the platform has a live runner pool for this arch right now. */
+export function isBuildableArch(arch: BuildArch): boolean {
+	return BUILDABLE_ARCHES.includes(arch);
+}
+
 const SUPPORTED_OPERATORS = ["hanzo-operator", "hanzo"];
 const SUPPORTED_CRDS = ["Service"];
 
