@@ -1,4 +1,6 @@
 import {
+	BUILDABLE_ARCHES,
+	isBuildableArch,
 	PlatformConfigError,
 	parsePlatformConfig,
 	resolveTag,
@@ -242,5 +244,32 @@ describe("resolveTag", () => {
 		expect(
 			resolveTag("br-{{git.branch}}", { sha: "x", branch: "feat/foo bar" }),
 		).toBe("br-feat-foo-bar");
+	});
+});
+
+describe("buildable arch gate (arm64 paused)", () => {
+	it("amd64 is buildable", () => {
+		expect(isBuildableArch("amd64")).toBe(true);
+	});
+	it("arm64 is NOT buildable while paused (no DOKS arm64 pool)", () => {
+		expect(isBuildableArch("arm64")).toBe(false);
+	});
+	it("BUILDABLE_ARCHES is amd64-only", () => {
+		expect([...BUILDABLE_ARCHES]).toEqual(["amd64"]);
+		expect(BUILDABLE_ARCHES).not.toContain("arm64");
+	});
+	it("a config may still DECLARE arm64 (schema-valid) — the gate is runtime, not schema", () => {
+		// A dual-arch config parses fine; the scheduler skips the arm64 entry at
+		// dispatch time. Keeps validation and build-time policy orthogonal.
+		const cfg = parsePlatformConfig(`
+build:
+  matrix:
+    - { os: linux, arch: amd64 }
+    - { os: linux, arch: arm64 }
+  image: ghcr.io/hanzoai/zip
+`);
+		expect(cfg.builds[0].matrix.map((m) => m.arch)).toEqual(["amd64", "arm64"]);
+		// Exactly one of the declared arches is currently buildable.
+		expect(cfg.builds[0].matrix.filter((m) => isBuildableArch(m.arch))).toHaveLength(1);
 	});
 });
