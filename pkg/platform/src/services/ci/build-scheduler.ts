@@ -33,6 +33,7 @@ import {
 	type BuildConfig,
 	type BuildOS,
 	type PlatformConfig,
+	isBuildableArch,
 	parsePlatformConfig,
 	resolveTag,
 	runnerPoolFor,
@@ -258,6 +259,16 @@ export async function enqueueDirectBuild(
 ): Promise<BuildJob> {
 	const os: BuildOS = input.os ?? "linux";
 	const arch: BuildArch = input.arch ?? "amd64";
+	// arm64 is paused (no DOKS arm64 pool). Reject an explicit arm64 request
+	// loudly rather than launch a Job that pends forever on a non-existent pool.
+	// The direct front door is an operator/tool asking for a specific arch, so a
+	// clear error beats a silent wedge. Resumes when arm64 rejoins BUILDABLE_ARCHES.
+	if (!isBuildableArch(arch)) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `arch "${arch}" is paused: DOKS has no arm64 droplets, so an arm64 build targets a non-existent runner pool and never schedules. Build amd64 only until DigitalOcean ships arm64.`,
+		});
+	}
 	const target = `${os}/${arch}`;
 	const branch = input.branch ?? "main";
 	const ref = input.ref ?? `refs/heads/${branch}`;
@@ -306,6 +317,12 @@ export async function scheduleBuilds(
 	// legacy single-build repos (name "") keep the bare `os/arch` target.
 	for (const build of config.builds) {
 		for (const entry of build.matrix) {
+			// arm64 is paused (no DOKS arm64 pool). Skip its matrix entries so a
+			// dual-arch repo still builds its amd64 image instead of wedging an
+			// unschedulable arm64 Job on a non-existent pool. Same "skip, don't
+			// fail the push" shape as the empty-{{git.tag}} skip below. Re-add
+			// "arm64" to BUILDABLE_ARCHES (platform-config) when DO ships arm64.
+			if (!isBuildableArch(entry.arch)) continue;
 			const arch = `${entry.os}/${entry.arch}`;
 			const target = build.name ? `${build.name}:${arch}` : arch;
 			const existing = await findBuildJobByTarget(
