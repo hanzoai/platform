@@ -268,8 +268,8 @@ build:
     - { os: linux, arch: arm64 }
   image: ghcr.io/hanzoai/zip
 `);
-		expect(cfg.builds[0].matrix.map((m) => m.arch)).toEqual(["amd64", "arm64"]);
+		expect(cfg.builds[0]!.matrix.map((m) => m.arch)).toEqual(["amd64", "arm64"]);
 		// Exactly one of the declared arches is currently buildable.
-		expect(cfg.builds[0].matrix.filter((m) => isBuildableArch(m.arch))).toHaveLength(1);
+		expect(cfg.builds[0]!.matrix.filter((m) => isBuildableArch(m.arch))).toHaveLength(1);
 	});
 });
