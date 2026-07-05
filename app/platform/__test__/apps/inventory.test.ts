@@ -12,9 +12,12 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+	brandOrg,
+	declaredOrg,
 	discoverApps,
 	healthFromDeployment,
 	observeService,
+	orgForService,
 	orgFromRepository,
 	repoFromRepository,
 	runningTagFromDeployment,
@@ -44,6 +47,45 @@ describe("repoFromRepository", () => {
 	});
 	it("keeps a bare namespace/name unchanged", () => {
 		expect(repoFromRepository("hanzoai/iam")).toBe("hanzoai/iam");
+	});
+});
+
+describe("brandOrg", () => {
+	it("canonicalizes a known image namespace to its brand org", () => {
+		expect(brandOrg("hanzoai")).toBe("hanzo");
+		expect(brandOrg("zooai")).toBe("zoo");
+		expect(brandOrg("luxfi")).toBe("lux");
+	});
+	it("passes an unknown namespace through unchanged (not a Hanzo product)", () => {
+		expect(brandOrg("grafana")).toBe("grafana");
+		expect(brandOrg("getmeili")).toBe("getmeili");
+	});
+});
+
+describe("declaredOrg / orgForService", () => {
+	const repo = "ghcr.io/hanzoai/iam";
+	it("reads an explicit `hanzo.ai/org` label", () => {
+		expect(
+			declaredOrg({ metadata: { name: "x", labels: { "hanzo.ai/org": "hanzo" } } }),
+		).toBe("hanzo");
+	});
+	it("reads an explicit `hanzo.ai/org` annotation", () => {
+		expect(
+			declaredOrg({
+				metadata: { name: "x", annotations: { "hanzo.ai/org": "lux" } },
+			}),
+		).toBe("lux");
+	});
+	it("is undefined when neither label nor annotation is set", () => {
+		expect(declaredOrg({ metadata: { name: "x" } })).toBeUndefined();
+	});
+	it("prefers the explicit label over the brand-canonicalized namespace", () => {
+		expect(
+			orgForService({ metadata: { name: "x", labels: { "hanzo.ai/org": "acme" } } }, repo),
+		).toBe("acme");
+	});
+	it("falls back to the brand org of the image namespace", () => {
+		expect(orgForService({ metadata: { name: "x" } }, repo)).toBe("hanzo");
 	});
 });
 
@@ -131,11 +173,13 @@ describe("observeService", () => {
 		status: { readyReplicas: 1 },
 	};
 
-	it("maps a CR + Deployment into a fully-resolved ObservedApp", () => {
+	it("maps a CR + Deployment into a fully-resolved ObservedApp (org brand-canonicalized)", () => {
 		const app = observeService(cr, dep, "hanzo-k8s", "hanzo", "main");
 		expect(app).toEqual({
-			id: "hanzoai/chat/main",
-			org: "hanzoai",
+			// `ghcr.io/hanzoai/chat` → org `hanzo` (brand org), NOT the raw `hanzoai`
+			// namespace: the board must group first-party services under the IAM org.
+			id: "hanzo/chat/main",
+			org: "hanzo",
 			app: "chat",
 			env: "main",
 			repo: "hanzoai/chat",
@@ -146,6 +190,25 @@ describe("observeService", () => {
 			cluster: "hanzo-k8s",
 			namespace: "hanzo",
 		});
+	});
+
+	it("honors an explicit `hanzo.ai/org` label over the image namespace", () => {
+		const labeled = {
+			metadata: { name: "chat", labels: { "hanzo.ai/org": "maxpower" } },
+			spec: { image: { repository: "ghcr.io/hanzoai/chat", tag: "0.7.10" } },
+		};
+		const app = observeService(labeled, dep, "hanzo-k8s", "hanzo", "main");
+		expect(app?.org).toBe("maxpower");
+		expect(app?.id).toBe("maxpower/chat/main");
+	});
+
+	it("honors an explicit `hanzo.ai/org` annotation when there is no label", () => {
+		const annotated = {
+			metadata: { name: "chat", annotations: { "hanzo.ai/org": "hanzo" } },
+			spec: { image: { repository: "docker.io/library/redis", tag: "7" } },
+		};
+		const app = observeService(annotated, null, "hanzo-k8s", "hanzo", "main");
+		expect(app?.org).toBe("hanzo");
 	});
 
 	it("records declared-but-not-running when there is no Deployment", () => {
