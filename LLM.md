@@ -437,3 +437,112 @@ One line, source→run, no forks:
    fix or fold `arcd-control` into the act_runner backend.
 6. **One-time: clear the operator selector wedge** (Break 2 runbook) so every app
    reconciles cleanly on the new one-way path.
+
+## Execution model — Goja vs Node vs Go-native (VERIFIED, evidence-based)
+
+Settles the claim *"the PaaS TypeScript runs as goroutines loaded by Goa in Goja,
+with Base features."* Verdict: **the PaaS TS is valid (typecheck green) but it does
+NOT run in Goja — it runs as a Node.js process.** The Docker/k8s/fs/exec
+orchestration is Go-native. "Goa" and "Goja" are unrelated pieces that both exist
+in the stack but neither runs the PaaS TS. Full trace below.
+
+### Three deployments, three runtimes (live, ns `hanzo`, `do-sfo3-hanzo-k8s`)
+
+| Deploy | Image | PID 1 | Runtime | Role |
+|---|---|---|---|---|
+| `platform` | `ghcr.io/hanzoai/base:0.39.11` | `/app/base serve --http=0.0.0.0:8090 --dir=/data` | **Go** (Base) | platform.hanzo.ai data/auth/org backend + static `/public` admin UI |
+| `paas` | `ghcr.io/hanzoai/platform:v4.4.10` | `node /usr/local/bin/pnpm start` (node v24, `.next/` present) | **Node.js** | the dokploy-derived PaaS TS (Next.js + server) |
+| `cloud` | `ghcr.io/hanzoai/cloud:v1.786.110` | cloud goa binary | **Go** | goa.design services incl. `clients/platform` k8s orchestration |
+
+The `platform` (Base) pod: `/app` holds only `base` (51 MB Go binary) + `public`.
+No Node, no PaaS `dist`. `/data` = SQLite (`data.db`, `auxiliary.db`). **`/hooks`
+and `/migrations` are EMPTY** → Base loads **zero JS** in production. It is a pure
+Go backend.
+
+### What actually runs in Goja (Base's JS engines) — and it is NOT the PaaS
+
+Base ships two goja engines; neither runs the PaaS orchestration:
+
+- **`plugins/jsvm`** — PocketBase-style hooks. Loads `*.base.js` / `*.base.ts`
+  from `HooksDir = <DataDir>/../hooks` (`jsvm.go:129`) into a **pool of per-execution
+  `goja.Runtime` instances** (`jsvm.go:312` `newPool(...)`, each `goja.New()`).
+  Per-goroutine VM isolation is correct — `goja.Runtime` is not concurrency-safe.
+  Host binds (`plugins/jsvm/binds.go`): `$app`, `routerAdd`, `cronAdd/cronRemove`,
+  `Record`, `Collection`, `DynamicModel`, field constructors, `sleep` (a *blocking*
+  Go sleep, not async). **No fs / exec / docker binds exist.** In the live pod the
+  hooks dir is empty → this engine loads nothing.
+- **`plugins/gojavm`** — manifest extensions (`extension.json`, `"runtime":"goja"`).
+  Wraps zip's shared `*runtime.JSRuntime` VM pool; esbuild bundles TS/JSX/ESM →
+  **CommonJS** (`module.go:47-59`). Every `Invoke` borrows a pooled VM and calls the
+  export **synchronously**. It **hard-rejects any handler returning a pending
+  promise** — `module.go:125-127`: *"gojavm: async handler returned a pending
+  promise; handler must resolve synchronously"*. goja has no event loop / microtask
+  queue.
+
+"Goa" (goa.design) is a **Go** service framework used in the separate `cloud`
+service (`~/work/hanzo/cloud/clients/platform/design/design/design.go`). It has
+nothing to do with loading TS and is not in the JS path. The claim conflates goa
+(Go framework) with goja (JS VM).
+
+### The PaaS TS is a Node app, by construction
+
+`~/work/hanzo/platform` workspace (`pnpm-workspace.yaml`) = `app/{api,platform,
+monitoring,schedules}` + `pkg/{platform,mcp,zap}`. The legacy dokploy
+`packages/server` is **not in the workspace** (orphaned). The active server is
+`pkg/platform` (`@hanzo/platform`). Its `esbuild.config.ts`:
+
+```
+platform: "node",        // built for Node, not neutral/browser/goja
+packages: "external",    // dockerode/ssh2/better-auth/drizzle NOT bundled — required from node_modules at runtime
+format: "esm",
+```
+
+`pkg/platform/src`: **280 `.ts` files, of which 168 (60%) use `async`/`await`/
+`Promise`** (the async event-loop model goja lacks), and **22 files hit external
+I/O goja cannot do**: `dockerode` (Docker daemon, 15), `ssh2`/`net` (6),
+`child_process` (2). A further 42 use `fs`/`path`. The `paas` pod runs this under
+real Node v24 — which is exactly why it works.
+
+### Base features the PaaS uses — consumed as a service, not built ON
+
+The PaaS TS uses Base as a **backend it talks to over HTTP**, not as its host
+runtime. The `base:0.39.11` pod's `plugins/platform` (Go-native) provides the
+multi-tenant layer: org isolation, IAM/KMS proxies, org collections/db, and
+`/v1/platform/*` auth routes (`plugins/platform/{org,org_isolation,auth_proxy,
+iam_proxy,kms}.go`). Base does **not** import `cloud/clients/platform` (`base/go.mod`
+has no `hanzoai/cloud`). So: PaaS-TS (Node) → Base (Go) over HTTP; k8s deploy
+orchestration → cloud goa/client-go (Go). Three processes, clean seams.
+
+### Verdict: "all PaaS as goroutines in Goja" — NOT achievable for the orchestration
+
+Achievable only for pure-synchronous slices (constants, schema, pure transforms).
+The orchestration cannot move into goja:
+
+1. **60% of files are async.** goja has no event loop; gojavm rejects pending
+   promises outright. Every `await` in a deploy path would need a synchronous
+   rewrite.
+2. **22 files need Docker daemon / SSH / child_process.** goja has no OS-process,
+   raw-socket, or Docker-client capability. Each would need a Go host-function
+   bridge — and even bridged, the async call-sites still violate the sync-only
+   contract, forcing a rewrite anyway.
+3. **esbuild target is `platform:"node"` + `packages:"external"`** — the code and
+   its deps assume Node builtins + node_modules, absent in goja.
+
+At which point you have reimplemented the orchestration in Go — which is **already
+done**: `cloud/clients/platform` (goa design + `k8s.io/client-go`, ~4.6k LOC:
+`deploy.go`, `k8s.go`, `reconcile.go`, `domains.go`, `secrets.go`, `store.go`)
+drives operator Service CRs natively. That is the correct home for the
+Docker/k8s/fs/exec work. The production split is already the right one: **Base (Go)
+for data/auth/org, cloud (Go/goa/client-go) for k8s orchestration, Node for the
+dokploy PaaS TS.** Goja is for synchronous PocketBase-style hooks only.
+
+### TS validity (typecheck) — now green
+
+`corepack pnpm@10.22.0 -r --no-bail run typecheck` (node 24) over the 5 TS projects.
+Was: 4/5 pass, `app/api` failed `TS2307: Cannot find module '@hanzo/platform'` —
+app/api imported the bare `@hanzo/platform` root but its `tsconfig` mapped only the
+subpath `@hanzo/platform/*` to pkg source, so tsc fell through to the package
+`exports` (`./dist/index.js`, no emitted `.d.ts`; `dist/` does not exist).
+Fix (PR #58, branch `fix/platform-typecheck`): add the bare-root path mapping to
+`app/api/tsconfig.json`, matching `app/schedules` which already carried both. Now:
+**all 5 projects `Done`.** (`pkg/zap` is a Rust crate, no `typecheck` script.)
