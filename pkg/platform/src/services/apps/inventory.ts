@@ -87,7 +87,11 @@ export const DEFAULT_TARGETS: ClusterTarget[] = [
 // ---------------------------------------------------------------------------
 
 interface ServiceCR {
-	metadata?: { name?: string };
+	metadata?: {
+		name?: string;
+		labels?: Record<string, string>;
+		annotations?: Record<string, string>;
+	};
 	spec?: {
 		image?: { repository?: string; tag?: string };
 	};
@@ -132,6 +136,57 @@ export function repoFromRepository(repository: string): string {
 	const parts = repository.split("/").filter(Boolean);
 	if (parts.length >= 3) return parts.slice(1).join("/");
 	return parts.join("/");
+}
+
+// ---------------------------------------------------------------------------
+// Org attribution — the ONE brand-alias source of truth
+// ---------------------------------------------------------------------------
+
+/**
+ * Canonical brand org for a known image namespace. This is the SINGLE source of
+ * truth for the `hanzoai`→`hanzo` / `zooai`→`zoo` / `luxfi`→`lux` brand alias,
+ * applied to BOTH the `apps.org` column (`brandOrg`, below) and the tenant FK
+ * (`resolveOrganizationId`, which derives `ORG_ALIASES` from this map). A
+ * first-party `ghcr.io/hanzoai/*` service IS the Hanzo org, so the board groups
+ * it under `hanzo` (the IAM/brand org the console scopes by) — never the raw
+ * registry namespace `hanzoai`. Unknown namespaces (grafana, meilisearch, …)
+ * pass through unchanged: they are genuinely their own upstream, not a Hanzo
+ * product, and must not be swept into the brand org.
+ */
+export const BRAND_ORG: Record<string, string> = {
+	hanzoai: "hanzo",
+	zooai: "zoo",
+	luxfi: "lux",
+};
+
+/** Canonicalize an image namespace to its brand org (identity when unknown). */
+export function brandOrg(imageOrg: string): string {
+	return BRAND_ORG[imageOrg] ?? imageOrg;
+}
+
+/**
+ * The operator-CR org-attribution key. An explicit `hanzo.ai/org` on the Service
+ * CR (as a label OR an annotation) DECLARES the owning org and wins over the
+ * image-namespace inference — so a service whose org differs from its image
+ * namespace (e.g. a tenant app deployed into the `hanzo` namespace, or a shared
+ * image published under `hanzoai` but owned by another org) attributes correctly.
+ */
+export const ORG_LABEL = "hanzo.ai/org";
+
+/** The org explicitly declared on a CR via `hanzo.ai/org` (label or annotation). */
+export function declaredOrg(cr: ServiceCR): string | undefined {
+	const meta = cr.metadata;
+	return meta?.labels?.[ORG_LABEL] ?? meta?.annotations?.[ORG_LABEL];
+}
+
+/**
+ * Resolve the org a Service CR attributes to, in precedence order:
+ *   1. an explicit `hanzo.ai/org` label/annotation on the CR (declared owner);
+ *   2. else the brand org of the image namespace (`hanzoai`→`hanzo`, …), so a
+ *      first-party service groups under its brand/IAM org on the board.
+ */
+export function orgForService(cr: ServiceCR, repository: string): string {
+	return declaredOrg(cr) ?? brandOrg(orgFromRepository(repository));
 }
 
 /** Roll a Deployment's replica counts up to the apps-table health vocabulary. */
@@ -200,7 +255,7 @@ export function observeService(
 	const repository = cr.spec?.image?.repository;
 	if (!name || !repository) return null;
 
-	const org = orgFromRepository(repository);
+	const org = orgForService(cr, repository);
 	const repo = repoFromRepository(repository);
 	const declaredTag = cr.spec?.image?.tag ?? null;
 	const runningTag = runningTagFromDeployment(dep, repository);
@@ -283,11 +338,12 @@ export async function discoverApps(
  * everything). Returns null when ambiguous, leaving the row tenant-unowned (it
  * still lists on the un-scoped board).
  */
-const ORG_ALIASES: Record<string, string[]> = {
-	hanzoai: ["hanzo"],
-	zooai: ["zoo"],
-	luxfi: ["lux"],
-};
+// Derived from the ONE brand-alias source (`BRAND_ORG`) so the image-namespace →
+// brand-org mapping cannot drift between the `org` column and the tenant FK.
+// `{ hanzoai: ["hanzo"], zooai: ["zoo"], luxfi: ["lux"] }`.
+const ORG_ALIASES: Record<string, string[]> = Object.fromEntries(
+	Object.entries(BRAND_ORG).map(([imageOrg, brand]) => [imageOrg, [brand]]),
+);
 
 export async function resolveOrganizationId(
 	imageOrg: string,
