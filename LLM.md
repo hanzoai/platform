@@ -52,6 +52,39 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
   The fully-autonomous build→deploy→e2e one-shot is for TENANT apps whose
   `hanzo.yml` targets their own tenant namespace.
 
+### Gitea Actions on git.hanzo.ai — the GitHub-Actions-compatible on-ramp
+
+The BuildKit pipeline above is the *opinionated* lane (platform owns
+build→deploy→e2e→publish from `hanzo.yml`). The **complementary** lane is
+**native GitHub-Actions-compatible CI on git.hanzo.ai**: a GitHub user brings
+their repo and their existing `.github/workflows` **just run** — no rewrite, on
+our own infra. This is the easy on-ramp INTO the Hanzo estate.
+
+- **Enabled:** `GITEA__actions__ENABLED=true` on the `gitea` Deployment
+  (`universe/infra/k8s/gitea/deployment.yaml`) → `app.ini [actions] ENABLED=true`.
+  `DEFAULT_ACTIONS_URL` stays `github`, so `uses: actions/checkout@v4` (and any
+  `owner/action@ref`) resolves to github.com.
+- **Runners:** StatefulSet `gitea-act-runner` (2× `gitea/act_runner:0.6.1-dind`,
+  privileged bundled dockerd, on `runner-pool-32g` + `dedicated=ci-runner` — the
+  SAME CI pool the BuildKit Jobs use) in `universe/infra/k8s/gitea-runner/`.
+  Registration token minted by gitea → **KMS** (`hanzo` / `gitea-runner-secrets` /
+  `GITEA_RUNNER_REGISTRATION_TOKEN`, env=prod) → `KMSSecret` (kms-operator) →
+  k8s Secret. NEVER in git/plaintext (same funnel as every platform secret).
+- **`runs-on` map:** `ubuntu-latest` / `ubuntu-22.04` / `ubuntu-24.04` →
+  catthehacker act images (GH-hosted-runner-equivalent); plus
+  `hanzo-build-linux-amd64` for parity with existing hanzoai `runs-on`.
+- **User on-ramp (how a GitHub repo lands):** create/mirror the repo on
+  git.hanzo.ai (HTTP push with a Gitea token, or the repo-migration UI/API) → on
+  push, gitea auto-discovers workflows and dispatches jobs to the runners.
+  GOTCHA: if a repo has BOTH `.gitea/workflows/` and `.github/workflows/`, gitea
+  uses **only `.gitea/workflows/`** and ignores `.github/`. Pure-GitHub repos
+  (only `.github/workflows/`) run unmodified.
+- **PROVEN (PR `hanzoai/universe#412`):** `z/gh-onramp` — a pure
+  `.github/workflows/ci.yml` with `actions/checkout@v4` fetched from github.com —
+  ran to `status=success` on `gitea-act-runner-1`; `z/actions-smoke`
+  (`.gitea/workflows`) also `success`. GH-Actions-compatible CI is live natively
+  on git.hanzo.ai.
+
 ## Apps inventory — the "observe" half of the control plane
 
 `platform.hanzo.ai/apps` (the apps-lifecycle drift board, `docs/APPS_LIFECYCLE.md`)
