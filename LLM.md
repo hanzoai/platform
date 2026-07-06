@@ -52,6 +52,39 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
   The fully-autonomous build→deploy→e2e one-shot is for TENANT apps whose
   `hanzo.yml` targets their own tenant namespace.
 
+### Gitea Actions on git.hanzo.ai — the GitHub-Actions-compatible on-ramp
+
+The BuildKit pipeline above is the *opinionated* lane (platform owns
+build→deploy→e2e→publish from `hanzo.yml`). The **complementary** lane is
+**native GitHub-Actions-compatible CI on git.hanzo.ai**: a GitHub user brings
+their repo and their existing `.github/workflows` **just run** — no rewrite, on
+our own infra. This is the easy on-ramp INTO the Hanzo estate.
+
+- **Enabled:** `GITEA__actions__ENABLED=true` on the `gitea` Deployment
+  (`universe/infra/k8s/gitea/deployment.yaml`) → `app.ini [actions] ENABLED=true`.
+  `DEFAULT_ACTIONS_URL` stays `github`, so `uses: actions/checkout@v4` (and any
+  `owner/action@ref`) resolves to github.com.
+- **Runners:** StatefulSet `gitea-act-runner` (2× `gitea/act_runner:0.6.1-dind`,
+  privileged bundled dockerd, on `runner-pool-32g` + `dedicated=ci-runner` — the
+  SAME CI pool the BuildKit Jobs use) in `universe/infra/k8s/gitea-runner/`.
+  Registration token minted by gitea → **KMS** (`hanzo` / `gitea-runner-secrets` /
+  `GITEA_RUNNER_REGISTRATION_TOKEN`, env=prod) → `KMSSecret` (kms-operator) →
+  k8s Secret. NEVER in git/plaintext (same funnel as every platform secret).
+- **`runs-on` map:** `ubuntu-latest` / `ubuntu-22.04` / `ubuntu-24.04` →
+  catthehacker act images (GH-hosted-runner-equivalent); plus
+  `hanzo-build-linux-amd64` for parity with existing hanzoai `runs-on`.
+- **User on-ramp (how a GitHub repo lands):** create/mirror the repo on
+  git.hanzo.ai (HTTP push with a Gitea token, or the repo-migration UI/API) → on
+  push, gitea auto-discovers workflows and dispatches jobs to the runners.
+  GOTCHA: if a repo has BOTH `.gitea/workflows/` and `.github/workflows/`, gitea
+  uses **only `.gitea/workflows/`** and ignores `.github/`. Pure-GitHub repos
+  (only `.github/workflows/`) run unmodified.
+- **PROVEN (PR `hanzoai/universe#412`):** `z/gh-onramp` — a pure
+  `.github/workflows/ci.yml` with `actions/checkout@v4` fetched from github.com —
+  ran to `status=success` on `gitea-act-runner-1`; `z/actions-smoke`
+  (`.gitea/workflows`) also `success`. GH-Actions-compatible CI is live natively
+  on git.hanzo.ai.
+
 ## Apps inventory — the "observe" half of the control plane
 
 `platform.hanzo.ai/apps` (the apps-lifecycle drift board, `docs/APPS_LIFECYCLE.md`)
@@ -295,6 +328,11 @@ becomes a running pod, WHERE that path forks, and the ONE native path we collaps
      served the RETIRED long-poll arcd-runner surface. **Retired 2026-07-05**:
      deleted the Deployment + Service; the conductor is the `paas` pod, the
      workers are `arcbuild*` — one build path, no dead component.)*
+     BuildKit Job (see "Platform-native CI/CD (GHA escape)" above); worker pods
+     `arcbuild*` + `arcd-control` in `hanzo` (build fleet on spark/evo/dbc). This
+     is the intended GHA-escape and matches the "NO GITHUB BUILDERS" directive.
+     `arcd-control` is currently **crash-looping** (`TypeError: Cannot redefine
+     property: query`) — the native path is deployed but degraded.
    - **Gitea Actions** — the TARGET native CI (GitHub-workflow-compatible, runs
      `.github/workflows`). **NOT enabled**: no `act_runner` pods anywhere, no
      `[actions]` block in Gitea `app.ini`. This is the keystone gap.
@@ -359,6 +397,16 @@ crane-promoted `0.1.0` semver aliases of the live digest — verify per-digest.)
 bump those CR tags in `universe` so `git==live`; (2) verify the app diff is a
 no-op; (3) THEN add `automated:{selfHeal,prune:false}` and re-apply the
 ApplicationSet. Flipping before step 2 regresses prod.
+`automated` block**. Both generated apps are manual-sync. A merged universe PR
+editing `infra/k8s/operator/crs/*.yaml` (e.g. #410 retire-temporal, #409
+social-repin) goes OutOfSync and WAITS until a human runs `argocd app sync`. That
+is exactly why the workaround has been hand-patching CRs.
+*Fix (one edit to the ApplicationSet template in `universe`):*
+```yaml
+syncPolicy:
+  automated: { selfHeal: true, prune: false }   # prune:false first; enable after an orphan audit
+```
+Re-apply the ApplicationSet → both apps auto-converge on every git change.
 
 **Break 2 — operator immutable-selector wedge.** operator v0.6.17
 `src/manifests.rs:69 selector_labels()` emits selector
@@ -389,6 +437,11 @@ with the operator's per-app 422 cleared. The operator error set collapsed from 1
 apps to **3 residual: `insights-kafka, insights-kv, insights-sql`** — same class,
 same fix, held for a separate go-ahead (they back the analytics pipeline; a
 recreate is a brief single-pod blip).
+# operator's next reconcile takes the CREATE path → new Deployment, new selector
+kubectl rollout status deploy/<app> -n hanzo
+```
+NOT executed here — a production restart of 8 Deployments needs an explicit
+go-ahead; the runbook is ready and safe with `--cascade=orphan`.
 
 **The "5 orphaned resources" warning is neither of these and must NOT be
 "pruned".** The orphans are the hand-created secrets in `operator-system`
@@ -462,3 +515,112 @@ One line, source→run, no forks:
    fix or fold `arcd-control` into the act_runner backend.
 6. **One-time: clear the operator selector wedge** (Break 2 runbook) so every app
    reconciles cleanly on the new one-way path.
+
+## Execution model — Goja vs Node vs Go-native (VERIFIED, evidence-based)
+
+Settles the claim *"the PaaS TypeScript runs as goroutines loaded by Goa in Goja,
+with Base features."* Verdict: **the PaaS TS is valid (typecheck green) but it does
+NOT run in Goja — it runs as a Node.js process.** The Docker/k8s/fs/exec
+orchestration is Go-native. "Goa" and "Goja" are unrelated pieces that both exist
+in the stack but neither runs the PaaS TS. Full trace below.
+
+### Three deployments, three runtimes (live, ns `hanzo`, `do-sfo3-hanzo-k8s`)
+
+| Deploy | Image | PID 1 | Runtime | Role |
+|---|---|---|---|---|
+| `platform` | `ghcr.io/hanzoai/base:0.39.11` | `/app/base serve --http=0.0.0.0:8090 --dir=/data` | **Go** (Base) | platform.hanzo.ai data/auth/org backend + static `/public` admin UI |
+| `paas` | `ghcr.io/hanzoai/platform:v4.4.10` | `node /usr/local/bin/pnpm start` (node v24, `.next/` present) | **Node.js** | the dokploy-derived PaaS TS (Next.js + server) |
+| `cloud` | `ghcr.io/hanzoai/cloud:v1.786.110` | cloud goa binary | **Go** | goa.design services incl. `clients/platform` k8s orchestration |
+
+The `platform` (Base) pod: `/app` holds only `base` (51 MB Go binary) + `public`.
+No Node, no PaaS `dist`. `/data` = SQLite (`data.db`, `auxiliary.db`). **`/hooks`
+and `/migrations` are EMPTY** → Base loads **zero JS** in production. It is a pure
+Go backend.
+
+### What actually runs in Goja (Base's JS engines) — and it is NOT the PaaS
+
+Base ships two goja engines; neither runs the PaaS orchestration:
+
+- **`plugins/jsvm`** — PocketBase-style hooks. Loads `*.base.js` / `*.base.ts`
+  from `HooksDir = <DataDir>/../hooks` (`jsvm.go:129`) into a **pool of per-execution
+  `goja.Runtime` instances** (`jsvm.go:312` `newPool(...)`, each `goja.New()`).
+  Per-goroutine VM isolation is correct — `goja.Runtime` is not concurrency-safe.
+  Host binds (`plugins/jsvm/binds.go`): `$app`, `routerAdd`, `cronAdd/cronRemove`,
+  `Record`, `Collection`, `DynamicModel`, field constructors, `sleep` (a *blocking*
+  Go sleep, not async). **No fs / exec / docker binds exist.** In the live pod the
+  hooks dir is empty → this engine loads nothing.
+- **`plugins/gojavm`** — manifest extensions (`extension.json`, `"runtime":"goja"`).
+  Wraps zip's shared `*runtime.JSRuntime` VM pool; esbuild bundles TS/JSX/ESM →
+  **CommonJS** (`module.go:47-59`). Every `Invoke` borrows a pooled VM and calls the
+  export **synchronously**. It **hard-rejects any handler returning a pending
+  promise** — `module.go:125-127`: *"gojavm: async handler returned a pending
+  promise; handler must resolve synchronously"*. goja has no event loop / microtask
+  queue.
+
+"Goa" (goa.design) is a **Go** service framework used in the separate `cloud`
+service (`~/work/hanzo/cloud/clients/platform/design/design/design.go`). It has
+nothing to do with loading TS and is not in the JS path. The claim conflates goa
+(Go framework) with goja (JS VM).
+
+### The PaaS TS is a Node app, by construction
+
+`~/work/hanzo/platform` workspace (`pnpm-workspace.yaml`) = `app/{api,platform,
+monitoring,schedules}` + `pkg/{platform,mcp,zap}`. The legacy dokploy
+`packages/server` is **not in the workspace** (orphaned). The active server is
+`pkg/platform` (`@hanzo/platform`). Its `esbuild.config.ts`:
+
+```
+platform: "node",        // built for Node, not neutral/browser/goja
+packages: "external",    // dockerode/ssh2/better-auth/drizzle NOT bundled — required from node_modules at runtime
+format: "esm",
+```
+
+`pkg/platform/src`: **280 `.ts` files, of which 168 (60%) use `async`/`await`/
+`Promise`** (the async event-loop model goja lacks), and **22 files hit external
+I/O goja cannot do**: `dockerode` (Docker daemon, 15), `ssh2`/`net` (6),
+`child_process` (2). A further 42 use `fs`/`path`. The `paas` pod runs this under
+real Node v24 — which is exactly why it works.
+
+### Base features the PaaS uses — consumed as a service, not built ON
+
+The PaaS TS uses Base as a **backend it talks to over HTTP**, not as its host
+runtime. The `base:0.39.11` pod's `plugins/platform` (Go-native) provides the
+multi-tenant layer: org isolation, IAM/KMS proxies, org collections/db, and
+`/v1/platform/*` auth routes (`plugins/platform/{org,org_isolation,auth_proxy,
+iam_proxy,kms}.go`). Base does **not** import `cloud/clients/platform` (`base/go.mod`
+has no `hanzoai/cloud`). So: PaaS-TS (Node) → Base (Go) over HTTP; k8s deploy
+orchestration → cloud goa/client-go (Go). Three processes, clean seams.
+
+### Verdict: "all PaaS as goroutines in Goja" — NOT achievable for the orchestration
+
+Achievable only for pure-synchronous slices (constants, schema, pure transforms).
+The orchestration cannot move into goja:
+
+1. **60% of files are async.** goja has no event loop; gojavm rejects pending
+   promises outright. Every `await` in a deploy path would need a synchronous
+   rewrite.
+2. **22 files need Docker daemon / SSH / child_process.** goja has no OS-process,
+   raw-socket, or Docker-client capability. Each would need a Go host-function
+   bridge — and even bridged, the async call-sites still violate the sync-only
+   contract, forcing a rewrite anyway.
+3. **esbuild target is `platform:"node"` + `packages:"external"`** — the code and
+   its deps assume Node builtins + node_modules, absent in goja.
+
+At which point you have reimplemented the orchestration in Go — which is **already
+done**: `cloud/clients/platform` (goa design + `k8s.io/client-go`, ~4.6k LOC:
+`deploy.go`, `k8s.go`, `reconcile.go`, `domains.go`, `secrets.go`, `store.go`)
+drives operator Service CRs natively. That is the correct home for the
+Docker/k8s/fs/exec work. The production split is already the right one: **Base (Go)
+for data/auth/org, cloud (Go/goa/client-go) for k8s orchestration, Node for the
+dokploy PaaS TS.** Goja is for synchronous PocketBase-style hooks only.
+
+### TS validity (typecheck) — now green
+
+`corepack pnpm@10.22.0 -r --no-bail run typecheck` (node 24) over the 5 TS projects.
+Was: 4/5 pass, `app/api` failed `TS2307: Cannot find module '@hanzo/platform'` —
+app/api imported the bare `@hanzo/platform` root but its `tsconfig` mapped only the
+subpath `@hanzo/platform/*` to pkg source, so tsc fell through to the package
+`exports` (`./dist/index.js`, no emitted `.d.ts`; `dist/` does not exist).
+Fix (PR #58, branch `fix/platform-typecheck`): add the bare-root path mapping to
+`app/api/tsconfig.json`, matching `app/schedules` which already carried both. Now:
+**all 5 projects `Done`.** (`pkg/zap` is a Rust crate, no `typecheck` script.)
