@@ -319,6 +319,15 @@ becomes a running pod, WHERE that path forks, and the ONE native path we collaps
      `arc-gha-rs-controller`. LOAD-BEARING: every image this session was built
      here → `ghcr.io/hanzoai/*` (4 runners were mid-build during diagnosis).
    - **Platform-native BuildKit (`arcd`)** — the `paas` pod conducts an in-cluster
+     BuildKit Job (see "Platform-native CI/CD (GHA escape)" above); the real build
+     fleet is `arcbuild*` on spark/evo/dbc (healthy). This is the intended
+     GHA-escape and matches the "NO GITHUB BUILDERS" directive.
+     *(A stray `arcd-control` Deployment was crash-looping `TypeError: Cannot
+     redefine property: query` — it ran a stale image `platform:0c009a0-arcd`
+     built from a commit not in the repo, was NOT in git, had no CR owner, and
+     served the RETIRED long-poll arcd-runner surface. **Retired 2026-07-05**:
+     deleted the Deployment + Service; the conductor is the `paas` pod, the
+     workers are `arcbuild*` — one build path, no dead component.)*
      BuildKit Job (see "Platform-native CI/CD (GHA escape)" above); worker pods
      `arcbuild*` + `arcd-control` in `hanzo` (build fleet on spark/evo/dbc). This
      is the intended GHA-escape and matches the "NO GITHUB BUILDERS" directive.
@@ -365,6 +374,29 @@ symptom — NOT the orphan warning.
 **Break 1 — ArgoCD auto-sync is disabled.** ApplicationSet `hanzo-operator`
 template carries `syncPolicy` = `retry` + `syncOptions` (`ServerSideApply`,
 `ApplyOutOfSyncOnly`, `PruneLast`, `RespectIgnoreDifferences`) but **no
+`automated` block** — and the template comment explicitly gates it: "NO automated
+sync until the live diff is verified to be a no-op (git==live)." Both generated
+apps are manual-sync. A merged universe PR editing `infra/k8s/operator/crs/*.yaml`
+(e.g. #410 retire-temporal, #409 social-repin) goes OutOfSync and WAITS until a
+human runs `argocd app sync`. That is exactly why the workaround has been
+hand-patching CRs.
+*Intended fix (one edit to the ApplicationSet template in `universe`):*
+```yaml
+syncPolicy:
+  automated: { selfHeal: true, prune: false }   # prune:false: never auto-delete the load-bearing secrets
+```
+**HELD — do NOT flip yet (verified outage risk).** The gate is currently
+violated: `hanzo-k8s-operator` has **107 OutOfSync resources**, and a git(main)
+vs live image audit found **git BEHIND live for 5 production services** — enabling
+selfHeal would ROLL THEM BACK:
+`commerce` v1.46.37→v1.46.35, `studio` 0.14.4→0.14.3, `cloud` v1.786.110→v1.786.106
+(critical API, carries an explicit "never regress" floor comment), `console`
+v8.4.111→v8.4.109, `visor` v1.108.11→sha-6085b5d. (The remaining diffs are
+crane-promoted `0.1.0` semver aliases of the live digest — verify per-digest.)
+*Safe sequence (author's documented intent):* (1) reconcile git main to live —
+bump those CR tags in `universe` so `git==live`; (2) verify the app diff is a
+no-op; (3) THEN add `automated:{selfHeal,prune:false}` and re-apply the
+ApplicationSet. Flipping before step 2 regresses prod.
 `automated` block**. Both generated apps are manual-sync. A merged universe PR
 editing `infra/k8s/operator/crs/*.yaml` (e.g. #410 retire-temporal, #409
 social-repin) goes OutOfSync and WAITS until a human runs `argocd app sync`. That
@@ -392,6 +424,19 @@ recreates them fresh with the correct selector.
 verify each; do `paas` LAST):*
 ```
 kubectl delete deploy <app> -n hanzo --cascade=orphan   # old pods keep serving
+kubectl annotate services.hanzo.ai <app> -n hanzo hanzo.ai/reconcile=$(date +%s) --overwrite
+# operator's next reconcile takes the CREATE path → new Deployment, new selector
+kubectl rollout status deploy/<app> -n hanzo
+```
+**EXECUTED (2026-07-05, CTO go-ahead).** All 8 wedged Deployments recreated
+one-at-a-time with `--cascade=orphan` (zero-downtime — the k8s Service selects on
+labels both old orphaned pods and new pods carry): `hanzo-bot-site, stream,
+bot-hub, bot-gateway, o11y, analytics` (off its frozen gen 93), `dns` (2/2),
+`paas` (rolling, control plane stayed up). Each verified Ready on the new selector
+with the operator's per-app 422 cleared. The operator error set collapsed from 11
+apps to **3 residual: `insights-kafka, insights-kv, insights-sql`** — same class,
+same fix, held for a separate go-ahead (they back the analytics pipeline; a
+recreate is a brief single-pod blip).
 # operator's next reconcile takes the CREATE path → new Deployment, new selector
 kubectl rollout status deploy/<app> -n hanzo
 ```
