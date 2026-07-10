@@ -18,8 +18,12 @@
  *   cluster-write primitive — `applyServiceCR` (`../k8s/operator`).
  *
  * SAFE BY CONSTRUCTION (mirrors the cron's guarantees):
- *   - NEVER deletes / prunes: create-or-update only (`applyServiceCR`). A CR
- *     removed from git is left alone.
+ *   - NEVER deletes / prunes: `applyServiceCR` is a field-managed SERVER-SIDE
+ *     APPLY (create-or-update in one call, `fieldManager: hanzo-platform`) — the
+ *     exact semantic of the cron's `kubectl apply --server-side
+ *     --force-conflicts`, so fields the operator owns (finalizers, annotations,
+ *     the protected /status) are never clobbered. A CR removed from git is left
+ *     alone.
  *   - Applies ONLY the RECONCILABLE set, never all ~79 CRs (some would fight a
  *     live plain Deployment). Membership is a DURABLE per-CR marker
  *     (`hanzo.ai/reconcile: platform`, label or annotation) so it lives with the
