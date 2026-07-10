@@ -22,6 +22,7 @@ import {
 	OPERATOR_GROUP,
 	OPERATOR_VERSION,
 	type OperatorKind,
+	type OperatorServiceSpec,
 } from "./cr-builder";
 import { checkQuota, defaultQuotaForTier, type OrgUsage, type PlanTier } from "./quota";
 import { signPaasTicket } from "./tenant";
@@ -53,15 +54,15 @@ export interface ApplyOptions {
 }
 
 /**
- * Apply a datastore CR (SQL / KV / DocDB) to the cluster.
+ * Apply any operator CR (`hanzo.ai/v1`) to the cluster — the ONE idempotent
+ * create-or-update primitive every apply path shares (datastores AND Services).
  *
- * If the CR already exists in the namespace, this performs an
- * update via the operator's standard reconcile loop. Otherwise it
- * creates a new CR. Status is observed by the caller via
- * `readDatastoreCRStatus`.
+ * Replaces the CR when it already exists (the operator then reconciles the
+ * change) and creates it on 404. Idempotent: the caller need not track whether
+ * the CR exists. Never prunes — removal is `deleteDatastoreCR`.
  */
-export async function applyDatastoreCR(
-	cr: CustomResource<DatastoreSpec>,
+export async function applyCR<Spec>(
+	cr: CustomResource<Spec>,
 	opts: ApplyOptions = {},
 ): Promise<void> {
 	const clients = getClients(opts.kubeconfig);
@@ -105,6 +106,30 @@ export async function applyDatastoreCR(
 			message: `Cannot create ${cr.kind}/${name} in ${namespace}: ${k8sError(err)}`,
 		});
 	}
+}
+
+/**
+ * Apply a datastore CR (SQL / KV / DocDB) to the cluster. Thin typed alias over
+ * `applyCR`. Status is observed by the caller via `readDatastoreCRStatus`.
+ */
+export function applyDatastoreCR(
+	cr: CustomResource<DatastoreSpec>,
+	opts: ApplyOptions = {},
+): Promise<void> {
+	return applyCR(cr, opts);
+}
+
+/**
+ * Apply a `Service` CR (kind=Service) to the cluster. Thin typed alias over
+ * `applyCR`, used by the git→CR reconcile (`services/apps/apply-declared`) to
+ * push each declared `hanzo.ai/v1` `Service` from `hanzoai/universe` into the
+ * cluster, where the operator reconciles it into a Deployment.
+ */
+export function applyServiceCR(
+	cr: CustomResource<OperatorServiceSpec>,
+	opts: ApplyOptions = {},
+): Promise<void> {
+	return applyCR(cr, opts);
 }
 
 // ---------------------------------------------------------------------------
