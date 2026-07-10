@@ -7,7 +7,7 @@
  * Job runs on our own cluster, like buildkit build Jobs.
  *
  * Auth: the shared machine-to-machine bearer token PLATFORM_BUILD_CALLBACK_TOKEN
- * (same infra credential as /v1/build-callback and /v1/arcd/enqueue).
+ * (same infra credential as /v1/build-callback and /v1/runner).
  *
  * Returns 202 + { jobName } — poll the Job (or its pod logs) for the result.
  */

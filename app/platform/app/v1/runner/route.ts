@@ -1,6 +1,9 @@
 /**
- * Direct build enqueue — POST /v1/arcd/enqueue
+ * Direct build enqueue — POST /v1/runner
  *
+ * The native runner fabric's enqueue front door (formerly /v1/arcd/enqueue).
+ * "runner" is the platform's own CI/compute pool namespace — distinct from
+ * github.com/arc-runner (arcd), the client-side GitHub-Actions BYO product.
  * The GitHub-App-free trigger for platform-native CI. The webhook path
  * (/v1/github-webhook) derives a build from `hanzo.yml` at a SHA; this route
  * lets an operator (or a repo not wired to the GitHub App) enqueue a build by
