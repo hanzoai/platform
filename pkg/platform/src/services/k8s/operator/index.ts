@@ -11,24 +11,34 @@
  * `USE_K8S_OPERATOR=true`. Docker Swarm path is preserved when the flag
  * is off.
  */
+import { setHeaderOptions } from "@kubernetes/client-node";
 import { TRPCError } from "@trpc/server";
 
-import { createK8sClients, getDefaultClients, type K8sClients } from "../k8s-client";
 import {
-	type CRMetadataInput,
+	createK8sClients,
+	getDefaultClients,
+	type K8sClients,
+} from "../k8s-client";
+import {
 	type CustomResource,
 	type DatastoreSpec,
 	KIND_TO_PLURAL,
 	OPERATOR_GROUP,
 	OPERATOR_VERSION,
 	type OperatorKind,
+	type OperatorServiceSpec,
 } from "./cr-builder";
-import { checkQuota, defaultQuotaForTier, type OrgUsage, type PlanTier } from "./quota";
+import {
+	checkQuota,
+	defaultQuotaForTier,
+	type OrgUsage,
+	type PlanTier,
+} from "./quota";
 import { signPaasTicket } from "./tenant";
 
 export * from "./cr-builder";
-export * from "./tenant";
 export * from "./quota";
+export * from "./tenant";
 
 // ---------------------------------------------------------------------------
 // Client factory
@@ -39,12 +49,23 @@ function getClients(kubeconfig?: string): K8sClients {
 }
 
 function k8sError(err: unknown): string {
-	const e = err as { response?: { body?: { message?: string } }; message?: string };
+	const e = err as {
+		response?: { body?: { message?: string } };
+		message?: string;
+	};
 	return e.response?.body?.message ?? e.message ?? String(err);
 }
 
 // ---------------------------------------------------------------------------
-// Apply CR
+// Apply CR — two semantics matched to two ownership models:
+//   applyCR (replace→create): platform-EXCLUSIVE resources (datastores). One
+//     writer, so a full replace is correct and simplest.
+//   serverApplyCR (server-side apply): resources SHARED with the operator (the
+//     git→CR deploy plane). Field-managed apply force-acquires only the fields
+//     git declares and never clobbers fields another manager owns (operator
+//     finalizers/annotations, the protected /status). Matches the retired
+//     gitops-reconcile cron's `kubectl apply --server-side --force-conflicts
+//     --field-manager`.
 // ---------------------------------------------------------------------------
 
 export interface ApplyOptions {
@@ -52,16 +73,17 @@ export interface ApplyOptions {
 	kubeconfig?: string;
 }
 
+/** Field-manager identity for platform's server-side applies. */
+const FIELD_MANAGER = "hanzo-platform";
+
 /**
- * Apply a datastore CR (SQL / KV / DocDB) to the cluster.
- *
- * If the CR already exists in the namespace, this performs an
- * update via the operator's standard reconcile loop. Otherwise it
- * creates a new CR. Status is observed by the caller via
- * `readDatastoreCRStatus`.
+ * Apply an operator CR by full REPLACE (create on 404) — for platform-EXCLUSIVE
+ * resources (datastores) where platform is the sole writer, so overwriting the
+ * whole object is correct. Idempotent: the caller need not track whether the CR
+ * exists. Never prunes — removal is `deleteDatastoreCR`.
  */
-export async function applyDatastoreCR(
-	cr: CustomResource<DatastoreSpec>,
+export async function applyCR<Spec>(
+	cr: CustomResource<Spec>,
 	opts: ApplyOptions = {},
 ): Promise<void> {
 	const clients = getClients(opts.kubeconfig);
@@ -105,6 +127,72 @@ export async function applyDatastoreCR(
 			message: `Cannot create ${cr.kind}/${name} in ${namespace}: ${k8sError(err)}`,
 		});
 	}
+}
+
+/**
+ * Apply an operator CR by SERVER-SIDE APPLY (field-managed, create-or-update in
+ * one call) — for resources SHARED with the operator (the git→CR deploy plane).
+ * Force-acquires only the fields git declares; fields owned by another manager
+ * (operator finalizers/annotations, the protected /status) are preserved, so a
+ * blind replace can never clobber them. Never prunes.
+ */
+export async function serverApplyCR<Spec>(
+	cr: CustomResource<Spec>,
+	opts: ApplyOptions = {},
+): Promise<void> {
+	const clients = getClients(opts.kubeconfig);
+	const plural = KIND_TO_PLURAL[cr.kind];
+	const { namespace, name } = cr.metadata;
+
+	try {
+		await clients.custom.patchNamespacedCustomObject(
+			{
+				group: OPERATOR_GROUP,
+				version: OPERATOR_VERSION,
+				namespace,
+				plural,
+				name,
+				body: cr as unknown as object,
+				fieldManager: FIELD_MANAGER,
+				force: true,
+			},
+			// Server-side apply is a PATCH with the apply media type; without this
+			// header the server treats the body as a merge patch, not an apply.
+			setHeaderOptions("Content-Type", "application/apply-patch+yaml"),
+		);
+	} catch (err) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Cannot apply ${cr.kind}/${name} in ${namespace}: ${k8sError(err)}`,
+		});
+	}
+}
+
+/**
+ * Apply a datastore CR (SQL / KV / DocDB) to the cluster. Thin typed alias over
+ * `applyCR` (REPLACE) — datastores are platform-exclusive. Status is observed by
+ * the caller via `readDatastoreCRStatus`.
+ */
+export function applyDatastoreCR(
+	cr: CustomResource<DatastoreSpec>,
+	opts: ApplyOptions = {},
+): Promise<void> {
+	return applyCR(cr, opts);
+}
+
+/**
+ * Apply a `Service` CR (kind=Service) to the cluster. Thin typed alias over
+ * `serverApplyCR` (SERVER-SIDE APPLY) — a Service CR is shared with the operator,
+ * so apply preserves the operator's fields. Used by the git→CR reconcile
+ * (`services/apps/apply-declared`) to push each declared `hanzo.ai/v1` `Service`
+ * from `hanzoai/universe` into the cluster, where the operator reconciles it
+ * into a Deployment.
+ */
+export function applyServiceCR(
+	cr: CustomResource<OperatorServiceSpec>,
+	opts: ApplyOptions = {},
+): Promise<void> {
+	return serverApplyCR(cr, opts);
 }
 
 // ---------------------------------------------------------------------------
@@ -242,7 +330,10 @@ export async function waitDatastoreReady(
 	kind: OperatorKind,
 	namespace: string,
 	name: string,
-	opts: ApplyOptions & { timeoutMs?: number; onProgress?: (msg: string) => void } = {},
+	opts: ApplyOptions & {
+		timeoutMs?: number;
+		onProgress?: (msg: string) => void;
+	} = {},
 ): Promise<DatastoreCRStatus> {
 	const timeoutMs = opts.timeoutMs ?? 5 * 60 * 1000;
 	const intervalMs = 2000;
@@ -253,7 +344,9 @@ export async function waitDatastoreReady(
 		if (!status) {
 			opts.onProgress?.(`Waiting for ${kind}/${name} to appear...`);
 		} else if (status.phase === "Running") {
-			opts.onProgress?.(`${kind}/${name} is Running (${status.readyReplicas} replica(s))`);
+			opts.onProgress?.(
+				`${kind}/${name} is Running (${status.readyReplicas} replica(s))`,
+			);
 			return status;
 		} else if (status.phase === "Degraded") {
 			throw new TRPCError({
