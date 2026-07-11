@@ -1,10 +1,15 @@
 /**
- * Apps-inventory scheduler — drives the two "observe" readers so the `apps`
- * table tracks the live cluster + GitHub releases without manual seeding.
+ * Apps-inventory scheduler — drives the deploy loop's apply-then-observe passes
+ * so the cluster tracks the declared CRs in git and the `apps` table tracks the
+ * live cluster + GitHub releases, without manual kubectl or seeding.
  *
+ *   - apply (`applyDeclaredCRs`): git → CR. Pushes the reconcilable declared
+ *     `Service` CRs from `hanzoai/universe` into the cluster (the native
+ *     replacement for the `gitops-reconcile` cron). Incremental — steady state
+ *     is one directory-listing call and zero applies. Runs FIRST each tick.
  *   - inventory (`syncInventory`): declared (operator CR) + running (Deployment)
  *     + health, read from the cluster. Cheap and read-mostly, so it ticks fast
- *     (default 60s).
+ *     (default 60s). Runs AFTER apply, so it observes what apply just declared.
  *   - release-meta (`syncReleases`): latest released tag + release-url +
  *     asset-count, read from the GitHub Releases API. This is the third tag the
  *     drift view compares — without it every row is an opaque `no-release`.
@@ -14,16 +19,24 @@
  *
  * Mirrors the billing-job scheduler pattern (`billing/billing-job.ts`):
  * idempotent start (a module-level guard makes a second call a no-op), a leading
- * run, then `setInterval`. Both passes write only platform's own SQLite, so they
- * cannot perturb the control plane.
+ * run, then `setInterval`. apply is create-or-update only (never prunes); the
+ * observe passes write only platform's own SQLite.
  *
  * Started from the custom server (`server/server.ts`) when the platform runs
  * in-cluster. Failures are logged and swallowed — a transient cluster blip or a
  * GitHub hiccup must never crash the server or stop future ticks.
  */
 
+import { applyDeclaredCRs } from "./apply-declared";
 import { syncInventory } from "./inventory";
 import { syncReleases } from "./release-reader";
+
+/**
+ * The ONE gate for the git→CR apply pass. Default ON in the deploy env; set
+ * `PLATFORM_CRS_APPLY=false` to disable apply (keeping observe) without a
+ * redeploy — the escape hatch for pausing the native reconcile.
+ */
+const CRS_APPLY_ENABLED = process.env.PLATFORM_CRS_APPLY !== "false";
 
 /** How often to reconcile declared/running/health from the cluster (ms). */
 const INTERVAL_MS = Number.parseInt(
@@ -41,11 +54,40 @@ let started = false;
 let ticking = false;
 let releaseTicking = false;
 
-/** Run one inventory sync pass, logging the outcome; never throws. */
+/**
+ * Run one git→CR apply pass, logging the outcome; never throws. Gated by the ONE
+ * `PLATFORM_CRS_APPLY` flag. A `source.list()` failure (GitHub unreachable) is
+ * logged and swallowed here so it can never skip the observe pass that follows.
+ */
+export async function applyDeclaredOnce(): Promise<void> {
+	if (!CRS_APPLY_ENABLED) return;
+	try {
+		const s = await applyDeclaredCRs();
+		if (s.unchanged && s.failed.length === 0) return; // steady state — stay quiet
+		console.log(
+			`[apps-apply] applied ${s.applied.length} CR(s)` +
+				(s.applied.length ? ` (${s.applied.join(", ")})` : "") +
+				`; skipped ${s.skipped}` +
+				(s.failed.length
+					? `; ${s.failed.length} failed: ${s.failed
+							.map((f) => `${f.name}=${f.error}`)
+							.join("; ")}`
+					: ""),
+		);
+	} catch (err) {
+		console.error("[apps-apply] apply pass failed", err);
+	}
+}
+
+/** Run one apply-then-observe pass, logging the outcome; never throws. */
 export async function runInventoryOnce(): Promise<void> {
 	if (ticking) return; // skip if the previous tick is still in flight
 	ticking = true;
 	try {
+		// apply (git → CR) FIRST, then observe (CR/Deployment → drift), so the
+		// inventory pass reflects what apply just declared. Decomplected: apply and
+		// observe are separate functions composed here, sharing no state.
+		await applyDeclaredOnce();
 		const results = await syncInventory();
 		const total = results.reduce((n, r) => n + r.upserted, 0);
 		console.log(
@@ -80,8 +122,8 @@ export function startInventoryScheduler(): void {
 	if (started) return;
 	started = true;
 	console.log(
-		`[apps-inventory] scheduler starting (inventory every ${INTERVAL_MS}ms, ` +
-			`releases every ${RELEASE_INTERVAL_MS}ms)`,
+		`[apps-inventory] scheduler starting (apply=${CRS_APPLY_ENABLED ? "on" : "off"}, ` +
+			`inventory every ${INTERVAL_MS}ms, releases every ${RELEASE_INTERVAL_MS}ms)`,
 	);
 
 	// Inventory first so the apps table is populated before releases are read.
