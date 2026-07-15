@@ -313,8 +313,13 @@ function buildRoutingIngress(rule: RoutingRule): Record<string, unknown> {
 			labels: { "managed-by": MANAGED_BY_LABEL },
 			annotations,
 		},
+		// NOTE: class is carried by the `kubernetes.io/ingress.class` annotation
+		// only — never `spec.ingressClassName`. The hanzoai/ingress (Traefik fork)
+		// rejects an ingressClassName whose IngressClass controller string is the
+		// rebranded `hanzo.ai/ingress-controller` (not `traefik.io/…`), which makes
+		// the spec field take precedence over the annotation and silently drops
+		// spec.tls → the host serves no cert. Annotation-only is the one way.
 		spec: {
-			ingressClassName: "ingress",
 			rules: [
 				{
 					host: rule.host,
