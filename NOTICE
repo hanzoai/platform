@@ -1,0 +1,14 @@
+Hanzo Platform
+Copyright 2025-present Hanzo Industries Inc.
+
+This product includes software developed by Dokploy.
+
+  Dokploy
+  https://github.com/Dokploy/dokploy
+  Copyright 2026-present Dokploy Technology, Inc.
+  Licensed under the Apache License, Version 2.0.
+
+Upstream Dokploy licenses content under any "/proprietary" directory under a
+separate proprietary license (LICENSE_PROPRIETARY). This fork does not include
+that content; all files derived from Dokploy in this repository are licensed
+under the Apache License, Version 2.0.
