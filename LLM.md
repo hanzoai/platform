@@ -303,6 +303,12 @@ Canonical lifecycle doc (was fragmented across ~6 systems). Verified against liv
 `do-sfo3-hanzo-k8s` 2026-07. This section is the source of truth for HOW a commit
 becomes a running pod, WHERE that path forks, and the ONE native path we collapse to.
 
+> **⚠️ CURRENT STATE + DECISION (re-verified live `do-sfo3-hanzo-k8s`, 2026-07-16) — supersedes §1–5 below where they conflict.** The §1–5 trace is accurate HISTORY of the complecting + the 07-05 breaks, but predates the operator 0.7.x cutover:
+> - **CD is now operator-native, NOT ArgoCD.** ArgoCD was torn out (no `argocd` ns, no `applications.argoproj.io` CRDs); the live deployer is the Rust operator **0.7.6** running a `GitSource` CR (`gitsource/universe` → `github.com/hanzoai/universe` path `infra/k8s/operator/crs`, 45s, `prune:false`, 21 objects, Running; `imageupdates.hanzo.ai` CRD live/0 instances). `src/controllers/gitsource.rs` states ArgoCD was removed on purpose. All "ArgoCD ApplicationSet auto-sync" + "operator v0.6.17" references below are historical.
+> - **`hanzoai/deploy` (the "ArgoCD fork") is a pristine unmodified upstream clone — 0 hanzo commits, deployed nowhere.** CTO decision (2026-07-16): make it real by embedding its **gitops-engine** as the CD library inside the cloud binary's `/v1/deploy` (`cloud/clients/deploy`, already mounted at `apps/apps.go:247`), NOT as a standalone `argocd` namespace (that re-adds the second control plane the operator deleted). Operator `GitSource` stays the interim engine until `/v1/deploy` is proven, then retires. The `applyDeclaredCRs` TS path (`pkg/platform/src/services/apps/apply-declared.ts`) duplicates GitSource byte-for-byte over the same universe crs path → retire it (leave platform observe + thin drive).
+> - **CI target = the cloud binary's `/v1/git` forge** (`cloud/clients/git`, Gitea-ported, mounted `apps/apps.go:281`) with push→build via `build.go:334 RegisterPushBuilder`. **ARC self-hosted GitHub Actions (`arc-system`) remains LOAD-BEARING — builds every image today; do NOT retire it until `/v1/git` builds prod.** The "Gitea Actions on git.hanzo.ai" lane above is superseded as the target by the one-binary forge (and Gitea is not currently hosted in this cluster).
+> - **End-state = ONE Go binary (`hanzoai/cloud`) embedding forge + CD + platform** (HIP-0106). Convergence is by native Go reimplementation; `cloud/go.mod` imports none of operator/deploy/platform/git.
+
 ### 1. Today's lifecycle, traced end to end (verified)
 
 1. **Source — canonical TODAY = GitHub (`github.com/hanzoai/*`).** `git.hanzo.ai`
