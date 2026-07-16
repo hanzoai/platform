@@ -9,6 +9,7 @@
 </div>
 <br />
 
+> Forked from [Dokploy/dokploy](https://github.com/Dokploy/dokploy) (Apache-2.0).
 
 Hanzo is a free, self-hostable Platform as a Service (PaaS) that simplifies the deployment and management of applications and databases.
 
