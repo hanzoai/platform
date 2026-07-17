@@ -18,7 +18,7 @@ pool**, so a GHA outage cannot halt shipping.
 
 ## Architecture
 
-One conductor (the `paas` pod), one build path (an in-cluster Kaniko Job), one
+One conductor (the `paas` pod), one build path (an in-cluster BuildKit Job), one
 heartbeat (the build-watcher) that drives each build through the rest of the
 pipeline. No `workflow_dispatch`, no external runner registration, no callback
 required.
@@ -32,15 +32,15 @@ service-token  ─direct──▶ /v1/arcd/enqueue   (Bearer PLATFORM_BUILD_CALL
                               │                     one build_job per matrix entry
                               │                     (idempotent on repo+sha+target)
                               ▼
-                        launchBuildJob ──▶ Kaniko Job (gcr.io/kaniko-project/executor)
-                              │              git://github.com/<repo>.git#<ref>
-                              │              --destination ghcr.io/<org>/<repo>:<tag>
-                              │              --digest-file /dev/termination-log
-                              ▼              (console-git-token + kaniko-ghcr)
+                        launchBuildJob ──▶ BuildKit Job (moby/buildkit, buildctl-daemonless.sh)
+                              │              https://github.com/<repo>.git#<ref>
+                              │              --output=type=image,name=ghcr.io/<org>/<repo>:<tag>,push=true
+                              │              --secret=id=GIT_AUTH_TOKEN,env=GIT_AUTH_TOKEN
+                              ▼              (console-git-token via GIT_AUTH_TOKEN + kaniko-ghcr at /root/.docker)
                         build_job (DB, status=running, buildJobName=<job>)
                               ▲
                               │  every 15s
-                        build-watcher ── reads the Kaniko Job status
+                        build-watcher ── reads the BuildKit Job status
                               │  succeeded → completeBuild():
                               │     markSucceeded(+digest)
                               │     → DeployExecutor: merge-patch operator Service CR
@@ -53,22 +53,22 @@ service-token  ─direct──▶ /v1/arcd/enqueue   (Bearer PLATFORM_BUILD_CALL
 
 Source: `pkg/platform/src/services/ci/` — `platform-config` (`hanzo.yml`
 parser + validator), `github-webhook` (decoder + HMAC), `build-job` (DB CRUD),
-`build-scheduler` (Kaniko dispatch), `kaniko-job` (the build muscle),
+`build-scheduler` (BuildKit dispatch), `buildkit-job` (the build muscle),
 `build-watcher` (the heartbeat), `build-completion` (the post-build
 orchestrator: deploy → test → publish), `deploy-executor` (operator CR patch),
 `e2e-runner` (Playwright Job), `publish-job` (npm/pypi Job).
 
-## The single build path: in-cluster Kaniko
+## The single build path: in-cluster BuildKit
 
-`launchBuildJob` creates a Kaniko Job identical to the build Jobs operators
+`launchBuildJob` creates a BuildKit Job identical to the build Jobs operators
 applied by hand before this was automated:
 
-- context `git://github.com/<owner>/<repo>.git#<ref>` (git auth from the
+- context `https://github.com/<owner>/<repo>.git#<ref>` (git auth from the
   `console-git-token` secret, key `token`);
-- `--destination ghcr.io/<org>/<repo>:<tag>` (registry auth from the
-  `kaniko-ghcr` secret, mounted at `/kaniko/.docker/config.json`);
-- `--digest-file /dev/termination-log` so the image digest is recoverable from
-  the build pod's termination message;
+- `--output=type=image,name=ghcr.io/<org>/<repo>:<tag>,push=true` (registry auth
+  from the `kaniko-ghcr` secret — legacy name — mounted at `/root/.docker`);
+- the in-cluster BuildKit path leaves the image digest unset; a digest is
+  recorded only on the external-builder `/v1/build-callback` path when reported;
 - scheduled onto `nodeSelector doks.digitalocean.com/node-pool=runner-pool-32g`
   with the `dedicated=ci-runner` toleration;
 - `automountServiceAccountToken: false` — the build pod gets no cluster creds.
@@ -79,9 +79,9 @@ e2e-runner and deploy-executor use. There is exactly ONE k8s client.
 
 ## The heartbeat: build-watcher
 
-Kaniko Jobs cannot call back, so the watcher (`startBuildWatcher`, started from
+BuildKit Jobs cannot call back, so the watcher (`startBuildWatcher`, started from
 `server/server.ts` in-cluster, gate `BUILD_WATCHER_DISABLED=true`) polls every
-`running` build_job's Kaniko Job. On success it calls `completeBuild`, which
+`running` build_job's BuildKit Job. On success it calls `completeBuild`, which
 records the digest, rolls out the deploy, fires the e2e Job, and arms publish;
 on failure it marks the row failed. It then ticks `reconcilePostBuild` for
 succeeded rows until e2e + publish reach a terminal state. The pipeline is
@@ -164,8 +164,8 @@ tRPC `buildJob` router (org-scoped): `list`, `one`, `logs`, `trigger`.
 | `githubWebhookSecret` | github provider row (DB) | HMAC validation per installation |
 | `GH_TOKEN` | platform env | Octokit token: reads `hanzo.yml` for the deploy/test/publish decision (no GitHub App needed) |
 | GitHub App creds | github provider row (DB) | Octokit App auth for the webhook path's config read |
-| `console-git-token` | k8s secret (key `token`) | Kaniko + publish Job git clone |
-| `kaniko-ghcr` | k8s secret (key `config.json`) | Kaniko GHCR push credential |
+| `console-git-token` | k8s secret (key `token`) | BuildKit + publish Job git clone |
+| `kaniko-ghcr` | k8s secret (key `config.json`) | BuildKit GHCR push credential (secret name is legacy) |
 | `npm-token` / `pypi-token` | KMS-synced k8s secret (key `token`) | Publish Job registry auth — KMS-only, never hardcoded (optional refs; dry-run works without them) |
 | `PLATFORM_BUILD_CALLBACK_TOKEN` | platform env | Bearer for the direct/e2e/callback REST surfaces |
 | `BUILD_WATCHER_INTERVAL_MS` | platform env | Watcher poll interval (default 15000) |
