@@ -2,8 +2,16 @@ import {
 	buildBuildkitJob,
 	buildJobName,
 	buildkitArgs,
+	buildkitWrapperScript,
 } from "@hanzo/platform/services/ci/buildkit-job";
 import { describe, expect, it } from "vitest";
+
+type Vol = {
+	name: string;
+	secret?: { secretName: string; items: { key: string; path: string }[] };
+	emptyDir?: Record<string, unknown>;
+};
+type Mount = { name: string; mountPath: string; readOnly?: boolean };
 
 /**
  * buildkit-job is the single build muscle. These tests pin the BuildKit Job
@@ -88,12 +96,74 @@ describe("buildkitArgs", () => {
 		});
 		expect(args).toContain("--opt=platform=linux/arm64");
 	});
+
+	it("stays single-GHCR (proven form) when no fleet registry is set", () => {
+		const args = buildkitArgs({
+			repo: "hanzoai/pricing",
+			gitRef: "refs/heads/main",
+			image: "ghcr.io/hanzoai/pricing:v1.2.3",
+			buildJobId: "j1",
+		});
+		expect(args).toContain(
+			"--output=type=image,name=ghcr.io/hanzoai/pricing:v1.2.3,push=true",
+		);
+		expect(args.some((a) => a.includes("registry.hanzo.ai"))).toBe(false);
+	});
+
+	it("emits ONE output with BOTH refs (quoted) when a fleet registry is set", () => {
+		const args = buildkitArgs({
+			repo: "hanzoai/pricing",
+			gitRef: "refs/heads/main",
+			image: "ghcr.io/hanzoai/pricing:v1.2.3",
+			fleetRegistryHost: "registry.hanzo.ai",
+			buildJobId: "j1",
+		});
+		// GHCR (public consumers) + the fleet registry (the estate deploys from
+		// it), host-swapped from the GHCR ref, in ONE quoted name= field so the
+		// CSV parser keeps the comma-joined refs as a single value. One build.
+		expect(args).toContain(
+			'--output=type=image,"name=ghcr.io/hanzoai/pricing:v1.2.3,registry.hanzo.ai/hanzoai/pricing:v1.2.3",push=true',
+		);
+		// Exactly one image output — never the bare single-ref form alongside it.
+		expect(args.filter((a) => a.startsWith("--output=type=image")).length).toBe(
+			1,
+		);
+		expect(args).not.toContain(
+			"--output=type=image,name=ghcr.io/hanzoai/pricing:v1.2.3,push=true",
+		);
+	});
+});
+
+describe("buildkitWrapperScript", () => {
+	it("is the proven netrc→exec wrapper with no fleet registry", () => {
+		const s = buildkitWrapperScript();
+		expect(s).toContain("/tmp/netrc");
+		expect(s.endsWith('exec buildctl-daemonless.sh "$@"')).toBe(true);
+		// No docker-cred merge when there is nothing to compose.
+		expect(s).not.toContain("/tmp/fleet-cred");
+	});
+
+	it("composes the two docker creds (jq-free) before exec when a fleet host is set", () => {
+		const s = buildkitWrapperScript("registry.hanzo.ai");
+		expect(s).toContain("/tmp/ghcr-cred/config.json");
+		expect(s).toContain("/tmp/fleet-cred/config.json");
+		// Peel each compact {"auths":{…}} and recombine into DOCKER_CONFIG.
+		expect(s).toContain("printf '{\"auths\":{%s,%s}}'");
+		expect(s).toContain("/root/.docker/config.json");
+		// Missing/empty fleet cred degrades to GHCR-only — never fails the push.
+		expect(s).toContain(
+			"cp /tmp/ghcr-cred/config.json /root/.docker/config.json",
+		);
+		expect(s.endsWith('exec buildctl-daemonless.sh "$@"')).toBe(true);
+	});
 });
 
 type EnvRef = {
 	name: string;
 	value?: string;
-	valueFrom?: { secretKeyRef: { name: string; key: string; optional?: boolean } };
+	valueFrom?: {
+		secretKeyRef: { name: string; key: string; optional?: boolean };
+	};
 };
 
 describe("buildBuildkitJob", () => {
@@ -108,7 +178,11 @@ describe("buildBuildkitJob", () => {
 
 	it("runs the privileged BuildKit executor on the CI runner pool", () => {
 		expect(container.image).toBe("moby/buildkit:v0.16.0");
-		expect(container.command).toEqual(["buildctl-daemonless.sh"]);
+		// buildctl runs under an `sh -c` wrapper (materializes ~/.netrc); its real
+		// args ride "$@" after the `buildctl-daemonless.sh` $0 placeholder.
+		expect(container.command).toEqual(["/bin/sh", "-c"]);
+		expect(container.args[1]).toBe("buildctl-daemonless.sh");
+		expect(container.args[0]!).toContain('exec buildctl-daemonless.sh "$@"');
 		expect(container.securityContext.privileged).toBe(true);
 		expect(pod.nodeSelector["doks.digitalocean.com/node-pool"]).toBe(
 			"runner-pool-32g",
@@ -121,8 +195,12 @@ describe("buildBuildkitJob", () => {
 			(e) => e.name === "GIT_AUTH_TOKEN",
 		);
 		expect(gitEnv?.valueFrom?.secretKeyRef.name).toBe("console-git-token");
-		expect(pod.volumes[0]!.secret.secretName).toBe("kaniko-ghcr");
-		expect(container.volumeMounts[0]!.mountPath).toBe("/root/.docker");
+		// No fleet registry → the proven single-secret mount, unchanged.
+		expect((pod.volumes as Vol[])[0]!.secret?.secretName).toBe("kaniko-ghcr");
+		expect((container.volumeMounts as Mount[])[0]!.mountPath).toBe(
+			"/root/.docker",
+		);
+		expect(pod.volumes.length).toBe(1);
 	});
 
 	it("does not mount a service account token into the build pod", () => {
@@ -132,5 +210,48 @@ describe("buildBuildkitJob", () => {
 	it("labels the Job with its build-job id for correlation", () => {
 		expect(job.metadata.labels["hanzo.ai/build-job-id"]).toBe("abc12345");
 		expect(job.metadata.name).toBe("build-pricing-abc12345");
+	});
+});
+
+describe("buildBuildkitJob — fleet dual-push wiring", () => {
+	const job = buildBuildkitJob({
+		repo: "hanzoai/pricing",
+		gitRef: "refs/heads/main",
+		image: "ghcr.io/hanzoai/pricing:t",
+		fleetRegistryHost: "registry.hanzo.ai",
+		buildJobId: "abc12345",
+	});
+	const pod = job.spec.template.spec;
+	const container = pod.containers[0]!;
+	const vols = Object.fromEntries(
+		(pod.volumes as Vol[]).map((v) => [v.name, v]),
+	);
+	const mounts = Object.fromEntries(
+		(container.volumeMounts as Mount[]).map((m) => [m.name, m.mountPath]),
+	);
+
+	it("mounts BOTH the GHCR and the KMS-synced fleet cred", () => {
+		expect(vols["ghcr-cred"]!.secret?.secretName).toBe("kaniko-ghcr");
+		expect(vols["fleet-cred"]!.secret?.secretName).toBe("registry-credentials");
+		expect(vols["fleet-cred"]!.secret?.items[0]!.key).toBe(".dockerconfigjson");
+		expect(mounts["ghcr-cred"]).toBe("/tmp/ghcr-cred");
+		expect(mounts["fleet-cred"]).toBe("/tmp/fleet-cred");
+	});
+
+	it("makes DOCKER_CONFIG a writable emptyDir the wrapper composes into", () => {
+		expect(vols["docker-config"]!.emptyDir).toBeDefined();
+		expect(vols["docker-config"]!.secret).toBeUndefined();
+		expect(mounts["docker-config"]).toBe("/root/.docker");
+		expect(container.args[0]!).toContain("printf '{\"auths\":{%s,%s}}'");
+	});
+
+	it("NEVER duplicates the fleet cred into kaniko-ghcr (one canonical home)", () => {
+		// registry-credentials stays the sole home for the fleet cred; kaniko-ghcr
+		// carries only the GHCR config.json — same DRY split the ci reusable uses.
+		expect(vols["ghcr-cred"]!.secret?.items[0]!.key).toBe("config.json");
+		const fleetInGhcr = JSON.stringify(vols["ghcr-cred"]).includes(
+			"registry-credentials",
+		);
+		expect(fleetInGhcr).toBe(false);
 	});
 });
