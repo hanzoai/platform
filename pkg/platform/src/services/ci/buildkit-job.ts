@@ -21,9 +21,16 @@
  * the `runner-pool-32g` CI pool (tainted `dedicated=ci-runner`). Bridging the
  * scheduler to this is what makes platform-native builds REAL — no human
  * applying Job YAML by hand.
+ *
+ * Dual-push (opt-in, gated by `FLEET_REGISTRY_HOST`): when a fleet registry is
+ * configured the ONE build pushes the SAME image to both GHCR (public consumers
+ * pull it) and the fleet registry `registry.hanzo.ai` (the S3-backed store the
+ * estate DEPLOYS from) — additive, matching the `hanzoai/ci` reusable's dual-host
+ * pattern. Unset (the default) keeps the exact single-GHCR proven behavior.
  */
 import { TRPCError } from "@trpc/server";
 import { getDefaultClients } from "../k8s/k8s-client";
+import { withRegistryHost } from "./image-ref";
 import type { BuildArch } from "./platform-config";
 
 /** BuildKit executor image — the canonical in-cluster builder (proven contract). */
@@ -32,6 +39,50 @@ const BUILDKIT_IMAGE = "moby/buildkit:v0.16.0";
 const GIT_SECRET = "console-git-token";
 /** Secret (key `config.json`) holding the GHCR push credential, mounted at /root/.docker. */
 const DOCKER_CONFIG_SECRET = "kaniko-ghcr";
+/**
+ * KMS-synced docker cred (key `.dockerconfigjson`) for the fleet registry
+ * (`registry.hanzo.ai`) — the SAME secret the `hanzoai/ci` reusable reads. Only
+ * mounted (alongside `kaniko-ghcr`) when a fleet registry is configured; the
+ * fleet cred is NEVER duplicated into `kaniko-ghcr`, so `registry-credentials`
+ * stays its one canonical home.
+ */
+const FLEET_CRED_SECRET = "registry-credentials";
+
+/**
+ * The fleet registry host every image is ALSO pushed to (on top of GHCR), or
+ * undefined when unset. ONE config value — `FLEET_REGISTRY_HOST` (e.g.
+ * `registry.hanzo.ai`) — gates the whole dual-push; there are no scattered
+ * literals. Unset (the default) = GHCR-only, byte-identical to the proven build.
+ */
+export function fleetRegistryHost(): string | undefined {
+	const h = process.env.FLEET_REGISTRY_HOST?.trim();
+	return h ? h : undefined;
+}
+
+/** Materialize ~/.netrc from GIT_AUTH_TOKEN so a Dockerfile can clone private repos. */
+const NETRC_SETUP =
+	'printf "machine github.com login x-access-token password %s\\n" "$GIT_AUTH_TOKEN" > /tmp/netrc';
+
+/**
+ * The `sh -c` wrapper the build container runs. Without a fleet registry it is
+ * byte-identical to the proven Job (netrc → exec buildctl). With one, it also
+ * merges the two mounted docker creds — `kaniko-ghcr` (GHCR) and
+ * `registry-credentials` (fleet) — into the writable `DOCKER_CONFIG` before
+ * exec, because k8s cannot merge two secrets into one file and BuildKit reads a
+ * single `config.json`. The merge is jq-free (the builder image is busybox): both
+ * secrets are compact `{"auths":{…}}` objects, so each is peeled to its lone
+ * `.auths` entry and recombined. A missing/empty fleet cred degrades to
+ * GHCR-only, so a fleet-registry hiccup never fails the primary push.
+ */
+export function buildkitWrapperScript(fleetHost?: string): string {
+	if (!fleetHost) return `${NETRC_SETUP} && exec buildctl-daemonless.sh "$@"`;
+	const merge =
+		"g=$(sed -e 's/^{\"auths\":{//' -e 's/}}$//' /tmp/ghcr-cred/config.json); " +
+		"f=$(sed -e 's/^{\"auths\":{//' -e 's/}}$//' /tmp/fleet-cred/config.json 2>/dev/null || true); " +
+		'if [ -n "$f" ]; then printf \'{"auths":{%s,%s}}\' "$g" "$f" > /root/.docker/config.json; ' +
+		"else cp /tmp/ghcr-cred/config.json /root/.docker/config.json; fi";
+	return `${NETRC_SETUP} && ${merge} && exec buildctl-daemonless.sh "$@"`;
+}
 /** CI runner taint the build Jobs tolerate. */
 const CI_TOLERATION = {
 	effect: "NoSchedule",
@@ -85,6 +136,14 @@ export interface BuildJobLaunchInput {
 	namespace?: string;
 	/** Override the resource envelope (large repos like platform need more). */
 	resources?: BuildResources;
+	/**
+	 * Fleet registry host to ALSO push the built image to, e.g.
+	 * `registry.hanzo.ai`. When set, the one BuildKit output carries both refs
+	 * (GHCR + the fleet host, host-swapped from `image`) and the pod mounts the
+	 * fleet cred. Defaulted from `fleetRegistryHost()` at the launch boundary;
+	 * leave unset in callers. Empty/undefined = GHCR-only (the proven path).
+	 */
+	fleetRegistryHost?: string;
 }
 
 export interface BuildJobLaunch {
@@ -127,7 +186,9 @@ export function buildJobName(repo: string, buildJobId: string): string {
 /**
  * `buildctl-daemonless.sh` args for a build — pure, so the unit test can assert
  * the contract. Mirrors the proven hand-applied BuildKit Jobs: dockerfile.v0
- * frontend, HTTPS git context, image output pushed to GHCR.
+ * frontend, HTTPS git context, image output pushed to GHCR. When a fleet
+ * registry is set, the single image output carries BOTH refs (GHCR +
+ * fleet-host), so one build pushes to both destinations with no rebuild.
  */
 export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	const dockerfile = (input.dockerfile ?? "Dockerfile").replace(/^\.\//, "");
@@ -146,6 +207,14 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	for (const [k, v] of Object.entries(input.buildArgs ?? {})) {
 		args.push(`--opt=build-arg:${k}=${v}`);
 	}
+	// Dual-push when a fleet registry is set: BuildKit's image exporter takes a
+	// comma-separated ref list in one `name=…` field (quoted so the CSV parser
+	// keeps it one field). One build, two destinations — GHCR for public
+	// consumers, the fleet registry the estate deploys from. Unset → single GHCR
+	// ref, byte-identical to the proven build.
+	const push = input.fleetRegistryHost
+		? `--output=type=image,"name=${input.image},${withRegistryHost(input.image, input.fleetRegistryHost)}",push=true`
+		: `--output=type=image,name=${input.image},push=true`;
 	args.push(
 		"--secret=id=GIT_AUTH_TOKEN,env=GIT_AUTH_TOKEN",
 		"--secret=id=gh_token,env=GH_TOKEN",
@@ -154,10 +223,54 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 		// authenticates. Same credential (console-git-token) as the git context —
 		// one credential, one way.
 		"--secret=id=netrc,src=/tmp/netrc",
-		`--output=type=image,name=${input.image},push=true`,
+		push,
 		"--progress=plain",
 	);
 	return args;
+}
+
+/**
+ * Docker-registry auth wiring for the build pod — pure, so its shape is
+ * unit-testable. Two shapes, selected by whether a fleet registry is set:
+ *
+ *  - none: the PROVEN single-secret mount — `kaniko-ghcr` (its `config.json`) at
+ *    `/root/.docker` (the `DOCKER_CONFIG` dir). Byte-identical to the original.
+ *  - fleet: dual-push needs BOTH the GHCR cred and the fleet cred in ONE docker
+ *    config, so both secrets mount read-only and `DOCKER_CONFIG` is a writable
+ *    `emptyDir` the wrapper composes into (see `buildkitWrapperScript`).
+ */
+function dockerAuthWiring(fleetHost?: string): {
+	volumeMounts: Array<{ mountPath: string; name: string; readOnly?: boolean }>;
+	volumes: Array<Record<string, unknown>>;
+} {
+	const ghcrCred = {
+		secretName: DOCKER_CONFIG_SECRET,
+		items: [{ key: "config.json", path: "config.json" }],
+	};
+	if (!fleetHost) {
+		return {
+			volumeMounts: [{ mountPath: "/root/.docker", name: "docker-config" }],
+			volumes: [{ name: "docker-config", secret: ghcrCred }],
+		};
+	}
+	return {
+		volumeMounts: [
+			{ mountPath: "/root/.docker", name: "docker-config" },
+			{ mountPath: "/tmp/ghcr-cred", name: "ghcr-cred", readOnly: true },
+			{ mountPath: "/tmp/fleet-cred", name: "fleet-cred", readOnly: true },
+		],
+		volumes: [
+			{ name: "docker-config", emptyDir: {} },
+			{ name: "ghcr-cred", secret: ghcrCred },
+			{
+				name: "fleet-cred",
+				secret: {
+					secretName: FLEET_CRED_SECRET,
+					items: [{ key: ".dockerconfigjson", path: "config.json" }],
+				},
+			},
+		],
+	};
 }
 
 /** Build the BuildKit Job object — pure (no IO), so its shape is unit-testable. */
@@ -166,6 +279,7 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 	const arch = input.arch ?? "amd64";
 	const name = buildJobName(input.repo, input.buildJobId);
 	const resources = input.resources ?? DEFAULT_RESOURCES;
+	const auth = dockerAuthWiring(input.fleetRegistryHost);
 	const labels = {
 		"app.kubernetes.io/name": "build",
 		"app.kubernetes.io/managed-by": "platform",
@@ -195,12 +309,13 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 							name: "build",
 							image: BUILDKIT_IMAGE,
 							// Wrap buildctl to first materialize ~/.netrc from the
-							// GIT_AUTH_TOKEN env, so Dockerfiles cloning private repos
-							// via `--mount=type=secret,id=netrc` authenticate. `$0` is a
+							// GIT_AUTH_TOKEN env (and, for a fleet registry, compose the
+							// docker creds), so Dockerfiles cloning private repos via
+							// `--mount=type=secret,id=netrc` authenticate. `$0` is a
 							// placeholder; buildctl's real args ride `"$@"`.
 							command: ["/bin/sh", "-c"],
 							args: [
-								'printf "machine github.com login x-access-token password %s\\n" "$GIT_AUTH_TOKEN" > /tmp/netrc && exec buildctl-daemonless.sh "$@"',
+								buildkitWrapperScript(input.fleetRegistryHost),
 								"buildctl-daemonless.sh",
 								...buildkitArgs(input),
 							],
@@ -221,20 +336,10 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 								{ name: "DOCKER_CONFIG", value: "/root/.docker" },
 							],
 							resources,
-							volumeMounts: [
-								{ mountPath: "/root/.docker", name: "docker-config" },
-							],
+							volumeMounts: auth.volumeMounts,
 						},
 					],
-					volumes: [
-						{
-							name: "docker-config",
-							secret: {
-								secretName: DOCKER_CONFIG_SECRET,
-								items: [{ key: "config.json", path: "config.json" }],
-							},
-						},
-					],
+					volumes: auth.volumes,
 				},
 			},
 		},
@@ -249,8 +354,15 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 export async function launchBuildJob(
 	input: BuildJobLaunchInput,
 ): Promise<BuildJobLaunch> {
-	const job = buildBuildkitJob(input);
-	const namespace = input.namespace ?? "hanzo";
+	// The ONE place the fleet-registry env is read: default it here so every
+	// dispatch path (webhook + direct) opts into dual-push without threading it,
+	// while `buildkitArgs`/`buildBuildkitJob` stay pure (fed via the input).
+	const resolved: BuildJobLaunchInput = {
+		...input,
+		fleetRegistryHost: input.fleetRegistryHost ?? fleetRegistryHost(),
+	};
+	const job = buildBuildkitJob(resolved);
+	const namespace = resolved.namespace ?? "hanzo";
 	const clients = getDefaultClients();
 	try {
 		await clients.batch.createNamespacedJob({ namespace, body: job as never });
@@ -273,7 +385,7 @@ export async function launchBuildJob(
 			message: `Failed to launch build Job in ${namespace}: ${e.body?.message ?? e.message ?? String(err)}`,
 		});
 	}
-	return { jobName: job.metadata.name, namespace, image: input.image };
+	return { jobName: job.metadata.name, namespace, image: resolved.image };
 }
 
 /**
