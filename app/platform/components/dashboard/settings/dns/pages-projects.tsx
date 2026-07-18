@@ -6,6 +6,7 @@ import {
 	Globe,
 	Loader2,
 	PlusIcon,
+	RefreshCw,
 	Rocket,
 	Trash2,
 } from "lucide-react";
@@ -13,6 +14,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { AlertBlock } from "@/components/shared/alert-block";
 import { DialogAction } from "@/components/shared/dialog-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -339,7 +341,7 @@ function ProjectCard({
 					<span>Branch:</span>
 					<Badge variant="blank">{project.production_branch ?? "main"}</Badge>
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex flex-wrap items-center gap-2">
 					<Button
 						variant="outline"
 						size="sm"
@@ -399,7 +401,7 @@ function ProjectCard({
 										<Button
 											variant="ghost"
 											size="icon"
-											className="group hover:bg-red-500/10 h-7 w-7"
+											className="group hover:bg-red-500/10 h-11 w-11"
 											isLoading={isRemovingDomain}
 										>
 											<Trash2 className="size-3 text-primary group-hover:text-red-500" />
@@ -426,6 +428,8 @@ export function PagesProjects() {
 	const {
 		data: projects,
 		isLoading,
+		isError,
+		error: projectsErr,
 		refetch,
 	} = dns.listPagesProjects.useQuery();
 
@@ -449,7 +453,16 @@ export function PagesProjects() {
 				<CreateProjectDialog onSuccess={() => refetch()} />
 			</div>
 
-			{!projects || projects.length === 0 ? (
+			{isError ? (
+				<div className="flex flex-col items-center gap-3 min-h-[25vh] justify-center">
+					<AlertBlock type="error">
+						{projectsErr?.message || "Failed to load Pages projects."}
+					</AlertBlock>
+					<Button variant="outline" onClick={() => refetch()}>
+						<RefreshCw className="size-4" /> Retry
+					</Button>
+				</div>
+			) : !projects || projects.length === 0 ? (
 				<div className="flex flex-col items-center gap-3 min-h-[25vh] justify-center">
 					<Rocket className="size-8 text-muted-foreground" />
 					<span className="text-base text-muted-foreground text-center">
