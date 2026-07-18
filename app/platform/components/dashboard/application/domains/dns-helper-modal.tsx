@@ -29,7 +29,7 @@ export const DnsHelperModal = ({ domain, serverIp }: Props) => {
 	return (
 		<Dialog>
 			<DialogTrigger>
-				<Button variant="ghost" size="icon" className="group">
+				<Button variant="ghost" size="icon" className="group h-11 w-11">
 					<HelpCircle className="size-4" />
 				</Button>
 			</DialogTrigger>
