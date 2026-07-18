@@ -4,6 +4,7 @@ import {
 	Edit2,
 	Loader2,
 	PlusIcon,
+	RefreshCw,
 	Shield,
 	Trash2,
 	X,
@@ -12,6 +13,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { AlertBlock } from "@/components/shared/alert-block";
 import { DialogAction } from "@/components/shared/dialog-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -132,7 +134,7 @@ function AddRecordDialog({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button>
+				<Button className="w-full sm:w-auto">
 					<PlusIcon className="h-4 w-4" />
 					Add Record
 				</Button>
@@ -304,7 +306,7 @@ function EditRecordDialog({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button variant="ghost" size="icon" className="group hover:bg-blue-500/10">
+				<Button variant="ghost" size="icon" className="group hover:bg-blue-500/10 h-11 w-11">
 					<Edit2 className="size-4 text-primary group-hover:text-blue-500" />
 				</Button>
 			</DialogTrigger>
@@ -427,12 +429,19 @@ function EditRecordDialog({
 
 export function DnsRecords() {
 	const [selectedZoneId, setSelectedZoneId] = useState<string>("");
-	const { data: zones, isLoading: zonesLoading } =
-		dns.listZones.useQuery();
+	const {
+		data: zones,
+		isLoading: zonesLoading,
+		isError: zonesError,
+		error: zonesErr,
+		refetch: refetchZones,
+	} = dns.listZones.useQuery();
 
 	const {
 		data: records,
 		isLoading: recordsLoading,
+		isError: recordsError,
+		error: recordsErr,
 		refetch: refetchRecords,
 	} = dns.listRecords.useQuery(
 		{ zoneId: selectedZoneId || undefined },
@@ -462,10 +471,23 @@ export function DnsRecords() {
 		);
 	}
 
+	if (zonesError) {
+		return (
+			<div className="space-y-4">
+				<AlertBlock type="error">
+					{zonesErr?.message || "Failed to load DNS zones."}
+				</AlertBlock>
+				<Button variant="outline" onClick={() => refetchZones()}>
+					<RefreshCw className="size-4" /> Retry
+				</Button>
+			</div>
+		);
+	}
+
 	return (
 		<div className="space-y-4">
-			<div className="flex items-center justify-between">
-				<div className="w-64">
+			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div className="w-full sm:w-64">
 					<Select
 						value={selectedZoneId}
 						onValueChange={setSelectedZoneId}
@@ -509,7 +531,17 @@ export function DnsRecords() {
 					<span>Loading records...</span>
 					<Loader2 className="animate-spin size-4" />
 				</div>
-			) : !records || records.length === 0 ? (
+			) : recordsError ? (
+					<div className="flex flex-col items-center gap-3 min-h-[25vh] justify-center">
+						<AlertBlock type="error">
+							{recordsErr?.message ||
+								"Failed to load DNS records for this zone."}
+						</AlertBlock>
+						<Button variant="outline" onClick={() => refetchRecords()}>
+							<RefreshCw className="size-4" /> Retry
+						</Button>
+					</div>
+				) : !records || records.length === 0 ? (
 				<div className="flex flex-col items-center gap-3 min-h-[25vh] justify-center">
 					<Shield className="size-8 text-muted-foreground" />
 					<span className="text-base text-muted-foreground text-center">
@@ -558,7 +590,7 @@ export function DnsRecords() {
 										</TableCell>
 										<TableCell>{formatTtl(record.ttl ?? 1)}</TableCell>
 										<TableCell className="text-right">
-											<div className="flex items-center justify-end gap-1">
+											<div className="flex items-center justify-end gap-2">
 												<EditRecordDialog
 													record={record}
 													zoneId={selectedZoneId}
@@ -573,7 +605,7 @@ export function DnsRecords() {
 													<Button
 														variant="ghost"
 														size="icon"
-														className="group hover:bg-red-500/10"
+														className="group hover:bg-red-500/10 h-11 w-11 ml-1"
 														isLoading={isDeleting}
 													>
 														<Trash2 className="size-4 text-primary group-hover:text-red-500" />
