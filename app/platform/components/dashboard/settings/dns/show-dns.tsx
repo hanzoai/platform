@@ -28,18 +28,21 @@ export const ShowDns = () => {
 					</CardHeader>
 					<CardContent className="space-y-2 py-4 border-t">
 						<Tabs defaultValue="records">
-							<TabsList>
-								<TabsTrigger value="records" className="flex items-center gap-1.5">
-									<Globe className="size-3.5" />
-									DNS Records
+							{/* Full-width 3-col grid so the triggers share the card width
+							    and truncate instead of overflowing it on mobile
+							    ("Domain Verification" was clipping at ~390px). */}
+							<TabsList className="grid w-full grid-cols-3">
+								<TabsTrigger value="records" className="flex min-w-0 items-center gap-1.5">
+									<Globe className="size-3.5 shrink-0" />
+									<span className="truncate">DNS Records</span>
 								</TabsTrigger>
-								<TabsTrigger value="pages" className="flex items-center gap-1.5">
-									<Rocket className="size-3.5" />
-									Pages Projects
+								<TabsTrigger value="pages" className="flex min-w-0 items-center gap-1.5">
+									<Rocket className="size-3.5 shrink-0" />
+									<span className="truncate">Pages Projects</span>
 								</TabsTrigger>
-								<TabsTrigger value="verify" className="flex items-center gap-1.5">
-									<Search className="size-3.5" />
-									Domain Verification
+								<TabsTrigger value="verify" className="flex min-w-0 items-center gap-1.5">
+									<Search className="size-3.5 shrink-0" />
+									<span className="truncate">Domain Verification</span>
 								</TabsTrigger>
 							</TabsList>
 							<TabsContent value="records" className="mt-4">
