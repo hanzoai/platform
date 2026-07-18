@@ -1,10 +1,10 @@
 /**
- * Cloudflare Pages — per-org client of the Hanzo Cloud /v1/cloudflare/pages plane.
+ * Cloudflare Pages — per-org client of the Hanzo Cloud /v1/integrations/cloudflare/pages plane.
  *
  * This REPLACES the global-env-token Pages path (the old cloudflare.ts Pages
  * functions that rode getCloudflareConfig() → CLOUDFLARE_API_TOKEN). Instead of
  * reaching Cloudflare directly with one shared token, it delegates to cloud's
- * per-org /v1/cloudflare/pages/* surface. Cloud resolves the ORG's OWN KMS-sealed
+ * per-org /v1/integrations/cloudflare/pages/* surface. Cloud resolves the ORG's OWN KMS-sealed
  * Cloudflare token in-process (the token the org connected via the integrations
  * connector) and scopes every call to that org — so the platform never holds a
  * global Cloudflare token for Pages again. One token, one custody boundary, per org.
@@ -25,7 +25,7 @@ import type {
 } from "./cloudflare";
 
 const DEFAULT_BASE_URL = "https://api.hanzo.ai";
-const API_PREFIX = "/v1/cloudflare/pages";
+const API_PREFIX = "/v1/integrations/cloudflare/pages";
 
 /** Cloud API origin (no `/api/` prefix — the surface lives under `/v1`). */
 function baseUrl(): string {
@@ -53,7 +53,7 @@ interface CloudFetchOptions {
 }
 
 /**
- * Per-org fetch against cloud's /v1/cloudflare/pages plane. The org rides the
+ * Per-org fetch against cloud's /v1/integrations/cloudflare/pages plane. The org rides the
  * X-Org-Id header (the ONLY tenant key); cloud derives the Cloudflare token from it.
  * Unwraps cloud's JSON, throws a clean error on non-2xx (never surfacing a token).
  */
