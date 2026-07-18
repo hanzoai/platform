@@ -18,7 +18,7 @@ import dns from "node:dns/promises";
 import type { IncomingMessage } from "node:http";
 // getCloudflareConfig stays for the DNS-record zoneId fallback (the CF-provider DNS
 // path). The Pages functions now come from the per-org cloudflare-pages client, which
-// delegates to cloud's /v1/cloudflare/pages plane — no global env token for Pages.
+// delegates to cloud's /v1/integrations/cloudflare/pages plane — no global env token for Pages.
 import { getCloudflareConfig } from "@hanzo/platform/services/cloudflare";
 import {
 	addPagesCustomDomain,
@@ -346,7 +346,7 @@ async function dispatch(ctx: DnsCtx, call: Call): Promise<unknown> {
 		}
 
 		// -------------------------------------------------------------------
-		// Cloudflare Pages endpoints — per-org via cloud's /v1/cloudflare/pages plane
+		// Cloudflare Pages endpoints — per-org via cloud's /v1/integrations/cloudflare/pages plane
 		// (ctx.organizationId is the tenant key). The old global-env-token path is
 		// gone; cloud resolves the org's own KMS-sealed Cloudflare token in-process.
 		// -------------------------------------------------------------------
