@@ -1,10 +1,17 @@
 /**
  * Hanzo DNS Provider
  *
- * Implements the DnsProvider interface by calling the Hanzo DNS REST API
- * at dns.hanzo.ai. Works with any upstream DNS provider the org has
- * configured (Cloudflare, Route53, etc.) -- the Hanzo DNS service
- * abstracts the provider details.
+ * Implements the DnsProvider interface by calling the Hanzo DNS REST API at
+ * dns.hanzo.ai (hanzoai/dns). The Hanzo DNS service is the ONE DNS control
+ * plane: it serves authoritative zones from its own CoreDNS store and, for
+ * provider-backed zones, manages records in the org's connected upstream
+ * (Cloudflare) via the org's KMS-sealed token — so this client works the same
+ * whichever backend a zone uses.
+ *
+ * The deployed server is keyed by zone NAME (not an opaque zone id) and serves
+ * everything under /v1/dns/* (no /api/ prefix). Its list endpoints return
+ * `{zones|records, total}` and its item endpoints return the object directly —
+ * there is no `{data}` envelope.
  *
  * Configuration is read from environment variables:
  *   - HANZO_DNS_API_KEY:   bearer token (preferred)
@@ -60,16 +67,11 @@ export function isHanzoDnsConfigured(): boolean {
 // API Client
 // ============================================================================
 
-interface HanzoDnsApiResponse<T> {
-	data: T;
-	error?: string;
-}
-
 /**
- * Generic fetch wrapper for the Hanzo DNS API.
- *
- * Handles authentication, JSON serialization, and error unwrapping.
- * Throws on non-2xx responses or API-level errors.
+ * Generic fetch wrapper for the Hanzo DNS API. Handles authentication, JSON
+ * serialization, and error unwrapping. The server returns raw JSON (an object,
+ * or `{zones|records, total}` for lists); errors are `{code, message}`. Throws
+ * on non-2xx responses.
  */
 async function hanzoDnsFetch<T>(
 	config: HanzoDnsConfig,
@@ -98,11 +100,11 @@ async function hanzoDnsFetch<T>(
 		let errorMessage: string;
 		try {
 			const errorBody = (await response.json()) as {
-				error?: string;
 				message?: string;
+				error?: string;
 			};
 			errorMessage =
-				errorBody.error ?? errorBody.message ?? response.statusText;
+				errorBody.message ?? errorBody.error ?? response.statusText;
 		} catch {
 			errorMessage = response.statusText;
 		}
@@ -111,38 +113,34 @@ async function hanzoDnsFetch<T>(
 		);
 	}
 
-	const json = (await response.json()) as HanzoDnsApiResponse<T>;
-	if (json.error) {
-		throw new Error(`Hanzo DNS API error: ${json.error}`);
-	}
-
-	return json.data;
+	return (await response.json()) as T;
 }
 
 // ============================================================================
-// API Response Types
+// API Response Types (match the deployed server)
 // ============================================================================
 
 interface HanzoDnsZone {
 	id: string;
-	name: string;
+	zone: string; // the zone NAME (FQDN with trailing dot) — the addressing key
+	provider: string; // "authoritative" | "cloudflare"
 	status: string;
-	name_servers: string[];
+	nameservers: string[];
+	record_count: number;
 	created_at: string;
-	modified_at: string;
+	updated_at: string;
 }
 
 interface HanzoDnsRecord {
 	id: string;
-	zone_id: string;
 	name: string;
 	type: string;
 	content: string;
 	ttl: number;
-	proxied?: boolean;
+	proxied: boolean;
 	priority?: number;
 	created_at: string;
-	modified_at: string;
+	updated_at: string;
 }
 
 // ============================================================================
@@ -151,20 +149,22 @@ interface HanzoDnsRecord {
 
 function mapZone(zone: HanzoDnsZone): DnsZone {
 	return {
-		id: zone.id,
-		name: zone.name,
+		// The server addresses zones by NAME, so the canonical id IS the name —
+		// subsequent getZone/listRecords/... calls pass it back as the key.
+		id: zone.zone,
+		name: zone.zone,
 		status: zone.status,
 		provider: "hanzo" as DnsProviderType,
-		nameServers: zone.name_servers,
+		nameServers: zone.nameservers ?? [],
 		createdAt: zone.created_at,
-		modifiedAt: zone.modified_at,
+		modifiedAt: zone.updated_at,
 	};
 }
 
-function mapRecord(record: HanzoDnsRecord): DnsRecord {
+function mapRecord(zoneName: string, record: HanzoDnsRecord): DnsRecord {
 	return {
 		id: record.id,
-		zoneId: record.zone_id,
+		zoneId: zoneName,
 		name: record.name,
 		type: record.type,
 		content: record.content,
@@ -173,7 +173,7 @@ function mapRecord(record: HanzoDnsRecord): DnsRecord {
 		priority: record.priority,
 		provider: "hanzo" as DnsProviderType,
 		createdAt: record.created_at,
-		modifiedAt: record.modified_at,
+		modifiedAt: record.updated_at,
 	};
 }
 
@@ -189,17 +189,17 @@ export class HanzoDnsProvider implements DnsProvider {
 	}
 
 	async listZones(): Promise<DnsZone[]> {
-		const zones = await hanzoDnsFetch<HanzoDnsZone[]>(
+		const { zones } = await hanzoDnsFetch<{ zones: HanzoDnsZone[] }>(
 			this.config,
-			"/api/v1/zones",
+			"/v1/dns/zones",
 		);
-		return zones.map(mapZone);
+		return (zones ?? []).map(mapZone);
 	}
 
 	async getZone(zoneId: string): Promise<DnsZone> {
 		const zone = await hanzoDnsFetch<HanzoDnsZone>(
 			this.config,
-			`/api/v1/zones/${zoneId}`,
+			`/v1/dns/zones/${encodeURIComponent(zoneId)}`,
 		);
 		return mapZone(zone);
 	}
@@ -207,24 +207,26 @@ export class HanzoDnsProvider implements DnsProvider {
 	async createZone(name: string): Promise<DnsZone> {
 		const zone = await hanzoDnsFetch<HanzoDnsZone>(
 			this.config,
-			"/api/v1/zones",
-			{ method: "POST", body: { name } },
+			"/v1/dns/zones",
+			{ method: "POST", body: { zone: name } },
 		);
 		return mapZone(zone);
 	}
 
 	async deleteZone(zoneId: string): Promise<void> {
-		await hanzoDnsFetch<unknown>(this.config, `/api/v1/zones/${zoneId}`, {
-			method: "DELETE",
-		});
+		await hanzoDnsFetch<unknown>(
+			this.config,
+			`/v1/dns/zones/${encodeURIComponent(zoneId)}`,
+			{ method: "DELETE" },
+		);
 	}
 
 	async listRecords(zoneId: string): Promise<DnsRecord[]> {
-		const records = await hanzoDnsFetch<HanzoDnsRecord[]>(
+		const { records } = await hanzoDnsFetch<{ records: HanzoDnsRecord[] }>(
 			this.config,
-			`/api/v1/zones/${zoneId}/records`,
+			`/v1/dns/zones/${encodeURIComponent(zoneId)}/records`,
 		);
-		return records.map(mapRecord);
+		return (records ?? []).map((r) => mapRecord(zoneId, r));
 	}
 
 	async createRecord(
@@ -233,10 +235,10 @@ export class HanzoDnsProvider implements DnsProvider {
 	): Promise<DnsRecord> {
 		const created = await hanzoDnsFetch<HanzoDnsRecord>(
 			this.config,
-			`/api/v1/zones/${zoneId}/records`,
+			`/v1/dns/zones/${encodeURIComponent(zoneId)}/records`,
 			{ method: "POST", body: record },
 		);
-		return mapRecord(created);
+		return mapRecord(zoneId, created);
 	}
 
 	async updateRecord(
@@ -246,16 +248,16 @@ export class HanzoDnsProvider implements DnsProvider {
 	): Promise<DnsRecord> {
 		const updated = await hanzoDnsFetch<HanzoDnsRecord>(
 			this.config,
-			`/api/v1/zones/${zoneId}/records/${recordId}`,
+			`/v1/dns/zones/${encodeURIComponent(zoneId)}/records/${encodeURIComponent(recordId)}`,
 			{ method: "PUT", body: record },
 		);
-		return mapRecord(updated);
+		return mapRecord(zoneId, updated);
 	}
 
 	async deleteRecord(zoneId: string, recordId: string): Promise<void> {
 		await hanzoDnsFetch<unknown>(
 			this.config,
-			`/api/v1/zones/${zoneId}/records/${recordId}`,
+			`/v1/dns/zones/${encodeURIComponent(zoneId)}/records/${encodeURIComponent(recordId)}`,
 			{ method: "DELETE" },
 		);
 	}
