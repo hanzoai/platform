@@ -75,6 +75,22 @@ async function cloudPagesFetch<T>(
 		body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
 	});
 
+	// Comingling guardrail. On any SERVED (2xx) response, cloud stamps X-Hanzo-Org with
+	// the org whose Cloudflare token it actually used. If it differs from the org we
+	// asked for, the service credential is NOT org-switch-capable (SuperAdmin) and
+	// cloud's identity boundary PINNED X-Org-Id to the token's OWN owner — so this call
+	// would silently read/write another tenant's Cloudflare account. Refuse LOUD.
+	if (response.ok) {
+		const acting = response.headers.get("X-Hanzo-Org");
+		if (acting !== org) {
+			throw new Error(
+				acting
+					? `Cloudflare Pages tenant mismatch: cloud served org '${acting}' but '${org}' was requested — HANZO_CLOUD_API_TOKEN is not org-switch-capable (must be a SuperAdmin token); refusing to comingle tenants`
+					: "Cloudflare Pages: cloud did not confirm the acting org (X-Hanzo-Org missing); refusing to proceed",
+			);
+		}
+	}
+
 	if (response.status === 204) return {} as T;
 
 	const text = await response.text();
