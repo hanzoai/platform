@@ -29,7 +29,6 @@ import {
 	createDnsProvider,
 	type DnsProviderType,
 } from "@hanzo/platform/services/dns-provider";
-import { isHanzoDnsConfigured } from "@hanzo/platform/services/hanzo-dns-provider";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
@@ -71,13 +70,17 @@ class NotFoundError extends Error {}
 
 /**
  * Resolve a DnsProvider instance from the optional provider input.
- * When no explicit provider is given, prefers Hanzo DNS (dns.hanzo.ai)
- * if HANZO_DNS_API_KEY is set, otherwise falls back to Cloudflare.
+ *
+ * DNS zone/record management goes through the per-org Hanzo DNS control plane
+ * (dns.hanzo.ai/v1/dns) by DEFAULT — that plane owns the upstream provider per
+ * org (authoritative CoreDNS, or Cloudflare via the org's KMS-sealed connector),
+ * so the platform never reaches Cloudflare with a global env token for DNS. The
+ * global-env Cloudflare client is used ONLY when a caller explicitly asks for
+ * `provider: "cloudflare"` (and for the CF-Pages endpoints below, which are a
+ * distinct Cloudflare-only product surface).
  */
 async function resolveProvider(providerType?: DnsProviderType) {
-	const effectiveType =
-		providerType ?? (isHanzoDnsConfigured() ? "hanzo" : "cloudflare");
-	return createDnsProvider(effectiveType);
+	return createDnsProvider(providerType ?? "hanzo");
 }
 
 /**

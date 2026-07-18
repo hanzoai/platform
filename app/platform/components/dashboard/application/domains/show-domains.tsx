@@ -447,7 +447,7 @@ export const ShowDomains = ({ id, type }: Props) => {
 																<Button
 																	variant="ghost"
 																	size="icon"
-																	className="group hover:bg-blue-500/10"
+																	className="group hover:bg-blue-500/10 h-11 w-11"
 																>
 																	<PenBoxIcon className="size-3.5 text-primary group-hover:text-blue-500" />
 																</Button>
@@ -476,7 +476,7 @@ export const ShowDomains = ({ id, type }: Props) => {
 																<Button
 																	variant="ghost"
 																	size="icon"
-																	className="group hover:bg-red-500/10"
+																	className="group hover:bg-red-500/10 h-11 w-11 ml-1"
 																	isLoading={isRemoving}
 																>
 																	<Trash2 className="size-4 text-primary group-hover:text-red-500" />
@@ -583,10 +583,10 @@ export const ShowDomains = ({ id, type }: Props) => {
 																	variant="outline"
 																	className={
 																		validationState?.isValid
-																			? "bg-green-500/10 text-green-500 cursor-pointer"
+																			? "bg-green-500/10 text-green-600 dark:text-green-400 cursor-pointer"
 																			: validationState?.error
-																				? "bg-red-500/10 text-red-500 cursor-pointer"
-																				: "bg-yellow-500/10 text-yellow-500 cursor-pointer"
+																				? "bg-red-500/10 text-red-600 dark:text-red-400 cursor-pointer"
+																				: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 cursor-pointer"
 																	}
 																	onClick={() =>
 																		handleValidateDomain(item.host)
