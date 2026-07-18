@@ -16,15 +16,18 @@
 
 import dns from "node:dns/promises";
 import type { IncomingMessage } from "node:http";
+// getCloudflareConfig stays for the DNS-record zoneId fallback (the CF-provider DNS
+// path). The Pages functions now come from the per-org cloudflare-pages client, which
+// delegates to cloud's /v1/cloudflare/pages plane — no global env token for Pages.
+import { getCloudflareConfig } from "@hanzo/platform/services/cloudflare";
 import {
 	addPagesCustomDomain,
 	createPagesDeployment,
 	createPagesProject,
-	getCloudflareConfig,
 	getPagesProject,
 	listPagesProjects,
 	removePagesCustomDomain,
-} from "@hanzo/platform/services/cloudflare";
+} from "@hanzo/platform/services/cloudflare-pages";
 import {
 	createDnsProvider,
 	type DnsProviderType,
@@ -107,10 +110,10 @@ async function withProviderError<T>(
  * same one the tRPC procedure ran), and encode the result. Errors map to ZAP
  * status codes, never a thrown HTTP 500 leak.
  */
-export function dnsRootCap(_ctx: DnsCtx): CallHandler {
+export function dnsRootCap(ctx: DnsCtx): CallHandler {
 	return async (call: Call): Promise<Response> => {
 		try {
-			const value = await dispatch(call);
+			const value = await dispatch(ctx, call);
 			return {
 				status: Status.OK,
 				promiseID: call.promiseID,
@@ -133,7 +136,7 @@ export function dnsRootCap(_ctx: DnsCtx): CallHandler {
 	};
 }
 
-async function dispatch(call: Call): Promise<unknown> {
+async function dispatch(ctx: DnsCtx, call: Call): Promise<unknown> {
 	switch (call.method) {
 		// -------------------------------------------------------------------
 		// Provider-aware DNS zone endpoints
@@ -343,12 +346,13 @@ async function dispatch(call: Call): Promise<unknown> {
 		}
 
 		// -------------------------------------------------------------------
-		// Cloudflare Pages endpoints (CF-only features, unchanged)
+		// Cloudflare Pages endpoints — per-org via cloud's /v1/cloudflare/pages plane
+		// (ctx.organizationId is the tenant key). The old global-env-token path is
+		// gone; cloud resolves the org's own KMS-sealed Cloudflare token in-process.
 		// -------------------------------------------------------------------
 		case DnsMethod.listPagesProjects: {
 			try {
-				const config = getCloudflareConfig();
-				return await listPagesProjects(config.apiToken, config.accountId);
+				return await listPagesProjects(ctx.organizationId);
 			} catch (error) {
 				throw new Error(
 					error instanceof Error
@@ -360,12 +364,7 @@ async function dispatch(call: Call): Promise<unknown> {
 		case DnsMethod.getPagesProject: {
 			const input = decodeArgs<{ projectName: string }>(call.payload);
 			try {
-				const config = getCloudflareConfig();
-				return await getPagesProject(
-					config.apiToken,
-					config.accountId,
-					input.projectName,
-				);
+				return await getPagesProject(ctx.organizationId, input.projectName);
 			} catch (error) {
 				throw new NotFoundError(
 					error instanceof Error
@@ -380,8 +379,7 @@ async function dispatch(call: Call): Promise<unknown> {
 				production_branch?: string;
 			}>(call.payload);
 			try {
-				const config = getCloudflareConfig();
-				return await createPagesProject(config.apiToken, config.accountId, {
+				return await createPagesProject(ctx.organizationId, {
 					name: input.name,
 					production_branch: input.production_branch,
 				});
@@ -398,10 +396,8 @@ async function dispatch(call: Call): Promise<unknown> {
 				call.payload,
 			);
 			try {
-				const config = getCloudflareConfig();
 				return await createPagesDeployment(
-					config.apiToken,
-					config.accountId,
+					ctx.organizationId,
 					input.projectName,
 					input.branch,
 				);
@@ -418,10 +414,8 @@ async function dispatch(call: Call): Promise<unknown> {
 				call.payload,
 			);
 			try {
-				const config = getCloudflareConfig();
 				return await addPagesCustomDomain(
-					config.apiToken,
-					config.accountId,
+					ctx.organizationId,
 					input.projectName,
 					input.domain,
 				);
@@ -438,10 +432,8 @@ async function dispatch(call: Call): Promise<unknown> {
 				call.payload,
 			);
 			try {
-				const config = getCloudflareConfig();
 				await removePagesCustomDomain(
-					config.apiToken,
-					config.accountId,
+					ctx.organizationId,
 					input.projectName,
 					input.domainId,
 				);
