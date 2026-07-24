@@ -36,6 +36,7 @@ import {
 	Server,
 	ShieldCheck,
 	Star,
+	Store,
 	Tags,
 	Trash2,
 	User,
@@ -165,6 +166,12 @@ const MENU: Menu = {
 			title: "Apps",
 			url: "/dashboard/apps",
 			icon: Layers,
+		},
+		{
+			isSingle: true,
+			title: "Templates",
+			url: "/dashboard/templates",
+			icon: Store,
 		},
 		{
 			isSingle: true,

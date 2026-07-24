@@ -32,14 +32,19 @@ const nextConfig = {
 		// In frontend-only mode there is no local backend, so proxy the /v1/*
 		// surface straight to the production platform.
 		if (process.env.SKIP_ENV_VALIDATION === "1") {
-			const target = process.env.PLATFORM_API_URL || "https://platform.hanzo.ai";
+			const target =
+				process.env.PLATFORM_API_URL || "https://platform.hanzo.ai";
 			return [
 				{ source: "/v1/:path*", destination: `${target}/v1/:path*` },
 				{ source: "/apps", destination: "/dashboard/apps" },
+				{ source: "/templates", destination: "/dashboard/templates" },
 			];
 		}
 
-		return [{ source: "/apps", destination: "/dashboard/apps" }];
+		return [
+			{ source: "/apps", destination: "/dashboard/apps" },
+			{ source: "/templates", destination: "/dashboard/templates" },
+		];
 	},
 	async headers() {
 		return [
