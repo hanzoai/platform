@@ -1,3 +1,36 @@
+# Hanzo Platform — LLM / agent orientation
+
+**What this is.** Hanzo Platform — the self-hostable PaaS that is the *deploy plane*
+of the Open AI Cloud. Point it at a repo; it builds, deploys, routes, backs up, and
+monitors apps, services, and databases. Fork of Dokploy (Apache-2.0), rebranded and
+extended with platform-native CI/CD, an apps-lifecycle drift board, KMS-sourced
+secrets, and operator-CR-driven Kubernetes deploys.
+
+**Canonical role.** A *product/infra* repo in the `hanzoai/*` umbrella — the impl
+lives here; the site and docs link IN, never duplicate it. This is NOT an SDK. The
+one-way SDK model (two lines: generated cloud SDK + AI/agents lib; Python flagship)
+is specified in `~/work/hanzo/SDK-ARCHITECTURE.md`.
+
+**Run it.** pnpm monorepo, Node per `.nvmrc`. `pnpm install` → `pnpm platform:setup`
+→ `pnpm platform:dev`; `pnpm build`; `pnpm test`. Ship: bump
+`app/platform/package.json`, tag `main` HEAD the same `vX.Y.Z` →
+`ghcr.io/hanzoai/platform:<tag>` (ONE version line, `v4.x`).
+
+**Key entry points.** `pkg/platform` = server + services (`services/ci/*` =
+build→deploy→e2e→publish; `services/apps/*` = inventory/drift). `app/*` = Next.js app
++ schedulers. `openapi.json` = the `/v1` surface. `docs/PLATFORM_CI.md` and
+`docs/APPS_LIFECYCLE.md` = the contracts.
+
+**Brand rules (hard).** Voice: "Hanzo — the Open AI Cloud." Never call anything an
+"LLM gateway" or position vs LiteLLM — Hanzo is a full AI cloud, not a proxy. HTTP
+routes are `/v1/*`, never an `/api/` URL prefix (existing `pages/api/v1/*` are
+Next.js *filesystem* paths — real code, leave them). Zen models are our own family;
+never name upstream models.
+
+**CLAUDE.md and AGENTS.md are symlinks to this file — edit LLM.md only.**
+
+---
+
 # paas — AI Assistant Context
 
 <div align="center">
