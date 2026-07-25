@@ -1,0 +1,44 @@
+# platform — the ONE build, on Hanzo's own forge.
+#
+#   git.hanzo.ai push → act_runner (in-cluster git-runner, privileged dind)
+#   → docker build → ghcr.io/hanzoai/platform:<sha> → operator/StatefulSet
+#
+# GitHub Actions is disabled account-wide, so `.github/workflows/*` cannot
+# build. This is the real pipeline. No GitHub builders.
+#
+# The image is tagged by COMMIT SHA only. A semver tag that gets re-pushed
+# means two digests behind one name, and with imagePullPolicy: IfNotPresent the
+# node keeps whichever it cached first — that is how v4.4.5 and v4.4.6 each came
+# to mean two different builds on 2026-07-25. A SHA cannot move.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: hanzo-linux-amd64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+
+      - name: Build + push
+        run: |
+          set -euo pipefail
+          SHA="${GITHUB_SHA}"
+          IMAGE="ghcr.io/hanzoai/platform:${SHA}"
+          docker build --target platform -f Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "built $IMAGE"
+
+      # The cluster is told the exact SHA that was just built. Declared state and
+      # the artifact can never disagree, because they are the same string.
+      - name: Declare the tag
+        run: |
+          set -euo pipefail
+          echo "ghcr.io/hanzoai/platform:${GITHUB_SHA}" > image.txt
+          echo "Pin k8s/platform-statefulset.yaml to this tag to roll it out."
+        continue-on-error: true
