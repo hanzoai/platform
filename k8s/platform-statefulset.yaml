@@ -114,6 +114,15 @@ spec:
                 secretKeyRef:
                   name: platform-app-secrets
                   key: NEXTAUTH_SECRET
+            # better-auth signs sessions with this. UNSET, it silently falls back
+            # to a well-known DEFAULT secret and throws unhandledRejection on every
+            # request — which is how this shipped when the app moved NextAuth →
+            # better-auth: NEXTAUTH_SECRET stayed set but is no longer read.
+            - name: BETTER_AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: platform-app-secrets
+                  key: BETTER_AUTH_SECRET
             - name: IAM_CLIENT_ID
               valueFrom:
                 secretKeyRef:
