@@ -141,6 +141,58 @@ build:
 		).toThrow(/one way only/);
 	});
 
+	it("accepts the App CRD — the kind the fleet actually runs", () => {
+		const cfg = validatePlatformConfig({
+			build: { matrix: [{ os: "linux", arch: "amd64" }], image: "x/y" },
+			deploy: {
+				on: ["main"],
+				target: {
+					cluster: "hanzo-k8s",
+					namespace: "hanzo",
+					operator: "hanzo-operator",
+					crd: "App",
+					name: "cloud",
+				},
+			},
+		});
+		expect(cfg.deploy?.target.crd).toBe("App");
+	});
+
+	it("defaults an omitted crd to App", () => {
+		// `App` is ~99% of the fleet, so omitting the kind must not be an error.
+		const cfg = validatePlatformConfig({
+			build: { matrix: [{ os: "linux", arch: "amd64" }], image: "x/y" },
+			deploy: {
+				on: ["main"],
+				target: {
+					cluster: "hanzo-k8s",
+					namespace: "hanzo",
+					operator: "hanzo-operator",
+					name: "cloud",
+				},
+			},
+		});
+		expect(cfg.deploy?.target.crd).toBe("App");
+	});
+
+	it("rejects a datastore kind as a deploy target", () => {
+		expect(() =>
+			validatePlatformConfig({
+				build: { matrix: [{ os: "linux", arch: "amd64" }], image: "x/y" },
+				deploy: {
+					on: ["main"],
+					target: {
+						cluster: "c",
+						namespace: "n",
+						operator: "hanzo-operator",
+						crd: "SQL",
+						name: "x",
+					},
+				},
+			}),
+		).toThrow(/must be one of App, Service/);
+	});
+
 	it("rejects non-YAML", () => {
 		expect(() => parsePlatformConfig(":\n  - [")).toThrow(PlatformConfigError);
 	});
@@ -268,8 +320,13 @@ build:
     - { os: linux, arch: arm64 }
   image: ghcr.io/hanzoai/zip
 `);
-		expect(cfg.builds[0]!.matrix.map((m) => m.arch)).toEqual(["amd64", "arm64"]);
+		expect(cfg.builds[0]!.matrix.map((m) => m.arch)).toEqual([
+			"amd64",
+			"arm64",
+		]);
 		// Exactly one of the declared arches is currently buildable.
-		expect(cfg.builds[0]!.matrix.filter((m) => isBuildableArch(m.arch))).toHaveLength(1);
+		expect(
+			cfg.builds[0]!.matrix.filter((m) => isBuildableArch(m.arch)),
+		).toHaveLength(1);
 	});
 });
