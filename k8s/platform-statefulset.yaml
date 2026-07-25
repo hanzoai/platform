@@ -78,7 +78,7 @@ spec:
           # overwrites the existing tag in place — and with IfNotPresent the node
           # keeps its cached layer and the change never runs. That is exactly how
           # v4.4.5 ended up meaning two different digests (2026-07-25).
-          image: ghcr.io/hanzoai/platform:v4.4.6
+          image: ghcr.io/hanzoai/platform:v4.4.7
           imagePullPolicy: IfNotPresent
           # `pnpm start` runs `dist/migration.mjs` (applies drizzle migrations,
           # including the uniqueConfigKey UNIQUE indexes) then `dist/server.mjs`.
