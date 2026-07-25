@@ -18,13 +18,17 @@
       "command": "node",
       "args": ["/home/z/platform/pkg/mcp/build/index.js"],
       "env": {
-        "PLATFORM_URL": "https://platform.hanzo.ai/api",
+        "PLATFORM_URL": "https://platform.hanzo.ai/v1/trpc",
         "PLATFORM_API_KEY": "your-api-key-from-step-1"
       }
     }
   }
 }
 ```
+
+`PLATFORM_URL` is the tRPC endpoint the tools call (`<PLATFORM_URL>/project.all`,
+`<PLATFORM_URL>/compose.deploy`, …). Platform serves tRPC natively at `/v1/trpc`
+— never under an `/api` prefix, which 404s.
 
 3. **Restart Claude Code** to load the MCP server
 
@@ -41,7 +45,7 @@ Once installed, you can ask Claude to:
 
 Test the connection:
 ```bash
-PLATFORM_URL=https://platform.hanzo.ai/api PLATFORM_API_KEY=your-key node /home/z/platform/pkg/mcp/build/index.js
+PLATFORM_URL=https://platform.hanzo.ai/v1/trpc PLATFORM_API_KEY=your-key node /home/z/platform/pkg/mcp/build/index.js
 ```
 
 Should output: `{"level":"info","message":"MCP Platform CLI server running via stdio"...}`
