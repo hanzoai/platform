@@ -1,0 +1,64 @@
+# platform-app is a control plane: it builds its dashboard by INVENTORYING the
+# cluster — listing the Hanzo operator CRs (apps, services, functions, …) plus
+# the core workloads behind them — to show what is deployed and whether it is
+# healthy. That needs a read identity.
+#
+# Without this it runs as the namespace `default` ServiceAccount, which has no
+# permissions, and the apps-inventory scheduler loops on:
+#   services.hanzo.ai is forbidden: User "system:serviceaccount:hanzo:default"
+#   cannot list resource "services" in API group "hanzo.ai"
+#
+# The grant is READ-ONLY and cluster-wide on purpose: the platform observes the
+# whole estate across namespaces, and never mutates through this identity. The
+# deploy/apply path (writing App CRs) is a separate, explicitly-scoped concern —
+# it is NOT granted here.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: platform-app
+  namespace: hanzo
+  labels:
+    app: platform-app
+    app.kubernetes.io/name: platform-app
+    app.kubernetes.io/part-of: hanzo-platform
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: platform-app-reader
+  labels:
+    app.kubernetes.io/part-of: hanzo-platform
+rules:
+  # Hanzo operator CRs — the App/Service inventory the dashboard renders. The
+  # base `hanzo.ai` group holds apps + services + the datastore/function/gateway
+  # family; the sub-groups carry the ArgoCD, nchain, gateway and KMS kinds.
+  - apiGroups:
+      - hanzo.ai
+      - apps.hanzo.ai
+      - nchain.hanzo.ai
+      - gateway.hanzo.ai
+      - kms.hanzo.ai
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  # Core + workload status, for the health rollup behind each app tile.
+  - apiGroups: [""]
+    resources: ["namespaces", "pods", "services", "endpoints", "configmaps", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "replicasets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: platform-app-reader
+  labels:
+    app.kubernetes.io/part-of: hanzo-platform
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: platform-app-reader
+subjects:
+  - kind: ServiceAccount
+    name: platform-app
+    namespace: hanzo
