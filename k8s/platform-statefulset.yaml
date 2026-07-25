@@ -79,10 +79,11 @@ spec:
           # different digests within hours (2026-07-25) — and with IfNotPresent the
           # node keeps whichever it cached first, so a "released" version silently
           # means different code on different nodes. A commit SHA cannot move.
-          # This digest (sha256:f5b7d80a) is the build of 6012d637 that is running
-          # and verified: apps-inventory syncs 75 apps. Move this pin only to
-          # another SHA you have confirmed is published.
-          image: ghcr.io/hanzoai/platform:6012d637b1592c0f0a4c0c574db0758e4f850c08
+          # This digest (sha256:ae2b2eb8) is the build of 7c817d6a — the FIRST
+          # image produced on Hanzo's own forge (git.hanzo.ai → act_runner →
+          # docker build → GHCR), with no GitHub involvement. Move this pin only
+          # to another SHA you have confirmed is published.
+          image: ghcr.io/hanzoai/platform:7c817d6ac1fdc5b6c7eeb83df723c0f4dd3fba53
           imagePullPolicy: IfNotPresent
           # `pnpm start` runs `dist/migration.mjs` (applies drizzle migrations,
           # including the uniqueConfigKey UNIQUE indexes) then `dist/server.mjs`.
