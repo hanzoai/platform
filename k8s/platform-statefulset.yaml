@@ -134,6 +134,22 @@ spec:
                 secretKeyRef:
                   name: platform-app-secrets
                   key: IAM_CLIENT_SECRET
+            # The shared service bearer token /v1 verifies (`requireServiceToken`,
+            # constant-time). It is NOT a new secret: `console` already presents
+            # this exact 64-char value as PAAS_SERVICE_TOKEN from this same
+            # Secret — the SERVER simply never held it, so every /v1/apps call
+            # got `500 Service token is not configured` and the REST twin of the
+            # board was dead while the session-rendered board worked. One value,
+            # referenced where it already lives; a fresh token here would be a
+            # second copy to drift. (`admin-api-secrets/PLATFORM_SERVICE_TOKEN`
+            # holds a byte-identical copy with no consumer — a leftover, not a
+            # second token.)
+            - name: PLATFORM_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: paas-console-token
+                  key: PAAS_SERVICE_TOKEN
+                  optional: true
             # The platform's OWN GitHub App installation. `appEnvOctokit` reads
             # exactly these three and, with all three present, mints short-lived
             # installation tokens (5000 req/hr, scoped to the installation).
