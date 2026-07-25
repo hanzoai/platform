@@ -109,6 +109,34 @@ function ReleaseCell({ app }: { app: AppView }) {
 	);
 }
 
+/**
+ * Where the service actually answers. The operator CR's `spec.ingress.hosts` is
+ * the only authority on this, so the cell renders exactly what was observed —
+ * a link per host, no host invented. Internal-only workloads declare no ingress
+ * and honestly show a dash.
+ */
+function HostCell({ hosts }: { hosts: string[] }) {
+	if (hosts.length === 0) {
+		return <span className="text-muted-foreground">—</span>;
+	}
+	return (
+		<div className="flex flex-col gap-0.5">
+			{hosts.map((h) => (
+				<a
+					key={h}
+					href={`https://${h}`}
+					target="_blank"
+					rel="noreferrer"
+					className="inline-flex items-center gap-1 font-mono text-xs hover:underline"
+				>
+					{h}
+					<ExternalLink className="size-3 text-muted-foreground" />
+				</a>
+			))}
+		</div>
+	);
+}
+
 function HealthCell({ health }: { health: AppHealth | null }) {
 	if (!health) return <span className="text-muted-foreground">—</span>;
 	return <Badge variant={HEALTH_BADGE[health]}>{health}</Badge>;
@@ -142,6 +170,7 @@ export function AppsBoard({ apps, summary }: Props) {
 					<TableHeader>
 						<TableRow>
 							<TableHead>Org/App</TableHead>
+							<TableHead>Host</TableHead>
 							<TableHead>Env</TableHead>
 							<TableHead>Declared</TableHead>
 							<TableHead>Running</TableHead>
@@ -156,7 +185,7 @@ export function AppsBoard({ apps, summary }: Props) {
 						{apps.length === 0 ? (
 							<TableRow>
 								<TableCell
-									colSpan={9}
+									colSpan={10}
 									className="text-center text-muted-foreground"
 								>
 									No apps recorded yet.
@@ -167,6 +196,9 @@ export function AppsBoard({ apps, summary }: Props) {
 								<TableRow key={app.id}>
 									<TableCell className="font-medium">
 										{app.org}/{app.app}
+									</TableCell>
+									<TableCell>
+										<HostCell hosts={app.hosts} />
 									</TableCell>
 									<TableCell>
 										<Badge variant="blank">{app.env}</Badge>

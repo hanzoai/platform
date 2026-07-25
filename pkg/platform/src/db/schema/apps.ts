@@ -70,6 +70,14 @@ export const apps = sqliteTable(
 		cluster: text("cluster"),
 		/** Target namespace, e.g. `hanzo`. */
 		namespace: text("namespace"),
+		/**
+		 * Public hostnames the operator CR publishes (`spec.ingress.hosts`), e.g.
+		 * `["analytics.hanzo.ai"]`. This is what turns the board from a list of
+		 * names into a directory you can click through to the running service.
+		 * Observed like every other column here — never hand-maintained. Null when
+		 * the CR declares no ingress (internal-only workloads).
+		 */
+		hosts: text("hosts", { mode: "json" }).$type<string[]>(),
 		createdAt: integer("created_at", { mode: "timestamp_ms" })
 			.notNull()
 			.$defaultFn(() => new Date()),
@@ -116,6 +124,7 @@ export const apiUpsertApp = createSchema.pick({
 	health: true,
 	cluster: true,
 	namespace: true,
+	hosts: true,
 });
 
 export const apiFindOneApp = z.object({

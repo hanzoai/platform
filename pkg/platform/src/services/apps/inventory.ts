@@ -13,11 +13,16 @@
  *   - `runningTag`   ← the live `Deployment`'s container image tag
  *                      (what ACTUALLY runs).
  *   - `health`       ← rolled up from the Deployment's ready/desired replicas.
+ *   - `hosts`        ← `spec.ingress.hosts` — where the thing actually answers.
+ *
+ * The workload kind is `App` (`APPS_PLURAL`). `Service` is the v0.3.0 alias it
+ * replaced and is NOT scanned: the fleet holds 82 `apps.hanzo.ai` and 0
+ * `services.hanzo.ai`, so a second lookup would only ever return an empty set.
  *
  * It is READ-MOSTLY: it lists CRs + Deployments and writes ONLY to platform's
  * own SQLite `apps` table. It NEVER mutates a cluster object, so it cannot
  * affect the control plane or the live services it observes. The lifecycle
- * WRITE path (patching a `Service` CR to a new tag) lives in the CI deploy
+ * WRITE path (patching a workload CR to a new tag) lives in the CI deploy
  * executor and is intentionally not invoked here.
  *
  * `latestTag` / `releaseUrl` / `releaseAssets` are owned by the GHCR/GH-release
@@ -92,7 +97,11 @@ export const DEFAULT_TARGETS: ClusterTarget[] = [
 // Wire shapes (only the fields we read; the operator CR is much larger)
 // ---------------------------------------------------------------------------
 
-interface ServiceCR {
+/**
+ * A workload CR (`App` today, `Service` historically) — only the fields this
+ * reader consumes. Both kinds share this shape exactly.
+ */
+interface WorkloadCR {
 	metadata?: {
 		name?: string;
 		labels?: Record<string, string>;
@@ -100,6 +109,8 @@ interface ServiceCR {
 	};
 	spec?: {
 		image?: { repository?: string; tag?: string };
+		/** Public routing the operator publishes for this workload. */
+		ingress?: { enabled?: boolean; hosts?: string[] };
 	};
 }
 
@@ -180,7 +191,7 @@ export function brandOrg(imageOrg: string): string {
 export const ORG_LABEL = "hanzo.ai/org";
 
 /** The org explicitly declared on a CR via `hanzo.ai/org` (label or annotation). */
-export function declaredOrg(cr: ServiceCR): string | undefined {
+export function declaredOrg(cr: WorkloadCR): string | undefined {
 	const meta = cr.metadata;
 	return meta?.labels?.[ORG_LABEL] ?? meta?.annotations?.[ORG_LABEL];
 }
@@ -191,7 +202,7 @@ export function declaredOrg(cr: ServiceCR): string | undefined {
  *   2. else the brand org of the image namespace (`hanzoai`→`hanzo`, …), so a
  *      first-party service groups under its brand/IAM org on the board.
  */
-export function orgForService(cr: ServiceCR, repository: string): string {
+export function orgForService(cr: WorkloadCR, repository: string): string {
 	return declaredOrg(cr) ?? brandOrg(orgFromRepository(repository));
 }
 
@@ -244,14 +255,29 @@ export interface ObservedApp {
 	health: AppHealth | null;
 	cluster: string;
 	namespace: string;
+	/** Public hostnames from `spec.ingress.hosts`; empty for internal workloads. */
+	hosts: string[];
 }
 
 /**
- * Map a `Service` CR + its (optional) live Deployment into an `ObservedApp`.
+ * Public hostnames a workload CR publishes. Empty when ingress is absent or
+ * explicitly disabled — a disabled ingress block may still list stale hosts,
+ * and reporting an unreachable URL is worse than reporting none.
+ */
+export function hostsFor(cr: WorkloadCR): string[] {
+	const ing = cr.spec?.ingress;
+	if (!ing || ing.enabled === false) return [];
+	return (ing.hosts ?? []).filter(
+		(h): h is string => typeof h === "string" && h.length > 0,
+	);
+}
+
+/**
+ * Map a workload CR + its (optional) live Deployment into an `ObservedApp`.
  * Returns null for CRs with no image repository (nothing to track).
  */
 export function observeService(
-	cr: ServiceCR,
+	cr: WorkloadCR,
 	dep: DeploymentLike | null,
 	cluster: string,
 	namespace: string,
@@ -278,6 +304,7 @@ export function observeService(
 		health: healthFromDeployment(dep),
 		cluster,
 		namespace,
+		hosts: hostsFor(cr),
 	};
 }
 
@@ -292,7 +319,34 @@ function clientsFor(target: ClusterTarget): K8sClients {
 }
 
 /**
- * Observe every `Service` CR (and its live Deployment) across the target's
+ * List one workload plural in a namespace. A missing CRD (or a namespace with
+ * no such resource) is a 404 and means "this cluster does not use that kind" —
+ * an empty list, not an error. Anything else (RBAC denial, API outage) is
+ * re-thrown: a forbidden list must never be silently reported as zero apps.
+ */
+async function listWorkloadCRs(
+	clients: K8sClients,
+	namespace: string,
+	plural: string,
+): Promise<WorkloadCR[]> {
+	try {
+		const res = (await clients.custom.listNamespacedCustomObject({
+			group: OPERATOR_GROUP,
+			version: OPERATOR_VERSION,
+			namespace,
+			plural,
+		})) as { items?: WorkloadCR[] };
+		return res.items ?? [];
+	} catch (err) {
+		const code = (err as { code?: number; statusCode?: number })?.code ??
+			(err as { statusCode?: number })?.statusCode;
+		if (code === 404) return [];
+		throw err;
+	}
+}
+
+/**
+ * Observe every workload CR (and its live Deployment) across the target's
  * namespaces. Pure-data out — DB writes happen in `syncInventory`.
  */
 export async function discoverApps(
@@ -308,7 +362,7 @@ export async function discoverApps(
 			version: OPERATOR_VERSION,
 			namespace,
 			plural: APPS_PLURAL,
-		})) as { items?: ServiceCR[] };
+		})) as { items?: WorkloadCR[] };
 		const crs = crList.items ?? [];
 
 		// 2) Running state: one Deployment list per namespace, indexed by name.
@@ -419,6 +473,7 @@ export async function syncTarget(
 			health: o.health,
 			cluster: o.cluster,
 			namespace: o.namespace,
+			hosts: o.hosts,
 			organizationId,
 			lastObserved: now,
 			updatedAt: now,
@@ -442,6 +497,7 @@ export async function syncTarget(
 					health: row.health,
 					cluster: row.cluster,
 					namespace: row.namespace,
+					hosts: row.hosts,
 					organizationId,
 					lastObserved: now,
 					updatedAt: now,
