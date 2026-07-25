@@ -6,13 +6,13 @@
  *
  * Operator CRD reference: ~/work/hanzo/operator/src/crd.rs
  *   - apiVersion: hanzo.ai/v1
- *   - Kinds: SQL, KV, DocDB, Service, Datastore (full DatastoreSpec/ServiceSpec)
+ *   - Kinds: SQL, KV, DocDB, App, Service, Datastore (DatastoreSpec/ServiceSpec)
  *
  * Mapping (platform → operator):
  *   Postgres → SQL    (inner DatastoreSpec type=postgresql)
  *   Redis    → KV     (inner DatastoreSpec type=valkey)
  *   Mongo    → DocDB  (inner DatastoreSpec type=docdb)
- *   App      → Service (full ServiceSpec)
+ *   Workload → App    (canonical) or Service (v0.3.0 alias) — same ServiceSpec
  *
  * MariaDB/MySQL have no direct mapping (no operator CRD). Caller MUST
  * either skip those or surface a clear UX-side error before reaching
@@ -31,8 +31,28 @@ import { parseImageRef } from "../../ci/image-ref";
 export const OPERATOR_GROUP = "hanzo.ai";
 export const OPERATOR_VERSION = "v1";
 
+/**
+ * Workload kinds — the operator CRs that carry a container image and are
+ * therefore rollable by the CI deploy leg. `App` is canonical (the live fleet
+ * holds 82 `apps.hanzo.ai`); `Service` is the v0.3.0 alias kept for the one CR
+ * still on it. Both share the same spec shape, so one code path serves both.
+ *
+ * Order matters: the FIRST entry is the default when a repo's `hanzo.yml`
+ * omits `deploy.target.crd`.
+ */
+export const WORKLOAD_KINDS = ["App", "Service"] as const;
+export type WorkloadKind = (typeof WORKLOAD_KINDS)[number];
+
+/** The kind assumed when `hanzo.yml` does not name one. */
+export const DEFAULT_WORKLOAD_KIND: WorkloadKind = WORKLOAD_KINDS[0];
+
+/** True when `kind` is a workload kind the deploy leg can roll. */
+export function isWorkloadKind(kind: string): kind is WorkloadKind {
+	return (WORKLOAD_KINDS as readonly string[]).includes(kind);
+}
+
 /** CRD kinds we materialize from the platform UI. */
-export type OperatorKind = "SQL" | "KV" | "DocDB" | "Service";
+export type OperatorKind = "SQL" | "KV" | "DocDB" | WorkloadKind;
 
 export interface ImageSpec {
 	repository: string;
@@ -313,10 +333,10 @@ export function buildMongoCR(
 }
 
 // ---------------------------------------------------------------------------
-// App → Service CR
+// Workload CR (App | Service)
 // ---------------------------------------------------------------------------
 
-export interface ServiceCROptions {
+export interface WorkloadCROptions {
 	/** Container image to run. */
 	image: ImageSpec;
 	replicas?: number;
@@ -328,23 +348,29 @@ export interface ServiceCROptions {
 }
 
 /**
- * Build a minimal operator `Service` CR for the CI/CD deploy path.
+ * Build a minimal operator workload CR for the CI/CD deploy path.
  *
- * Used when a deploy targets a Service CR that does not yet exist: rather than
+ * Used when a deploy targets a CR that does not yet exist: rather than
  * erroring, the DeployExecutor creates it from the freshly-built image so a
  * newly-connected repo deploys with zero manual CR. Only `image` is required;
  * the operator fills in defaults for everything else and reconciles the
  * Deployment/Service/Ingress.
+ *
+ * ONE builder for both workload kinds: `App` and `Service` share the spec shape
+ * byte for byte (verified against both live CRDs — `spec.image` is
+ * `{repository, tag, pullPolicy}` on each), so the kind is a parameter, not a
+ * second implementation.
  */
-export function buildServiceCR(
+export function buildWorkloadCR(
+	kind: WorkloadKind,
 	name: string,
 	meta: CRMetadataInput,
-	opts: ServiceCROptions,
+	opts: WorkloadCROptions,
 ): CustomResource<OperatorServiceSpec> {
 	return {
 		apiVersion: `${OPERATOR_GROUP}/${OPERATOR_VERSION}`,
-		kind: "Service",
-		metadata: buildMetadata(name, "Service", meta),
+		kind,
+		metadata: buildMetadata(name, kind, meta),
 		spec: {
 			image: opts.image,
 			replicas: opts.replicas ?? 1,
@@ -366,5 +392,6 @@ export const KIND_TO_PLURAL: Record<OperatorKind, string> = {
 	SQL: "sqls",
 	KV: "kvs",
 	DocDB: "docdbs",
+	App: "apps",
 	Service: "services",
 };

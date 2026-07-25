@@ -110,8 +110,8 @@ deploy:                         # optional; omit for build-only / library repos
     cluster: hanzo-k8s
     namespace: hanzo
     operator: hanzo-operator    # only hanzo-operator | hanzo
-    crd: Service                # only Service (legacy HanzoService removed)
-    name: <service-name>        # operator Service CR to roll the image onto
+    crd: App                    # optional, default App | Service
+    name: <workload-name>       # operator workload CR to roll the image onto
 e2e:                            # optional; runs after a successful deploy
   spec: tests/16-pricing.spec.ts  # required: Playwright spec under universe/e2e
   baseDomain: pricing.hanzo.ai    # optional, default hanzo.ai
@@ -134,9 +134,36 @@ Field rules (validator returns a path-qualified error on any violation):
 | `build.tag-pattern` | template; supports `{{git.sha}}`, `{{git.branch}}` |
 | `deploy.on` | non-empty list of branch names |
 | `deploy.target.operator` | `hanzo-operator` \| `hanzo` |
-| `deploy.target.crd` | `Service` only |
+| `deploy.target.crd` | `App` (default) \| `Service` |
+| `deploy.target.namespace` | must be owned by the repo's org — see below |
 | `e2e.spec` | required when `e2e:` present |
 | `publish` | requires at least one of `npm: true` / `pypi: true` |
+
+### Deploy target: kind and namespace
+
+`crd` is the operator workload kind. **`App` is canonical** — the fleet runs
+`apps.hanzo.ai` almost exclusively — and is what you get when `crd` is omitted.
+`Service` is the v0.3.0 alias, still accepted. Both carry `spec.image`, and the
+deploy leg patches `spec.image.{repository,tag}` on either; it deliberately does
+NOT rewrite `pullPolicy`, so rolling an image never changes pull semantics.
+Datastore kinds (`SQL`/`KV`/`DocDB`) are rejected — they carry no rollable image.
+
+`namespace` is authorized, not merely validated. A deploy may write only into a
+namespace that resolves to the repo's own organization:
+
+| Basis | Rule |
+|-------|------|
+| tenant | `namespace == tenant-<org>` — derived from the org, so unforgeable |
+| fleet  | the namespace is assigned to that org in the fleet ownership table |
+
+The fleet table (`DEFAULT_FLEET_NAMESPACE_OWNERS` in
+`services/k8s/operator/namespace-authz.ts`) maps each estate namespace to its
+owning org — `hanzo`/`hanzo-testnet`/`hanzo-devnet` → `hanzo`, and the lux/zoo
+equivalents. Override it wholesale with `PLATFORM_FLEET_NAMESPACE_OWNERS`
+(`ns=org,ns=org,…`); a malformed entry throws rather than silently widening.
+
+Anything else is REFUSED (`FORBIDDEN`, rollout marked failed, nothing written
+to the cluster). There is no wildcard and no system-namespace carve-out.
 
 `e2e` runs only after a real rollout; its result is RECORDED on the build_job
 (`e2eStatus`), reported not hard-gated. `publish` is gated behind a passing

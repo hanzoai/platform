@@ -37,6 +37,7 @@ import {
 import { signPaasTicket } from "./tenant";
 
 export * from "./cr-builder";
+export * from "./namespace-authz";
 export * from "./quota";
 export * from "./tenant";
 
@@ -262,20 +263,6 @@ export async function readDatastoreCRStatus(
 			message: `Cannot read ${kind}/${name} status in ${namespace}: ${msg}`,
 		});
 	}
-}
-
-// ---------------------------------------------------------------------------
-// Tenant namespace helper
-// ---------------------------------------------------------------------------
-
-/**
- * Canonical tenant namespace name. All operator-managed CRs for an org
- * live in this namespace. Format must match the operator's tenant-mode
- * webhook regex: `^tenant-[a-z0-9-]{1,55}$`.
- */
-export function tenantNamespace(organizationId: string): string {
-	const normalized = organizationId.toLowerCase().replace(/[^a-z0-9-]/g, "-");
-	return `tenant-${normalized}`;
 }
 
 // ---------------------------------------------------------------------------
