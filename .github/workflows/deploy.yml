@@ -84,6 +84,25 @@ jobs:
           else
             echo "suffix=canary" >> $GITHUB_OUTPUT
           fi
+      # A published version tag is immutable. Re-pushing it leaves two digests
+      # behind one name, and every cluster pinned to it with
+      # imagePullPolicy: IfNotPresent keeps running whichever it cached first —
+      # a green pipeline over unchanged production. That happened to v4.4.5 on
+      # 2026-07-25 (sha256:178d1762 built, sha256:b33f2de5 still serving). Bump
+      # app/platform/package.json instead of overwriting.
+      - name: Refuse to overwrite a published version tag
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          # Fail-open: only block on a definitive hit, never on an API hiccup.
+          if gh api --paginate "/orgs/${{ env.ORG }}/packages/container/platform/versions" \
+               --jq '.[].metadata.container.tags[]?' 2>/dev/null | grep -qx "$VERSION"; then
+            echo "::error::ghcr.io/${{ env.ORG }}/platform:$VERSION is already published. Patch-bump app/platform/package.json (x.y.z+1) and pin the deployment to the new tag in the same commit."
+            exit 1
+          fi
+          echo "$VERSION is unpublished — safe to push."
       - uses: docker/build-push-action@v6
         with:
           context: .
