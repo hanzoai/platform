@@ -66,6 +66,8 @@ export interface AppView {
 	health: AppHealth | null;
 	cluster: string | null;
 	namespace: string | null;
+	/** Public hostnames the workload CR publishes; empty for internal services. */
+	hosts: string[];
 	lastObserved: string | null;
 	updatedAt: string;
 	/** Derived per `docs/APPS_LIFECYCLE.md` — never stored, always computed. */
@@ -96,6 +98,9 @@ export const toAppView = (row: App): AppView => ({
 	health: (row.health as AppHealth | null) ?? null,
 	cluster: row.cluster,
 	namespace: row.namespace,
+	// JSON column: normalize null / legacy non-array values to [] so every
+	// consumer can map over it without a guard.
+	hosts: Array.isArray(row.hosts) ? row.hosts : [],
 	lastObserved: iso(row.lastObserved),
 	// `updatedAt` is NOT NULL (column has `.notNull().defaultNow()`), so it is
 	// always present — format it directly, no nullable fallback.
