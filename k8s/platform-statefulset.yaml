@@ -61,9 +61,14 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       # Give the app time to flush the WAL and close the DB cleanly on rollout.
       terminationGracePeriodSeconds: 30
+      # ghcr.io/hanzoai/platform is a PRIVATE image — the pull needs the shared
+      # ghcr-secret (docker-registry secret in ns hanzo). Without it the pod
+      # ErrImagePulls. Keep this in sync when bumping the tag.
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: platform-app
-          image: ghcr.io/hanzoai/platform:0.28.5
+          image: ghcr.io/hanzoai/platform:v4.4.5
           imagePullPolicy: IfNotPresent
           # `pnpm start` runs `dist/migration.mjs` (applies drizzle migrations,
           # including the uniqueConfigKey UNIQUE indexes) then `dist/server.mjs`.
