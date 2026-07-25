@@ -54,7 +54,18 @@ export const buildJobRouter = createTRPCRouter({
 	trigger: protectedProcedure
 		.input(
 			z.object({
-				installationId: z.string().min(1),
+				// Same ConfigSource the webhook path passes — one scheduler input,
+				// whichever forge (or operator) is asking.
+				source: z.discriminatedUnion("forge", [
+					z.object({
+						forge: z.literal("github"),
+						installationId: z.string().min(1),
+					}),
+					z.object({
+						forge: z.literal("hanzo-git"),
+						sourceRepo: z.string().min(3),
+					}),
+				]),
 				repo: z.string().min(3),
 				sha: z.string().min(7),
 				ref: z.string().min(1),
@@ -66,7 +77,7 @@ export const buildJobRouter = createTRPCRouter({
 			if (!result) {
 				return {
 					scheduled: 0,
-					message: `${input.repo} has no .platform.yml`,
+					message: `${input.repo} has no hanzo.yml`,
 				};
 			}
 			return {
