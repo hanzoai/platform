@@ -4,7 +4,9 @@ metadata:
   name: {{iid}}-kms-sync
   namespace: {{namespace}}
 spec:
-  hostAPI: https://kms.hanzo.ai
+  # In-cluster KMS service — the plane every live KMSSecret CR uses. NOT a
+  # public API host: kms.hanzo.ai is not the operator's API surface.
+  hostAPI: http://kms.hanzo.svc
   resyncInterval: 60
   authentication:
     universalAuth:

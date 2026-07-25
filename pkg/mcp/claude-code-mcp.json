@@ -4,7 +4,7 @@
       "command": "node",
       "args": ["/home/z/platform/pkg/mcp/build/index.js"],
       "env": {
-        "PLATFORM_URL": "https://platform.hanzo.ai/api",
+        "PLATFORM_URL": "https://platform.hanzo.ai/v1/trpc",
         "PLATFORM_API_KEY": "YOUR_API_KEY_HERE"
       }
     }
