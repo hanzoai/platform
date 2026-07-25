@@ -124,7 +124,7 @@ class HanzoIAM {
    * Exchange authorization code for access token
    */
   async exchangeCode(code: string): Promise<HanzoSession> {
-    const response = await fetch(`${this.iamEndpoint}/v1/iam/oauth/access_token`, {
+    const response = await fetch(`${this.iamEndpoint}/v1/iam/oauth/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -189,12 +189,14 @@ class HanzoIAM {
   }
 
   /**
-   * Validate session with Hanzo IAM
+   * Validate session with Hanzo IAM.
+   *
+   * UserInfo is the validation endpoint — IAM has no /oauth/validate, and a
+   * bearer that userinfo accepts is by definition a live session.
    */
   async validateSession(token: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.iamEndpoint}/oauth/validate`, {
-        method: "POST",
+      const response = await fetch(`${this.iamEndpoint}/v1/iam/oauth/userinfo`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -210,7 +212,7 @@ class HanzoIAM {
    * Logout from Hanzo IAM
    */
   async logout(token: string): Promise<void> {
-    await fetch(`${this.iamEndpoint}/oauth/logout`, {
+    await fetch(`${this.iamEndpoint}/v1/iam/oauth/logout`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
