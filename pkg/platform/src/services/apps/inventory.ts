@@ -10,9 +10,10 @@
  *
  *   - `declaredTag`  ← the operator `App` CR's `spec.image.tag`
  *                      (what SHOULD run — the declared-state source of truth).
- *   - `runningTag`   ← the live `Deployment`'s container image tag
- *                      (what ACTUALLY runs).
- *   - `health`       ← rolled up from the Deployment's ready/desired replicas.
+ *   - `runningTag`   ← the live workload's container image tag (what ACTUALLY
+ *                      runs). Deployment OR StatefulSet — the operator creates
+ *                      both, and they are identical in every field read here.
+ *   - `health`       ← rolled up from that workload's ready/desired replicas.
  *   - `hosts`        ← `spec.ingress.hosts` — where the thing actually answers.
  *
  * The workload kind is `App` (`APPS_PLURAL`). `Service` is the v0.3.0 alias it
@@ -35,10 +36,10 @@
 
 import { db, eq } from "@hanzo/platform/db";
 import {
-	type NewApp,
-	appEnvValues,
-	appHealthValues,
+	type appEnvValues,
+	type appHealthValues,
 	apps,
+	type NewApp,
 	organization,
 } from "@hanzo/platform/db/schema";
 import { parseImageRef } from "../ci/image-ref";
@@ -51,9 +52,10 @@ import { parseImageRef } from "../ci/image-ref";
 export type AppEnv = (typeof appEnvValues)[number];
 /** Aggregate health vocabulary (`"green" | "yellow" | "red"`). */
 export type AppHealth = (typeof appHealthValues)[number];
+
 import {
-	getDefaultClients,
 	createK8sClients,
+	getDefaultClients,
 	type K8sClients,
 } from "../k8s/k8s-client";
 
@@ -67,10 +69,11 @@ const OPERATOR_VERSION = "v1";
 const APPS_PLURAL = "apps";
 
 /**
- * The clusters + namespaces this platform install observes, and the env each
- * namespace maps to. hanzo-k8s is the shared platform cluster: the `hanzo`
- * namespace is production (`main`); the env-split namespaces map to test/dev
- * (Hanzo 3-env split — `svc.{testnet,devnet}.hanzo.ai`).
+ * The clusters this platform install observes. hanzo-k8s is the shared platform
+ * cluster: the `hanzo` namespace is production (`main`); the env-split namespaces
+ * map to test/dev (Hanzo 3-env split — `svc.{testnet,devnet}.hanzo.ai`); and
+ * `tenant-<org>` namespaces are customers' own. Which namespaces those ARE is
+ * DISCOVERED per pass (`discoverNamespaces` + `nsClass`), not hardcoded.
  *
  * Cross-cluster federation (lux-k8s / zoo-k8s) is added by appending entries
  * here whose `kubeconfig` is loaded from KMS — see the report. The default
@@ -79,19 +82,104 @@ const APPS_PLURAL = "apps";
 export interface ClusterTarget {
 	/** Logical cluster name recorded on each app row, e.g. `hanzo-k8s`. */
 	cluster: string;
-	/** Namespace → env map (only listed namespaces are scanned). */
-	namespaces: Record<string, AppEnv>;
+	/**
+	 * Namespace → env map. OMIT to discover the scan set from the cluster
+	 * (`discoverNamespaces`) — that is the production path. Supplying it pins the
+	 * scan to exactly these namespaces, which is what the unit tests want and what
+	 * a remote target may need when its RBAC cannot list namespaces.
+	 */
+	namespaces?: Record<string, AppEnv>;
 	/** Optional kubeconfig YAML for a remote cluster; omit for in-cluster. */
 	kubeconfig?: string;
 }
 
-/** Default target: the in-cluster hanzo-k8s, all three Hanzo env namespaces. */
-export const DEFAULT_TARGETS: ClusterTarget[] = [
-	{
-		cluster: "hanzo-k8s",
-		namespaces: { hanzo: "main", "hanzo-testnet": "test", "hanzo-devnet": "dev" },
-	},
-];
+/**
+ * Default target: the in-cluster hanzo-k8s. No `namespaces` — the scan set is
+ * DISCOVERED (see `discoverNamespaces`), so a tenant onboarded after this pod
+ * started appears on the board without a redeploy.
+ */
+export const DEFAULT_TARGETS: ClusterTarget[] = [{ cluster: "hanzo-k8s" }];
+
+/**
+ * Namespace → (tenant, env), or null when the namespace is not ours.
+ *
+ * THE one rule for "is this namespace part of the estate, and which env is it?".
+ * Ported rule-for-rule from cloud's `clients/paas` `nsClass` (Go) — the two must
+ * agree or the board and `/v1/paas/apps` disagree about what the fleet IS. Two
+ * languages, one rule: change them together.
+ *
+ * Total by construction: every string classifies, and anything unrecognised
+ * classifies OUT. Widening the estate is a one-line change HERE (and in the Go
+ * twin), never a literal list edited at each call site.
+ */
+export function nsClass(ns: string): { tenant: string; env: AppEnv } | null {
+	switch (ns) {
+		case "hanzo":
+		case "hanzo-mainnet":
+			return { tenant: "hanzo", env: "main" };
+		case "hanzo-testnet":
+			return { tenant: "hanzo", env: "test" };
+		case "hanzo-devnet":
+			return { tenant: "hanzo", env: "dev" };
+	}
+	// tenant-<org>: a customer's own namespace. The org IS the tenant key, so it
+	// classifies exactly like a first-party namespace with no special case.
+	const t = ns.startsWith("tenant-") ? ns.slice("tenant-".length) : "";
+	return t ? { tenant: t, env: "main" } : null;
+}
+
+/**
+ * The first-party namespaces, main before test/dev. This is the FAIL-SAFE scan
+ * set: narrower than the truth, never wider, so a discovery failure can only
+ * lose visibility of a tenant's own namespace — never grant visibility of
+ * someone else's.
+ */
+export const FIRST_PARTY_NAMESPACES = [
+	"hanzo",
+	"hanzo-testnet",
+	"hanzo-devnet",
+] as const;
+
+function firstPartyScanSet(): Record<string, AppEnv> {
+	const out: Record<string, AppEnv> = {};
+	for (const ns of FIRST_PARTY_NAMESPACES) out[ns] = nsClass(ns)!.env;
+	return out;
+}
+
+/**
+ * Every namespace in the cluster that `nsClass` recognises, first-party first
+ * (so a bare app name still resolves to production) then tenants in stable order.
+ *
+ * This is what makes `tenant-<org>` workloads visible at all: they classified
+ * correctly but were never SCANNED, because the scan set was a hardcoded literal
+ * that goes stale the moment a tenant is onboarded. Asking the cluster "which
+ * namespaces exist?" is the honest question; deriving the set from a cluster-wide
+ * CR list would answer a different one ("where are there CRs?").
+ *
+ * Fail-SAFE, never fail-open: a list error falls back to the first-party set, and
+ * `nsClass` still filters, so a namespace that is not ours can never enter the
+ * scan set however discovery goes.
+ */
+export async function discoverNamespaces(
+	clients: K8sClients,
+): Promise<Record<string, AppEnv>> {
+	let names: string[];
+	try {
+		const res = await clients.core.listNamespace();
+		names = (res.items ?? [])
+			.map((n) => n.metadata?.name)
+			.filter((n): n is string => typeof n === "string" && n.length > 0);
+	} catch {
+		return firstPartyScanSet();
+	}
+	// First-party is always present, even if the list somehow omitted it.
+	const out = firstPartyScanSet();
+	for (const ns of [...names].sort()) {
+		const c = nsClass(ns);
+		if (c) out[ns] = c.env;
+	}
+	return out;
+}
 
 // ---------------------------------------------------------------------------
 // Wire shapes (only the fields we read; the operator CR is much larger)
@@ -207,7 +295,9 @@ export function orgForService(cr: WorkloadCR, repository: string): string {
 }
 
 /** Roll a Deployment's replica counts up to the apps-table health vocabulary. */
-export function healthFromDeployment(dep: DeploymentLike | null): AppHealth | null {
+export function healthFromDeployment(
+	dep: DeploymentLike | null,
+): AppHealth | null {
 	if (!dep) return null;
 	const desired = dep.spec?.replicas ?? 0;
 	const ready = dep.status?.readyReplicas ?? 0;
@@ -273,8 +363,16 @@ export function hostsFor(cr: WorkloadCR): string[] {
 }
 
 /**
- * Map a workload CR + its (optional) live Deployment into an `ObservedApp`.
- * Returns null for CRs with no image repository (nothing to track).
+ * Map a workload CR + its (optional) live Deployment/StatefulSet into an
+ * `ObservedApp`.
+ *
+ * Returns null for a CR with no `spec.image.repository`. That is a real kind, not
+ * a defect: the operator's App CR also expresses ROUTE-ONLY objects (`hanzo-domains`,
+ * `hanzo-app-sites` carry `spec.domains[]` and no image), which declare ingress for
+ * OTHER services and run no workload of their own. They have no declared tag, no
+ * running tag and no health, so every column this board compares is undefined —
+ * listing them would add rows that can only ever read `red`. Dropping them is the
+ * answer; the bug was that the drop was undocumented.
  */
 export function observeService(
 	cr: WorkloadCR,
@@ -338,7 +436,8 @@ async function listWorkloadCRs(
 		})) as { items?: WorkloadCR[] };
 		return res.items ?? [];
 	} catch (err) {
-		const code = (err as { code?: number; statusCode?: number })?.code ??
+		const code =
+			(err as { code?: number; statusCode?: number })?.code ??
 			(err as { statusCode?: number })?.statusCode;
 		if (code === 404) return [];
 		throw err;
@@ -354,8 +453,9 @@ export async function discoverApps(
 	clients: K8sClients = clientsFor(target),
 ): Promise<ObservedApp[]> {
 	const observed: ObservedApp[] = [];
+	const namespaces = target.namespaces ?? (await discoverNamespaces(clients));
 
-	for (const [namespace, env] of Object.entries(target.namespaces)) {
+	for (const [namespace, env] of Object.entries(namespaces)) {
 		// 1) Declared state: list operator Service CRs in the namespace.
 		const crList = (await clients.custom.listNamespacedCustomObject({
 			group: OPERATOR_GROUP,
@@ -365,17 +465,25 @@ export async function discoverApps(
 		})) as { items?: WorkloadCR[] };
 		const crs = crList.items ?? [];
 
-		// 2) Running state: one Deployment list per namespace, indexed by name.
-		const depList = await clients.apps.listNamespacedDeployment({ namespace });
+		// 2) Running state, indexed by name. BOTH workload kinds the operator
+		// creates: Deployment and StatefulSet. They are structurally identical for
+		// everything read here (`spec.replicas`, `spec.template…containers[].image`,
+		// `status.readyReplicas`), so one index serves both — listing only
+		// Deployments is why the StatefulSet-backed apps (`kv`, `sql`) reported a
+		// null running-tag and null health.
 		const byName = new Map<string, DeploymentLike>();
-		for (const d of depList.items ?? []) {
-			const n = d.metadata?.name;
-			if (n) byName.set(n, d as DeploymentLike);
+		const [depList, stsList] = await Promise.all([
+			clients.apps.listNamespacedDeployment({ namespace }),
+			clients.apps.listNamespacedStatefulSet({ namespace }),
+		]);
+		for (const w of [...(depList.items ?? []), ...(stsList.items ?? [])]) {
+			const n = w.metadata?.name;
+			if (n) byName.set(n, w as DeploymentLike);
 		}
 
 		for (const cr of crs) {
 			const dep = cr.metadata?.name
-				? byName.get(cr.metadata.name) ?? null
+				? (byName.get(cr.metadata.name) ?? null)
 				: null;
 			const app = observeService(cr, dep, target.cluster, namespace, env);
 			if (app) observed.push(app);
@@ -409,7 +517,11 @@ export async function resolveOrganizationId(
 	imageOrg: string,
 ): Promise<string | null> {
 	const orgs = await db
-		.select({ id: organization.id, name: organization.name, slug: organization.slug })
+		.select({
+			id: organization.id,
+			name: organization.name,
+			slug: organization.slug,
+		})
 		.from(organization);
 	if (orgs.length === 0) return null;
 
@@ -435,6 +547,8 @@ export async function resolveOrganizationId(
 export interface SyncResult {
 	observed: number;
 	upserted: number;
+	/** Rows deleted because their CR no longer exists in the cluster. */
+	pruned: number;
 	cluster: string;
 }
 
@@ -442,6 +556,12 @@ export interface SyncResult {
  * Observe a target and upsert each app into the `apps` table. Owns only the
  * declared/running/health/topology columns it observes; never touches the
  * release-reader columns (`latestTag`/`releaseUrl`/`releaseAssets`).
+ *
+ * The table MIRRORS the cluster: after upserting, rows for this cluster whose CR
+ * is gone are pruned (`pruneMissing`), so a deleted app leaves the board instead
+ * of lingering forever as a phantom. Two ways a row goes stale, both fixed here:
+ * the CR is deleted, or its ATTRIBUTION changes (the row id embeds `org`, so a
+ * re-attributed app is written under a new id and orphans the old one).
  */
 export async function syncTarget(
 	target: ClusterTarget = DEFAULT_TARGETS[0]!,
@@ -507,7 +627,26 @@ export async function syncTarget(
 		upserted += 1;
 	}
 
-	return { observed: observed.length, upserted, cluster: target.cluster };
+	// Mirror deletions. Guarded on a NON-EMPTY observation: an empty result is
+	// indistinguishable from "every app was deleted", and a transient blip must
+	// never be able to empty the board. (A genuine RBAC/API failure throws out of
+	// `discoverApps` before reaching here, so this only guards the ambiguous case.)
+	// The namespace scope is derived from what was OBSERVED, not from the intended
+	// scan set, so prune authority never exceeds proven observation.
+	const pruned = observed.length
+		? await pruneMissing(
+				target.cluster,
+				new Set(observed.map((o) => o.id)),
+				new Set(observed.map((o) => o.namespace)),
+			)
+		: 0;
+
+	return {
+		observed: observed.length,
+		upserted,
+		pruned,
+		cluster: target.cluster,
+	};
 }
 
 /** Sync every configured cluster target. The runtime entry point. */
@@ -521,21 +660,36 @@ export async function syncInventory(
 	return results;
 }
 
-/** Prune apps rows for a cluster whose CR no longer exists (kept observed set). */
+/**
+ * Delete this cluster's rows whose CR no longer exists, so the board mirrors
+ * reality instead of accumulating phantoms.
+ *
+ * DOUBLY SCOPED, because a DELETE must never reach further than the evidence:
+ *   - `cluster` — rows belonging to another cluster are untouched, so the
+ *     directly-seeded cross-cluster estate (lux-k8s / zoo-k8s) survives a
+ *     hanzo-k8s pass. A target only ever prunes what it observes.
+ *   - `namespaces` — only namespaces this pass PROVABLY scanned (i.e. actually
+ *     yielded rows). The scan set is DISCOVERED (`discoverNamespaces`) and
+ *     narrows fail-safe to first-party on a list error; without this scope, one
+ *     failed namespace list would delete every `tenant-<org>` app from the board.
+ *     The cost is conservative in the safe direction: emptying a namespace
+ *     entirely leaves its rows until something is observed there again.
+ */
 export async function pruneMissing(
 	cluster: string,
 	keepIds: Set<string>,
+	namespaces: Set<string>,
 ): Promise<number> {
 	const rows = await db
-		.select({ id: apps.id })
+		.select({ id: apps.id, namespace: apps.namespace })
 		.from(apps)
 		.where(eq(apps.cluster, cluster));
 	let deleted = 0;
 	for (const r of rows) {
-		if (!keepIds.has(r.id)) {
-			await db.delete(apps).where(eq(apps.id, r.id)).run();
-			deleted += 1;
-		}
+		if (!r.namespace || !namespaces.has(r.namespace)) continue;
+		if (keepIds.has(r.id)) continue;
+		await db.delete(apps).where(eq(apps.id, r.id)).run();
+		deleted += 1;
 	}
 	return deleted;
 }
