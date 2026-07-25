@@ -16,6 +16,13 @@
  * silently-accepted bad config.
  */
 import { parse as parseYaml } from "yaml";
+// Deployable kinds come from the operator contract — one source of truth.
+// `cr-builder` is a pure module (types + builders, no K8s client), so importing
+// it here does not drag a cluster connection into config parsing.
+import {
+	DEFAULT_WORKLOAD_KIND,
+	WORKLOAD_KINDS,
+} from "../k8s/operator/cr-builder";
 
 export type BuildOS = "linux" | "darwin" | "windows";
 export type BuildArch = "amd64" | "arm64";
@@ -42,9 +49,13 @@ export interface DeployTarget {
 	namespace: string;
 	/** Operator deployment surface. Only the hanzo operator is supported. */
 	operator: string;
-	/** Operator CRD kind. Must be `Service` (legacy `HanzoService` was removed). */
+	/**
+	 * Operator CRD kind: `App` (canonical) or the `Service` alias. Optional in
+	 * `hanzo.yml` — omitted means `App`, which is what nearly the whole fleet
+	 * runs. (Legacy `HanzoService` was removed.)
+	 */
 	crd: string;
-	/** Name of the operator Service CR to roll the new image onto. */
+	/** Name of the operator workload CR to roll the new image onto. */
 	name: string;
 }
 
@@ -129,7 +140,12 @@ export function isBuildableArch(arch: BuildArch): boolean {
 }
 
 const SUPPORTED_OPERATORS = ["hanzo-operator", "hanzo"];
-const SUPPORTED_CRDS = ["Service"];
+/**
+ * Deployable CRD kinds — DERIVED from the operator contract, never re-listed
+ * here. `WORKLOAD_KINDS` is the one place that knows which kinds carry an
+ * image; a kind added there is accepted by this validator automatically.
+ */
+const SUPPORTED_CRDS: readonly string[] = WORKLOAD_KINDS;
 
 export class PlatformConfigError extends Error {
 	constructor(message: string) {
@@ -433,7 +449,10 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig {
 				`deploy.target.operator must be one of ${SUPPORTED_OPERATORS.join(", ")} (got ${operator})`,
 			);
 		}
-		const crd = requireString(t, "crd", "deploy.target");
+		// `crd` is optional: the overwhelming majority of the fleet is `App`, so a
+		// repo that omits it gets `App` rather than a validation error. Naming a
+		// kind outside the supported set still fails loudly.
+		const crd = optionalString(t, "crd", DEFAULT_WORKLOAD_KIND);
 		if (!SUPPORTED_CRDS.includes(crd)) {
 			throw new PlatformConfigError(
 				`deploy.target.crd must be one of ${SUPPORTED_CRDS.join(", ")} (the operator removed legacy HanzoService — one way only)`,
