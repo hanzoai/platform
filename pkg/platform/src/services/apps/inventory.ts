@@ -3,11 +3,12 @@
  * (`docs/APPS_LIFECYCLE.md` §1, readers `read_declared_tag` + `read_running_tag`,
  * unified into one cluster pass).
  *
- * The platform pod runs in-cluster as `hanzo-paas-sa`, whose ClusterRole grants
- * `hanzo.ai/services` (list) and `apps/deployments` + `pods` (list/get). This
- * module uses that access to reconcile the `apps` table from REALITY:
+ * The platform pod runs in-cluster as `platform-app` (k8s/platform-rbac.yaml),
+ * whose ClusterRole grants the `hanzo.ai` CR groups (list) and `apps/deployments`
+ * + `pods` (list/get). This module uses that access to reconcile the `apps`
+ * table from REALITY:
  *
- *   - `declaredTag`  ← the operator `Service` CR's `spec.image.tag`
+ *   - `declaredTag`  ← the operator `App` CR's `spec.image.tag`
  *                      (what SHOULD run — the declared-state source of truth).
  *   - `runningTag`   ← the live `Deployment`'s container image tag
  *                      (what ACTUALLY runs).
@@ -53,7 +54,12 @@ import {
 
 const OPERATOR_GROUP = "hanzo.ai";
 const OPERATOR_VERSION = "v1";
-const SERVICES_PLURAL = "services";
+// `apps`, not `services`: the operator's Service kind is a v0.3.0 alias that no
+// CR in the fleet uses — the cluster holds 82 `apps.hanzo.ai` and 0
+// `services.hanzo.ai`, so listing services returned an empty set and the board
+// reported "synced 0 apps" against a fully-populated cluster. Both kinds share
+// the same spec shape (`spec.image.{repository,tag}`), so only the plural moves.
+const APPS_PLURAL = "apps";
 
 /**
  * The clusters + namespaces this platform install observes, and the env each
@@ -301,7 +307,7 @@ export async function discoverApps(
 			group: OPERATOR_GROUP,
 			version: OPERATOR_VERSION,
 			namespace,
-			plural: SERVICES_PLURAL,
+			plural: APPS_PLURAL,
 		})) as { items?: ServiceCR[] };
 		const crs = crList.items ?? [];
 
