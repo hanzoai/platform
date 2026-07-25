@@ -21,6 +21,7 @@ import {
 } from "@hanzo/platform/utils/providers/github";
 import { TRPCError } from "@trpc/server";
 import { findGithubByInstallationId } from "../github";
+import { type HanzoGitConfig, hanzoGitConfig } from "../hanzo-git";
 import type { BuildJob } from "./build-job";
 import {
 	createBuildJob,
@@ -30,18 +31,37 @@ import {
 import { launchBuildJob } from "./buildkit-job";
 import {
 	type BuildArch,
-	type BuildConfig,
 	type BuildOS,
-	type PlatformConfig,
 	isBuildableArch,
+	type PlatformConfig,
 	parsePlatformConfig,
 	resolveTag,
 	runnerPoolFor,
 } from "./platform-config";
 
+/**
+ * Where to read `hanzo.yml` from, and which organization owns the result.
+ *
+ * Data, not a callback: a delivery states WHICH forge vouched for it, and the
+ * scheduler resolves that to an org + a config reader. GitHub identifies
+ * itself with the App installation id carried in the payload; Hanzo Git has
+ * no such concept — it is our own single forge, so it identifies itself and
+ * carries only the repo name it uses. Both land on one `resolveSource`, so
+ * the build path below is identical for every forge — one way to build,
+ * several front doors.
+ */
+export type ConfigSource =
+	| { forge: "github"; installationId: string }
+	| {
+			forge: "hanzo-git";
+			/** `owner/repo` as the FORGE names it — see DecodedWebhook.sourceRepo. */
+			sourceRepo: string;
+	  };
+
 export interface ScheduleInput {
-	/** GitHub App installation id from the webhook payload. */
-	installationId: string;
+	/** Which provider vouched for this delivery, and how to read its config. */
+	source: ConfigSource;
+	/** Canonical `owner/repo` (org already mapped). Keys the buildJob row. */
 	repo: string;
 	sha: string;
 	ref: string;
@@ -190,6 +210,77 @@ export async function fetchPlatformConfigByToken(
 	return null;
 }
 
+/**
+ * Fetch the repo's platform config from Hanzo Git at a specific ref.
+ *
+ * Hanzo Git's contents API is GitHub-shaped — same path, same
+ * `{content, encoding:"base64"}` body — so `parseContentResponse` is shared
+ * verbatim rather than re-implemented. `repo` here is the FORGE-native
+ * `owner/name` (`hanzo/kms`), not the canonical one, because we are
+ * addressing the forge. Returns null when the repo has not opted in.
+ */
+export async function fetchPlatformConfigFromHanzoGit(
+	cfg: Pick<HanzoGitConfig, "url" | "token">,
+	repo: string,
+	ref: string,
+): Promise<PlatformConfig | null> {
+	const [owner, name] = repo.split("/");
+	if (!owner || !name) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Invalid repo "${repo}"; expected owner/name`,
+		});
+	}
+	const headers: Record<string, string> = { Accept: "application/json" };
+	if (cfg.token) headers.Authorization = `token ${cfg.token}`;
+	for (const path of CONFIG_NAMES) {
+		const url = `${cfg.url}/api/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${path}?ref=${encodeURIComponent(ref)}`;
+		const res = await fetch(url, { headers });
+		if (res.status === 404) continue;
+		if (!res.ok) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: `Failed to read ${path} from ${repo}@${ref}: Hanzo Git returned ${res.status}`,
+			});
+		}
+		return parseContentResponse(
+			(await res.json()) as { content?: string; encoding?: string },
+			`${path} in ${repo}@${ref}`,
+		);
+	}
+	return null;
+}
+
+/**
+ * Resolve a {@link ConfigSource} to the owning organization plus the repo's
+ * config at `sha`. The ONLY place the build path knows which forge it is
+ * talking to; everything after this point is forge-agnostic.
+ */
+async function resolveSource(
+	source: ConfigSource,
+	repo: string,
+	sha: string,
+): Promise<{ organizationId: string; config: PlatformConfig | null }> {
+	if (source.forge === "hanzo-git") {
+		const cfg = hanzoGitConfig();
+		return {
+			organizationId: cfg.organizationId,
+			config: await fetchPlatformConfigFromHanzoGit(
+				cfg,
+				source.sourceRepo,
+				sha,
+			),
+		};
+	}
+	const { provider, organizationId } = await resolveProvider(
+		source.installationId,
+	);
+	return {
+		organizationId,
+		config: await fetchPlatformConfig(provider, repo, sha),
+	};
+}
+
 /** Build-target arch from a target key (`linux/amd64`, `web:linux/amd64`). */
 function archOf(target: string): BuildArch {
 	return target.split("/").pop() === "arm64" ? "arm64" : "amd64";
@@ -304,11 +395,11 @@ export async function enqueueDirectBuild(
 export async function scheduleBuilds(
 	input: ScheduleInput,
 ): Promise<ScheduleResult | null> {
-	const { provider, organizationId } = await resolveProvider(
-		input.installationId,
+	const { organizationId, config } = await resolveSource(
+		input.source,
+		input.repo,
+		input.sha,
 	);
-
-	const config = await fetchPlatformConfig(provider, input.repo, input.sha);
 	if (!config) return null;
 
 	const jobs: BuildJob[] = [];

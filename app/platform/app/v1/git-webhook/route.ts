@@ -1,0 +1,225 @@
+/**
+ * Platform-native CI/CD webhook — POST /v1/git-webhook
+ *
+ * The ONE front door for git-forge deliveries. Accepts `push` /
+ * `pull_request` / `ping` from Hanzo Git (git.hanzo.ai) **and** from GitHub,
+ * validates the HMAC using the scheme that forge speaks,
+ * normalizes the payload to a single internal shape, and hands accepted
+ * events to the BuildScheduler. Platform owns the build+deploy lifecycle,
+ * dispatching build work to self-hosted arcd runner pools.
+ *
+ * WHY one route and not `/v1/hanzo-git-webhook` beside `/v1/github-webhook`:
+ * the two deliveries differ only in transport — which header names the event,
+ * which header carries the signature, how that signature is encoded, and how
+ * the sender identifies itself. Everything after that (decode, org mapping,
+ * schedule, build, deploy) is identical. A second route would fork ~90 lines
+ * of identical control flow and give the estate two orchestrators to keep in
+ * step, which is exactly the failure mode we are moving off GitHub Actions to
+ * avoid. So: ONE handler, forge detected from the headers, the two genuine
+ * differences isolated to `verifyDelivery` (signature scheme) and
+ * `resolveDelivery` (who vouched for this) below.
+ *
+ * `/v1/github-webhook` remains a zero-logic alias of this handler — the
+ * GitHub App's configured delivery URL points there and rewiring a live App
+ * is not worth the outage window. It re-exports; it does not re-implement.
+ *
+ * Distinct from /v1/deploy/github (Dokploy app-redeploy webhook). That route
+ * redeploys already-defined platform *applications*; THIS route builds and
+ * rolls out *services from source* per the repo's `hanzo.yml`.
+ *
+ * Raw-body handling: HMAC the exact bytes the forge signed (`await
+ * req.text()`), then JSON.parse the same string. App Router does not
+ * pre-parse the body, so the raw bytes round-trip for signature verification.
+ */
+import { db } from "@hanzo/platform/db";
+import { github } from "@hanzo/platform/db/schema";
+import {
+	type ConfigSource,
+	decodeWebhook,
+	detectForge,
+	eventHeaderOf,
+	forgeOrigin,
+	type GitForge,
+	scheduleBuilds,
+	verifyDelivery,
+	WebhookError,
+} from "@hanzo/platform/services/ci";
+import {
+	type HanzoGitConfig,
+	hanzoGitConfig,
+	isHanzoGitOrigin,
+} from "@hanzo/platform/services/hanzo-git";
+import { eq } from "drizzle-orm";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+/** A delivery that named a provider we trust: its secret + how to read config. */
+interface Delivery {
+	secret: string;
+	source: ConfigSource;
+}
+
+/**
+ * Establish who vouched for this delivery, and get the secret to verify it.
+ *
+ * The only forge-specific step besides the signature encoding. GitHub stamps
+ * an App `installation.id` into the payload and platform stores that App's
+ * webhook secret on the provider row. Hanzo Git has no installation concept —
+ * it is our own forge, so it is configured once at the deployment level from
+ * KMS `hanzo/platform` (see services/hanzo-git.ts) and a delivery only has to
+ * prove it came from that origin and carries a valid HMAC. The secret is
+ * never persisted to the app DB, never returned, and never logged.
+ *
+ * Returns a `Response` (not a throw) for the fail cases so the caller stays a
+ * straight line.
+ */
+async function resolveDelivery(
+	forge: GitForge,
+	payload: Record<string, unknown>,
+): Promise<Delivery | Response> {
+	if (forge === "hanzo-git") {
+		let cfg: HanzoGitConfig;
+		try {
+			cfg = hanzoGitConfig();
+		} catch (err) {
+			// Names the missing key, never a value — see HanzoGitNotConfigured.
+			return Response.json(
+				{ message: (err as Error).message },
+				{ status: 503 },
+			);
+		}
+		const origin = forgeOrigin(payload);
+		if (!origin) {
+			return Response.json(
+				{ message: "Missing repository.html_url; cannot identify the forge" },
+				{ status: 400 },
+			);
+		}
+		if (!isHanzoGitOrigin(origin, cfg)) {
+			return Response.json(
+				{ message: `Not a Hanzo Git origin: ${origin}` },
+				{ status: 404 },
+			);
+		}
+		const repository = payload.repository as { full_name?: string } | undefined;
+		if (!repository?.full_name) {
+			return Response.json(
+				{ message: "Missing repository.full_name" },
+				{ status: 400 },
+			);
+		}
+		return {
+			secret: cfg.webhookSecret,
+			source: { forge: "hanzo-git", sourceRepo: repository.full_name },
+		};
+	}
+
+	const installation = payload.installation as { id?: number } | undefined;
+	if (!installation?.id) {
+		return Response.json(
+			{ message: "Missing installation id" },
+			{ status: 400 },
+		);
+	}
+	const installationId = String(installation.id);
+	const provider = await db.query.github.findFirst({
+		where: eq(github.githubInstallationId, installationId),
+	});
+	if (!provider) {
+		return Response.json(
+			{ message: `No GitHub provider for installation ${installationId}` },
+			{ status: 404 },
+		);
+	}
+	if (!provider.githubWebhookSecret) {
+		return Response.json(
+			{ message: "GitHub webhook secret not configured for provider" },
+			{ status: 400 },
+		);
+	}
+	return {
+		secret: provider.githubWebhookSecret,
+		source: { forge: "github", installationId },
+	};
+}
+
+export async function POST(req: Request) {
+	const rawBody = await req.text();
+
+	const forge = detectForge(req.headers);
+	if (!forge) {
+		return Response.json(
+			{
+				message:
+					"Unrecognized delivery: no X-Hanzo-Event or X-GitHub-Event header",
+			},
+			{ status: 400 },
+		);
+	}
+
+	let payload: Record<string, unknown>;
+	try {
+		payload = JSON.parse(rawBody) as Record<string, unknown>;
+	} catch {
+		return Response.json(
+			{ message: "Body is not valid JSON" },
+			{ status: 400 },
+		);
+	}
+
+	const delivery = await resolveDelivery(forge, payload);
+	if (delivery instanceof Response) return delivery;
+
+	if (!verifyDelivery(forge, rawBody, req.headers, delivery.secret)) {
+		return Response.json({ message: "Invalid signature" }, { status: 401 });
+	}
+
+	let decoded: ReturnType<typeof decodeWebhook>;
+	try {
+		decoded = decodeWebhook(eventHeaderOf(forge, req.headers), payload, forge);
+	} catch (err) {
+		if (err instanceof WebhookError) {
+			// 422 for "valid but nothing to do" so the forge does not retry-storm.
+			return Response.json({ message: err.message }, { status: err.status });
+		}
+		throw err;
+	}
+
+	if (decoded.event === "ping") {
+		return Response.json({ message: "pong" });
+	}
+
+	// ACK fast: enqueue + dispatch happen synchronously here but the heavy
+	// build runs on arcd. scheduleBuilds is idempotent on (repo, sha, target),
+	// so a re-delivery does not double-build.
+	try {
+		const result = await scheduleBuilds({
+			source: delivery.source,
+			repo: decoded.repo,
+			sha: decoded.sha,
+			ref: decoded.ref,
+			branch: decoded.branch,
+		});
+		if (!result) {
+			return Response.json(
+				{
+					message: `Accepted; ${decoded.repo} has no hanzo.yml (nothing to build)`,
+				},
+				{ status: 202 },
+			);
+		}
+		return Response.json(
+			{
+				message: `Accepted; scheduled ${result.jobs.length} build(s)`,
+				buildJobIds: result.jobs.map((j) => j.buildJobId),
+			},
+			{ status: 202 },
+		);
+	} catch (err) {
+		return Response.json(
+			{ message: `Failed to schedule builds: ${(err as Error).message}` },
+			{ status: 500 },
+		);
+	}
+}
