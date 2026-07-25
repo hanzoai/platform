@@ -293,7 +293,14 @@ export function clusterTargetFromRecord(
 /** Kubeconfig-free projection of a ClusterTarget — safe to return over the API. */
 export interface ClusterTargetView {
 	cluster: string;
-	namespaces: Record<string, AppEnv>;
+	/**
+	 * The PINNED scan set, or absent when the target discovers its namespaces
+	 * from the cluster each pass. A dedicated cluster is always pinned (one
+	 * tenant namespace); the shared cluster discovers, so reporting `{}` there
+	 * would claim "no namespaces" — the field is optional precisely so the two
+	 * cases stay distinguishable over the wire.
+	 */
+	namespaces?: Record<string, AppEnv>;
 	/** True when the org resolves to a dedicated cluster (vs. the shared one). */
 	dedicated: boolean;
 }

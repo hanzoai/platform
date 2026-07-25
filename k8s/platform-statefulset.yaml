@@ -133,6 +133,39 @@ spec:
                 secretKeyRef:
                   name: platform-app-secrets
                   key: IAM_CLIENT_SECRET
+            # The platform's OWN GitHub App installation. `appEnvOctokit` reads
+            # exactly these three and, with all three present, mints short-lived
+            # installation tokens (5000 req/hr, scoped to the installation).
+            # UNSET, it falls through to an ANONYMOUS Octokit — 60 req/hr — which
+            # is how the control plane ran: every apply pass 404'd on the private
+            # `hanzoai/universe` (anonymous cannot see it, so GitHub says "not
+            # found", never "forbidden") and the release reader burned the
+            # anonymous quota, after which octokit's throttle plugin SLEEPS until
+            # the hourly reset. The creds were already synced into this Secret and
+            # simply never handed to the container.
+            #
+            # `optional: true` on all three: absence must DEGRADE (anonymous
+            # reads), never block startup. Declaring a hand-set key as required is
+            # what turned a missing NEXTAUTH_SECRET into CreateContainerConfigError
+            # twice on 2026-07-25; these keys are likewise not KMS-declared yet.
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: platform-app-secrets
+                  key: GITHUB_APP_ID
+                  optional: true
+            - name: GITHUB_APP_INSTALLATION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: platform-app-secrets
+                  key: GITHUB_APP_INSTALLATION_ID
+                  optional: true
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: platform-app-secrets
+                  key: GITHUB_APP_PRIVATE_KEY
+                  optional: true
           # Clean-shutdown hygiene: before SIGTERM reaches the app, force a
           # full WAL checkpoint so the -wal file is folded back into the main
           # DB and truncated. SQLite recovers an un-checkpointed WAL on the
