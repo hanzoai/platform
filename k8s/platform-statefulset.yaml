@@ -73,12 +73,16 @@ spec:
         - name: ghcr-secret
       containers:
         - name: platform-app
-          # Pin a NEW semver tag for every change. CI tags the image from
-          # app/platform/package.json `version`, so re-pushing without a bump
-          # overwrites the existing tag in place — and with IfNotPresent the node
-          # keeps its cached layer and the change never runs. That is exactly how
-          # v4.4.5 ended up meaning two different digests (2026-07-25).
-          image: ghcr.io/hanzoai/platform:v4.4.7
+          # Pinned to the COMMIT-SHA tag, not a semver tag, and deliberately so.
+          # CI tags from app/platform/package.json `version` and re-pushes that tag
+          # on every main build, so `v4.4.5` and `v4.4.6` have each meant two
+          # different digests within hours (2026-07-25) — and with IfNotPresent the
+          # node keeps whichever it cached first, so a "released" version silently
+          # means different code on different nodes. A commit SHA cannot move.
+          # This digest (sha256:f5b7d80a) is the build of 6012d637 that is running
+          # and verified: apps-inventory syncs 75 apps. Move this pin only to
+          # another SHA you have confirmed is published.
+          image: ghcr.io/hanzoai/platform:6012d637b1592c0f0a4c0c574db0758e4f850c08
           imagePullPolicy: IfNotPresent
           # `pnpm start` runs `dist/migration.mjs` (applies drizzle migrations,
           # including the uniqueConfigKey UNIQUE indexes) then `dist/server.mjs`.
