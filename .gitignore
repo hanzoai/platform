@@ -52,3 +52,4 @@ yarn-error.log*
 *.db-wal
 pkg/platform/data/
 app/platform/data/
+.claude/
