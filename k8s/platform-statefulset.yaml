@@ -51,6 +51,11 @@ spec:
         app.kubernetes.io/name: platform-app
         app.kubernetes.io/part-of: hanzo-platform
     spec:
+      # Read-only control-plane identity: platform-app lists hanzo.ai operator CRs
+      # (apps, services, …) + core workloads to build the dashboard inventory.
+      # Defined in platform-rbac.yaml. Without it the pod runs as `default` (no
+      # RBAC) and apps-inventory fails: `services.hanzo.ai is forbidden`.
+      serviceAccountName: platform-app
       # Non-root, fixed UID/GID; fsGroup makes the mounted PVC group-writable so
       # the unprivileged process can create and write the SQLite file + WAL.
       securityContext:
