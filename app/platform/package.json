@@ -60,7 +60,7 @@
 		"@codemirror/view": "6.29.0",
 		"@dokploy/trpc-openapi": "0.0.17",
 		"@faker-js/faker": "^8.4.1",
-		"@hanzo/event": "^0.2.0",
+		"@hanzo/event": "^0.3.1",
 		"@hanzo/platform": "workspace:*",
 		"@hanzo/ui": "^5.6.1",
 		"@hookform/resolvers": "^5.4.0",
