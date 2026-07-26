@@ -25,7 +25,7 @@ required.
 
 ```
 GitHub push/PR ─webhook─▶ /v1/github-webhook (HMAC per installation)
-service-token  ─direct──▶ /v1/arcd/enqueue   (Bearer PLATFORM_BUILD_CALLBACK_TOKEN)
+service-token  ─direct──▶ /v1/runner         (Bearer PLATFORM_BUILD_CALLBACK_TOKEN)
                               │
                               ▼
                         BuildScheduler              reads hanzo.yml @ sha, validates,
@@ -178,7 +178,7 @@ brand-mapped from the GitHub org (`hanzoai`→`hanzo`).
 | Route | Method | Auth | Purpose |
 |-------|--------|------|---------|
 | `/v1/github-webhook` | POST | HMAC (`X-Hub-Signature-256`) vs per-installation `githubWebhookSecret` | Accept push/PR/ping; schedule builds |
-| `/v1/arcd/enqueue` | POST | `Bearer ${PLATFORM_BUILD_CALLBACK_TOKEN}` | GitHub-free direct build trigger (repo, sha, image) |
+| `/v1/runner` | POST | `Bearer ${PLATFORM_BUILD_CALLBACK_TOKEN}` | GitHub-free direct build trigger (repo, sha, image) |
 | `/v1/e2e/run` | POST | `Bearer ${PLATFORM_BUILD_CALLBACK_TOKEN}` | Launch a Playwright e2e Job on demand |
 | `/v1/build-callback` | POST | `Bearer ${PLATFORM_BUILD_CALLBACK_TOKEN}` | Optional external-builder completion hook → deploy/test/publish |
 
@@ -223,7 +223,7 @@ without a token and without mutating any registry.
    image lands at `ghcr.io/<org>/<repo>:<sha>`, and (on a deploy branch) the
    operator Service CR rolls.
 
-A repo can also be built with no GitHub App at all via `POST /v1/arcd/enqueue`.
+A repo can also be built with no GitHub App at all via `POST /v1/runner`.
 Repos WITHOUT a `hanzo.yml` are ACKed with 202 and nothing is scheduled.
 
 ## Known limitations (this cut)
