@@ -35,9 +35,10 @@
  */
 
 /**
- * Normalize an organization id to the character set a namespace segment
- * allows. Shared by `tenantNamespace` and the fleet-owner comparison so the
- * two bases cannot disagree about what "the same org" means (e.g. casing).
+ * Normalize an organization id into a DNS label, for BUILDING a namespace name.
+ * Used only by `tenantNamespace` — never to compare principals. Folding case
+ * and punctuation is right when producing a k8s name and wrong when deciding
+ * who someone is, so the fleet comparison below is exact `===`.
  */
 function normalizeOrg(organizationId: string): string {
 	return organizationId.toLowerCase().replace(/[^a-z0-9-]/g, "-");
@@ -56,26 +57,22 @@ export function tenantNamespace(organizationId: string): string {
 export type NamespaceOwners = Readonly<Record<string, string>>;
 
 /**
- * Fleet namespace ownership, as data.
+ * Fleet namespace ownership, as data — EMPTY by default, on purpose.
  *
- * These are the estate namespaces that existed before the `tenant-*` scheme and
- * that hold ~99% of running workloads. Each is owned by the org whose fleet it
- * is, so the entry both ENABLES that org and REFUSES every other one.
+ * Owners are `organization.id` values, which are per-install `nanoid()`s
+ * (`Yb5GFGDBEwcLsv2O8qWjS`), NOT brand names. So there is no honest default to
+ * ship: a table keyed by `hanzo`/`lux`/`zoo` would look like it worked, match no
+ * real org, and make every fleet deploy fail — the "reports success, changes
+ * nothing" class of bug in authorization form. An empty table instead means
+ * fleet authority is OFF until an operator states it, which is also the safer
+ * default: nobody holds fleet authority by accident.
  *
- * Override wholesale with `PLATFORM_FLEET_NAMESPACE_OWNERS` (see
- * `fleetNamespaceOwners`) — adding an org's fleet is config, not a code change.
+ * Configure with `PLATFORM_FLEET_NAMESPACE_OWNERS` (`ns=orgId,ns=orgId,…`)
+ * using real organization ids. Until then only the tenant basis applies.
  */
-export const DEFAULT_FLEET_NAMESPACE_OWNERS: NamespaceOwners = {
-	hanzo: "hanzo",
-	"hanzo-testnet": "hanzo",
-	"hanzo-devnet": "hanzo",
-	lux: "lux",
-	"lux-testnet": "lux",
-	"lux-devnet": "lux",
-	zoo: "zoo",
-	"zoo-testnet": "zoo",
-	"zoo-devnet": "zoo",
-};
+export const DEFAULT_FLEET_NAMESPACE_OWNERS: NamespaceOwners = Object.freeze(
+	Object.create(null),
+);
 
 /** Env var carrying a wholesale replacement for the fleet ownership table. */
 export const FLEET_NAMESPACE_OWNERS_ENV = "PLATFORM_FLEET_NAMESPACE_OWNERS";
@@ -95,7 +92,9 @@ export class NamespaceOwnershipError extends Error {
  * refused) or a silent widening.
  */
 export function parseFleetNamespaceOwners(spec: string): NamespaceOwners {
-	const owners: Record<string, string> = {};
+	// Null prototype: a namespace key like `__proto__` must be an ordinary
+	// entry, never a mutation of the object's prototype.
+	const owners: Record<string, string> = Object.create(null);
 	for (const raw of spec.split(",")) {
 		const entry = raw.trim();
 		if (entry.length === 0) continue;
@@ -110,6 +109,20 @@ export function parseFleetNamespaceOwners(spec: string): NamespaceOwners {
 		if (namespace.length === 0 || org.length === 0) {
 			throw new NamespaceOwnershipError(
 				`${FLEET_NAMESPACE_OWNERS_ENV} entry "${entry}" must be "namespace=organizationId"`,
+			);
+		}
+		// A `tenant-*` key would hand a SECOND org write access to a tenant's
+		// namespace — the one thing the tenant basis exists to make impossible.
+		// Tenant namespaces are owned by derivation and are never configurable.
+		if (namespace.startsWith("tenant-")) {
+			throw new NamespaceOwnershipError(
+				`${FLEET_NAMESPACE_OWNERS_ENV} may not assign the tenant namespace "${namespace}" — tenant ownership is derived, not configured`,
+			);
+		}
+		// `ns=org=more` is a typo, not an owner named "org=more".
+		if (org.includes("=")) {
+			throw new NamespaceOwnershipError(
+				`${FLEET_NAMESPACE_OWNERS_ENV} entry "${entry}" has more than one "="`,
 			);
 		}
 		if (owners[namespace] !== undefined && owners[namespace] !== org) {
@@ -161,11 +174,18 @@ export function authorizeNamespace(
 	const tenantNs = tenantNamespace(organizationId);
 	if (namespace === tenantNs) return { decision: "allow", basis: "tenant" };
 
-	const owner = owners[namespace];
-	if (owner !== undefined) {
-		if (normalizeOrg(owner) === normalizeOrg(organizationId)) {
-			return { decision: "allow", basis: "fleet" };
-		}
+	// OWN properties only. `namespace` is hostile input, and a plain-object
+	// lookup walks the prototype chain: `owners["constructor"]` would return a
+	// function, and a security decision must never crash on — or reason about —
+	// something inherited from Object.prototype.
+	const owner = Object.hasOwn(owners, namespace)
+		? owners[namespace]
+		: undefined;
+	if (typeof owner === "string") {
+		// EXACT match. `organizationId` is a trusted principal, so comparing it
+		// leniently (case-folded, punctuation-folded) would only ever admit
+		// someone it should not.
+		if (owner === organizationId) return { decision: "allow", basis: "fleet" };
 		// Do not name the owning org — the caller has no right to learn it.
 		return {
 			decision: "refuse",
@@ -173,8 +193,14 @@ export function authorizeNamespace(
 		};
 	}
 
+	// Say WHY there is no fleet basis at all, so an unconfigured install reads as
+	// "not configured" instead of a mystery refusal.
+	const hint =
+		Object.keys(owners).length === 0
+			? ` (no fleet namespaces are configured — set ${FLEET_NAMESPACE_OWNERS_ENV})`
+			: "";
 	return {
 		decision: "refuse",
-		reason: `namespace "${namespace}" is neither this org's tenant namespace "${tenantNs}" nor a fleet namespace it owns`,
+		reason: `namespace "${namespace}" is neither this org's tenant namespace "${tenantNs}" nor a fleet namespace it owns${hint}`,
 	};
 }

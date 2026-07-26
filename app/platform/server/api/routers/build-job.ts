@@ -72,8 +72,16 @@ export const buildJobRouter = createTRPCRouter({
 				branch: z.string().min(1),
 			}),
 		)
-		.mutation(async ({ input }) => {
-			const result = await scheduleBuilds(input);
+		.mutation(async ({ input, ctx }) => {
+			// `source` names the principal (a `hanzo-git` source resolves to the
+			// platform's own org), and `source` is caller input — so pin the
+			// resolved org to the caller's active org, exactly as `one`/`logs` do
+			// with assertOrg. Without this any authenticated user could build and
+			// deploy as the fleet-owning org.
+			const result = await scheduleBuilds({
+				...input,
+				requireOrganizationId: ctx.session.activeOrganizationId,
+			});
 			if (!result) {
 				return {
 					scheduled: 0,
