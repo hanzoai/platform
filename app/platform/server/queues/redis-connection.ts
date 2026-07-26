@@ -1,4 +1,4 @@
-import type { ConnectionOptions } from "bullmq";
+import type { ConnectionOptions } from "@hanzo/mq";
 
 export const redisConfig: ConnectionOptions = {
 	host:

@@ -10,7 +10,7 @@ import {
 	updateCompose,
 	updatePreviewDeployment,
 } from "@dokploy/server";
-import { type Job, Worker } from "bullmq";
+import { type Job, Worker } from "@hanzo/mq";
 import type { DeploymentJob } from "./queue-types";
 import { redisConfig } from "./redis-connection";
 
