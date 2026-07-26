@@ -428,7 +428,12 @@ export async function scheduleBuilds(
 			const tag = resolveTag(build.tagPattern, {
 				sha: input.sha,
 				branch: input.branch,
+				ref: input.ref,
 			});
+			// A `{{git.tag}}` pattern has no image name on a branch push. Skip the
+			// target rather than inventing one — the push still succeeds, and the
+			// versioned image appears when the tag itself is pushed.
+			if (tag === null) continue;
 			const job = await createBuildJob({
 				repo: input.repo,
 				sha: input.sha,
