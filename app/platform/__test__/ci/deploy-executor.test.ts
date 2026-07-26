@@ -12,6 +12,7 @@
 import type { BuildJob } from "@hanzo/platform/db/schema";
 import { executeDeploy } from "@hanzo/platform/services/ci/deploy-executor";
 import type { DeployConfig } from "@hanzo/platform/services/ci/platform-config";
+import { tenantNamespace } from "@hanzo/platform/services/k8s/operator/namespace-authz";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // --- fake cluster -----------------------------------------------------------
@@ -33,6 +34,17 @@ const calls = vi.hoisted(() => ({
 }));
 
 const jobUpdates = vi.hoisted(() => [] as Record<string, unknown>[]);
+
+// Production-shaped principals. `organization.id` is a nanoid, NOT a brand name
+// (the live fleet org is `Yb5GFGDBEwcLsv2O8qWjS`, slug `hanzo`) — testing with
+// readable ids would let a brand-keyed authorization bug pass green.
+const { FLEET_ORG, LUX_ORG, TENANT_ORG } = vi.hoisted(() => ({
+	FLEET_ORG: "Yb5GFGDBEwcLsv2O8qWjS",
+	LUX_ORG: "Lx7QpZm2NvKd8RtYeWc1A",
+	TENANT_ORG: "Mx3KpQr9TvBn2WsLdYe5F",
+}));
+/** What `tenantNamespace(TENANT_ORG)` produces — the tenant basis. */
+const TENANT_NS = "tenant-mx3kpqr9tvbn2wsldye5f";
 
 vi.mock("@hanzo/platform/services/dedicated-cluster", () => ({
 	resolveOrgClusterClients: vi.fn(async () => ({
@@ -64,6 +76,14 @@ vi.mock("@hanzo/platform/services/ci/build-job", () => ({
 vi.mock("@hanzo/platform/services/k8s/operator", async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	signPaasTicket: vi.fn(() => "test.ticket.sig"),
+	// Stand in for PLATFORM_FLEET_NAMESPACE_OWNERS (the vitest config freezes
+	// process.env). The REAL authorizeNamespace runs against this table.
+	fleetNamespaceOwners: vi.fn(() => ({
+		hanzo: FLEET_ORG,
+		"hanzo-testnet": FLEET_ORG,
+		"hanzo-devnet": FLEET_ORG,
+		lux: LUX_ORG,
+	})),
 }));
 
 // --- fixtures ---------------------------------------------------------------
@@ -71,7 +91,7 @@ vi.mock("@hanzo/platform/services/k8s/operator", async (importOriginal) => ({
 const job = (over: Partial<BuildJob> = {}): BuildJob =>
 	({
 		buildJobId: "bj_1",
-		organizationId: "hanzo",
+		organizationId: FLEET_ORG,
 		status: "succeeded",
 		branch: "main",
 		image: "ghcr.io/hanzoai/cloud:v1.801.215",
@@ -141,10 +161,10 @@ describe("App CR deploy", () => {
 
 	it("deploys into the org's tenant namespace too", async () => {
 		await executeDeploy(
-			job({ organizationId: "maxpower" }),
-			deploy({ namespace: "tenant-maxpower", name: "ai-demo" }),
+			job({ organizationId: TENANT_ORG }),
+			deploy({ namespace: TENANT_NS, name: "ai-demo" }),
 		);
-		expect(calls.patch[0]!.namespace).toBe("tenant-maxpower");
+		expect(calls.patch[0]!.namespace).toBe(TENANT_NS);
 		expect(calls.patch[0]!.plural).toBe("apps");
 	});
 
@@ -155,8 +175,8 @@ describe("App CR deploy", () => {
 		};
 
 		const res = await executeDeploy(
-			job({ organizationId: "maxpower" }),
-			deploy({ namespace: "tenant-maxpower" }),
+			job({ organizationId: TENANT_ORG }),
+			deploy({ namespace: TENANT_NS }),
 		);
 
 		expect(calls.create).toHaveLength(1);
@@ -195,8 +215,8 @@ describe("Service CR deploy (no regression)", () => {
 	it("creates a Service CR with kind Service", async () => {
 		calls.patchError = { code: 404, message: "not found" };
 		await executeDeploy(
-			job({ organizationId: "maxpower" }),
-			deploy({ crd: "Service", namespace: "tenant-maxpower" }),
+			job({ organizationId: TENANT_ORG }),
+			deploy({ crd: "Service", namespace: TENANT_NS }),
 		);
 		expect((calls.create[0]!.body as { kind: string }).kind).toBe("Service");
 		expect(calls.create[0]!.plural).toBe("services");
@@ -225,8 +245,8 @@ describe("no auto-create in a fleet namespace", () => {
 	it("still creates in a tenant namespace (zero-manual-CR onboarding)", async () => {
 		calls.patchError = { code: 404, message: "not found" };
 		await executeDeploy(
-			job({ organizationId: "maxpower" }),
-			deploy({ namespace: "tenant-maxpower" }),
+			job({ organizationId: TENANT_ORG }),
+			deploy({ namespace: TENANT_NS }),
 		);
 		expect(calls.create).toHaveLength(1);
 	});
@@ -237,7 +257,7 @@ describe("no auto-create in a fleet namespace", () => {
 describe("🔴 cross-tenant deploy is refused", () => {
 	it("REFUSES a tenant org targeting the production fleet namespace", async () => {
 		await expect(
-			executeDeploy(job({ organizationId: "maxpower" }), deploy()),
+			executeDeploy(job({ organizationId: TENANT_ORG }), deploy()),
 		).rejects.toThrow(/belongs to another organization/);
 		expectNothingWritten();
 	});
@@ -245,8 +265,8 @@ describe("🔴 cross-tenant deploy is refused", () => {
 	it("REFUSES a tenant org targeting another tenant's namespace", async () => {
 		await expect(
 			executeDeploy(
-				job({ organizationId: "maxpower" }),
-				deploy({ namespace: "tenant-hanzo" }),
+				job({ organizationId: TENANT_ORG }),
+				deploy({ namespace: tenantNamespace(FLEET_ORG) }),
 			),
 		).rejects.toThrow(/tenant namespace/);
 		expectNothingWritten();
@@ -255,11 +275,21 @@ describe("🔴 cross-tenant deploy is refused", () => {
 	it("REFUSES a fleet org reaching into another org's fleet", async () => {
 		await expect(
 			executeDeploy(
-				job({ organizationId: "hanzo" }),
+				job({ organizationId: FLEET_ORG }),
 				deploy({ namespace: "lux" }),
 			),
 		).rejects.toThrow(/belongs to another organization/);
 		expectNothingWritten();
+	});
+
+	it("REFUSES a prototype-key namespace as FORBIDDEN, not a 500", async () => {
+		await expect(
+			executeDeploy(job(), deploy({ namespace: "constructor" })),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expectNothingWritten();
+		expect(jobUpdates).toContainEqual(
+			expect.objectContaining({ rolloutStatus: "failed" }),
+		);
 	});
 
 	it("REFUSES an unowned namespace (fail closed)", async () => {
@@ -271,7 +301,7 @@ describe("🔴 cross-tenant deploy is refused", () => {
 
 	it("records the refusal on the build job as a failed rollout", async () => {
 		await expect(
-			executeDeploy(job({ organizationId: "maxpower" }), deploy()),
+			executeDeploy(job({ organizationId: TENANT_ORG }), deploy()),
 		).rejects.toThrow();
 		expect(jobUpdates).toContainEqual(
 			expect.objectContaining({ rolloutStatus: "failed" }),
