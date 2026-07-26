@@ -1,4 +1,4 @@
-import { Queue, type RepeatableJob } from "bullmq";
+import { Queue, type RepeatableJob } from "@hanzo/mq";
 import { logger } from "./logger.js";
 import type { QueueJob } from "./schema.js";
 

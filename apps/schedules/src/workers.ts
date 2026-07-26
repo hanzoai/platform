@@ -1,4 +1,4 @@
-import { type Job, Worker } from "bullmq";
+import { type Job, Worker } from "@hanzo/mq";
 import { logger } from "./logger.js";
 import type { QueueJob } from "./schema.js";
 import { runJobs } from "./utils.js";

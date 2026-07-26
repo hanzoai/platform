@@ -3,8 +3,8 @@ import {
 	execAsync,
 	execAsyncRemote,
 } from "@dokploy/server/utils/process/execAsync";
-import type { Job } from "bullmq";
-import { Queue } from "bullmq";
+import type { Job } from "@hanzo/mq";
+import { Queue } from "@hanzo/mq";
 import { deploymentWorker } from "./deployments-queue";
 import { redisConfig } from "./redis-connection";
 
