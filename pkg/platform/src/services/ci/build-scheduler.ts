@@ -66,6 +66,16 @@ export interface ScheduleInput {
 	sha: string;
 	ref: string;
 	branch: string;
+	/**
+	 * The org the CALLER is allowed to act as. Set it on any path where the
+	 * caller chooses `source` — the source selects the principal, so without
+	 * this a caller picks which org it builds and deploys as.
+	 *
+	 * Webhook paths leave it undefined: there the forge authenticates the
+	 * delivery (HMAC) and the principal comes from the installation binding,
+	 * not from anything the sender picked.
+	 */
+	requireOrganizationId?: string;
 }
 
 export interface ScheduleResult {
@@ -400,6 +410,20 @@ export async function scheduleBuilds(
 		input.repo,
 		input.sha,
 	);
+	// The principal is whatever `source` resolved to. When the caller chose
+	// `source`, it therefore chose the principal — so confirm it is the org the
+	// caller is actually entitled to act as, BEFORE any build or deploy is
+	// scheduled against that org's namespaces. Exact match, fail closed.
+	if (
+		input.requireOrganizationId !== undefined &&
+		input.requireOrganizationId !== organizationId
+	) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message:
+				"Refusing to schedule a build for another organization — the build source resolves to an org you are not acting as",
+		});
+	}
 	if (!config) return null;
 
 	const jobs: BuildJob[] = [];
