@@ -23,6 +23,7 @@ import {
 	authorizeNamespace,
 	buildWorkloadCR,
 	defaultQuotaForTier,
+	fleetNamespaceOwners,
 	isWorkloadKind,
 	KIND_TO_PLURAL,
 	OPERATOR_GROUP,
@@ -96,7 +97,11 @@ export async function executeDeploy(
 	// because operator-controlled config assigns that fleet namespace to it.
 	// Anything else is refused, never silently rewritten, so a misconfigured or
 	// malicious repo cannot reach into another org's namespace.
-	const authz = authorizeNamespace(target.namespace, job.organizationId);
+	const authz = authorizeNamespace(
+		target.namespace,
+		job.organizationId,
+		fleetNamespaceOwners(),
+	);
 	if (authz.decision === "refuse") {
 		await updateBuildJob(job.buildJobId, {
 			rolloutStatus: "failed",
