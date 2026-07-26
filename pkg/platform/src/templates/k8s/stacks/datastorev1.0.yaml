@@ -55,17 +55,17 @@ spec:
             memory: {{podConfig.memoryLimit}}{{podConfig.memoryLimitType}}
             cpu: {{podConfig.cpuLimit}}{{podConfig.cpuLimitType}}
         env:
-        - name: CLICKHOUSE_USER
+        - name: DATASTORE_USER
           valueFrom:
             secretKeyRef:
               key: username
               name: {{iid}}
-        - name: CLICKHOUSE_PASSWORD
+        - name: DATASTORE_PASSWORD
           valueFrom:
             secretKeyRef:
               key: password
               name: {{iid}}
-        - name: CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT
+        - name: DATASTORE_DEFAULT_ACCESS_MANAGEMENT
           value: "1"
         livenessProbe:
           httpGet:
