@@ -39,7 +39,10 @@ export interface BuildConfig {
 	dockerfile: string;
 	context: string;
 	image: string;
-	/** Tag template; only `{{git.sha}}` and `{{git.branch}}` are supported. */
+	/**
+	 * Tag template. Supported tokens: `{{git.sha}}`, `{{git.branch}}`, and
+	 * `{{git.tag}}` (tag pushes only — see resolveTag).
+	 */
 	tagPattern: string;
 	push: boolean;
 }
@@ -530,12 +533,41 @@ export function runnerPoolFor(
 	return `${brand}-${role}-${osLabel}-${entry.arch}`;
 }
 
-/** Resolve a tag-pattern template against the triggering git context. */
+/**
+ * The git tag a ref names, or null when the ref is not a tag.
+ *
+ * `refs/tags/v1.2.3` → `v1.2.3`; `refs/heads/main` and a bare SHA → null.
+ */
+export function tagFromRef(ref: string | undefined): string | null {
+	if (!ref?.startsWith("refs/tags/")) return null;
+	const name = ref.slice("refs/tags/".length);
+	return name.length > 0 ? name : null;
+}
+
+/**
+ * Resolve a tag-pattern template against the triggering git context.
+ *
+ * Returns null when the pattern uses `{{git.tag}}` but the push was not a tag.
+ * That is deliberate: a tag-patterned build has no meaningful image name on a
+ * branch push, and inventing one (falling back to the branch) would give a
+ * single token two meanings. The caller skips the build instead — a `v*` image
+ * is published when, and only when, a `v*` tag is pushed.
+ */
 export function resolveTag(
 	tagPattern: string,
-	ctx: { sha: string; branch: string },
-): string {
+	ctx: { sha: string; branch: string; ref?: string },
+): string | null {
+	if (tagPattern.includes("{{git.tag}}")) {
+		const tag = tagFromRef(ctx.ref);
+		if (tag === null) return null;
+		tagPattern = tagPattern.replaceAll("{{git.tag}}", sanitizeTagSegment(tag));
+	}
 	return tagPattern
 		.replaceAll("{{git.sha}}", ctx.sha)
-		.replaceAll("{{git.branch}}", ctx.branch.replace(/[^a-zA-Z0-9._-]/g, "-"));
+		.replaceAll("{{git.branch}}", sanitizeTagSegment(ctx.branch));
+}
+
+/** Docker tags allow only [A-Za-z0-9._-]; everything else collapses to `-`. */
+function sanitizeTagSegment(s: string): string {
+	return s.replace(/[^a-zA-Z0-9._-]/g, "-");
 }

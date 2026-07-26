@@ -131,7 +131,8 @@ Field rules (validator returns a path-qualified error on any violation):
 | `build.matrix[].arch` | `amd64` \| `arm64` |
 | `build.matrix` | non-empty, no duplicate `os/arch` |
 | `build.image` | non-empty, must NOT contain a tag |
-| `build.tag-pattern` | template; supports `{{git.sha}}`, `{{git.branch}}` |
+| `build.tag-pattern` | template; supports `{{git.sha}}`, `{{git.branch}}`, `{{git.tag}}` |
+| `{{git.tag}}` | resolves ONLY on a tag push (`refs/tags/X` → `X`). On a branch push the target is **skipped** — no image, push still succeeds. It does not fall back to the branch: one token, one meaning. Use it when a repo should publish versioned images on `v*` tags only. |
 | `deploy.on` | non-empty list of branch names |
 | `deploy.target.operator` | `hanzo-operator` \| `hanzo` |
 | `deploy.target.crd` | `App` (default) \| `Service` |
