@@ -49,7 +49,7 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
 `docs/PLATFORM_CI.md`.
 
 - Triggers: `app/platform/pages/api/v1/github-webhook.ts` (HMAC per
-  installation) and `app/platform/pages/api/v1/arcd/enqueue.ts` (service-token,
+  installation) and `app/platform/app/v1/runner/route.ts` (service-token,
   GitHub-free direct build). `build-callback.ts` is an optional external-builder
   completion hook (bearer token).
 - Service layer: `pkg/platform/src/services/ci/` — `platform-config` (`hanzo.yml`
@@ -74,7 +74,7 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
   `/root/.docker`). The RETIRED long-poll/`workflow_dispatch` external-runner
   surface (build-queue, arcd-runner, `/v1/arcd/poll`+`/complete`) was removed —
   it pointed at offline GitHub runners and silently no-op'd.
-- PROVEN LIVE (v4.4.4): `POST /v1/arcd/enqueue` for `hanzoai/pricing` created a
+- PROVEN LIVE (v4.4.4): `POST /v1/runner` for `hanzoai/pricing` created a
   `build_job` row → platform launched the BuildKit Job (`build-pricing-*`,
   `managed-by=platform`) → pushed `ghcr.io/hanzoai/pricing:v1.1.2` → the
   build-watcher flipped the row to `succeeded`. The auto-deploy leg
@@ -396,7 +396,7 @@ becomes a running pod, WHERE that path forks, and the ONE native path we collaps
 **Worked example (`pricing`, today):** commit → GHA/ARC runner builds →
 `ghcr.io/hanzoai/pricing:vX` → EITHER a universe PR bumps
 `services.hanzo.ai/pricing.spec.image.tag` (and ArgoCD must be **manually** synced)
-OR `POST /v1/arcd/enqueue` drives platform BuildKit and `deploy-executor` patches
+OR `POST /v1/runner` drives platform BuildKit and `deploy-executor` patches
 the CR → operator rolls the Deployment. Two independent ways to ship one change.
 
 ### 2. The two GitOps breaks behind "CR changes don't reach the cluster"
