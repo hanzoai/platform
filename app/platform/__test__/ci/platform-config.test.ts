@@ -4,6 +4,7 @@ import {
 	PlatformConfigError,
 	parsePlatformConfig,
 	resolveTag,
+	tagFromRef,
 	runnerPoolFor,
 	validatePlatformConfig,
 } from "@hanzo/platform/services/ci/platform-config";
@@ -296,6 +297,58 @@ describe("resolveTag", () => {
 		expect(
 			resolveTag("br-{{git.branch}}", { sha: "x", branch: "feat/foo bar" }),
 		).toBe("br-feat-foo-bar");
+	});
+
+	// {{git.tag}} exists so a repo can publish a semver image on a `v*` push —
+	// the capability GitHub Actions provided before repos moved to platform.
+	it("substitutes git.tag on a tag push", () => {
+		expect(
+			resolveTag("{{git.tag}}", {
+				sha: "x",
+				branch: "main",
+				ref: "refs/tags/v0.9.4",
+			}),
+		).toBe("v0.9.4");
+	});
+	it("sanitizes the tag", () => {
+		expect(
+			resolveTag("{{git.tag}}", {
+				sha: "x",
+				branch: "main",
+				ref: "refs/tags/release/1.0 rc1",
+			}),
+		).toBe("release-1.0-rc1");
+	});
+	// Skip, don't invent: falling back to the branch would give one token two
+	// meanings and publish a branch image under a version-shaped name.
+	it("returns null for {{git.tag}} on a branch push", () => {
+		expect(
+			resolveTag("{{git.tag}}", {
+				sha: "x",
+				branch: "main",
+				ref: "refs/heads/main",
+			}),
+		).toBeNull();
+	});
+	it("returns null for {{git.tag}} when ref is absent", () => {
+		expect(resolveTag("{{git.tag}}", { sha: "x", branch: "main" })).toBeNull();
+	});
+	it("leaves sha/branch patterns unaffected by a missing ref", () => {
+		expect(resolveTag("{{git.sha}}", { sha: "abc", branch: "main" })).toBe(
+			"abc",
+		);
+	});
+});
+
+describe("tagFromRef", () => {
+	it("reads the tag name", () => {
+		expect(tagFromRef("refs/tags/v1.2.3")).toBe("v1.2.3");
+	});
+	it("rejects a branch ref, a bare sha, undefined, and an empty tag", () => {
+		expect(tagFromRef("refs/heads/main")).toBeNull();
+		expect(tagFromRef("deadbeef")).toBeNull();
+		expect(tagFromRef(undefined)).toBeNull();
+		expect(tagFromRef("refs/tags/")).toBeNull();
 	});
 });
 
