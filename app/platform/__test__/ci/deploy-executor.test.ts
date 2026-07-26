@@ -12,7 +12,8 @@
 import type { BuildJob } from "@hanzo/platform/db/schema";
 import { executeDeploy } from "@hanzo/platform/services/ci/deploy-executor";
 import type { DeployConfig } from "@hanzo/platform/services/ci/platform-config";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { tenantNamespace } from "@hanzo/platform/services/k8s/operator/namespace-authz";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // --- fake cluster -----------------------------------------------------------
 
@@ -33,6 +34,17 @@ const calls = vi.hoisted(() => ({
 }));
 
 const jobUpdates = vi.hoisted(() => [] as Record<string, unknown>[]);
+
+// Production-shaped principals. `organization.id` is a nanoid, NOT a brand name
+// (the live fleet org is `Yb5GFGDBEwcLsv2O8qWjS`, slug `hanzo`) — testing with
+// readable ids would let a brand-keyed authorization bug pass green.
+const { FLEET_ORG, LUX_ORG, TENANT_ORG } = vi.hoisted(() => ({
+	FLEET_ORG: "Yb5GFGDBEwcLsv2O8qWjS",
+	LUX_ORG: "Lx7QpZm2NvKd8RtYeWc1A",
+	TENANT_ORG: "Mx3KpQr9TvBn2WsLdYe5F",
+}));
+/** What `tenantNamespace(TENANT_ORG)` produces — the tenant basis. */
+const TENANT_NS = "tenant-mx3kpqr9tvbn2wsldye5f";
 
 vi.mock("@hanzo/platform/services/dedicated-cluster", () => ({
 	resolveOrgClusterClients: vi.fn(async () => ({
@@ -66,12 +78,45 @@ vi.mock("@hanzo/platform/services/k8s/operator", async (importOriginal) => ({
 	signPaasTicket: vi.fn(() => "test.ticket.sig"),
 }));
 
+// Configure fleet ownership the way production does — through the env var the
+// REAL fleetNamespaceOwners() reads.
+//
+// Mocking the `fleetNamespaceOwners` export off the operator barrel does NOT
+// work here: the module under test resolves that barrel by relative path from
+// dist ("../k8s/operator/index.js") while the mock names it by package
+// specifier, and through the pnpm workspace symlink those are two module
+// identities. The mock is installed on one and the code calls the other, so the
+// table silently stays empty and every deploy is refused with "no fleet
+// namespaces are configured" — a failure that looks like broken authz but is
+// broken test wiring.
+//
+// Driving the env var sidesteps module identity entirely and exercises the same
+// path production takes.
+beforeEach(() => {
+	vi.stubEnv(
+		"PLATFORM_FLEET_NAMESPACE_OWNERS",
+		`hanzo=${FLEET_ORG},hanzo-testnet=${FLEET_ORG},hanzo-devnet=${FLEET_ORG},lux=${LUX_ORG}`,
+	);
+	// Same story for the PaaS ticket signer, which only the CREATE path mints:
+	// it reads OPERATOR_PAAS_SHARED_SECRET directly, so stubbing the export off
+	// the barrel never reaches it. A test-only value — in production this comes
+	// from KMS.
+	// >=32 bytes: the signer rejects anything shorter outright.
+	vi.stubEnv(
+		"OPERATOR_PAAS_SHARED_SECRET",
+		"test-shared-secret-at-least-32-bytes-long",
+	);
+});
+afterEach(() => {
+	vi.unstubAllEnvs();
+});
+
 // --- fixtures ---------------------------------------------------------------
 
 const job = (over: Partial<BuildJob> = {}): BuildJob =>
 	({
 		buildJobId: "bj_1",
-		organizationId: "hanzo",
+		organizationId: FLEET_ORG,
 		status: "succeeded",
 		branch: "main",
 		image: "ghcr.io/hanzoai/cloud:v1.801.215",
@@ -141,10 +186,10 @@ describe("App CR deploy", () => {
 
 	it("deploys into the org's tenant namespace too", async () => {
 		await executeDeploy(
-			job({ organizationId: "maxpower" }),
-			deploy({ namespace: "tenant-maxpower", name: "ai-demo" }),
+			job({ organizationId: TENANT_ORG }),
+			deploy({ namespace: TENANT_NS, name: "ai-demo" }),
 		);
-		expect(calls.patch[0]!.namespace).toBe("tenant-maxpower");
+		expect(calls.patch[0]!.namespace).toBe(TENANT_NS);
 		expect(calls.patch[0]!.plural).toBe("apps");
 	});
 
@@ -155,8 +200,8 @@ describe("App CR deploy", () => {
 		};
 
 		const res = await executeDeploy(
-			job({ organizationId: "maxpower" }),
-			deploy({ namespace: "tenant-maxpower" }),
+			job({ organizationId: TENANT_ORG }),
+			deploy({ namespace: TENANT_NS }),
 		);
 
 		expect(calls.create).toHaveLength(1);
@@ -195,8 +240,8 @@ describe("Service CR deploy (no regression)", () => {
 	it("creates a Service CR with kind Service", async () => {
 		calls.patchError = { code: 404, message: "not found" };
 		await executeDeploy(
-			job({ organizationId: "maxpower" }),
-			deploy({ crd: "Service", namespace: "tenant-maxpower" }),
+			job({ organizationId: TENANT_ORG }),
+			deploy({ crd: "Service", namespace: TENANT_NS }),
 		);
 		expect((calls.create[0]!.body as { kind: string }).kind).toBe("Service");
 		expect(calls.create[0]!.plural).toBe("services");
@@ -225,8 +270,8 @@ describe("no auto-create in a fleet namespace", () => {
 	it("still creates in a tenant namespace (zero-manual-CR onboarding)", async () => {
 		calls.patchError = { code: 404, message: "not found" };
 		await executeDeploy(
-			job({ organizationId: "maxpower" }),
-			deploy({ namespace: "tenant-maxpower" }),
+			job({ organizationId: TENANT_ORG }),
+			deploy({ namespace: TENANT_NS }),
 		);
 		expect(calls.create).toHaveLength(1);
 	});
@@ -237,7 +282,7 @@ describe("no auto-create in a fleet namespace", () => {
 describe("🔴 cross-tenant deploy is refused", () => {
 	it("REFUSES a tenant org targeting the production fleet namespace", async () => {
 		await expect(
-			executeDeploy(job({ organizationId: "maxpower" }), deploy()),
+			executeDeploy(job({ organizationId: TENANT_ORG }), deploy()),
 		).rejects.toThrow(/belongs to another organization/);
 		expectNothingWritten();
 	});
@@ -245,8 +290,8 @@ describe("🔴 cross-tenant deploy is refused", () => {
 	it("REFUSES a tenant org targeting another tenant's namespace", async () => {
 		await expect(
 			executeDeploy(
-				job({ organizationId: "maxpower" }),
-				deploy({ namespace: "tenant-hanzo" }),
+				job({ organizationId: TENANT_ORG }),
+				deploy({ namespace: tenantNamespace(FLEET_ORG) }),
 			),
 		).rejects.toThrow(/tenant namespace/);
 		expectNothingWritten();
@@ -255,11 +300,21 @@ describe("🔴 cross-tenant deploy is refused", () => {
 	it("REFUSES a fleet org reaching into another org's fleet", async () => {
 		await expect(
 			executeDeploy(
-				job({ organizationId: "hanzo" }),
+				job({ organizationId: FLEET_ORG }),
 				deploy({ namespace: "lux" }),
 			),
 		).rejects.toThrow(/belongs to another organization/);
 		expectNothingWritten();
+	});
+
+	it("REFUSES a prototype-key namespace as FORBIDDEN, not a 500", async () => {
+		await expect(
+			executeDeploy(job(), deploy({ namespace: "constructor" })),
+		).rejects.toMatchObject({ code: "FORBIDDEN" });
+		expectNothingWritten();
+		expect(jobUpdates).toContainEqual(
+			expect.objectContaining({ rolloutStatus: "failed" }),
+		);
 	});
 
 	it("REFUSES an unowned namespace (fail closed)", async () => {
@@ -271,7 +326,7 @@ describe("🔴 cross-tenant deploy is refused", () => {
 
 	it("records the refusal on the build job as a failed rollout", async () => {
 		await expect(
-			executeDeploy(job({ organizationId: "maxpower" }), deploy()),
+			executeDeploy(job({ organizationId: TENANT_ORG }), deploy()),
 		).rejects.toThrow();
 		expect(jobUpdates).toContainEqual(
 			expect.objectContaining({ rolloutStatus: "failed" }),
