@@ -162,8 +162,8 @@ importers:
         specifier: ^8.4.1
         version: 8.4.1
       '@hanzo/event':
-        specifier: ^0.3.1
-        version: 0.3.1(react@18.2.0)
+        specifier: ^0.3.3
+        version: 0.3.3(react@18.2.0)
       '@hanzo/mq':
         specifier: ^5.71.2
         version: 5.71.2
@@ -1602,8 +1602,8 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
-  '@hanzo/event@0.3.1':
-    resolution: {integrity: sha512-FAA6C/+hP8woUdle9VxRZXreCpCa+K1zlZAVOT8HTYHu6QH37LJIG2KS5NXutx80haSwNPGooJJlZRvx9x07ug==}
+  '@hanzo/event@0.3.3':
+    resolution: {integrity: sha512-faooSLA2UR4N8B0hOcSuQk3yi48Dahp5IMTrQn/WdKQc4JkKGx0lmdASp7os80ita48VQUNheqF6lpdXIj6ZYQ==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
@@ -10770,7 +10770,7 @@ snapshots:
       protobufjs: 7.6.4
       yargs: 17.7.3
 
-  '@hanzo/event@0.3.1(react@18.2.0)':
+  '@hanzo/event@0.3.3(react@18.2.0)':
     optionalDependencies:
       react: 18.2.0
 
