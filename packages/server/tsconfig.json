@@ -19,9 +19,7 @@
 		"moduleResolution": "Bundler",
 		"jsx": "preserve",
 		"plugins": [{ "name": "next" }],
-		"outDir": "./dist",
-		/* Path Aliases */
-		"baseUrl": ".",
+    "outDir": "./dist",
 		"paths": {
 			"@dokploy/server/*": ["./src/*"]
 		}
