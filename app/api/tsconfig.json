@@ -7,8 +7,7 @@
 		"skipLibCheck": true,
 		"outDir": "dist",
 		"jsx": "react-jsx",
-		"jsxImportSource": "hono/jsx",
-		"baseUrl": ".",
+    "jsxImportSource": "hono/jsx",
 		"paths": {
 			"@/*": ["./*"],
 			"@hanzo/platform": ["../../pkg/platform/src/index.ts"],
