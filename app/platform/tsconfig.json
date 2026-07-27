@@ -23,9 +23,7 @@
 				"name": "next"
 			}
 		],
-		"incremental": true,
-		/* Path Aliases */
-		"baseUrl": ".",
+    "incremental": true,
 		"paths": {
 			"@/*": ["./*"],
 			"@hanzo/platform": ["../../pkg/platform/src/index.ts"],

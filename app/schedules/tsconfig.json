@@ -7,8 +7,7 @@
 		"skipLibCheck": true,
 		"outDir": "dist",
 		"jsx": "react-jsx",
-		"declaration": false,
-		"baseUrl": ".",
+    "declaration": false,
 		"paths": {
 			"@hanzo/platform": ["../../pkg/platform/src/index.ts"],
 			"@hanzo/platform/*": ["../../pkg/platform/src/*"]
