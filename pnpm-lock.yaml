@@ -164,6 +164,9 @@ importers:
       '@hanzo/event':
         specifier: ^0.3.1
         version: 0.3.1(react@18.2.0)
+      '@hanzo/mq':
+        specifier: ^5.71.2
+        version: 5.71.2
       '@hanzo/platform':
         specifier: workspace:*
         version: link:../../pkg/platform
@@ -311,9 +314,6 @@ importers:
       boxen:
         specifier: ^7.1.1
         version: 7.1.1
-      bullmq:
-        specifier: 5.67.3
-        version: 5.67.3
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -579,6 +579,12 @@ importers:
 
   app/schedules:
     dependencies:
+      '@hanzo/kv':
+        specifier: ^0.4.1
+        version: 0.4.1
+      '@hanzo/mq':
+        specifier: ^5.71.2
+        version: 5.71.2
       '@hanzo/platform':
         specifier: workspace:*
         version: link:../../pkg/platform
@@ -588,9 +594,6 @@ importers:
       '@hono/zod-validator':
         specifier: 0.7.6
         version: 0.7.6(hono@4.12.26)(zod@4.4.3)
-      bullmq:
-        specifier: 5.67.3
-        version: 5.67.3
       dotenv:
         specifier: ^16.6.1
         version: 16.6.1
@@ -600,9 +603,6 @@ importers:
       hono:
         specifier: ^4.12.26
         version: 4.12.26
-      ioredis:
-        specifier: 5.4.1
-        version: 5.4.1
       pino:
         specifier: 9.4.0
         version: 9.4.0
@@ -1628,6 +1628,28 @@ packages:
       react:
         optional: true
 
+  '@hanzo/kv-commands@0.1.1':
+    resolution: {integrity: sha512-6hCH69HcA3EbFhPUgK445VwbcY/qoneaHGv+DRRdKVNzLDsewigcMWCyE7+XT7CdNYs/yFwCTBZKI4DBTIf1nA==}
+
+  '@hanzo/kv-errors@1.2.2':
+    resolution: {integrity: sha512-Lzf7vw1WXiS/8FqzdxLGcgocKzm4B9KgUy7rDQUuMJ17O3TfHIOEa1npVrkdXrNT022ji5S6nesAiOLp8gjEQw==}
+
+  '@hanzo/kv-parser@3.0.2':
+    resolution: {integrity: sha512-bEfP1pfzUaau1j67WODNL92n71gCDq1w+6gjArhBzGgCp1HbA8tFN8S4ajoavE7Gws/ccm7W1lXSF4ToEUsppg==}
+
+  '@hanzo/kv@0.4.1':
+    resolution: {integrity: sha512-gIMxg5lpiLPUkEPqqhzY6nAbGl8RzJD0HhiV6GgBIbsXM2vgaLzNUw3ot6/AoOwIg/nlVFZghabYMcRcn+1kdg==}
+    engines: {node: '>=18.12.0'}
+
+  '@hanzo/mq@5.71.2':
+    resolution: {integrity: sha512-LoGeKW1cVoe4dtCRWrmXMsHWlVGX9p4BOLBpK0rl2KOKhWrtJ507f9IuJFTUYh7t9cWbqxsa4eGSU5oDrbNCQQ==}
+    engines: {node: '>=12.22.0'}
+    peerDependencies:
+      redis: '>=5.0.0'
+    peerDependenciesMeta:
+      redis:
+        optional: true
+
   '@hanzo/ui@5.6.1':
     resolution: {integrity: sha512-EQuObXit5ZTW09D3p3Zw29ZeA19EtehulN0w9gw9H0fi5iZVqKwL1VGMEud9jOi6Ez2XIfk403MPwgwnMySOcA==}
     deprecated: → @hanzo/ui-shadcn; @hanzo/ui@8 is the @hanzo/gui unified lib
@@ -1894,12 +1916,6 @@ packages:
 
   '@inngest/ai@0.1.7':
     resolution: {integrity: sha512-5xWatW441jacGf9czKEZdgAmkvoy7GS2tp7X8GSbdGeRXzjisHR6vM+q8DQbv6rqRsmQoCQ5iShh34MguELvUQ==}
-
-  '@ioredis/commands@1.10.0':
-    resolution: {integrity: sha512-UmeW7z4LfctwoQ5wkhVzgq8tXkreED2xZGpX+Bg+zA+WJFZCT6c062AfCK/Dfk81xZnnwdhJCUMkitihRaoC2Q==}
-
-  '@ioredis/commands@1.5.0':
-    resolution: {integrity: sha512-eUgLqrMf8nJkZxT24JvVRrQya1vZkQh8BBeYNwGDqa5I0VUi8ACx7uFvAaLxintokpTenkK6DASvo/bvNbBGow==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -5502,9 +5518,6 @@ packages:
     resolution: {integrity: sha512-lHblz4ahamxpTmnsk+MNTRWsjYKv965MwOrSJyeD588rR3Jcu7swE+0wN5F+PbL5cjgu/9ObkhfzEPuofEMwLA==}
     engines: {node: '>=10.0.0'}
 
-  bullmq@5.67.3:
-    resolution: {integrity: sha512-eeQobOJn8M0Rj8tcZCVFLrimZgJQallJH1JpclOoyut2nDNkDwTEPMVcZzLeSR2fGeIVbfJTjU96F563Qkge5A==}
-
   bundle-name@4.1.0:
     resolution: {integrity: sha512-tjwM5exMg6BGRI+kNmTntNsvdZS1X8BFYS6tnJ2hdH0kVxM6/eVZ2xy+FqStSWvYmtfFMDLIxurorHwDKfDz5Q==}
     engines: {node: '>=18'}
@@ -7131,14 +7144,6 @@ packages:
   invariant@2.2.4:
     resolution: {integrity: sha512-phJfQVBuaJM5raOpJjSfkiD6BpbCE4Ns//LaXl6wGYtUBY83nWS6Rf9tXm2e8VaK60JEjYldbPif/A2B1C2gNA==}
 
-  ioredis@5.4.1:
-    resolution: {integrity: sha512-2YZsvl7jopIa1gaePkeMtd9rAcSjOOjPtpcLlOeusyO+XH2SK5ZcT+UCrElPP+WVIInh2TzeI4XW9ENaSLVVHA==}
-    engines: {node: '>=12.22.0'}
-
-  ioredis@5.9.2:
-    resolution: {integrity: sha512-tAAg/72/VxOUW7RQSX1pIxJVucYKcjFjfvj60L57jrZpYCHC3XN0WCQ3sNYL4Gmvv+7GPvTAjc+KSdeNuE8oWQ==}
-    engines: {node: '>=12.22.0'}
-
   ip-address@10.2.0:
     resolution: {integrity: sha512-/+S6j4E9AHvW9SWMSEY9Xfy66O5PWvVEJ08O0y5JGyEKQpojb0K0GKpz/v5HJ/G0vi3D2sjGK78119oXZeE0qA==}
     engines: {node: '>= 12'}
@@ -8730,14 +8735,6 @@ packages:
       react: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  redis-errors@1.2.0:
-    resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
-    engines: {node: '>=4'}
-
-  redis-parser@3.0.0:
-    resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
-    engines: {node: '>=4'}
-
   redis@4.7.0:
     resolution: {integrity: sha512-zvmkHEAdGMn+hMRXuMBtu4Vo5P6rHQjLoHftu+lBqq8ZTA3RCVC/WzD790bkKKiNFp7d5/9PcSD19fJyyRvOdQ==}
 
@@ -8900,8 +8897,8 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  semver@7.8.5:
-    resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
+  semver@7.8.1:
+    resolution: {integrity: sha512-rkVq3IXh+4FDGch+KwzX3aV9W3kO54GyEgpvBzSyctDA6Xtd7RJQV1xmXbeQp5v7+VzLOfVqiutSE6GICgPFvg==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -9561,10 +9558,6 @@ packages:
   utils-merge@1.0.1:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
-
-  uuid@11.1.0:
-    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
-    hasBin: true
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
@@ -10797,6 +10790,39 @@ snapshots:
     optionalDependencies:
       react: 18.2.0
 
+  '@hanzo/kv-commands@0.1.1': {}
+
+  '@hanzo/kv-errors@1.2.2': {}
+
+  '@hanzo/kv-parser@3.0.2':
+    dependencies:
+      '@hanzo/kv-errors': 1.2.2
+
+  '@hanzo/kv@0.4.1':
+    dependencies:
+      '@hanzo/kv-commands': 0.1.1
+      '@hanzo/kv-errors': 1.2.2
+      '@hanzo/kv-parser': 3.0.2
+      cluster-key-slot: 1.1.2
+      debug: 4.4.3
+      denque: 2.1.0
+      lodash.defaults: 4.2.0
+      lodash.isarguments: 3.1.0
+      standard-as-callback: 2.1.0
+    transitivePeerDependencies:
+      - supports-color
+
+  '@hanzo/mq@5.71.2':
+    dependencies:
+      '@hanzo/kv': 0.4.1
+      cron-parser: 4.9.0
+      msgpackr: 1.11.5
+      node-abort-controller: 3.1.1
+      semver: 7.8.1
+      tslib: 2.8.1
+    transitivePeerDependencies:
+      - supports-color
+
   '@hanzo/ui@5.6.1(@hookform/resolvers@5.4.0(react-hook-form@7.71.2(react@18.2.0)))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@tanstack/react-query@5.101.0(react@18.2.0))(@tanstack/react-table@8.21.3(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(@types/react-dom@18.3.0)(@types/react@18.3.5)(date-fns@3.6.0)(embla-carousel@8.6.0)(lucide-react@0.469.0(react@18.2.0))(mobx@6.15.0)(next-themes@0.2.1(next@16.1.6(@opentelemetry/api@1.9.1)(@playwright/test@1.61.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(next@16.1.6(@opentelemetry/api@1.9.1)(@playwright/test@1.61.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-day-picker@8.10.1(date-fns@3.6.0)(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react-hook-form@7.71.2(react@18.2.0))(react@18.2.0)(recharts@2.15.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(tailwindcss@3.4.19(tsx@4.22.4)(yaml@2.8.1))(validator@13.15.26)':
     dependencies:
       '@hookform/resolvers': 5.4.0(react-hook-form@7.71.2(react@18.2.0))
@@ -11010,10 +11036,6 @@ snapshots:
     dependencies:
       '@types/node': 22.19.21
       typescript: 5.9.3
-
-  '@ioredis/commands@1.10.0': {}
-
-  '@ioredis/commands@1.5.0': {}
 
   '@isaacs/cliui@8.0.2':
     dependencies:
@@ -11881,7 +11903,7 @@ snapshots:
       '@opentelemetry/instrumentation': 0.57.2(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.28.0
       forwarded-parse: 2.1.2
-      semver: 7.8.5
+      semver: 7.7.3
     transitivePeerDependencies:
       - supports-color
 
@@ -12082,7 +12104,7 @@ snapshots:
       '@types/shimmer': 1.2.0
       import-in-the-middle: 1.15.0
       require-in-the-middle: 7.5.2
-      semver: 7.8.5
+      semver: 7.7.3
       shimmer: 1.2.1
     transitivePeerDependencies:
       - supports-color
@@ -12227,7 +12249,7 @@ snapshots:
       '@opentelemetry/propagator-b3': 1.30.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/propagator-jaeger': 1.30.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base': 1.30.1(@opentelemetry/api@1.9.1)
-      semver: 7.8.5
+      semver: 7.7.3
 
   '@opentelemetry/semantic-conventions@1.28.0': {}
 
@@ -14773,7 +14795,7 @@ snapshots:
       '@typescript-eslint/visitor-keys': 8.61.1
       debug: 4.4.3
       minimatch: 10.2.5
-      semver: 7.8.5
+      semver: 7.7.3
       tinyglobby: 0.2.17
       ts-api-utils: 2.5.0(typescript@5.9.3)
       typescript: 5.9.3
@@ -15356,18 +15378,6 @@ snapshots:
 
   buildcheck@0.0.7:
     optional: true
-
-  bullmq@5.67.3:
-    dependencies:
-      cron-parser: 4.9.0
-      ioredis: 5.9.2
-      msgpackr: 1.11.5
-      node-abort-controller: 3.1.1
-      semver: 7.7.3
-      tslib: 2.8.1
-      uuid: 11.1.0
-    transitivePeerDependencies:
-      - supports-color
 
   bundle-name@4.1.0:
     dependencies:
@@ -16843,34 +16853,6 @@ snapshots:
   invariant@2.2.4:
     dependencies:
       loose-envify: 1.4.0
-
-  ioredis@5.4.1:
-    dependencies:
-      '@ioredis/commands': 1.10.0
-      cluster-key-slot: 1.1.2
-      debug: 4.4.3
-      denque: 2.1.0
-      lodash.defaults: 4.2.0
-      lodash.isarguments: 3.1.0
-      redis-errors: 1.2.0
-      redis-parser: 3.0.0
-      standard-as-callback: 2.1.0
-    transitivePeerDependencies:
-      - supports-color
-
-  ioredis@5.9.2:
-    dependencies:
-      '@ioredis/commands': 1.5.0
-      cluster-key-slot: 1.1.2
-      debug: 4.4.3
-      denque: 2.1.0
-      lodash.defaults: 4.2.0
-      lodash.isarguments: 3.1.0
-      redis-errors: 1.2.0
-      redis-parser: 3.0.0
-      standard-as-callback: 2.1.0
-    transitivePeerDependencies:
-      - supports-color
 
   ip-address@10.2.0: {}
 
@@ -18585,12 +18567,6 @@ snapshots:
       tiny-invariant: 1.3.3
       victory-vendor: 36.9.2
 
-  redis-errors@1.2.0: {}
-
-  redis-parser@3.0.0:
-    dependencies:
-      redis-errors: 1.2.0
-
   redis@4.7.0:
     dependencies:
       '@redis/bloom': 1.2.0(@redis/client@1.6.0)
@@ -18784,7 +18760,7 @@ snapshots:
 
   semver@7.7.3: {}
 
-  semver@7.8.5: {}
+  semver@7.8.1: {}
 
   send@1.2.1:
     dependencies:
@@ -19574,8 +19550,6 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   utils-merge@1.0.1: {}
-
-  uuid@11.1.0: {}
 
   uuid@9.0.1: {}
 
