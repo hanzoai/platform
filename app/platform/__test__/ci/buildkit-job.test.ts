@@ -166,6 +166,63 @@ describe("buildkitArgs", () => {
 	});
 });
 
+describe("per-org push credential", () => {
+	// Registries never mix. The credential is DERIVED from the destination image
+	// rather than configured, so there is no way to point a build at the wrong
+	// org's token by hand. It also replaced a hardcoded `kaniko-ghcr`, which only
+	// ever existed in the `hanzo` namespace and would not have mounted at all
+	// once builds moved into `hanzo-build`.
+	const secretOf = (image: string) => {
+		const j = buildBuildkitJob({
+			repo: "o/r",
+			gitRef: "main",
+			image,
+			buildJobId: "j",
+		});
+		const vols = j.spec.template.spec.volumes as Vol[];
+		return vols.find((v) => v.name === "docker-config")?.secret;
+	};
+
+	it("mounts push-<org> for each org, keyed to project .dockerconfigjson", () => {
+		expect(secretOf("ghcr.io/hanzoai/pricing:v1")?.secretName).toBe(
+			"push-hanzoai",
+		);
+		expect(secretOf("ghcr.io/luxfi/node:v1.36.35")?.secretName).toBe(
+			"push-luxfi",
+		);
+		expect(secretOf("ghcr.io/zooai/app:v1")?.secretName).toBe("push-zooai");
+		expect(secretOf("ghcr.io/hanzoai/pricing:v1")?.items).toEqual([
+			{ key: ".dockerconfigjson", path: "config.json" },
+		]);
+	});
+
+	it("mounts exactly ONE registry credential (no cross-org token in the pod)", () => {
+		const j = buildBuildkitJob({
+			repo: "luxfi/node",
+			gitRef: "refs/tags/v1.36.35",
+			image: "ghcr.io/luxfi/node:v1.36.35",
+			buildJobId: "j",
+		});
+		const names = (j.spec.template.spec.volumes as Vol[])
+			.map((v) => v.secret?.secretName)
+			.filter((n): n is string => !!n && n.startsWith("push-"));
+		expect(names).toEqual(["push-luxfi"]);
+	});
+
+	it("REFUSES an image with no derivable org rather than guessing one", () => {
+		// A silent fallback here is how a build ends up pushing with another org's
+		// token; the caller must see this immediately.
+		expect(() =>
+			buildBuildkitJob({
+				repo: "o/r",
+				gitRef: "main",
+				image: "pricing:v1",
+				buildJobId: "j",
+			}),
+		).toThrow(/Cannot derive a push credential/);
+	});
+});
+
 describe("buildkitWrapperScript", () => {
 	it("is the proven netrc→exec wrapper with no fleet registry", () => {
 		const s = buildkitWrapperScript();
@@ -228,7 +285,7 @@ describe("buildBuildkitJob", () => {
 		);
 		expect(gitEnv?.valueFrom?.secretKeyRef.name).toBe("console-git-token");
 		// No fleet registry → the proven single-secret mount, unchanged.
-		expect((pod.volumes as Vol[])[0]!.secret?.secretName).toBe("kaniko-ghcr");
+		expect((pod.volumes as Vol[])[0]!.secret?.secretName).toBe("push-hanzoai");
 		expect((container.volumeMounts as Mount[])[0]!.mountPath).toBe(
 			"/root/.docker",
 		);
@@ -263,7 +320,7 @@ describe("buildBuildkitJob — fleet dual-push wiring", () => {
 	);
 
 	it("mounts BOTH the GHCR and the KMS-synced fleet cred", () => {
-		expect(vols["ghcr-cred"]!.secret?.secretName).toBe("kaniko-ghcr");
+		expect(vols["ghcr-cred"]!.secret?.secretName).toBe("push-hanzoai");
 		expect(vols["fleet-cred"]!.secret?.secretName).toBe("registry-credentials");
 		expect(vols["fleet-cred"]!.secret?.items[0]!.key).toBe(".dockerconfigjson");
 		expect(mounts["ghcr-cred"]).toBe("/tmp/ghcr-cred");
@@ -277,10 +334,13 @@ describe("buildBuildkitJob — fleet dual-push wiring", () => {
 		expect(container.args[0]!).toContain("printf '{\"auths\":{%s,%s}}'");
 	});
 
-	it("NEVER duplicates the fleet cred into kaniko-ghcr (one canonical home)", () => {
-		// registry-credentials stays the sole home for the fleet cred; kaniko-ghcr
-		// carries only the GHCR config.json — same DRY split the ci reusable uses.
-		expect(vols["ghcr-cred"]!.secret?.items[0]!.key).toBe("config.json");
+	it("NEVER duplicates the fleet cred into the push secret (one canonical home)", () => {
+		// registry-credentials stays the sole home for the fleet cred; the per-org
+		// push secret carries only the GHCR cred — same DRY split the ci reusable
+		// uses. The push secrets store it under `.dockerconfigjson` and project it
+		// to the `config.json` filename BuildKit reads.
+		expect(vols["ghcr-cred"]!.secret?.items[0]!.key).toBe(".dockerconfigjson");
+		expect(vols["ghcr-cred"]!.secret?.items[0]!.path).toBe("config.json");
 		const fleetInGhcr = JSON.stringify(vols["ghcr-cred"]).includes(
 			"registry-credentials",
 		);
