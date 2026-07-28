@@ -59,6 +59,25 @@ export function fleetRegistryHost(): string | undefined {
 	return h ? h : undefined;
 }
 
+/**
+ * The namespace build Jobs run in. ONE seam — `PLATFORM_BUILD_NS` — with the
+ * isolated build namespace as the default.
+ *
+ * It must NOT default to `hanzo`. `hanzo` is the APPLICATION namespace: it holds
+ * every tenant Secret in the estate, and a build executes a Dockerfile we did not
+ * write. `hanzo-build` exists precisely to keep those apart — it carries no
+ * secrets, denies all ingress, and its egress policy blocks the internal cluster
+ * ranges and the cloud-metadata IP (see hanzoai/universe
+ * infra/k8s/hanzo-build/). Defaulting here to `hanzo` silently undid that
+ * isolation for every platform-launched build, and it is also why the first
+ * self-service enqueue was refused: the platform-app ServiceAccount is granted
+ * job-create in `hanzo-build`, not in `hanzo`.
+ */
+export function buildNamespace(): string {
+	const ns = process.env.PLATFORM_BUILD_NS?.trim();
+	return ns ? ns : "hanzo-build";
+}
+
 /** Materialize ~/.netrc from GIT_AUTH_TOKEN so a Dockerfile can clone private repos. */
 const NETRC_SETUP =
 	'printf "machine github.com login x-access-token password %s\\n" "$GIT_AUTH_TOKEN" > /tmp/netrc';
@@ -132,7 +151,7 @@ export interface BuildJobLaunchInput {
 	arch?: BuildArch;
 	/** Stable correlation id (the buildJob id) baked into the Job name + labels. */
 	buildJobId: string;
-	/** Namespace to launch in. Default `hanzo`. */
+	/** Namespace to launch in. Default `buildNamespace()` (`hanzo-build`). */
 	namespace?: string;
 	/** Override the resource envelope (large repos like platform need more). */
 	resources?: BuildResources;
@@ -296,7 +315,7 @@ function dockerAuthWiring(fleetHost?: string): {
 
 /** Build the BuildKit Job object — pure (no IO), so its shape is unit-testable. */
 export function buildBuildkitJob(input: BuildJobLaunchInput) {
-	const namespace = input.namespace ?? "hanzo";
+	const namespace = input.namespace ?? buildNamespace();
 	const arch = input.arch ?? "amd64";
 	const name = buildJobName(input.repo, input.buildJobId);
 	const resources = input.resources ?? DEFAULT_RESOURCES;
@@ -383,7 +402,7 @@ export async function launchBuildJob(
 		fleetRegistryHost: input.fleetRegistryHost ?? fleetRegistryHost(),
 	};
 	const job = buildBuildkitJob(resolved);
-	const namespace = resolved.namespace ?? "hanzo";
+	const namespace = resolved.namespace ?? buildNamespace();
 	const clients = getDefaultClients();
 	try {
 		await clients.batch.createNamespacedJob({ namespace, body: job as never });
