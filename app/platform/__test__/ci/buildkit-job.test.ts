@@ -3,8 +3,9 @@ import {
 	buildJobName,
 	buildkitArgs,
 	buildkitWrapperScript,
+	buildNamespace,
 } from "@hanzo/platform/services/ci/buildkit-job";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 type Vol = {
 	name: string;
@@ -254,6 +255,50 @@ type EnvRef = {
 		secretKeyRef: { name: string; key: string; optional?: boolean };
 	};
 };
+
+/**
+ * The build namespace is the isolation boundary, and its DEFAULT is the whole
+ * guarantee: `hanzo` is the application namespace holding ~700 tenant Secrets,
+ * `hanzo-build` holds only build creds and denies ingress. A build executes a
+ * Dockerfile we did not write, so defaulting to `hanzo` silently voids the
+ * isolation — and it is also why the first self-service enqueue was refused 403
+ * (platform-app has job-create in `hanzo-build` only). It regressed once as an
+ * unasserted default; pin it so it cannot regress silently again.
+ */
+describe("buildNamespace", () => {
+	const saved = process.env.PLATFORM_BUILD_NS;
+	afterEach(() => {
+		if (saved === undefined) delete process.env.PLATFORM_BUILD_NS;
+		else process.env.PLATFORM_BUILD_NS = saved;
+	});
+
+	it("defaults to the isolated build namespace, NEVER the app namespace", () => {
+		delete process.env.PLATFORM_BUILD_NS;
+		expect(buildNamespace()).toBe("hanzo-build");
+		expect(buildNamespace()).not.toBe("hanzo");
+	});
+
+	it("treats an unset/blank override as absent rather than as a namespace", () => {
+		process.env.PLATFORM_BUILD_NS = "   ";
+		expect(buildNamespace()).toBe("hanzo-build");
+	});
+
+	it("honours an explicit override", () => {
+		process.env.PLATFORM_BUILD_NS = "hanzo-build-arm64";
+		expect(buildNamespace()).toBe("hanzo-build-arm64");
+	});
+
+	it("lands the Job in the isolated namespace when no namespace is passed", () => {
+		delete process.env.PLATFORM_BUILD_NS;
+		const j = buildBuildkitJob({
+			repo: "luxfi/node",
+			gitRef: "refs/tags/v1.36.35",
+			image: "ghcr.io/luxfi/node:v1.36.35",
+			buildJobId: "nsdefault1",
+		});
+		expect(j.metadata.namespace).toBe("hanzo-build");
+	});
+});
 
 describe("buildBuildkitJob", () => {
 	const job = buildBuildkitJob({
