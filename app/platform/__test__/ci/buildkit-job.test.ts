@@ -60,6 +60,38 @@ describe("buildkitArgs", () => {
 		expect(args.some((a) => a.startsWith("--opt=target="))).toBe(false);
 	});
 
+	// Regression: without KEEP_GIT_DIR, BuildKit's git context has no .git, so a
+	// Dockerfile's `git describe --tags` fails and the version silently falls back
+	// to a checked-in (stale) file. The image is then tagged with the NEW version
+	// while the binary reports an OLD one — a rollout that reads as a downgrade.
+	// A luxfi/node build without this printed "Building Lux Node v1.32.11" while
+	// building the v1.36.33 tag.
+	it("keeps the .git dir in the context by default", () => {
+		const args = buildkitArgs({
+			repo: "luxfi/node",
+			gitRef: "refs/tags/v1.36.35",
+			image: "ghcr.io/luxfi/node:v1.36.35",
+			buildJobId: "j1",
+		});
+		expect(args).toContain("--opt=build-arg:BUILDKIT_CONTEXT_KEEP_GIT_DIR=1");
+	});
+
+	it("lets an explicit buildArg override the KEEP_GIT_DIR default exactly once", () => {
+		const args = buildkitArgs({
+			repo: "o/r",
+			gitRef: "main",
+			image: "i:t",
+			buildJobId: "j",
+			buildArgs: { BUILDKIT_CONTEXT_KEEP_GIT_DIR: "0" },
+		});
+		const emitted = args.filter((a) =>
+			a.startsWith("--opt=build-arg:BUILDKIT_CONTEXT_KEEP_GIT_DIR="),
+		);
+		// exactly one — the caller's — so precedence is explicit rather than a bet
+		// on which duplicate `--opt` BuildKit happens to keep.
+		expect(emitted).toEqual(["--opt=build-arg:BUILDKIT_CONTEXT_KEEP_GIT_DIR=0"]);
+	});
+
 	it("strips a leading ./ from the dockerfile", () => {
 		const args = buildkitArgs({
 			repo: "o/r",

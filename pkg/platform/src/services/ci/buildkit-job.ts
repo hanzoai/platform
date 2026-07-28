@@ -204,7 +204,28 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 		args.push(`--opt=context-subdir=${input.context}`);
 	}
 	if (input.dockerTarget) args.push(`--opt=target=${input.dockerTarget}`);
-	for (const [k, v] of Object.entries(input.buildArgs ?? {})) {
+	// Keep the .git directory in the build context. NOT cosmetic, and the single
+	// most expensive omission this builder can make: BuildKit's git context
+	// exports a WORKTREE with no .git by default, so any Dockerfile that derives
+	// its version from the repo (`git describe --tags`, the near-universal Go
+	// pattern — luxfi/node's scripts/git_commit.sh is the case that burned us)
+	// silently fails the describe and falls through to a checked-in version file
+	// that is usually stale. The image is then TAGGED with the right version
+	// while the BINARY self-reports an old one, so an operator verifying a
+	// rollout reads a downgrade and concludes the deploy failed. Proven: a
+	// luxfi/node Job without this printed "Building Lux Node v1.32.11" while
+	// building the v1.36.33 tag.
+	//
+	// It is a DEFAULT, not a hard-code: it is emitted only when the caller did
+	// not state the key itself, so an explicit buildArgs entry is the one that
+	// ships. That is an explicit precedence rather than a bet on which duplicate
+	// `--opt` BuildKit keeps. Harmless for repos that ignore it (they just carry
+	// a .git they never read).
+	const buildArgs = input.buildArgs ?? {};
+	if (!("BUILDKIT_CONTEXT_KEEP_GIT_DIR" in buildArgs)) {
+		args.push("--opt=build-arg:BUILDKIT_CONTEXT_KEEP_GIT_DIR=1");
+	}
+	for (const [k, v] of Object.entries(buildArgs)) {
 		args.push(`--opt=build-arg:${k}=${v}`);
 	}
 	// Dual-push when a fleet registry is set: BuildKit's image exporter takes a
