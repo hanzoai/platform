@@ -286,8 +286,10 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
  * Docker-registry auth wiring for the build pod — pure, so its shape is
  * unit-testable. Two shapes, selected by whether a fleet registry is set:
  *
- *  - none: the PROVEN single-secret mount — `kaniko-ghcr` (its `config.json`) at
- *    `/root/.docker` (the `DOCKER_CONFIG` dir). Byte-identical to the original.
+ *  - none: a single-secret mount — the caller's `pushSecret` (`push-<org>`,
+ *    projected to `config.json`) at `/root/.docker` (the `DOCKER_CONFIG` dir).
+ *    Same shape as the proven hand-applied Job, which mounted the shared
+ *    `kaniko-ghcr` here; only WHICH secret is mounted changed.
  *  - fleet: dual-push needs BOTH the GHCR cred and the fleet cred in ONE docker
  *    config, so both secrets mount read-only and `DOCKER_CONFIG` is a writable
  *    `emptyDir` the wrapper composes into (see `buildkitWrapperScript`).
