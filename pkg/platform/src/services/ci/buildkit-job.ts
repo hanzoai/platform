@@ -17,8 +17,9 @@
  * `dockerfile.v0` frontend over an HTTPS git context, pushing to
  * `--output=type=image,…,push=true`. Git auth comes from `console-git-token`
  * (the `GIT_AUTH_TOKEN` env BuildKit reads for an authenticated git context),
- * registry auth from `kaniko-ghcr` mounted at `/root/.docker`, scheduled onto
- * the `runner-pool-32g` CI pool (tainted `dedicated=ci-runner`). Bridging the
+ * registry auth from the per-org `push-<org>` secret mounted at `/root/.docker`,
+ * scheduled onto the `runner-pool-32g` CI pool (tainted `dedicated=ci-runner`).
+ * Bridging the
  * scheduler to this is what makes platform-native builds REAL — no human
  * applying Job YAML by hand.
  *
@@ -30,20 +31,32 @@
  */
 import { TRPCError } from "@trpc/server";
 import { getDefaultClients } from "../k8s/k8s-client";
-import { withRegistryHost } from "./image-ref";
+import { pushSecretForImage, withRegistryHost } from "./image-ref";
 import type { BuildArch } from "./platform-config";
 
 /** BuildKit executor image — the canonical in-cluster builder (proven contract). */
 const BUILDKIT_IMAGE = "moby/buildkit:v0.16.0";
 /** Secret (key `token`) used to clone private repos via the git context. */
 const GIT_SECRET = "console-git-token";
-/** Secret (key `config.json`) holding the GHCR push credential, mounted at /root/.docker. */
-const DOCKER_CONFIG_SECRET = "kaniko-ghcr";
+/**
+ * GHCR push credentials are PER ORG (`push-hanzoai` / `push-luxfi` /
+ * `push-zooai`), derived from the destination image by `pushSecretForImage` —
+ * never a single shared secret. A build mounts exactly one, so a token stolen
+ * from a hanzo build cannot push to ghcr.io/luxfi.
+ *
+ * This replaced a hardcoded `kaniko-ghcr`, which existed only in the `hanzo`
+ * namespace and so did not survive the move of builds into `hanzo-build` — the
+ * pod would have failed to mount a secret that is not there.
+ *
+ * The push secrets store a dockerconfigjson under `.dockerconfigjson`, which is
+ * projected to the `config.json` filename BuildKit reads.
+ */
+const PUSH_CRED_KEY = ".dockerconfigjson";
 /**
  * KMS-synced docker cred (key `.dockerconfigjson`) for the fleet registry
  * (`registry.hanzo.ai`) — the SAME secret the `hanzoai/ci` reusable reads. Only
- * mounted (alongside `kaniko-ghcr`) when a fleet registry is configured; the
- * fleet cred is NEVER duplicated into `kaniko-ghcr`, so `registry-credentials`
+ * mounted (alongside the per-org push cred) when a fleet registry is configured;
+ * the fleet cred is NEVER duplicated into a push secret, so `registry-credentials`
  * stays its one canonical home.
  */
 const FLEET_CRED_SECRET = "registry-credentials";
@@ -85,7 +98,7 @@ const NETRC_SETUP =
 /**
  * The `sh -c` wrapper the build container runs. Without a fleet registry it is
  * byte-identical to the proven Job (netrc → exec buildctl). With one, it also
- * merges the two mounted docker creds — `kaniko-ghcr` (GHCR) and
+ * merges the two mounted docker creds — `push-<org>` (GHCR) and
  * `registry-credentials` (fleet) — into the writable `DOCKER_CONFIG` before
  * exec, because k8s cannot merge two secrets into one file and BuildKit reads a
  * single `config.json`. The merge is jq-free (the builder image is busybox): both
@@ -279,13 +292,13 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
  *    config, so both secrets mount read-only and `DOCKER_CONFIG` is a writable
  *    `emptyDir` the wrapper composes into (see `buildkitWrapperScript`).
  */
-function dockerAuthWiring(fleetHost?: string): {
+function dockerAuthWiring(pushSecret: string, fleetHost?: string): {
 	volumeMounts: Array<{ mountPath: string; name: string; readOnly?: boolean }>;
 	volumes: Array<Record<string, unknown>>;
 } {
 	const ghcrCred = {
-		secretName: DOCKER_CONFIG_SECRET,
-		items: [{ key: "config.json", path: "config.json" }],
+		secretName: pushSecret,
+		items: [{ key: PUSH_CRED_KEY, path: "config.json" }],
 	};
 	if (!fleetHost) {
 		return {
@@ -319,7 +332,18 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 	const arch = input.arch ?? "amd64";
 	const name = buildJobName(input.repo, input.buildJobId);
 	const resources = input.resources ?? DEFAULT_RESOURCES;
-	const auth = dockerAuthWiring(input.fleetRegistryHost);
+	// Refuse rather than fall back: with no derivable org there is no correct
+	// credential to mount, and guessing one is how a build ends up pushing with
+	// another org's token. A caller sees this immediately; a silent default
+	// would surface much later as a cross-org push.
+	const pushSecret = pushSecretForImage(input.image);
+	if (!pushSecret) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Cannot derive a push credential from image "${input.image}": expected <registry>/<org>/<name>:<tag>`,
+		});
+	}
+	const auth = dockerAuthWiring(pushSecret, input.fleetRegistryHost);
 	const labels = {
 		"app.kubernetes.io/name": "build",
 		"app.kubernetes.io/managed-by": "platform",
