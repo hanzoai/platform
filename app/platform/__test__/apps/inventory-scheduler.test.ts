@@ -105,3 +105,34 @@ describe("inventory scheduler watchdog", () => {
 		expect(syncInventory).toHaveBeenCalledTimes(2);
 	});
 });
+
+describe("leading-run ordering", () => {
+	it("holds the first release pass until the first inventory pass has landed the repos", async () => {
+		const { startInventoryScheduler } = await loadScheduler();
+		let inventoryDone = false;
+		syncInventory.mockImplementation(
+			() =>
+				new Promise((r) =>
+					setTimeout(() => {
+						inventoryDone = true;
+						r({
+							observed: 1,
+							upserted: 1,
+							pruned: 0,
+							byCluster: { "hanzo-k8s": 1 },
+						});
+					}, TIMEOUT_MS / 2),
+				),
+		);
+		// The regression: a 5s timer ran this against an empty table.
+		syncReleases.mockImplementation(() => {
+			expect(inventoryDone).toBe(true);
+			return Promise.resolve({ repos: 1, updated: 1 });
+		});
+
+		startInventoryScheduler();
+		await wait(TIMEOUT_MS * 2);
+
+		expect(syncReleases).toHaveBeenCalled();
+	});
+});

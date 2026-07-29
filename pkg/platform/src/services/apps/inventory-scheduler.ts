@@ -138,20 +138,24 @@ export function startInventoryScheduler(): void {
 			`releases every ${RELEASE_INTERVAL_MS}ms)`,
 	);
 
-	// Inventory first so the apps table is populated before releases are read.
-	void runInventoryOnce();
 	const handle = setInterval(() => void runInventoryOnce(), INTERVAL_MS);
 	if (typeof handle.unref === "function") handle.unref();
 
-	// Release reader: a short initial delay lets the leading inventory pass land
-	// the repos first, then it ticks on its own slow cadence.
-	const kickReleases = setTimeout(() => {
+	// The release reader looks up the repos the INVENTORY pass discovers, so its
+	// leading run waits for that pass to FINISH — the dependency expressed as a
+	// dependency, not as a sleep. The old form guessed 5s, which on a fresh
+	// database (an empty `apps` table, e.g. right after a migration) ran against
+	// zero rows, logged `synced release meta for 0 repo(s)`, and then slept the
+	// full 10-minute interval with the board's third tag blank the whole time.
+	//
+	// Only the LEADING run is ordered. After that the two tick independently, so
+	// a stalled release pass can still never pace the cluster read.
+	void runInventoryOnce().then(() => {
 		void runReleasesOnce();
 		const rHandle = setInterval(
 			() => void runReleasesOnce(),
 			RELEASE_INTERVAL_MS,
 		);
 		if (typeof rHandle.unref === "function") rHandle.unref();
-	}, 5000);
-	if (typeof kickReleases.unref === "function") kickReleases.unref();
+	});
 }
