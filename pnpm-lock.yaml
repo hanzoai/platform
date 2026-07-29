@@ -25,8 +25,8 @@ importers:
   .:
     dependencies:
       '@hanzo/iam':
-        specifier: ^0.13.8
-        version: 0.13.8(react@18.2.0)
+        specifier: ^0.21.2
+        version: 0.21.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@hanzo/ui':
         specifier: link:../ui/pkg/ui
         version: link:../ui/pkg/ui
@@ -717,8 +717,8 @@ importers:
         specifier: ^8.4.1
         version: 8.4.1
       '@hanzo/iam':
-        specifier: ^0.13.1
-        version: 0.13.1(react@18.2.0)
+        specifier: ^0.21.2
+        version: 0.21.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@kubernetes/client-node':
         specifier: ^1.4.0
         version: 1.4.0
@@ -1400,11 +1400,11 @@ packages:
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild-kit/esm-loader@2.6.5':
     resolution: {integrity: sha512-FxEMIkJKnodyA1OaCUoEvbYRkoZlLZ4d/eXFu9Fh8CbBBgP5EmZxrfTRyN0qpXZ4vOvqnE5YdRdcrmUUXuU+dA==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild/aix-ppc64@0.20.2':
     resolution: {integrity: sha512-D+EBOJHXdNZcLJRBkhENNG8Wji2kgc9AZ9KiPr1JuZjsNtyHzrsfLRrY0tk2H2aoFu6RANO1y1iPPUCDYWkb5g==}
@@ -1610,22 +1610,16 @@ packages:
       react:
         optional: true
 
-  '@hanzo/iam@0.13.1':
-    resolution: {integrity: sha512-MAqXY7jL5pcPkaUE0Qb/ePL2WKvk3p6EQDLHGZENj+/gbNKs7e/9qG+nmRlPMFVcwXPk+suzkBAEyIMT2EiJ8w==}
+  '@hanzo/iam@0.21.2':
+    resolution: {integrity: sha512-yuk+di2VB02FQVHH2ggqOrJtEXiDLnKNOwkC6XMr+WAI8yzC0u/KqGhxn162jJRtYihvq9ykA428UfLgR2giHg==}
     engines: {node: '>=18'}
     peerDependencies:
       react: '>=17'
+      react-dom: '>=17'
     peerDependenciesMeta:
       react:
         optional: true
-
-  '@hanzo/iam@0.13.8':
-    resolution: {integrity: sha512-6D4lZSSuTBWV/bof5u5l6VEE0VZhNnpF99svirmHTRko5MsZ5sEd3+7xZ28KH0UL0oquvHwRJ6tkvn+E+f5YuQ==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      react: '>=17'
-    peerDependenciesMeta:
-      react:
+      react-dom:
         optional: true
 
   '@hanzo/kv-commands@0.1.1':
@@ -2755,6 +2749,7 @@ packages:
   '@opentelemetry/propagation-utils@0.30.16':
     resolution: {integrity: sha512-ZVQ3Z/PQ+2GQlrBfbMMMT0U7MzvYZLCPP800+ooyaBqm4hMvuQHfP028gB9/db0mwkmyEAMad9houukUVxhwcw==}
     engines: {node: '>=14'}
+    deprecated: The use of process spans has been removed from Messaging Semantic Conventions. It is now recommended to connect pub/sub spans via Span Links. See https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/ for details.
     peerDependencies:
       '@opentelemetry/api': ^1.0.0
 
@@ -10774,21 +10769,14 @@ snapshots:
     optionalDependencies:
       react: 18.2.0
 
-  '@hanzo/iam@0.13.1(react@18.2.0)':
+  '@hanzo/iam@0.21.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
       jose: 6.2.3
       libphonenumber-js: 1.13.7
       passport-oauth2: 1.8.0
     optionalDependencies:
       react: 18.2.0
-
-  '@hanzo/iam@0.13.8(react@18.2.0)':
-    dependencies:
-      jose: 6.2.3
-      libphonenumber-js: 1.13.7
-      passport-oauth2: 1.8.0
-    optionalDependencies:
-      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
 
   '@hanzo/kv-commands@0.1.1': {}
 
