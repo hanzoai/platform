@@ -1,6 +1,9 @@
 export * from "./account";
 export * from "./ai";
 export * from "./application";
+export * from "./apps";
+export * from "./apps-drift";
+export * from "./apps-summary";
 export * from "./audit-log";
 export * from "./backups";
 // Hanzo-specific schemas
@@ -51,5 +54,3 @@ export * from "./utils";
 export * from "./volume-backups";
 export * from "./wallet";
 export * from "./web-server-settings";
-export * from "./apps";
-export * from "./apps-drift";

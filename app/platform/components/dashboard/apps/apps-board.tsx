@@ -1,6 +1,14 @@
 "use client";
 
-import type { DriftSeverity } from "@hanzo/platform/db/schema";
+// Imported from the exact modules, NOT the `db/schema` barrel: the barrel pulls
+// every table in, including ones that reach for node builtins, and this is a
+// client component. `apps-summary` is pure by construction and carries only a
+// type-only edge to `apps-drift`, so nothing follows it into the bundle.
+import type { DriftSeverity } from "@hanzo/platform/db/schema/apps-drift";
+import {
+	type AppsSummary,
+	summarize,
+} from "@hanzo/platform/db/schema/apps-summary";
 import { ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -18,12 +26,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type {
-	AppHealth,
-	AppSync,
-	AppsSummary,
-	AppView,
-} from "@/server/apps/apps-api";
+import type { AppHealth, AppSync, AppView } from "@/server/apps/apps-api";
 
 /**
  * The fleet board — every app of every org, in ONE view.
@@ -230,6 +233,9 @@ export function AppsBoard({ apps, summary }: Props) {
 		() => (org ? apps.filter((a) => a.org === org) : apps),
 		[apps, org],
 	);
+	// Counted over what is ON SCREEN, by the SAME function the API uses, so the
+	// header can never describe a different set of rows than the table shows.
+	const counts = useMemo(() => summarize(rows), [rows]);
 
 	return (
 		<div className="flex flex-col gap-4 p-6">
@@ -243,12 +249,11 @@ export function AppsBoard({ apps, summary }: Props) {
 					</p>
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
-					<Badge variant="green">{summary.byDrift.ok} ok</Badge>
-					<Badge variant="yellow">{summary.byDrift.yellow} stale</Badge>
-					<Badge variant="red">{summary.byDrift.red} drift</Badge>
+					<Badge variant="green">{counts.byDrift.ok} ok</Badge>
+					<Badge variant="yellow">{counts.byDrift.yellow} stale</Badge>
+					<Badge variant="red">{counts.byDrift.red} drift</Badge>
 					<span className="text-muted-foreground text-xs">
-						{summary.bySync.drifted} out of sync · {summary.bySync.synced}{" "}
-						synced
+						{counts.bySync.drifted} out of sync · {counts.bySync.synced} synced
 					</span>
 				</div>
 			</div>
