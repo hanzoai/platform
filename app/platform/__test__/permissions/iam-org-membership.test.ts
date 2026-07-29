@@ -164,7 +164,7 @@ describe("isGlobalAdmin", () => {
 		).toBe(false);
 	});
 	it("uses claims.owner over the SDK fallback when sub is a UUID", () => {
-		// Real Casdoor user token: UUID sub → SDK owner falls back to 'unknown';
+		// Real IAM user token: UUID sub → SDK owner falls back to 'unknown';
 		// the true org is only in claims.owner.
 		expect(
 			resolveOwnerOrg(

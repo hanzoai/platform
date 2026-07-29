@@ -13,7 +13,7 @@ import * as schema from "../db/schema";
  * claims — NOT from Better Auth's (now empty) organization plugin.
  *
  * One way to answer "which orgs may this caller see and manage?":
- *   - the caller's home org is the IAM `owner` claim (the Casdoor org that
+ *   - the caller's home org is the IAM `owner` claim (the org that
  *     owns the `sub` = "org/username"); they are an `owner` of it.
  *   - a global admin (IAM `isGlobalAdmin`, or owned by the `admin` org per
  *     IAM_MIGRATION.md) is an `owner` of EVERY org the platform knows about,
@@ -29,13 +29,13 @@ import * as schema from "../db/schema";
 /** Owning org reserved by IAM for global administrators. */
 const GLOBAL_ADMIN_OWNER = "admin";
 
-/** Truthy across the JSON shapes Casdoor uses for booleans (`true`/"true"). */
+/** Truthy across the JSON shapes IAM uses for booleans (`true`/"true"). */
 const isTrue = (v: unknown): boolean => v === true || v === "true";
 
 /**
- * The caller's owning IAM org. The Casdoor token carries `owner` as a
+ * The caller's owning IAM org. The IAM token carries `owner` as a
  * TOP-LEVEL claim (e.g. "hanzo"), but @hanzo/iam's `ServerSession.owner` only
- * reflects the `sub` prefix and, when `sub` is a bare UUID (as Casdoor issues
+ * reflects the `sub` prefix and, when `sub` is a bare UUID (as IAM issues
  * for real users), falls back to `orgName ?? "unknown"` — dropping the real
  * org. So trust the explicit `claims.owner` first, then the SDK-derived
  * `identity.owner`. This is what keeps a@hanzo.ai in org "hanzo" instead of a
@@ -54,11 +54,11 @@ export const resolveOwnerOrg = (identity: ServerSession): string => {
 
 /**
  * Is this identity a global administrator? Independent signals, any sufficient:
- *   1. the `isGlobalAdmin` JWT claim Casdoor stamps on global admins, and
+ *   1. the `isGlobalAdmin` JWT claim IAM stamps on global admins, and
  *   2. ownership by the reserved `admin` org (the IAM_MIGRATION.md convention),
  *      read from the explicit owner claim (robust to the UUID-sub fallback).
  *
- * NOTE: Casdoor's `isAdmin` is an ORG-admin flag, NOT global — it is
+ * NOTE: IAM's `isAdmin` is an ORG-admin flag, NOT global — it is
  * deliberately not treated as global-admin here (an org admin manages only
  * their own org; their org-membership role already grants that).
  */
@@ -69,7 +69,7 @@ export const isGlobalAdmin = (identity: ServerSession): boolean =>
 /**
  * Resolve the platform `organization` row for an IAM org name, creating it on
  * first sight. The IAM org name is the stable key, stored in `slug` (which is
- * `unique`), so the same Casdoor org always maps to the same platform org row
+ * `unique`), so the same IAM org always maps to the same platform org row
  * regardless of display-name edits.
  *
  * `ownerId` is required and FKs into `user`; we seed it with the first user we
@@ -166,7 +166,7 @@ export const syncIamOrgMembership = async (
 	const now = new Date();
 	const global = isGlobalAdmin(identity);
 
-	// The home-org key — from the explicit `owner` claim (robust to Casdoor's
+	// The home-org key — from the explicit `owner` claim (robust to IAM's
 	// UUID `sub`, which makes the SDK's identity.owner fall back to "unknown").
 	// Fail closed rather than ever key an org on "" — an empty slug would
 	// collapse every owner-less principal into one shared org.
@@ -175,7 +175,7 @@ export const syncIamOrgMembership = async (
 		throw new Error("IAM identity has no owner claim; cannot resolve org");
 	}
 
-	// Home org: the caller's IAM owner. They own it (a Casdoor org member is
+	// Home org: the caller's IAM owner. They own it (an IAM org member is
 	// the operator of their own platform org). Global admins own it too.
 	const homeOrg = await ensureOrganization(ownerOrg, userId, now);
 	await ensureMembership(userId, homeOrg.id, "owner", now);

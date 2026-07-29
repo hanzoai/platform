@@ -64,7 +64,7 @@ tables remain but are populated FROM IAM. Build a real semver, deploy, Playwrigh
 login on `platform.hanzo.ai`.
 
 ## Stage 2 — orgs → IAM
-Map platform `organization` to the IAM (Casdoor) multi-tenant orgs (`s.owner`). Drop the
+Map platform `organization` to the IAM multi-tenant orgs (`s.owner`). Drop the
 better-auth `organization` plugin; org membership derives from IAM claims.
 
 ## Stage 3 — API keys → IAM
