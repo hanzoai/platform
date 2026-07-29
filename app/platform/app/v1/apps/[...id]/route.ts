@@ -15,11 +15,7 @@
  * /v1/apps/{id} by the App Router — no rewrite. Never /api/.
  */
 import { getApp } from "@/server/apps/apps-api";
-import {
-	headerValue,
-	queryValue,
-	requireServiceToken,
-} from "@/server/v1/http";
+import { headerValue, queryValue, requireServiceToken } from "@/server/v1/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,7 +43,10 @@ export async function GET(
 	try {
 		const app = await getApp(id, org);
 		if (!app) {
-			return Response.json({ message: `App not found: ${id}` }, { status: 404 });
+			return Response.json(
+				{ message: `App not found: ${id}` },
+				{ status: 404 },
+			);
 		}
 		return Response.json(app, { headers: { "Cache-Control": "no-cache" } });
 	} catch (err: unknown) {

@@ -20,11 +20,7 @@ import {
 	type AppsQuery,
 	listApps,
 } from "@/server/apps/apps-api";
-import {
-	headerValue,
-	queryValue,
-	requireServiceToken,
-} from "@/server/v1/http";
+import { headerValue, queryValue, requireServiceToken } from "@/server/v1/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
