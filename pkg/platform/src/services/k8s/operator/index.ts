@@ -181,21 +181,6 @@ export function applyDatastoreCR(
 	return applyCR(cr, opts);
 }
 
-/**
- * Apply a `Service` CR (kind=Service) to the cluster. Thin typed alias over
- * `serverApplyCR` (SERVER-SIDE APPLY) — a Service CR is shared with the operator,
- * so apply preserves the operator's fields. Used by the git→CR reconcile
- * (`services/apps/apply-declared`) to push each declared `hanzo.ai/v1` `Service`
- * from `hanzoai/universe` into the cluster, where the operator reconciles it
- * into a Deployment.
- */
-export function applyServiceCR(
-	cr: CustomResource<OperatorServiceSpec>,
-	opts: ApplyOptions = {},
-): Promise<void> {
-	return serverApplyCR(cr, opts);
-}
-
 // ---------------------------------------------------------------------------
 // Delete CR
 // ---------------------------------------------------------------------------
