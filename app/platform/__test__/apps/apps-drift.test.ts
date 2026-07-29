@@ -16,8 +16,8 @@ import { describe, expect, it } from "vitest";
 // Minimal observed row; each test overrides the tags/release fields it exercises.
 const row = (over: Partial<App>): App =>
 	({
-		id: "hanzoai/iam/main",
-		org: "hanzoai",
+		id: "hanzo-k8s/hanzo/iam",
+		org: "hanzo",
 		app: "iam",
 		env: "main",
 		repo: "hanzoai/iam",
@@ -28,6 +28,8 @@ const row = (over: Partial<App>): App =>
 		releaseUrl: null,
 		releaseAssets: 0,
 		health: null,
+		syncStatus: null,
+		syncRevision: null,
 		lastObserved: null,
 		cluster: "hanzo-k8s",
 		namespace: "hanzo",
@@ -170,5 +172,29 @@ describe("computeDrift", () => {
 		const app = row({ declaredTag: null, releaseUrl: null });
 		expect(computeDrift(app).flags).toEqual([]);
 		expect(computeDrift(app).severity).toBe("ok");
+	});
+});
+
+describe("the deployer's verdict", () => {
+	it("flags a drifted app: git and the live objects no longer agree", () => {
+		const d = computeDrift(row({ syncStatus: "drifted" }));
+		expect(d.flags.map((f) => f.kind)).toEqual(["unsynced"]);
+		expect(d.severity).toBe("yellow");
+	});
+	it("does NOT flag a synced app", () => {
+		expect(kinds(row({ syncStatus: "synced" }))).toEqual([]);
+	});
+	it("does NOT invent drift from missing evidence (unknown / unmanaged)", () => {
+		expect(kinds(row({ syncStatus: "unknown" }))).toEqual([]);
+		expect(kinds(row({ syncStatus: null }))).toEqual([]);
+	});
+	it("never outranks a hard red: a floating tag stays red while drifted", () => {
+		const d = computeDrift(
+			row({ declaredTag: "sha-abc1234", syncStatus: "drifted" }),
+		);
+		expect(d.severity).toBe("red");
+		expect(d.flags.map((f) => f.kind)).toEqual(
+			expect.arrayContaining(["floating-declared", "unsynced"]),
+		);
 	});
 });

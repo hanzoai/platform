@@ -42,7 +42,7 @@ export function imageOrg(ref: string): string | undefined {
 	const parts = repo.split("/");
 	// [host, org, name…] — an org only exists when a host is present.
 	if (parts.length < 3) return undefined;
-	const host = parts[0];
+	const host = parts[0] ?? "";
 	if (!(host.includes(".") || host.includes(":") || host === "localhost")) {
 		return undefined;
 	}
