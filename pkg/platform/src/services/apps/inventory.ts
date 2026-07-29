@@ -460,20 +460,10 @@ export async function resolveOrganizationId(
 export interface SyncResult {
 	observed: number;
 	upserted: number;
-	/** Rows deleted because their CR no longer exists in the cluster. */
+	/** Rows deleted because their app no longer exists on that cluster. */
 	pruned: number;
-	cluster: string;
-}
-
-/**
- * Observe ONE directly-readable cluster and write it. Kept as its own entry
- * point for tests and for a single-cluster refresh; the fleet pass is
- * `syncInventory`.
- */
-export async function syncTarget(
-	target: ClusterTarget = DEFAULT_TARGETS[0]!,
-): Promise<SyncResult> {
-	return persist(await discoverApps(target), [target.cluster]);
+	/** Rows written per cluster — the fleet's shape, not just its size. */
+	byCluster: Record<string, number>;
 }
 
 /**
@@ -482,10 +472,7 @@ export async function syncTarget(
  * other code path inserts into `apps` (the release reader only updates its own
  * three columns on rows this created).
  */
-async function persist(
-	observed: ObservedApp[],
-	clusters: string[],
-): Promise<SyncResult> {
+async function persist(observed: ObservedApp[]): Promise<SyncResult> {
 	const now = new Date();
 
 	// Resolve org tenants once per distinct image-org (small set).
@@ -557,22 +544,19 @@ async function persist(
 	// The namespace scope is derived from what was OBSERVED, not from the intended
 	// scan set, so prune authority never exceeds proven observation.
 	const ids = new Set(observed.map((o) => o.id));
+	const byCluster: Record<string, number> = {};
+	for (const o of observed)
+		byCluster[o.cluster] = (byCluster[o.cluster] ?? 0) + 1;
+
 	let pruned = 0;
-	if (observed.length) {
-		for (const cluster of clusters) {
-			const namespaces = new Set(
-				observed.filter((o) => o.cluster === cluster).map((o) => o.namespace),
-			);
-			pruned += await pruneMissing(cluster, ids, namespaces);
-		}
+	for (const cluster of Object.keys(byCluster)) {
+		const namespaces = new Set(
+			observed.filter((o) => o.cluster === cluster).map((o) => o.namespace),
+		);
+		pruned += await pruneMissing(cluster, ids, namespaces);
 	}
 
-	return {
-		observed: observed.length,
-		upserted,
-		pruned,
-		cluster: clusters.join(","),
-	};
+	return { observed: observed.length, upserted, pruned, byCluster };
 }
 
 /**
@@ -591,7 +575,7 @@ async function persist(
  */
 export async function syncInventory(
 	targets: ClusterTarget[] = DEFAULT_TARGETS,
-): Promise<SyncResult[]> {
+): Promise<SyncResult> {
 	const local = targets[0]?.cluster ?? DEFAULT_TARGETS[0]!.cluster;
 
 	const direct: ObservedApp[] = [];
@@ -606,9 +590,7 @@ export async function syncInventory(
 		console.error("[apps] delivery reader failed; sync column unknown", err);
 	}
 
-	const observed = mergeObserved(direct, delivered);
-	const clusters = [...new Set(observed.map((o) => o.cluster))];
-	return [await persist(observed, clusters)];
+	return persist(mergeObserved(direct, delivered));
 }
 
 /**
