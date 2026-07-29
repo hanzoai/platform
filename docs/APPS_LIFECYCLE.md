@@ -162,9 +162,9 @@ jobs:
 ```
 
 Each repo carries its own ruleset at `.github/upstream-rules.txt`; the action
-runs them all. This is the bug class that re-introduced antd in iam after
-casdoor v2.368.0 sync — the guard fails the PR until the offending files are
-re-converted.
+runs them all. This is the bug class the `no antd` rule above exists for: an
+upstream sync re-introduces a dependency the repo had already converted away
+from — the guard fails the PR until the offending files are re-converted.
 
 ### 6. Drift view at `platform.hanzo.ai/apps`
 
@@ -226,7 +226,7 @@ Each PR is independently shippable and produces measurable value:
 | Memory drift | "iam claimed 1.51, actual 1.14.0" | `apps.latest_tag` is read from registry, not memory |
 | Parallel workflows | iam had build.yml + docker-deploy.yml | verify step refuses second image push |
 | Floating tags | `:main` regrew on iam despite `latest=false` | reconciler refuses non-semver `declared_tag` |
-| Silent regressions | Casdoor merge re-introduced antd | upstream-merge-guard blocks PR |
+| Silent regressions | upstream merge re-introduced antd | upstream-merge-guard blocks PR |
 | Release-without-assets | v1.15.0 shipped with 0 binaries | verify step refuses to mark released |
 | Manifest reality gap | postgres database wired but service uses SQLite | declared state IS what runs; nothing else to wire |
 
