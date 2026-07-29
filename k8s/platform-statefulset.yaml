@@ -79,10 +79,18 @@ spec:
           # different digests within hours (2026-07-25) — and with IfNotPresent the
           # node keeps whichever it cached first, so a "released" version silently
           # means different code on different nodes. A commit SHA cannot move.
-          # This pin is the build of cba486ef — the fleet board: every org on
+          # This pin is the build of 96f6b326 — the fleet board: every org on
           # every cluster in one view, with the deployer's sync verdict beside
-          # the tags. Built by platform's own runner (POST /v1/runner → BuildKit
-          # Job in ns hanzo-build → GHCR).
+          # the tags. Built by platform's own runner
+          # (POST /v1/runner → BuildKit Job in ns hanzo-build → GHCR) with
+          # `dockerTarget: "platform"`.
+          #
+          # THE TARGET IS NOT OPTIONAL. This Dockerfile has four runtime stages
+          # and `api` is the LAST one, so a build that omits the target silently
+          # produces the API image under the platform name. It starts, dies on
+          # `Cannot find module /app/dist/index.js`, and CrashLoopBackOffs —
+          # which is exactly what a target-less build did to platform.hanzo.ai
+          # on 2026-07-29 before it was rolled back to the previous pin.
           #
           # It is also the point where this file stopped lying: git said
           # d549d765 while the live StatefulSet ran 76a0960e0, because a previous
@@ -90,7 +98,7 @@ spec:
           # this manifest — no CD Application owns the StatefulSet — so the roll
           # and this line have to move together, by hand, every time.
           # Move this pin only to another SHA you have confirmed is published.
-          image: ghcr.io/hanzoai/platform:cba486eff
+          image: ghcr.io/hanzoai/platform:96f6b3268
           imagePullPolicy: IfNotPresent
           # `pnpm start` runs `dist/migration.mjs` (applies drizzle migrations,
           # including the uniqueConfigKey UNIQUE indexes) then `dist/server.mjs`.
