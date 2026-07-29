@@ -31,9 +31,12 @@ vi.mock("@hanzo/platform/services/apps/release-reader", () => ({
 /** A pass that never settles — the wedged-socket case. */
 const hang = () => new Promise<never>(() => {});
 const ok = () =>
-	Promise.resolve([
-		{ cluster: "hanzo-k8s", observed: 1, upserted: 1, pruned: 0 },
-	]);
+	Promise.resolve({
+		observed: 1,
+		upserted: 1,
+		pruned: 0,
+		byCluster: { "hanzo-k8s": 1 },
+	});
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Import the scheduler fresh so it reads the env knobs at module load. */
