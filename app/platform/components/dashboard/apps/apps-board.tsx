@@ -320,7 +320,7 @@ export function AppsBoard({ apps, summary }: Props) {
 									<TableCell className="whitespace-nowrap">
 										<Badge variant="blank">{app.env}</Badge>
 										<div className="font-mono text-[11px] text-muted-foreground">
-											{app.cluster ?? "?"}/{app.namespace ?? "?"}
+											{app.cluster ?? "unknown"}/{app.namespace ?? "unknown"}
 										</div>
 									</TableCell>
 									<TableCell>
