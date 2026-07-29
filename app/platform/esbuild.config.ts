@@ -3,16 +3,33 @@ import esbuild from "esbuild";
 
 const result = dotenv.config({ path: ".env.production" });
 
+// The ONLY keys inlined as compile-time literals. Everything else in
+// .env.production stays a runtime lookup, served by the .env the image copies
+// and overridable by the deployment.
+//
+// This list is an allowlist because the rule used to be inverted: every key was
+// inlined and DATABASE_URL carried a hand-written exception so it could still be
+// overridden at runtime. One key was exempted because it was the one that bit
+// someone; the same freeze applied silently to every other key, so PORT could
+// not be changed at deploy time, and any secret added to this file would have
+// been compiled into the shipped bundle as a string literal.
+//
+// A value belongs here only if the BUILD must see it — NODE_ENV selects code
+// paths and drives dead-code elimination, so it does. Configuration does not:
+// where the app listens and what it connects to are properties of a deployment,
+// not of an artifact, and the same artifact has to run in every environment.
+const BUILD_TIME_KEYS = ["NODE_ENV"] as const;
+
 function prepareDefine(config: DotenvParseOutput | undefined) {
-	const define = {};
-	// @ts-ignore
-	for (const [key, value] of Object.entries(config)) {
-		// Skip DATABASE_URL to allow runtime environment variable override
-		if (key === "DATABASE_URL") {
-			continue;
+	const define: Record<string, string> = {};
+	if (!config) {
+		return define;
+	}
+	for (const key of BUILD_TIME_KEYS) {
+		const value = config[key];
+		if (value !== undefined) {
+			define[`process.env.${key}`] = JSON.stringify(value);
 		}
-		// @ts-ignore
-		define[`process.env.${key}`] = JSON.stringify(value);
 	}
 	return define;
 }
