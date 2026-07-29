@@ -1,7 +1,14 @@
 /**
- * Live apps inventory — the "observe" reader of the control plane
- * (`docs/APPS_LIFECYCLE.md` §1, readers `read_declared_tag` + `read_running_tag`,
- * unified into one cluster pass).
+ * Cluster reader + the single writer of the `apps` table.
+ *
+ * Two jobs, one module because they are one pass:
+ *
+ *   1. READ the clusters platform can reach directly (today: the one it runs
+ *      in) — operator workload CRs and the live Deployments/StatefulSets behind
+ *      them. This is the strongest evidence available: the objects themselves.
+ *   2. WRITE the fleet. `syncInventory` folds this reader with the delivery
+ *      reader (`delivery.ts`, which covers every OTHER cluster through CD) and
+ *      persists one row per app. Nothing else inserts into `apps`.
  *
  * The platform pod runs in-cluster as `platform-app` (k8s/platform-rbac.yaml),
  * whose ClusterRole grants the `hanzo.ai` CR groups (list) and `apps/deployments`
@@ -35,29 +42,27 @@
  */
 
 import { db, eq } from "@hanzo/platform/db";
-import {
-	type appEnvValues,
-	type appHealthValues,
-	apps,
-	type NewApp,
-	organization,
-} from "@hanzo/platform/db/schema";
+import { apps, type NewApp, organization } from "@hanzo/platform/db/schema";
 import { parseImageRef } from "../ci/image-ref";
-
-// Env / health vocabularies derive from the single canonical source — the
-// `appEnvValues` / `appHealthValues` `as const` tuples the schema column enums
-// are built from — so they cannot drift out of sync with the DB. (The
-// `apps-api` read layer derives the same two types the same way.)
-/** Deployment env vocabulary (`"dev" | "test" | "main"`). */
-export type AppEnv = (typeof appEnvValues)[number];
-/** Aggregate health vocabulary (`"green" | "yellow" | "red"`). */
-export type AppHealth = (typeof appHealthValues)[number];
-
 import {
 	createK8sClients,
 	getDefaultClients,
 	type K8sClients,
 } from "../k8s/k8s-client";
+import { discoverDelivered } from "./delivery";
+import {
+	type AppEnv,
+	type AppHealth,
+	BRAND_ORG,
+	brandOrg,
+	mergeObserved,
+	nsClass,
+	type ObservedApp,
+	observedId,
+	orgFromRepository,
+	repoFromRepository,
+	SELF_ORG,
+} from "./observed";
 
 const OPERATOR_GROUP = "hanzo.ai";
 const OPERATOR_VERSION = "v1";
@@ -99,34 +104,6 @@ export interface ClusterTarget {
  * started appears on the board without a redeploy.
  */
 export const DEFAULT_TARGETS: ClusterTarget[] = [{ cluster: "hanzo-k8s" }];
-
-/**
- * Namespace → (tenant, env), or null when the namespace is not ours.
- *
- * THE one rule for "is this namespace part of the estate, and which env is it?".
- * Ported rule-for-rule from cloud's `clients/paas` `nsClass` (Go) — the two must
- * agree or the board and `/v1/paas/apps` disagree about what the fleet IS. Two
- * languages, one rule: change them together.
- *
- * Total by construction: every string classifies, and anything unrecognised
- * classifies OUT. Widening the estate is a one-line change HERE (and in the Go
- * twin), never a literal list edited at each call site.
- */
-export function nsClass(ns: string): { tenant: string; env: AppEnv } | null {
-	switch (ns) {
-		case "hanzo":
-		case "hanzo-mainnet":
-			return { tenant: "hanzo", env: "main" };
-		case "hanzo-testnet":
-			return { tenant: "hanzo", env: "test" };
-		case "hanzo-devnet":
-			return { tenant: "hanzo", env: "dev" };
-	}
-	// tenant-<org>: a customer's own namespace. The org IS the tenant key, so it
-	// classifies exactly like a first-party namespace with no special case.
-	const t = ns.startsWith("tenant-") ? ns.slice("tenant-".length) : "";
-	return t ? { tenant: t, env: "main" } : null;
-}
 
 /**
  * The first-party namespaces, main before test/dev. This is the FAIL-SAFE scan
@@ -219,57 +196,6 @@ interface DeploymentLike {
 // ---------------------------------------------------------------------------
 
 /**
- * Derive the image namespace ("org" in apps-table terms) from an image repo.
- * `ghcr.io/hanzoai/chat` → `hanzoai`; `docker.io/grafana/grafana` → `grafana`.
- * Falls back to the whole repo when it has no namespace segment.
- */
-export function orgFromRepository(repository: string): string {
-	const parts = repository.split("/").filter(Boolean);
-	// [registryHost, namespace, name, ...] → namespace is parts[1]; if there is
-	// no registry host (`namespace/name`), it is parts[0].
-	if (parts.length >= 3) return parts[1]!;
-	if (parts.length === 2) return parts[0]!;
-	return repository;
-}
-
-/**
- * `ghcr.io/hanzoai/chat` → `hanzoai/chat`. The apps-table `repo` is the
- * `owner/repo` GitHub coordinate, i.e. the image path minus the registry host.
- * Third-party images with no namespace return the bare name.
- */
-export function repoFromRepository(repository: string): string {
-	const parts = repository.split("/").filter(Boolean);
-	if (parts.length >= 3) return parts.slice(1).join("/");
-	return parts.join("/");
-}
-
-// ---------------------------------------------------------------------------
-// Org attribution — the ONE brand-alias source of truth
-// ---------------------------------------------------------------------------
-
-/**
- * Canonical brand org for a known image namespace. This is the SINGLE source of
- * truth for the `hanzoai`→`hanzo` / `zooai`→`zoo` / `luxfi`→`lux` brand alias,
- * applied to BOTH the `apps.org` column (`brandOrg`, below) and the tenant FK
- * (`resolveOrganizationId`, which derives `ORG_ALIASES` from this map). A
- * first-party `ghcr.io/hanzoai/*` service IS the Hanzo org, so the board groups
- * it under `hanzo` (the IAM/brand org the console scopes by) — never the raw
- * registry namespace `hanzoai`. Unknown namespaces (grafana, meilisearch, …)
- * pass through unchanged: they are genuinely their own upstream, not a Hanzo
- * product, and must not be swept into the brand org.
- */
-export const BRAND_ORG: Record<string, string> = {
-	hanzoai: "hanzo",
-	zooai: "zoo",
-	luxfi: "lux",
-};
-
-/** Canonicalize an image namespace to its brand org (identity when unknown). */
-export function brandOrg(imageOrg: string): string {
-	return BRAND_ORG[imageOrg] ?? imageOrg;
-}
-
-/**
  * The operator-CR org-attribution key. An explicit `hanzo.ai/org` on the Service
  * CR (as a label OR an annotation) DECLARES the owning org and wins over the
  * image-namespace inference — so a service whose org differs from its image
@@ -332,23 +258,6 @@ export function runningTagFromDeployment(
 	return tag || null;
 }
 
-/** One observed app, fully mapped and ready to upsert (org tenant resolved later). */
-export interface ObservedApp {
-	id: string;
-	org: string;
-	app: string;
-	env: AppEnv;
-	repo: string;
-	registry: string;
-	declaredTag: string | null;
-	runningTag: string | null;
-	health: AppHealth | null;
-	cluster: string;
-	namespace: string;
-	/** Public hostnames from `spec.ingress.hosts`; empty for internal workloads. */
-	hosts: string[];
-}
-
 /**
  * Public hostnames a workload CR publishes. Empty when ingress is absent or
  * explicitly disabled — a disabled ingress block may still list stale hosts,
@@ -391,7 +300,7 @@ export function observeService(
 	const runningTag = runningTagFromDeployment(dep, repository);
 
 	return {
-		id: `${org}/${name}/${env}`,
+		id: observedId(cluster, namespace, name),
 		org,
 		app: name,
 		env,
@@ -400,6 +309,10 @@ export function observeService(
 		declaredTag,
 		runningTag,
 		health: healthFromDeployment(dep),
+		// The cluster cannot answer "does this still match git" — only the
+		// deployer can, and `delivery.ts` supplies it in the merge.
+		syncStatus: null,
+		syncRevision: null,
 		cluster,
 		namespace,
 		hosts: hostsFor(cr),
@@ -553,20 +466,26 @@ export interface SyncResult {
 }
 
 /**
- * Observe a target and upsert each app into the `apps` table. Owns only the
- * declared/running/health/topology columns it observes; never touches the
- * release-reader columns (`latestTag`/`releaseUrl`/`releaseAssets`).
- *
- * The table MIRRORS the cluster: after upserting, rows for this cluster whose CR
- * is gone are pruned (`pruneMissing`), so a deleted app leaves the board instead
- * of lingering forever as a phantom. Two ways a row goes stale, both fixed here:
- * the CR is deleted, or its ATTRIBUTION changes (the row id embeds `org`, so a
- * re-attributed app is written under a new id and orphans the old one).
+ * Observe ONE directly-readable cluster and write it. Kept as its own entry
+ * point for tests and for a single-cluster refresh; the fleet pass is
+ * `syncInventory`.
  */
 export async function syncTarget(
 	target: ClusterTarget = DEFAULT_TARGETS[0]!,
 ): Promise<SyncResult> {
-	const observed = await discoverApps(target);
+	return persist(await discoverApps(target), [target.cluster]);
+}
+
+/**
+ * Write a merged observation set to the `apps` table and mirror deletions for
+ * the clusters it PROVABLY covered. The one writer: both readers feed it, no
+ * other code path inserts into `apps` (the release reader only updates its own
+ * three columns on rows this created).
+ */
+async function persist(
+	observed: ObservedApp[],
+	clusters: string[],
+): Promise<SyncResult> {
 	const now = new Date();
 
 	// Resolve org tenants once per distinct image-org (small set).
@@ -591,6 +510,8 @@ export async function syncTarget(
 			declaredTag: o.declaredTag,
 			runningTag: o.runningTag,
 			health: o.health,
+			syncStatus: o.syncStatus,
+			syncRevision: o.syncRevision,
 			cluster: o.cluster,
 			namespace: o.namespace,
 			hosts: o.hosts,
@@ -603,7 +524,7 @@ export async function syncTarget(
 			.values(row)
 			.onConflictDoUpdate({
 				target: apps.id,
-				// Only the columns this reader owns. `latestTag`/`releaseUrl`/
+				// Only the columns the readers own. `latestTag`/`releaseUrl`/
 				// `releaseAssets` are deliberately omitted so the release reader's
 				// observations survive.
 				set: {
@@ -615,6 +536,8 @@ export async function syncTarget(
 					declaredTag: row.declaredTag,
 					runningTag: row.runningTag,
 					health: row.health,
+					syncStatus: row.syncStatus,
+					syncRevision: row.syncRevision,
 					cluster: row.cluster,
 					namespace: row.namespace,
 					hosts: row.hosts,
@@ -630,34 +553,62 @@ export async function syncTarget(
 	// Mirror deletions. Guarded on a NON-EMPTY observation: an empty result is
 	// indistinguishable from "every app was deleted", and a transient blip must
 	// never be able to empty the board. (A genuine RBAC/API failure throws out of
-	// `discoverApps` before reaching here, so this only guards the ambiguous case.)
+	// the readers before reaching here, so this only guards the ambiguous case.)
 	// The namespace scope is derived from what was OBSERVED, not from the intended
 	// scan set, so prune authority never exceeds proven observation.
-	const pruned = observed.length
-		? await pruneMissing(
-				target.cluster,
-				new Set(observed.map((o) => o.id)),
-				new Set(observed.map((o) => o.namespace)),
-			)
-		: 0;
+	const ids = new Set(observed.map((o) => o.id));
+	let pruned = 0;
+	if (observed.length) {
+		for (const cluster of clusters) {
+			const namespaces = new Set(
+				observed.filter((o) => o.cluster === cluster).map((o) => o.namespace),
+			);
+			pruned += await pruneMissing(cluster, ids, namespaces);
+		}
+	}
 
 	return {
 		observed: observed.length,
 		upserted,
 		pruned,
-		cluster: target.cluster,
+		cluster: clusters.join(","),
 	};
 }
 
-/** Sync every configured cluster target. The runtime entry point. */
+/**
+ * The runtime entry point: observe the whole fleet and write it.
+ *
+ * Two readers, one estate, one writer. The cluster reader reads the live
+ * objects of every directly-reachable target; the delivery reader reads what CD
+ * reports for every cluster it delivers to, which is how lux and zoo are on the
+ * board at all. `mergeObserved` folds them per app; `persist` writes once and
+ * prunes only the clusters actually covered.
+ *
+ * CD failing is not fatal: the estate platform CAN see is still worth showing,
+ * and the sync column honestly reads unknown. The reverse is fatal by design —
+ * a cluster read that throws (RBAC, API outage) must never be reported as an
+ * empty cluster.
+ */
 export async function syncInventory(
 	targets: ClusterTarget[] = DEFAULT_TARGETS,
 ): Promise<SyncResult[]> {
-	const results: SyncResult[] = [];
+	const local = targets[0]?.cluster ?? DEFAULT_TARGETS[0]!.cluster;
+
+	const direct: ObservedApp[] = [];
 	for (const target of targets) {
-		results.push(await syncTarget(target));
+		direct.push(...(await discoverApps(target)));
 	}
-	return results;
+
+	let delivered: ObservedApp[] = [];
+	try {
+		delivered = await discoverDelivered(local, SELF_ORG);
+	} catch (err) {
+		console.error("[apps] delivery reader failed; sync column unknown", err);
+	}
+
+	const observed = mergeObserved(direct, delivered);
+	const clusters = [...new Set(observed.map((o) => o.cluster))];
+	return [await persist(observed, clusters)];
 }
 
 /**

@@ -15,17 +15,19 @@
  * query and passes it here. RBAC is deliberately deferred (contract: "New
  * permissions = follow-up").
  */
-import { and, asc, eq } from "drizzle-orm";
+
 import { db } from "@hanzo/platform/db";
 import {
 	type App,
-	appEnvValues,
-	appHealthValues,
+	type appEnvValues,
+	type appHealthValues,
+	type appSyncValues,
 	apps,
 	computeDrift,
 	type Drift,
 	type DriftSeverity,
 } from "@hanzo/platform/db/schema";
+import { and, asc, eq } from "drizzle-orm";
 
 // Enum vocabularies derive from the single canonical source — the
 // `appEnvValues` / `appHealthValues` tuples in `db/schema/apps`. They are the
@@ -36,6 +38,8 @@ import {
 export type AppEnv = (typeof appEnvValues)[number];
 /** Aggregate health vocabulary (`"green" | "yellow" | "red"`). */
 export type AppHealth = (typeof appHealthValues)[number];
+/** Deployer verdict vocabulary (`"synced" | "drifted" | "unknown"`). */
+export type AppSync = (typeof appSyncValues)[number];
 
 /** Filters accepted by the list endpoint (all optional, all narrowing). */
 export interface AppsQuery {
@@ -56,14 +60,20 @@ export interface AppView {
 	org: string;
 	app: string;
 	env: AppEnv;
-	repo: string;
-	registry: string;
+	/** `owner/repo`; null when no image was observed. */
+	repo: string | null;
+	/** Image repository; null when no image was observed. */
+	registry: string | null;
 	declaredTag: string | null;
 	runningTag: string | null;
 	latestTag: string | null;
 	releaseUrl: string | null;
 	releaseAssets: number;
 	health: AppHealth | null;
+	/** What the deployer says about git vs live; null when nothing manages it. */
+	syncStatus: AppSync | null;
+	/** The git revision the deployer last reconciled to. */
+	syncRevision: string | null;
 	cluster: string | null;
 	namespace: string | null;
 	/** Public hostnames the workload CR publishes; empty for internal services. */
@@ -96,6 +106,8 @@ export const toAppView = (row: App): AppView => ({
 	releaseUrl: row.releaseUrl,
 	releaseAssets: row.releaseAssets,
 	health: (row.health as AppHealth | null) ?? null,
+	syncStatus: (row.syncStatus as AppSync | null) ?? null,
+	syncRevision: row.syncRevision,
 	cluster: row.cluster,
 	namespace: row.namespace,
 	// JSON column: normalize null / legacy non-array values to [] so every
@@ -108,10 +120,17 @@ export const toAppView = (row: App): AppView => ({
 	drift: computeDrift(row),
 });
 
-/** Rolled-up counts for the list response header. */
+/**
+ * Rolled-up counts for the list response header. `byOrg` is what makes the
+ * board one view over the whole fleet rather than three: the orgs are DERIVED
+ * from the rows observed, so a new org appears the moment it has an app and
+ * nothing has to be added to a list somewhere.
+ */
 export interface AppsSummary {
 	total: number;
 	byDrift: Record<DriftSeverity, number>;
+	bySync: Record<AppSync | "unmanaged", number>;
+	byOrg: Record<string, number>;
 }
 
 /** The list response envelope: ordered rows + a drift summary. */
@@ -143,10 +162,25 @@ export async function listApps(query: AppsQuery): Promise<AppsListResponse> {
 		views = views.filter((v) => v.drift.severity !== "ok");
 	}
 
-	const byDrift: Record<DriftSeverity, number> = { ok: 0, yellow: 0, red: 0 };
-	for (const v of views) byDrift[v.drift.severity] += 1;
+	return { apps: views, summary: summarize(views) };
+}
 
-	return { apps: views, summary: { total: views.length, byDrift } };
+/** Roll a projected list up to the response header counts. */
+export function summarize(views: AppView[]): AppsSummary {
+	const byDrift: Record<DriftSeverity, number> = { ok: 0, yellow: 0, red: 0 };
+	const bySync: Record<AppSync | "unmanaged", number> = {
+		synced: 0,
+		drifted: 0,
+		unknown: 0,
+		unmanaged: 0,
+	};
+	const byOrg: Record<string, number> = {};
+	for (const v of views) {
+		byDrift[v.drift.severity] += 1;
+		bySync[v.syncStatus ?? "unmanaged"] += 1;
+		byOrg[v.org] = (byOrg[v.org] ?? 0) + 1;
+	}
+	return { total: views.length, byDrift, bySync, byOrg };
 }
 
 /**

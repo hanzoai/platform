@@ -31,7 +31,13 @@ metadata:
 rules:
   # Hanzo operator CRs — the App/Service inventory the dashboard renders. The
   # base `hanzo.ai` group holds apps + services + the datastore/function/gateway
-  # family; the sub-groups carry the ArgoCD, nchain, gateway and KMS kinds.
+  # family; the sub-groups carry the nchain, gateway and KMS kinds.
+  #
+  # `apps.hanzo.ai` also carries CD's own `Application`/`AppProject` kinds, and
+  # THAT is how the board sees lux and zoo at all: CD reconciles those clusters
+  # and records what it found (images, sync, health) on objects that live right
+  # here. Platform reads them and holds no other cluster's credentials — note it
+  # is deliberately NOT granted `secrets`, where those credentials are.
   - apiGroups:
       - hanzo.ai
       - apps.hanzo.ai

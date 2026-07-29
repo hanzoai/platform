@@ -1,25 +1,21 @@
 /**
- * Apps-inventory scheduler — drives the deploy loop's apply and observe passes
- * so the cluster tracks the declared CRs in git and the `apps` table tracks the
- * live cluster + GitHub releases, without manual kubectl or seeding.
+ * Apps-inventory scheduler — keeps the `apps` table tracking the live fleet and
+ * GitHub releases, without manual kubectl or seeding.
  *
- * THREE INDEPENDENT PASSES, each with its OWN timer and its OWN in-flight guard.
- * They are deliberately not chained: apply and releases both call a rate-limited
- * external API (GitHub), and Octokit's throttle plugin SLEEPS rather than throws
- * when the quota is exhausted. While apply was awaited INSIDE the observe tick,
- * that sleep held the observe guard latched, so `if (ticking) return` skipped
- * every following tick and the board silently froze at its last observation while
- * the pod stayed `1/1 Running`. A stall in one pass must only ever stall that
- * pass — which is why the composition here is three timers, not one sequence.
+ * TWO INDEPENDENT PASSES, each with its OWN timer and its OWN in-flight guard.
+ * They are deliberately not chained: releases call a rate-limited external API
+ * (GitHub), and Octokit's throttle plugin SLEEPS rather than throws when the
+ * quota is exhausted. Awaited inside the observe tick, that sleep held the
+ * observe guard latched, so `if (ticking) return` skipped every following tick
+ * and the board silently froze at its last observation while the pod stayed
+ * `1/1 Running`. A stall in one pass must only ever stall that pass — which is
+ * why the composition here is separate timers, not one sequence.
  *
- *   - apply (`applyDeclaredCRs`): git → CR. Pushes the reconcilable declared
- *     `Service` CRs from `hanzoai/universe` into the cluster (the native
- *     replacement for the `gitops-reconcile` cron). Incremental — steady state
- *     is one directory-listing call and zero applies. Ticks every 60s.
- *   - inventory (`syncInventory`): declared (operator CR) + running (Deployment
- *     or StatefulSet) + health, read from the cluster. Cheap, read-mostly and
- *     dependent on NO external API, so it ticks fast (default 60s) and keeps
- *     ticking however GitHub behaves.
+ *   - inventory (`syncInventory`): the fleet pass — declared (operator CR) +
+ *     running (Deployment or StatefulSet) + health from every directly-readable
+ *     cluster, folded with what CD reports for every other cluster. Cheap,
+ *     read-only and dependent on NO external API, so it ticks fast (default 60s)
+ *     and keeps ticking however GitHub behaves.
  *   - release-meta (`syncReleases`): latest released tag + release-url +
  *     asset-count, read from the GitHub Releases API. This is the third tag the
  *     drift view compares — without it every row is an opaque `no-release`.
@@ -37,16 +33,8 @@
  * GitHub hiccup must never crash the server or stop future ticks.
  */
 
-import { applyDeclaredCRs } from "./apply-declared";
 import { syncInventory } from "./inventory";
 import { syncReleases } from "./release-reader";
-
-/**
- * The ONE gate for the git→CR apply pass. Default ON in the deploy env; set
- * `PLATFORM_CRS_APPLY=false` to disable apply (keeping observe) without a
- * redeploy — the escape hatch for pausing the native reconcile.
- */
-const CRS_APPLY_ENABLED = process.env.PLATFORM_CRS_APPLY !== "false";
 
 /** How often to reconcile declared/running/health from the cluster (ms). */
 const INTERVAL_MS = Number.parseInt(
@@ -57,15 +45,6 @@ const INTERVAL_MS = Number.parseInt(
 /** How often to reconcile latest-release facts from GitHub (ms, default 10m). */
 const RELEASE_INTERVAL_MS = Number.parseInt(
 	process.env.APPS_RELEASE_INTERVAL_MS || "600000",
-	10,
-);
-
-/**
- * How often to push declared CRs from git (ms, default 60s). Apply keeps its own
- * cadence precisely so it can never pace the observe loop.
- */
-const APPLY_INTERVAL_MS = Number.parseInt(
-	process.env.APPS_APPLY_INTERVAL_MS || "60000",
 	10,
 );
 
@@ -111,37 +90,7 @@ async function bounded<T>(label: string, work: Promise<T>): Promise<T> {
 
 let started = false;
 let ticking = false;
-let applyTicking = false;
 let releaseTicking = false;
-
-/**
- * Run one git→CR apply pass, logging the outcome; never throws. Gated by the ONE
- * `PLATFORM_CRS_APPLY` flag. A `source.list()` failure (GitHub unreachable) is
- * logged and swallowed here so it can never skip the observe pass that follows.
- */
-export async function applyDeclaredOnce(): Promise<void> {
-	if (!CRS_APPLY_ENABLED) return;
-	if (applyTicking) return; // skip if the previous apply is still in flight
-	applyTicking = true;
-	try {
-		const s = await bounded("apply", applyDeclaredCRs());
-		if (s.unchanged && s.failed.length === 0) return; // steady state — stay quiet
-		console.log(
-			`[apps-apply] applied ${s.applied.length} CR(s)` +
-				(s.applied.length ? ` (${s.applied.join(", ")})` : "") +
-				`; skipped ${s.skipped}` +
-				(s.failed.length
-					? `; ${s.failed.length} failed: ${s.failed
-							.map((f) => `${f.name}=${f.error}`)
-							.join("; ")}`
-					: ""),
-		);
-	} catch (err) {
-		console.error("[apps-apply] apply pass failed", err);
-	} finally {
-		applyTicking = false;
-	}
-}
 
 /** Run one observe pass (cluster → apps table), logging the outcome; never throws. */
 export async function runInventoryOnce(): Promise<void> {
@@ -186,8 +135,7 @@ export function startInventoryScheduler(): void {
 	if (started) return;
 	started = true;
 	console.log(
-		`[apps-inventory] scheduler starting (apply=${CRS_APPLY_ENABLED ? "on" : "off"} ` +
-			`every ${APPLY_INTERVAL_MS}ms, inventory every ${INTERVAL_MS}ms, ` +
+		`[apps-inventory] scheduler starting (inventory every ${INTERVAL_MS}ms, ` +
 			`releases every ${RELEASE_INTERVAL_MS}ms)`,
 	);
 
@@ -195,19 +143,6 @@ export function startInventoryScheduler(): void {
 	void runInventoryOnce();
 	const handle = setInterval(() => void runInventoryOnce(), INTERVAL_MS);
 	if (typeof handle.unref === "function") handle.unref();
-
-	// Apply on its OWN timer, never awaited by observe. It calls a rate-limited
-	// external API (GitHub); when that throttles, octokit SLEEPS rather than
-	// throwing, so awaiting apply inside the observe tick held `ticking` true and
-	// froze the cluster read for as long as the rate-limit window lasted — the
-	// board silently stopped tracking the fleet. Separate timers, separate guards:
-	// a GitHub stall can now only ever stall apply.
-	void applyDeclaredOnce();
-	const aHandle = setInterval(
-		() => void applyDeclaredOnce(),
-		APPLY_INTERVAL_MS,
-	);
-	if (typeof aHandle.unref === "function") aHandle.unref();
 
 	// Release reader: a short initial delay lets the leading inventory pass land
 	// the repos first, then it ticks on its own slow cadence.

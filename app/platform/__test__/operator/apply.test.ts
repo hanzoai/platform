@@ -84,15 +84,11 @@ vi.mock("@hanzo/platform/services/k8s/k8s-client", () => {
 });
 
 import {
-	applyDeclaredCRs,
-	type DeclaredCRsSource,
-} from "@hanzo/platform/services/apps/apply-declared";
-import {
 	applyDatastoreCR,
-	applyServiceCR,
 	type CustomResource,
 	type DatastoreSpec,
 	type OperatorServiceSpec,
+	serverApplyCR,
 } from "@hanzo/platform/services/k8s/operator";
 
 /** Run each middleware's `pre` against a recording request; return set headers. */
@@ -127,13 +123,13 @@ const serviceCR = (
 		spec: { image: { repository: `ghcr.io/hanzoai/${name}`, tag: "1.0.0" } },
 	}) as CustomResource<OperatorServiceSpec>;
 
-describe("applyServiceCR — server-side apply", () => {
+describe("serverApplyCR — server-side apply", () => {
 	it("issues a field-managed apply (patch), NOT a replace", async () => {
 		h.calls.patch.length = 0;
 		h.calls.replace.length = 0;
 		for (const k of Object.keys(h.store)) delete h.store[k];
 
-		await applyServiceCR(serviceCR("gallery-site"));
+		await serverApplyCR(serviceCR("gallery-site"));
 
 		expect(h.calls.replace).toHaveLength(0); // never a blind replace
 		expect(h.calls.patch).toHaveLength(1);
@@ -168,7 +164,7 @@ describe("applyServiceCR — server-side apply", () => {
 		};
 
 		// Git declares a new tag but knows nothing of the operator's fields.
-		await applyServiceCR(
+		await serverApplyCR(
 			serviceCR("vector", { annotations: { "hanzo.ai/org": "hanzo" } }),
 		);
 
@@ -184,43 +180,6 @@ describe("applyServiceCR — server-side apply", () => {
 		// …while git's declared fields are applied.
 		expect(merged.metadata.annotations?.["hanzo.ai/org"]).toBe("hanzo");
 		expect(merged.spec.image.tag).toBe("1.0.0");
-	});
-});
-
-describe("applyDeclaredCRs — the declared-apply path issues SSA end-to-end", () => {
-	it("pushes a reconcilable Service CR to the cluster via server-side apply", async () => {
-		h.calls.patch.length = 0;
-		h.calls.replace.length = 0;
-
-		// Real applyServiceCR wired as the source's apply; fake list/read (no GitHub).
-		const source: DeclaredCRsSource = {
-			list: async () => [
-				{ name: "vector.yaml", path: "crs/vector.yaml", sha: "a" },
-			],
-			read: async () =>
-				`apiVersion: hanzo.ai/v1
-kind: Service
-metadata:
-  name: vector
-  namespace: hanzo
-spec:
-  image:
-    repository: ghcr.io/hanzoai/vector
-    tag: "1.0.0"
-`,
-			apply: applyServiceCR, // the real SSA primitive, hitting the mocked client
-		};
-
-		const summary = await applyDeclaredCRs(source, new Map());
-
-		expect(summary.applied).toEqual(["vector"]);
-		expect(h.calls.replace).toHaveLength(0);
-		expect(h.calls.patch).toHaveLength(1);
-		expect(h.calls.patch[0]!.param.fieldManager).toBe("hanzo-platform");
-		expect(h.calls.patch[0]!.param.force).toBe(true);
-		expect(headersFrom(h.calls.patch[0]!.options)["Content-Type"]).toBe(
-			"application/apply-patch+yaml",
-		);
 	});
 });
 

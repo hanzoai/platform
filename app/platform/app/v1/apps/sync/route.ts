@@ -2,10 +2,11 @@
  * POST /v1/apps/sync — reconcile the apps-lifecycle table on demand (the same
  * passes the in-cluster scheduler runs every interval).
  *
- * Runs BOTH "observe" readers in order, so a single call gives the board a fully
+ * Runs the "observe" readers in order, so a single call gives the board a fully
  * refreshed verdict:
- *   1. inventory — reads the operator `Service` CRs (declared tag) + their
- *      Deployments (running tag + health) and upserts those observed columns.
+ *   1. inventory — the fleet pass: the operator workload CRs + their live
+ *      workloads on every directly-readable cluster, folded with what CD
+ *      reports for every OTHER cluster (lux, zoo), upserted as one row per app.
  *   2. release-meta — reads each discovered repo's latest GitHub Release and
  *      upserts `latestTag`/`releaseUrl`/`releaseAssets` (the third tag the drift
  *      checker needs). Skip it with `?releases=0` for a cluster-only refresh.
