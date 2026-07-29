@@ -165,10 +165,7 @@ export const computeDriftFlags = (app: DriftInput): DriftFlag[] => {
 		declaredTag !== latestTag
 	) {
 		flags.push(
-			flag(
-				"stale",
-				`declared ${declaredTag} is behind latest ${latestTag}`,
-			),
+			flag("stale", `declared ${declaredTag} is behind latest ${latestTag}`),
 		);
 	}
 
@@ -196,7 +193,10 @@ export const computeDriftFlags = (app: DriftInput): DriftFlag[] => {
 	// this board exists to prevent.
 	if (syncStatus === "drifted") {
 		flags.push(
-			flag("unsynced", "live objects no longer match git; CD reports OutOfSync"),
+			flag(
+				"unsynced",
+				"live objects no longer match git; CD reports OutOfSync",
+			),
 		);
 	}
 
@@ -204,14 +204,14 @@ export const computeDriftFlags = (app: DriftInput): DriftFlag[] => {
 	if (declaredTag != null) {
 		if (!releaseUrl) {
 			flags.push(
-				flag("no-release", `no GH Release found for declared tag ${declaredTag}`),
+				flag(
+					"no-release",
+					`no GH Release found for declared tag ${declaredTag}`,
+				),
 			);
 		} else if ((releaseAssets ?? 0) === 0) {
 			flags.push(
-				flag(
-					"zero-assets",
-					`GH Release for ${declaredTag} shipped 0 assets`,
-				),
+				flag("zero-assets", `GH Release for ${declaredTag} shipped 0 assets`),
 			);
 		}
 	}
