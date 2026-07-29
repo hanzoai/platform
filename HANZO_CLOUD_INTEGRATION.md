@@ -37,7 +37,7 @@ This platform can operate in two modes:
 
 ### 1. Environment Variables
 
-Copy `.env.hanzo-cloud` to `.env` and configure:
+Configure the deployment's environment (Helm values, or KMS-sourced env on the App CR):
 
 ```bash
 # Enable Hanzo Cloud integration

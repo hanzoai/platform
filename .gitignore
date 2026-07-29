@@ -53,3 +53,7 @@ yarn-error.log*
 pkg/platform/data/
 app/platform/data/
 .claude/
+# Stack-specific env files are deployment config, not repo content: the
+# platform's environment comes from Helm values and KMS, so a committed
+# .env for a stack is a second source that drifts from the first.
+.env.hanzo-*
