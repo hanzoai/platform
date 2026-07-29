@@ -25,6 +25,20 @@ import type { App } from "./apps";
  */
 const SEMVER_TAG = /^v\d+\.\d+\.\d+$/;
 
+/**
+ * Exactly the observed columns drift is derived from — named once so every
+ * caller (API, board, reconciler) proves it passes the same evidence.
+ */
+export type DriftInput = Pick<
+	App,
+	| "declaredTag"
+	| "runningTag"
+	| "latestTag"
+	| "releaseUrl"
+	| "releaseAssets"
+	| "syncStatus"
+>;
+
 /** True when `tag` is a strict `vX.Y.Z` semver tag. */
 export const isSemverTag = (tag: string | null | undefined): boolean =>
 	typeof tag === "string" && SEMVER_TAG.test(tag);
@@ -46,7 +60,9 @@ export type DriftKind =
 	/** no GH Release found for the declared tag. (red) */
 	| "no-release"
 	/** GH Release exists but shipped 0 assets (e.g. iam v1.15.0). (red) */
-	| "zero-assets";
+	| "zero-assets"
+	/** the deployer reports the live objects no longer match git. (yellow) */
+	| "unsynced";
 
 /** Aggregate drift severity. `ok` = no flags; otherwise the max over flags. */
 export type DriftSeverity = "ok" | "yellow" | "red";
@@ -66,6 +82,7 @@ const SEVERITY: Record<DriftKind, Exclude<DriftSeverity, "ok">> = {
 	"floating-running": "red",
 	"no-release": "red",
 	"zero-assets": "red",
+	unsynced: "yellow",
 };
 
 /**
@@ -108,13 +125,15 @@ const flag = (kind: DriftKind, message: string): DriftFlag => ({
  * ordering is assumed beyond equality, matching the contract ("records observed
  * reality — it never normalizes").
  */
-export const computeDriftFlags = (
-	app: Pick<
-		App,
-		"declaredTag" | "runningTag" | "latestTag" | "releaseUrl" | "releaseAssets"
-	>,
-): DriftFlag[] => {
-	const { declaredTag, runningTag, latestTag, releaseUrl, releaseAssets } = app;
+export const computeDriftFlags = (app: DriftInput): DriftFlag[] => {
+	const {
+		declaredTag,
+		runningTag,
+		latestTag,
+		releaseUrl,
+		releaseAssets,
+		syncStatus,
+	} = app;
 	const flags: DriftFlag[] = [];
 
 	const declaredFloating = declaredTag != null && !isSemverTag(declaredTag);
@@ -169,6 +188,18 @@ export const computeDriftFlags = (
 		);
 	}
 
+	// The deployer's own verdict. It answers a question no tag comparison can:
+	// the live objects have moved away from git (or were never reconciled), so
+	// the declaration on disk is not what the cluster is honouring. `unknown` is
+	// deliberately NOT flagged — "the deployer could not tell" is a gap in
+	// evidence, and inventing drift from missing evidence is the failure mode
+	// this board exists to prevent.
+	if (syncStatus === "drifted") {
+		flags.push(
+			flag("unsynced", "live objects no longer match git; CD reports OutOfSync"),
+		);
+	}
+
 	// Release-artifact integrity is keyed off the declared tag.
 	if (declaredTag != null) {
 		if (!releaseUrl) {
@@ -196,12 +227,7 @@ export const driftSeverity = (flags: DriftFlag[]): DriftSeverity => {
 };
 
 /** Full drift verdict (flags + rolled-up severity) for one `apps` row. */
-export const computeDrift = (
-	app: Pick<
-		App,
-		"declaredTag" | "runningTag" | "latestTag" | "releaseUrl" | "releaseAssets"
-	>,
-): Drift => {
+export const computeDrift = (app: DriftInput): Drift => {
 	const flags = computeDriftFlags(app);
 	return { severity: driftSeverity(flags), flags };
 };

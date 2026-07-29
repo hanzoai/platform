@@ -120,6 +120,67 @@ our own infra. This is the easy on-ramp INTO the Hanzo estate.
 
 ## Apps inventory — the "observe" half of the control plane
 
+**THE FLEET BOARD (current).** `platform.hanzo.ai/apps` shows **every org on
+every cluster in ONE view** — hanzo, lux AND zoo — with declared / running /
+latest tag, the deployer's sync verdict, and drift. Measured live 2026-07-29:
+**286 rows — hanzo 78, lux 157, zoo 49, maxpower 1 — across 3 clusters**
+(hanzo-k8s 81, lux 156, zoo 49), sync `263 drifted / 10 synced / 3 unknown /
+10 unmanaged`. Those sync counts match `kubectl get applications -n hanzo-cd`
+exactly; health 274 green / 2 red matches CD's 274 Healthy / 2 Degraded.
+
+TWO readers, ONE writer, no third mechanism:
+
+- **cluster reader** — `services/apps/inventory.ts`. Operator workload CRs
+  (`hanzo.ai/v1 apps`) + their live Deployments/StatefulSets, on every cluster
+  platform can reach directly (today: the one it runs in). Owns `declaredTag`
+  (`spec.image.tag`), `runningTag` (the container whose image repo matches the
+  CR's, so sidecars are ignored), `health`, `hosts`, `org`.
+- **delivery reader** — `services/apps/delivery.ts`. Lists CD `Application`
+  objects in `hanzo-cd`. THIS is how lux and zoo are visible at all: CD
+  reconciles those clusters and records what it found — `status.summary.images`
+  (verified against the live lux/zoo Deployments), `status.sync.status`,
+  `status.sync.revision`, `status.health.status` — on objects that live in OUR
+  cluster. So the whole fleet is readable from one namespace **with no new
+  credential**: the `platform-app` ClusterRole already covers `apps.hanzo.ai`,
+  and it is deliberately NOT granted `secrets`, where CD keeps the lux/zoo
+  cluster tokens. Verified: `auth can-i list applications.apps.hanzo.ai -n
+  hanzo-cd` → yes; `get secrets -n hanzo-cd` → no.
+- **release reader** — `services/apps/release-reader.ts`. Latest GH Release per
+  repo; owns `latestTag`/`releaseUrl`/`releaseAssets` and nothing else.
+
+`syncInventory` is the ONE writer: it folds the two fleet readers with
+`mergeObserved` (`services/apps/observed.ts`) field by field — the direct reader
+wins on what it read itself, the delivery reader alone supplies sync — then
+upserts once and prunes per observed cluster. 60 rows carry BOTH a declared tag
+and a deployer verdict, which is the composition working.
+
+**Identity is WHERE IT RUNS: `<cluster>/<namespace>/<app>`** (migration
+`0008_apps_fleet.sql`). `<org>/<app>/<env>` was unique only while the estate was
+one cluster; across the fleet the release `cloud` runs in `hanzo`, `lux-cloud`
+AND `zoo-cloud` at once (10 such collisions measured). The primary key now
+carries the whole identity and the redundant `apps_unique` index is gone.
+
+**Unobservable is NULL, and the board writes "unknown".** `repo`/`registry`
+became nullable for the same reason. The declared tag of a remotely-delivered
+app IS unknown — CD reports what is RUNNING and whether it matches git, never
+what git declares now; filling it from the running tag would make every remote
+app read "no drift" by construction.
+
+**RETIRED with this change:** `apply-declared.ts` + `/v1/apps/apply` + the
+`PLATFORM_CRS_APPLY` env flag + the now-orphaned `applyServiceCR` wrapper. It
+was a second git→CR deployer racing hanzo-cd's `universe-crs` Application (which
+is Synced and doing that job), and it had been dead for some time: the live pod
+logged `[apps-apply] apply pass failed Error: apply exceeded 45000ms —
+abandoned` on EVERY tick. Two mechanisms naming one thing, one of them broken.
+
+**BRAND:** the board carries no org mark, logo or colour — a Lux row must never
+carry a Hanzo mark, and in a shared table the only guarantee is to carry none.
+
+---
+
+### History (superseded by the fleet board above)
+
+
 `platform.hanzo.ai/apps` (the apps-lifecycle drift board, `docs/APPS_LIFECYCLE.md`)
 lists every org's real apps with **declared / running / latest tag + drift +
 health**. The schema (`apps`), drift logic (`apps-drift.ts`), read API
@@ -338,7 +399,7 @@ becomes a running pod, WHERE that path forks, and the ONE native path we collaps
 
 > **⚠️ CURRENT STATE + DECISION (re-verified live `do-sfo3-hanzo-k8s`, 2026-07-16) — supersedes §1–5 below where they conflict.** The §1–5 trace is accurate HISTORY of the complecting + the 07-05 breaks, but predates the operator 0.7.x cutover:
 > - **CD is now operator-native, NOT ArgoCD.** ArgoCD was torn out (no `argocd` ns, no `applications.argoproj.io` CRDs); the live deployer is the Rust operator **0.7.6** running a `GitSource` CR (`gitsource/universe` → `github.com/hanzoai/universe` path `infra/k8s/operator/crs`, 45s, `prune:false`, 21 objects, Running; `imageupdates.hanzo.ai` CRD live/0 instances). `src/controllers/gitsource.rs` states ArgoCD was removed on purpose. All "ArgoCD ApplicationSet auto-sync" + "operator v0.6.17" references below are historical.
-> - **`hanzoai/deploy` (the "ArgoCD fork") is a pristine unmodified upstream clone — 0 hanzo commits, deployed nowhere.** CTO decision (2026-07-16): make it real by embedding its **gitops-engine** as the CD library inside the cloud binary's `/v1/deploy` (`cloud/clients/deploy`, already mounted at `apps/apps.go:247`), NOT as a standalone `argocd` namespace (that re-adds the second control plane the operator deleted). Operator `GitSource` stays the interim engine until `/v1/deploy` is proven, then retires. The `applyDeclaredCRs` TS path (`pkg/platform/src/services/apps/apply-declared.ts`) duplicates GitSource byte-for-byte over the same universe crs path → retire it (leave platform observe + thin drive).
+> - **`hanzoai/deploy` (the "ArgoCD fork") is a pristine unmodified upstream clone — 0 hanzo commits, deployed nowhere.** CTO decision (2026-07-16): make it real by embedding its **gitops-engine** as the CD library inside the cloud binary's `/v1/deploy` (`cloud/clients/deploy`, already mounted at `apps/apps.go:247`), NOT as a standalone `argocd` namespace (that re-adds the second control plane the operator deleted). Operator `GitSource` stays the interim engine until `/v1/deploy` is proven, then retires. The `applyDeclaredCRs` TS path duplicated that same universe crs apply → **RETIRED 2026-07-29** (deleted; platform is observe + thin drive, and the observe half now reads hanzo-cd for the whole fleet — see "Apps inventory" above).
 > - **CI target = the cloud binary's `/v1/git` forge** (`cloud/clients/git`, Gitea-ported, mounted `apps/apps.go:281`) with push→build via `build.go:334 RegisterPushBuilder`. **ARC self-hosted GitHub Actions (`arc-system`) remains LOAD-BEARING — builds every image today; do NOT retire it until `/v1/git` builds prod.** The "Gitea Actions on git.hanzo.ai" lane above is superseded as the target by the one-binary forge (and Gitea is not currently hosted in this cluster).
 > - **End-state = ONE Go binary (`hanzoai/cloud`) embedding forge + CD + platform** (HIP-0106). Convergence is by native Go reimplementation; `cloud/go.mod` imports none of operator/deploy/platform/git.
 >

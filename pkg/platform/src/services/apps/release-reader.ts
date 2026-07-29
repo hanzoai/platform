@@ -155,9 +155,12 @@ export interface ReleaseSyncResult {
 export async function syncReleases(
 	octokit: Octokit = makeOctokit(),
 ): Promise<ReleaseSyncResult> {
-	// Distinct repos the inventory has already discovered.
+	// Distinct repos the inventory has already discovered. A row whose image was
+	// never observed has no repo to query — it is skipped, not guessed at.
 	const rows = await db.select({ repo: apps.repo }).from(apps);
-	const repos = [...new Set(rows.map((r) => r.repo))];
+	const repos = [
+		...new Set(rows.map((r) => r.repo).filter((r): r is string => !!r)),
+	];
 
 	const now = new Date();
 	let updated = 0;

@@ -35,8 +35,9 @@ export async function getServerSideProps(ctx: GetServerSidePropsContext) {
 		};
 	}
 
-	// The control-plane board shows every service x env for the authenticated
-	// operator; org/env/health filtering is available on /v1/apps for
+	// The control-plane board shows the WHOLE fleet — every org, every cluster —
+	// to the authenticated operator, and filters by org client-side over that one
+	// dataset; org/env/health filtering is also available on /v1/apps for
 	// programmatic callers. Wrapped like the REST handlers (app/v1/apps/route.ts)
 	// so a transient DB blip — or the apps table not yet migrated on a fresh
 	// image — renders an empty board (which AppsBoard handles) instead of a 500.
@@ -45,7 +46,15 @@ export async function getServerSideProps(ctx: GetServerSidePropsContext) {
 		data = await listApps({});
 	} catch (err) {
 		console.error("[/dashboard/apps] listApps failed", err);
-		data = { apps: [], summary: { total: 0, byDrift: { ok: 0, yellow: 0, red: 0 } } };
+		data = {
+			apps: [],
+			summary: {
+				total: 0,
+				byDrift: { ok: 0, yellow: 0, red: 0 },
+				bySync: { synced: 0, drifted: 0, unknown: 0, unmanaged: 0 },
+				byOrg: {},
+			},
+		};
 	}
 
 	return {

@@ -20,16 +20,12 @@ const TIMEOUT_MS = 50;
 /** Mocked pass functions, re-created per test so call counts are independent. */
 const syncInventory = vi.fn();
 const syncReleases = vi.fn();
-const applyDeclaredCRs = vi.fn();
 
 vi.mock("@hanzo/platform/services/apps/inventory", () => ({
 	syncInventory: (...a: unknown[]) => syncInventory(...a),
 }));
 vi.mock("@hanzo/platform/services/apps/release-reader", () => ({
 	syncReleases: (...a: unknown[]) => syncReleases(...a),
-}));
-vi.mock("@hanzo/platform/services/apps/apply-declared", () => ({
-	applyDeclaredCRs: (...a: unknown[]) => applyDeclaredCRs(...a),
 }));
 
 /** A pass that never settles — the wedged-socket case. */
@@ -44,7 +40,6 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function loadScheduler() {
 	vi.resetModules();
 	process.env.APPS_TICK_TIMEOUT_MS = String(TIMEOUT_MS);
-	process.env.PLATFORM_CRS_APPLY = "false"; // isolate the inventory pass
 	return await import("@hanzo/platform/services/apps/inventory-scheduler");
 }
 
@@ -52,7 +47,6 @@ describe("inventory scheduler watchdog", () => {
 	beforeEach(() => {
 		syncInventory.mockReset();
 		syncReleases.mockReset();
-		applyDeclaredCRs.mockReset();
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		vi.spyOn(console, "log").mockImplementation(() => {});
 	});

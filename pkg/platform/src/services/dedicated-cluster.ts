@@ -42,8 +42,9 @@ import * as k8s from "@kubernetes/client-node";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
-import type { AppEnv, ClusterTarget } from "./apps/inventory";
+import type { ClusterTarget } from "./apps/inventory";
 import { DEFAULT_TARGETS } from "./apps/inventory";
+import type { AppEnv } from "./apps/observed";
 import {
 	type DoksCluster,
 	findDoksClusterById,

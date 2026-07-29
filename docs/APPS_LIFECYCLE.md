@@ -56,32 +56,51 @@ Lives in `platform`'s embedded Base/SQLite (`platform.hanzo.ai`,
 
 ```sql
 CREATE TABLE apps (
-  id            TEXT PRIMARY KEY,        -- "<org>/<app>/<env>", e.g. "hanzoai/iam/main"
-  org           TEXT NOT NULL,
+  -- IDENTITY IS WHERE IT RUNS. `<org>/<app>/<env>` was unique only while the
+  -- estate was one cluster with one namespace per env; across the fleet the
+  -- release `cloud` runs in `hanzo`, `lux-cloud` AND `zoo-cloud` at once.
+  id            TEXT PRIMARY KEY,        -- "<cluster>/<namespace>/<app>"
+  org           TEXT NOT NULL,           -- brand org: hanzo | lux | zoo | <tenant>
   app           TEXT NOT NULL,
   env           TEXT NOT NULL CHECK(env IN ('dev','test','main')),
-  repo          TEXT NOT NULL,           -- "hanzoai/iam"
-  registry      TEXT NOT NULL,           -- "ghcr.io/hanzoai/iam"
-  declared_tag  TEXT,                    -- "v1.15.0" — from universe manifest
-  running_tag   TEXT,                    -- "v1.14.29" — observed from cluster
-  latest_tag    TEXT,                    -- "v1.15.0" — observed from GHCR/GAR
+  repo          TEXT,                    -- "hanzoai/iam"; NULL = no image observed
+  registry      TEXT,                    -- "ghcr.io/hanzoai/iam"; NULL = unobserved
+  declared_tag  TEXT,                    -- "v1.15.0" — from the workload CR
+  running_tag   TEXT,                    -- "v1.14.29" — observed from the cluster
+  latest_tag    TEXT,                    -- "v1.15.0" — observed from GHCR/GH releases
   release_url   TEXT,                    -- GH Release for declared_tag
   release_assets INT DEFAULT 0,          -- asset count on GH Release
   health        TEXT,                    -- "green" | "yellow" | "red"
+  sync_status   TEXT,                    -- "synced" | "drifted" | "unknown" (from CD)
+  sync_revision TEXT,                    -- the git sha CD last reconciled to
   last_observed DATETIME,
-  cluster       TEXT,                    -- "hanzo-k8s" | "lux-k8s" | ...
-  namespace     TEXT
+  cluster       TEXT,                    -- "hanzo-k8s" | "lux" | "zoo"
+  namespace     TEXT,
+  hosts         TEXT                     -- JSON array of public hostnames
 );
-CREATE UNIQUE INDEX apps_unique ON apps(org, app, env);
 ```
 
-Populated by four readers running on independent cron in `platform`:
+Populated by TWO readers on independent cron in `platform`, folded by one
+writer (`services/apps/inventory.ts#syncInventory`). Neither reader guesses: a
+value it cannot see is NULL and the board renders "unknown".
 
-- `read_latest_tag` — polls GHCR/GAR per app, writes `latest_tag`
-- `read_declared_tag` — scrapes universe manifests, writes `declared_tag`
-- `read_running_tag` — `kubectl` against each cluster, writes `running_tag` + `health`
-- `read_release_meta` — `gh release view` for `declared_tag`, writes
-  `release_url` + `release_assets`
+- **cluster reader** (`services/apps/inventory.ts`) — lists the operator
+  workload CRs and their live Deployments/StatefulSets on every cluster platform
+  can reach directly (today: the one it runs in). Owns `declared_tag`,
+  `running_tag`, `health`, `hosts`, `org`.
+- **delivery reader** (`services/apps/delivery.ts`) — lists CD `Application`
+  objects in `hanzo-cd`. This is how lux and zoo are on the board at all: CD
+  reconciles those clusters and records what it found on objects that live in
+  ours, so `running_tag`, `health`, `sync_status` and `sync_revision` come back
+  for every cluster without platform holding another org's credentials.
+- **release reader** (`services/apps/release-reader.ts`) — reads each repo's
+  latest GitHub Release; owns `latest_tag` / `release_url` / `release_assets`,
+  and touches nothing else.
+
+Where the two fleet readers overlap, `mergeObserved` composes them field by
+field: the direct reader wins on what it read itself (declared tag, hosts,
+health), and the delivery reader alone supplies the sync verdict — nothing else
+knows whether git and the cluster still agree.
 
 ### 2. Per-repo build contract
 
@@ -168,19 +187,31 @@ from — the guard fails the PR until the offending files are re-converted.
 
 ### 6. Drift view at `platform.hanzo.ai/apps`
 
-Single page. Filter by org / env / health. Columns:
+ONE page for the WHOLE fleet — hanzo, lux and zoo together, filtered by org over
+the same rows rather than split into a panel each. The org list is derived from
+the rows observed, so a new org appears the moment it has an app.
 
-| Org/App | Env | Declared | Running | Latest | Drift | GH Release | Health | Last seen |
-|---|---|---|---|---|---|---|---|---|
-| hanzoai/iam | main | v1.15.0 | v1.14.29 | v1.15.0 | ⚠ 1 ver behind | ✓ 4 assets | green | 2m ago |
-| hanzoai/iam | test | v1.15.0 | v1.15.0 | v1.15.0 | — | ✓ 4 assets | green | 30s ago |
-| luxfi/node | main | v1.14.0 | v1.14.0 | v1.14.0 | — | ✓ 6 assets | green | 1m ago |
-| hanzoai/gateway | main | v1.1.0 | (no image found) | v2.14.1 | ✗ DRIFT | ✗ skipped | red | 5m ago |
+| Org/App | Where | Host | Declared | Running | Latest | Sync | Drift | GH Release | Health | Last seen |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hanzo/iam | main · hanzo-k8s/hanzo | iam.hanzo.ai | v1.15.0 | v1.14.29 | v1.15.0 | out of sync | ⚠ un-rolled | ✓ 4 assets | green | 2m ago |
+| lux/app-lux-finance | main · lux/app-lux-finance | — | unknown | 1.0.3-amd64 | unknown | synced | ✗ floating-running | — | green | 1m ago |
+| zoo/zoo-docs | main · zoo/zoo-mainnet | — | unknown | unknown | unknown | out of sync | ⚠ unsynced | — | red | 1m ago |
 
-Drift column color is the page's keystone. Yellow = stale declaration.
-Red = running tag is floating or declared tag missing release artifacts. Both
-have one-click "open PR to bump" and "force reconcile" actions backed by the
-existing universe auto-bump dispatch.
+Drift severity is the page's keystone. Yellow = stale declaration, un-rolled
+tag, or the deployer reporting the live objects no longer match git (`unsynced`).
+Red = a floating tag, or a declared tag with missing release artifacts.
+
+BRAND: the board carries no org mark, logo or colour at all. A Lux row must
+never carry a Hanzo mark, and in a shared table the only way to guarantee that
+is to carry no mark; the org is a word in a column.
+
+HONESTY: "unknown" means no reader could observe that value, and it is written
+in full rather than left blank so a gap can never be mistaken for a value. A
+control plane that guesses is worse than one that admits a gap. Notably, the
+declared tag of a remotely-delivered app IS unknown: CD reports what is running
+and whether it matches git, never what git declares right now, and filling it in
+from the running tag would make every remote app read "no drift" by
+construction.
 
 ## Migration sequencing
 

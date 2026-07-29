@@ -57,6 +57,13 @@
       "when": 1785002254275,
       "tag": "0007_apps_hosts",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1785335881412,
+      "tag": "0008_apps_fleet",
+      "breakpoints": true
     }
   ]
 }

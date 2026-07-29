@@ -13,20 +13,22 @@
 
 import { db } from "@hanzo/platform/db";
 import {
-	brandOrg,
 	type ClusterTarget,
 	declaredOrg,
 	discoverApps,
 	discoverNamespaces,
 	healthFromDeployment,
-	nsClass,
 	observeService,
 	orgForService,
-	orgFromRepository,
 	pruneMissing,
-	repoFromRepository,
 	runningTagFromDeployment,
 } from "@hanzo/platform/services/apps/inventory";
+import {
+	brandOrg,
+	nsClass,
+	orgFromRepository,
+	repoFromRepository,
+} from "@hanzo/platform/services/apps/observed";
 import { describe, expect, it, vi } from "vitest";
 
 describe("orgFromRepository", () => {
@@ -202,9 +204,12 @@ describe("observeService", () => {
 	it("maps a CR + Deployment into a fully-resolved ObservedApp (org brand-canonicalized)", () => {
 		const app = observeService(cr, dep, "hanzo-k8s", "hanzo", "main");
 		expect(app).toEqual({
+			// The identity is WHERE IT RUNS. `<org>/<app>/<env>` collides across the
+			// fleet (the release `cloud` runs in three namespaces at once), so the
+			// row is keyed by cluster/namespace/name and `org` is an attribute.
+			id: "hanzo-k8s/hanzo/chat",
 			// `ghcr.io/hanzoai/chat` → org `hanzo` (brand org), NOT the raw `hanzoai`
 			// namespace: the board must group first-party services under the IAM org.
-			id: "hanzo/chat/main",
 			org: "hanzo",
 			app: "chat",
 			env: "main",
@@ -213,6 +218,10 @@ describe("observeService", () => {
 			declaredTag: "0.7.10",
 			runningTag: "0.7.9", // un-rolled: cluster is one patch behind declared
 			health: "green",
+			// The cluster cannot answer "does this match git" — only CD can, and it
+			// supplies these two in the merge.
+			syncStatus: null,
+			syncRevision: null,
 			cluster: "hanzo-k8s",
 			namespace: "hanzo",
 			// This CR declares no ingress, so it publishes no public hostname. The
@@ -254,7 +263,9 @@ describe("observeService", () => {
 		};
 		const app = observeService(labeled, dep, "hanzo-k8s", "hanzo", "main");
 		expect(app?.org).toBe("maxpower");
-		expect(app?.id).toBe("maxpower/chat/main");
+		// Attribution does NOT move the row: identity is where it runs, so a
+		// re-attributed app keeps its id and simply changes org.
+		expect(app?.id).toBe("hanzo-k8s/hanzo/chat");
 	});
 
 	it("honors an explicit `hanzo.ai/org` annotation when there is no label", () => {
@@ -499,7 +510,7 @@ describe("discoverApps", () => {
 
 		expect(scanned).toContain("tenant-maxpower");
 		expect(scanned).not.toContain("kube-system");
-		expect(apps.map((a) => a.id)).toEqual(["maxpower/hello/main"]);
+		expect(apps.map((a) => a.id)).toEqual(["hanzo-k8s/tenant-maxpower/hello"]);
 	});
 });
 
@@ -627,18 +638,17 @@ describe("pruneMissing", () => {
 		expect(deletes).not.toHaveBeenCalled();
 	});
 
-	it("prunes a re-attributed row: the id embeds `org`, so changed attribution orphans the old id", async () => {
-		// `chat-meilisearch` was stored under org `hanzo`; the org inference now
-		// resolves it to `getmeili`, so the row is written under a NEW id and the
-		// old one must not linger on the board as a phantom duplicate.
+	it("prunes a renamed row: the id embeds the namespace, so a moved app orphans the old id", async () => {
+		// `chat-meilisearch` moved namespace; the row is written under a NEW id and
+		// the old one must not linger on the board as a phantom duplicate.
 		const deletes = withRows([
-			{ id: "hanzo/chat-meilisearch/main", namespace: "hanzo" },
-			{ id: "getmeili/chat-meilisearch/main", namespace: "hanzo" },
+			{ id: "hanzo-k8s/hanzo/chat-meilisearch", namespace: "hanzo" },
+			{ id: "hanzo-k8s/hanzo/search", namespace: "hanzo" },
 		]);
 
 		const pruned = await pruneMissing(
 			"hanzo-k8s",
-			new Set(["getmeili/chat-meilisearch/main"]),
+			new Set(["hanzo-k8s/hanzo/search"]),
 			HANZO,
 		);
 
