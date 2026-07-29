@@ -50,66 +50,63 @@ export const appEnvValues = ["dev", "test", "main"] as const;
  */
 export const appSyncValues = ["synced", "drifted", "unknown"] as const;
 
-export const apps = sqliteTable(
-	"apps",
-	{
-		/** `<cluster>/<namespace>/<app>`, e.g. `hanzo-k8s/hanzo/iam`. */
-		id: text("id").notNull().primaryKey(),
-		/** Owning brand org, e.g. `hanzo`, `lux`, `zoo`. */
-		org: text("org").notNull(),
-		/** App / service name, e.g. `iam`. */
-		app: text("app").notNull(),
-		env: text("env", { enum: appEnvValues }).notNull(),
-		/** `owner/repo`, e.g. `hanzoai/iam`. Null when no image was observed. */
-		repo: text("repo"),
-		/** Image registry path, e.g. `ghcr.io/hanzoai/iam`. Null when unobserved. */
-		registry: text("registry"),
-		/** Declared tag from the universe operator CR (e.g. `v1.15.0`). */
-		declaredTag: text("declared_tag"),
-		/** Observed running tag from the cluster (e.g. `v1.14.29`). */
-		runningTag: text("running_tag"),
-		/** Newest released tag observed from GHCR/GAR (e.g. `v1.15.0`). */
-		latestTag: text("latest_tag"),
-		/** GH Release URL for `declaredTag`. */
-		releaseUrl: text("release_url"),
-		/** Asset count on the GH Release (0 = release shipped with no binaries). */
-		releaseAssets: integer("release_assets").notNull().default(0),
-		health: text("health", { enum: appHealthValues }),
-		/**
-		 * Whether the deployer still finds the live objects matching git. Only CD
-		 * can answer this — it is the one party that renders the manifest and
-		 * diffs it — so it is the one column CD owns for every row on the board.
-		 */
-		syncStatus: text("sync_status", { enum: appSyncValues }),
-		/** The git revision CD last reconciled this app to (full sha), if known. */
-		syncRevision: text("sync_revision"),
-		/** When the readers last observed this row. */
-		lastObserved: integer("last_observed", { mode: "timestamp_ms" }),
-		/** Target cluster, e.g. `hanzo-k8s`. */
-		cluster: text("cluster"),
-		/** Target namespace, e.g. `hanzo`. */
-		namespace: text("namespace"),
-		/**
-		 * Public hostnames the workload CR publishes (`spec.ingress.hosts`), e.g.
-		 * `["analytics.hanzo.ai"]`. This is what turns the board from a list of
-		 * names into a directory you can click through to the running service.
-		 * Observed like every other column here — never hand-maintained. Null when
-		 * the CR declares no ingress, and on clusters platform cannot read
-		 * directly (the deployer reports images and sync, not hostnames).
-		 */
-		hosts: text("hosts", { mode: "json" }).$type<string[]>(),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.notNull()
-			.$defaultFn(() => new Date()),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.notNull()
-			.$defaultFn(() => new Date()),
-		/** Owning org tenant (multi-tenant installs run their own apps table). */
-		organizationId: text("organizationId").references(() => organization.id, {
-			onDelete: "cascade",
-		}),
-	},
-);
+export const apps = sqliteTable("apps", {
+	/** `<cluster>/<namespace>/<app>`, e.g. `hanzo-k8s/hanzo/iam`. */
+	id: text("id").notNull().primaryKey(),
+	/** Owning brand org, e.g. `hanzo`, `lux`, `zoo`. */
+	org: text("org").notNull(),
+	/** App / service name, e.g. `iam`. */
+	app: text("app").notNull(),
+	env: text("env", { enum: appEnvValues }).notNull(),
+	/** `owner/repo`, e.g. `hanzoai/iam`. Null when no image was observed. */
+	repo: text("repo"),
+	/** Image registry path, e.g. `ghcr.io/hanzoai/iam`. Null when unobserved. */
+	registry: text("registry"),
+	/** Declared tag from the universe operator CR (e.g. `v1.15.0`). */
+	declaredTag: text("declared_tag"),
+	/** Observed running tag from the cluster (e.g. `v1.14.29`). */
+	runningTag: text("running_tag"),
+	/** Newest released tag observed from GHCR/GAR (e.g. `v1.15.0`). */
+	latestTag: text("latest_tag"),
+	/** GH Release URL for `declaredTag`. */
+	releaseUrl: text("release_url"),
+	/** Asset count on the GH Release (0 = release shipped with no binaries). */
+	releaseAssets: integer("release_assets").notNull().default(0),
+	health: text("health", { enum: appHealthValues }),
+	/**
+	 * Whether the deployer still finds the live objects matching git. Only CD
+	 * can answer this — it is the one party that renders the manifest and
+	 * diffs it — so it is the one column CD owns for every row on the board.
+	 */
+	syncStatus: text("sync_status", { enum: appSyncValues }),
+	/** The git revision CD last reconciled this app to (full sha), if known. */
+	syncRevision: text("sync_revision"),
+	/** When the readers last observed this row. */
+	lastObserved: integer("last_observed", { mode: "timestamp_ms" }),
+	/** Target cluster, e.g. `hanzo-k8s`. */
+	cluster: text("cluster"),
+	/** Target namespace, e.g. `hanzo`. */
+	namespace: text("namespace"),
+	/**
+	 * Public hostnames the workload CR publishes (`spec.ingress.hosts`), e.g.
+	 * `["analytics.hanzo.ai"]`. This is what turns the board from a list of
+	 * names into a directory you can click through to the running service.
+	 * Observed like every other column here — never hand-maintained. Null when
+	 * the CR declares no ingress, and on clusters platform cannot read
+	 * directly (the deployer reports images and sync, not hostnames).
+	 */
+	hosts: text("hosts", { mode: "json" }).$type<string[]>(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" })
+		.notNull()
+		.$defaultFn(() => new Date()),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		.notNull()
+		.$defaultFn(() => new Date()),
+	/** Owning org tenant (multi-tenant installs run their own apps table). */
+	organizationId: text("organizationId").references(() => organization.id, {
+		onDelete: "cascade",
+	}),
+});
 
 export const appsRelations = relations(apps, ({ one }) => ({
 	organization: one(organization, {
