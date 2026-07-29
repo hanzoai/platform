@@ -77,7 +77,7 @@ const identity = (over: Partial<ServerSession> = {}): ServerSession => ({
 	...over,
 });
 
-// The AUTHENTIC Casdoor token shape for a real user (verified live against
+// The AUTHENTIC IAM token shape for a real user (verified live against
 // a@hanzo.ai): `sub` is a bare UUID, so @hanzo/iam's ServerSession.owner
 // falls back to "unknown" — the real org lives ONLY in the top-level `owner`
 // claim. Stage 2 must still resolve the correct org from that claim.
@@ -129,7 +129,7 @@ describe("Stage 2 integration (real SQLite, real migrations)", () => {
 		expect(perms.environment.read).toBe(true);
 	});
 
-	it("real Casdoor token (UUID sub) resolves the org from claims.owner, NOT the 'unknown' SDK fallback", async () => {
+	it("real IAM token (UUID sub) resolves the org from claims.owner, NOT the 'unknown' SDK fallback", async () => {
 		// This is the live a@hanzo.ai shape: sub is a UUID, identity.owner is
 		// "unknown", and the real org is only in claims.owner="hanzo". The org
 		// the user lands in MUST be "hanzo", and the dashboard must not be denied.
