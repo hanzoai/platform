@@ -1,3 +1,4 @@
+import { createPrivateKey } from "node:crypto";
 import { join } from "node:path";
 import { paths } from "@hanzo/platform/constants";
 import type { apiFindGithubBranches } from "@hanzo/platform/db/schema";
@@ -60,7 +61,7 @@ export const getGithubToken = async (
  */
 export const appEnvOctokit = (): Octokit => {
 	const appId = process.env.GITHUB_APP_ID;
-	const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
+	const privateKey = pkcs8(process.env.GITHUB_APP_PRIVATE_KEY);
 	const installationId = process.env.GITHUB_APP_INSTALLATION_ID;
 	if (appId && privateKey && installationId) {
 		return new Octokit({
@@ -74,6 +75,35 @@ export const appEnvOctokit = (): Octokit => {
 	}
 	const token = process.env.GH_TOKEN;
 	return token ? new Octokit({ auth: token }) : new Octokit();
+};
+
+/**
+ * An RSA private key in the one encoding the JWT signer accepts.
+ *
+ * GitHub hands out App keys as PKCS#1 (`BEGIN RSA PRIVATE KEY`);
+ * `universal-github-app-jwt`, under `@octokit/auth-app`, accepts only PKCS#8
+ * (`BEGIN PRIVATE KEY`) and throws "Private Key is in PKCS#1 format, but only
+ * PKCS#8 is supported" on EVERY request. Not at construction — at request time,
+ * so the App path looks configured and then fails per call, which is how the
+ * apps board's Latest column read empty for every row while the credentials
+ * were plainly present.
+ *
+ * The two encodings are the same key, so this converts rather than asks anyone
+ * to re-issue or re-store one: normalize at the boundary where the key enters
+ * the process, and no caller — or KMS entry — has to know which form it holds.
+ * A PKCS#8 key passes through untouched, and an unparseable value is returned
+ * as-is so the failure stays where it belongs (the auth library's own error),
+ * never swallowed here.
+ */
+export const pkcs8 = (key: string | undefined): string | undefined => {
+	if (!key?.includes("BEGIN RSA PRIVATE KEY")) return key;
+	try {
+		return createPrivateKey(key)
+			.export({ type: "pkcs8", format: "pem" })
+			.toString();
+	} catch {
+		return key;
+	}
 };
 
 /**
