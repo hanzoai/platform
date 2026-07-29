@@ -97,15 +97,14 @@ export async function runInventoryOnce(): Promise<void> {
 	if (ticking) return; // skip if the previous tick is still in flight
 	ticking = true;
 	try {
-		const results = await bounded("inventory", syncInventory());
-		const total = results.reduce((n, r) => n + r.upserted, 0);
+		const r = await bounded("inventory", syncInventory());
+		const clusters = Object.entries(r.byCluster);
 		// Pruning is a DELETE — surface it whenever it happens so a row leaving the
 		// board is always attributable to a tick, never a silent disappearance.
-		const pruned = results.reduce((n, r) => n + r.pruned, 0);
 		console.log(
-			`[apps-inventory] synced ${total} apps across ${results.length} cluster(s): ` +
-				results.map((r) => `${r.cluster}=${r.upserted}`).join(", ") +
-				(pruned ? `; pruned ${pruned} stale row(s)` : ""),
+			`[apps-inventory] synced ${r.upserted} apps across ${clusters.length} cluster(s): ` +
+				clusters.map(([c, n]) => `${c}=${n}`).join(", ") +
+				(r.pruned ? `; pruned ${r.pruned} stale row(s)` : ""),
 		);
 	} catch (err) {
 		console.error("[apps-inventory] sync failed", err);

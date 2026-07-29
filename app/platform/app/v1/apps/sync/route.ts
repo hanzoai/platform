@@ -11,7 +11,7 @@
  *      upserts `latestTag`/`releaseUrl`/`releaseAssets` (the third tag the drift
  *      checker needs). Skip it with `?releases=0` for a cluster-only refresh.
  *
- * Returns the per-cluster upsert counts and the release-meta counts. Read-mostly
+ * Returns the fleet counts (total + per cluster) and the release-meta counts. Read-mostly
  * (writes only platform's own SQLite); never patches a cluster object or GitHub.
  *
  * Auth: shared service bearer token (PLATFORM_SERVICE_TOKEN). Served NATIVELY at
@@ -29,14 +29,10 @@ export async function POST(req: Request) {
 	if (!auth.ok) return auth.response;
 
 	try {
-		const results = await syncInventory();
+		const inventory = await syncInventory();
 		const withReleases = queryValue(req, "releases") !== "0";
 		const releases = withReleases ? await syncReleases() : undefined;
-		return Response.json({
-			results,
-			total: results.reduce((n, r) => n + r.upserted, 0),
-			releases,
-		});
+		return Response.json({ inventory, total: inventory.upserted, releases });
 	} catch (err: unknown) {
 		const message =
 			err instanceof Error ? err.message : "Failed to sync apps inventory";
