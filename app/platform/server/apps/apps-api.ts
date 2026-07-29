@@ -19,13 +19,14 @@
 import { db } from "@hanzo/platform/db";
 import {
 	type App,
+	type AppsSummary,
 	type appEnvValues,
 	type appHealthValues,
 	type appSyncValues,
 	apps,
 	computeDrift,
 	type Drift,
-	type DriftSeverity,
+	summarize,
 } from "@hanzo/platform/db/schema";
 import { and, asc, eq } from "drizzle-orm";
 
@@ -120,19 +121,6 @@ export const toAppView = (row: App): AppView => ({
 	drift: computeDrift(row),
 });
 
-/**
- * Rolled-up counts for the list response header. `byOrg` is what makes the
- * board one view over the whole fleet rather than three: the orgs are DERIVED
- * from the rows observed, so a new org appears the moment it has an app and
- * nothing has to be added to a list somewhere.
- */
-export interface AppsSummary {
-	total: number;
-	byDrift: Record<DriftSeverity, number>;
-	bySync: Record<AppSync | "unmanaged", number>;
-	byOrg: Record<string, number>;
-}
-
 /** The list response envelope: ordered rows + a drift summary. */
 export interface AppsListResponse {
 	apps: AppView[];
@@ -163,24 +151,6 @@ export async function listApps(query: AppsQuery): Promise<AppsListResponse> {
 	}
 
 	return { apps: views, summary: summarize(views) };
-}
-
-/** Roll a projected list up to the response header counts. */
-export function summarize(views: AppView[]): AppsSummary {
-	const byDrift: Record<DriftSeverity, number> = { ok: 0, yellow: 0, red: 0 };
-	const bySync: Record<AppSync | "unmanaged", number> = {
-		synced: 0,
-		drifted: 0,
-		unknown: 0,
-		unmanaged: 0,
-	};
-	const byOrg: Record<string, number> = {};
-	for (const v of views) {
-		byDrift[v.drift.severity] += 1;
-		bySync[v.syncStatus ?? "unmanaged"] += 1;
-		byOrg[v.org] = (byOrg[v.org] ?? 0) + 1;
-	}
-	return { total: views.length, byDrift, bySync, byOrg };
 }
 
 /**
