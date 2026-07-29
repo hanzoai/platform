@@ -79,12 +79,18 @@ spec:
           # different digests within hours (2026-07-25) — and with IfNotPresent the
           # node keeps whichever it cached first, so a "released" version silently
           # means different code on different nodes. A commit SHA cannot move.
-          # This digest (sha256:7cf46143) is the build of d549d765 — the apps
-          # scheduler unbraided from GitHub, so the observe pass can no longer be
-          # frozen by a rate-limit sleep. Built on Hanzo's own forge (git.hanzo.ai
-          # run 393 → git-runner-1 → docker build → GHCR), no GitHub involvement.
+          # This pin is the build of cba486ef — the fleet board: every org on
+          # every cluster in one view, with the deployer's sync verdict beside
+          # the tags. Built by platform's own runner (POST /v1/runner → BuildKit
+          # Job in ns hanzo-build → GHCR).
+          #
+          # It is also the point where this file stopped lying: git said
+          # d549d765 while the live StatefulSet ran 76a0960e0, because a previous
+          # roll patched the image and never came back here. Nothing reconciles
+          # this manifest — no CD Application owns the StatefulSet — so the roll
+          # and this line have to move together, by hand, every time.
           # Move this pin only to another SHA you have confirmed is published.
-          image: ghcr.io/hanzoai/platform:d549d765ccf02ae95e777abffb4af11d2bec6cc9
+          image: ghcr.io/hanzoai/platform:cba486eff
           imagePullPolicy: IfNotPresent
           # `pnpm start` runs `dist/migration.mjs` (applies drizzle migrations,
           # including the uniqueConfigKey UNIQUE indexes) then `dist/server.mjs`.
@@ -110,20 +116,26 @@ spec:
               value: "https://platform.hanzo.ai"
             - name: IAM_ENDPOINT
               value: "https://hanzo.id"
-            - name: NEXTAUTH_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: platform-app-secrets
-                  key: NEXTAUTH_SECRET
             # better-auth signs sessions with this. UNSET, it silently falls back
             # to a well-known DEFAULT secret and throws unhandledRejection on every
             # request — which is how this shipped when the app moved NextAuth →
-            # better-auth: NEXTAUTH_SECRET stayed set but is no longer read.
+            # better-auth: NEXTAUTH_SECRET stayed set but is no longer read, and
+            # it is gone from here for the same reason (the Secret has no such
+            # key; declaring it would be CreateContainerConfigError on the next
+            # apply).
+            #
+            # The key is OPERATOR_PAAS_SHARED_SECRET, which is what the live pod
+            # has read since it started and what the Secret actually contains —
+            # this file said `BETTER_AUTH_SECRET`, a key that does not exist.
+            # Verified 2026-07-29: platform-app-secrets holds DATABASE_URL,
+            # GITHUB_APP_*, IAM_*, MINIO_*, OPERATOR_PAAS_SHARED_SECRET,
+            # PAAS_DO_API_TOKEN, PLATFORM_BUILD_CALLBACK_TOKEN — and no
+            # BETTER_AUTH_SECRET or NEXTAUTH_SECRET.
             - name: BETTER_AUTH_SECRET
               valueFrom:
                 secretKeyRef:
                   name: platform-app-secrets
-                  key: BETTER_AUTH_SECRET
+                  key: OPERATOR_PAAS_SHARED_SECRET
             - name: IAM_CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -135,21 +147,29 @@ spec:
                   name: platform-app-secrets
                   key: IAM_CLIENT_SECRET
             # The shared service bearer token /v1 verifies (`requireServiceToken`,
-            # constant-time). It is NOT a new secret: `console` already presents
-            # this exact 64-char value as PAAS_SERVICE_TOKEN from this same
-            # Secret — the SERVER simply never held it, so every /v1/apps call
-            # got `500 Service token is not configured` and the REST twin of the
-            # board was dead while the session-rendered board worked. One value,
-            # referenced where it already lives; a fresh token here would be a
-            # second copy to drift. (`admin-api-secrets/PLATFORM_SERVICE_TOKEN`
-            # holds a byte-identical copy with no consumer — a leftover, not a
-            # second token.)
+            # constant-time). Its home is the dedicated `platform-service-token`
+            # Secret, which is what the live pod reads; this file pointed at
+            # `paas-console-token/PAAS_SERVICE_TOKEN`, a different Secret.
+            #
+            # NOT optional, deliberately. An absent service token does not
+            # degrade — every /v1 call answers `500 Service token is not
+            # configured`, so the REST half of the control plane is dead while
+            # the session-rendered pages still work, which is the hardest kind of
+            # outage to notice. Fail at startup instead.
             - name: PLATFORM_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: paas-console-token
-                  key: PAAS_SERVICE_TOKEN
-                  optional: true
+                  name: platform-service-token
+                  key: token
+            # The bearer that authorises `POST /v1/runner` — the build enqueue.
+            # Present on the live pod and absent from this file until now: a
+            # plain `kubectl apply` of this manifest would have deleted it and
+            # taken the build path down with it.
+            - name: PLATFORM_BUILD_CALLBACK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: platform-app-secrets
+                  key: PLATFORM_BUILD_CALLBACK_TOKEN
             # The platform's OWN GitHub App installation. `appEnvOctokit` reads
             # exactly these three and, with all three present, mints short-lived
             # installation tokens (5000 req/hr, scoped to the installation).
