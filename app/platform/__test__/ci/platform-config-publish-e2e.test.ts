@@ -1,6 +1,6 @@
 import {
-	parsePlatformConfig,
 	PlatformConfigError,
+	parsePlatformConfig,
 } from "@hanzo/platform/services/ci/platform-config";
 import { describe, expect, it } from "vitest";
 
@@ -10,6 +10,22 @@ import { describe, expect, it } from "vitest";
  * contract so a malformed block fails loud rather than silently skipping a
  * stage.
  */
+/**
+ * Parse a config that MUST declare a build, and fail the test if it does not.
+ *
+ * `parsePlatformConfig` returns null for a document that declares nothing for
+ * the build lane — empty, comments-only, or `test:`-only — which is a real state
+ * this suite covers explicitly below. Every OTHER case here is about a config
+ * that does declare one, so asserting it up front keeps those tests reading as
+ * statements about builds rather than about null-checks.
+ */
+function built(yamlText: string) {
+	const cfg = parsePlatformConfig(yamlText);
+	if (!cfg)
+		throw new Error(`expected a build declaration, got none:\n${yamlText}`);
+	return cfg;
+}
+
 describe("platform-config e2e block", () => {
 	const base = `
 build:
@@ -18,7 +34,7 @@ build:
 `;
 
 	it("parses a full e2e block", () => {
-		const cfg = parsePlatformConfig(
+		const cfg = built(
 			`${base}e2e:\n  spec: tests/smoke.spec.ts\n  baseDomain: x.hanzo.ai\n  ref: main\n`,
 		);
 		expect(cfg.e2e).toEqual({
@@ -29,7 +45,7 @@ build:
 	});
 
 	it("defaults baseDomain/ref to undefined when omitted", () => {
-		const cfg = parsePlatformConfig(`${base}e2e:\n  spec: tests/health.spec.ts\n`);
+		const cfg = built(`${base}e2e:\n  spec: tests/health.spec.ts\n`);
 		expect(cfg.e2e).toEqual({
 			spec: "tests/health.spec.ts",
 			baseDomain: undefined,
@@ -44,7 +60,7 @@ build:
 	});
 
 	it("leaves e2e undefined when the block is absent", () => {
-		expect(parsePlatformConfig(base).e2e).toBeUndefined();
+		expect(built(base).e2e).toBeUndefined();
 	});
 });
 
@@ -56,7 +72,7 @@ build:
 `;
 
 	it("parses npm publish with defaults", () => {
-		const cfg = parsePlatformConfig(`${base}publish:\n  npm: true\n`);
+		const cfg = built(`${base}publish:\n  npm: true\n`);
 		expect(cfg.publish).toEqual({
 			npm: true,
 			pypi: false,
@@ -68,7 +84,7 @@ build:
 	});
 
 	it("parses pypi + packageDir + dryRun", () => {
-		const cfg = parsePlatformConfig(
+		const cfg = built(
 			`${base}publish:\n  pypi: true\n  packageDir: sdk/python\n  dryRun: true\n`,
 		);
 		expect(cfg.publish).toEqual({
@@ -82,7 +98,7 @@ build:
 	});
 
 	it("parses cargo publish with an ordered workspace crate list", () => {
-		const cfg = parsePlatformConfig(
+		const cfg = built(
 			`${base}publish:\n  cargo: true\n  cargoCrates:\n    - hanzo-kernels\n    - hanzo-ml\n`,
 		);
 		expect(cfg.publish).toEqual({
@@ -96,26 +112,24 @@ build:
 	});
 
 	it("allows both npm and pypi", () => {
-		const cfg = parsePlatformConfig(
-			`${base}publish:\n  npm: true\n  pypi: true\n`,
-		);
+		const cfg = built(`${base}publish:\n  npm: true\n  pypi: true\n`);
 		expect(cfg.publish?.npm).toBe(true);
 		expect(cfg.publish?.pypi).toBe(true);
 	});
 
 	it("rejects a publish block with no target", () => {
-		expect(() =>
-			parsePlatformConfig(`${base}publish:\n  dryRun: true\n`),
-		).toThrow(/at least one of npm: true, pypi: true or cargo: true/);
+		expect(() => built(`${base}publish:\n  dryRun: true\n`)).toThrow(
+			/at least one of npm: true, pypi: true or cargo: true/,
+		);
 	});
 
 	it("rejects a non-boolean npm flag", () => {
-		expect(() =>
-			parsePlatformConfig(`${base}publish:\n  npm: "yes"\n`),
-		).toThrow(PlatformConfigError);
+		expect(() => built(`${base}publish:\n  npm: "yes"\n`)).toThrow(
+			PlatformConfigError,
+		);
 	});
 
 	it("leaves publish undefined when the block is absent", () => {
-		expect(parsePlatformConfig(base).publish).toBeUndefined();
+		expect(built(base).publish).toBeUndefined();
 	});
 });
