@@ -13,9 +13,12 @@
  * server. Same wire format, different product; conflating them is how you end
  * up with two ways to reach one forge.
  *
- * Interop note: Hanzo Git today speaks a Gitea-compatible HTTP API and webhook
- * wire format (`/api/v1/...`, `X-Gitea-Event` / `X-Gitea-Signature`). That is
- * an implementation detail of the wire, never a name for the product.
+ * Interop note: Hanzo Git speaks a Gitea-compatible request/response SHAPE and
+ * webhook wire format (`X-Gitea-Event` / `X-Gitea-Signature`), but it is served
+ * at `/v1/...`, NOT `/api/v1/...` — the latter answers 404 "Not found.", which
+ * reads exactly like the API being switched off and has sent more than one
+ * investigation down the wrong path. The shape is an implementation detail of
+ * the wire; the prefix is ours, and it is `/v1`.
  *
  * Env:
  *   HANZO_GIT_URL              base URL (default https://git.hanzo.ai)

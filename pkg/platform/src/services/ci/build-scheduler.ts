@@ -223,11 +223,18 @@ export async function fetchPlatformConfigByToken(
 /**
  * Fetch the repo's platform config from Hanzo Git at a specific ref.
  *
- * Hanzo Git's contents API is GitHub-shaped — same path, same
- * `{content, encoding:"base64"}` body — so `parseContentResponse` is shared
- * verbatim rather than re-implemented. `repo` here is the FORGE-native
- * `owner/name` (`hanzo/kms`), not the canonical one, because we are
- * addressing the forge. Returns null when the repo has not opted in.
+ * Hanzo Git's contents API is GitHub-shaped in its BODY — same
+ * `{content, encoding:"base64"}` — so `parseContentResponse` is shared verbatim
+ * rather than re-implemented. It is NOT GitHub-shaped in its PREFIX: Hanzo Git
+ * serves `/v1/`, and `/api/v1/` returns 404 "Not found." (measured, with the
+ * `/v1/` control returning 200 and the file). This read asked for `/api/v1/`,
+ * and a 404 here is the "repo has not opted in" signal, so the miss was
+ * indistinguishable from a repo with no config: every forge push answered
+ * `202 Accepted; <repo> has no hanzo.yml (nothing to build)` and built nothing.
+ *
+ * `repo` here is the FORGE-native `owner/name` (`hanzo/kms`), not the canonical
+ * one, because we are addressing the forge. Returns null when the repo has not
+ * opted in.
  */
 export async function fetchPlatformConfigFromHanzoGit(
 	cfg: Pick<HanzoGitConfig, "url" | "token">,
@@ -244,7 +251,7 @@ export async function fetchPlatformConfigFromHanzoGit(
 	const headers: Record<string, string> = { Accept: "application/json" };
 	if (cfg.token) headers.Authorization = `token ${cfg.token}`;
 	for (const path of CONFIG_NAMES) {
-		const url = `${cfg.url}/api/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${path}?ref=${encodeURIComponent(ref)}`;
+		const url = `${cfg.url}/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${path}?ref=${encodeURIComponent(ref)}`;
 		const res = await fetch(url, { headers });
 		if (res.status === 404) continue;
 		if (!res.ok) {
