@@ -17,9 +17,7 @@
  */
 import { type BuildJob, listBuildJobs } from "./build-job";
 import { completeBuild, reconcilePostBuild } from "./build-completion";
-import { readBuildOutcome } from "./buildkit-job";
-
-const CI_NAMESPACE = "hanzo";
+import { buildNamespace, readBuildOutcome } from "./buildkit-job";
 
 /** How often to poll in-flight build / e2e / publish Jobs (ms, default 15s). */
 const INTERVAL_MS = Number.parseInt(
@@ -30,10 +28,21 @@ const INTERVAL_MS = Number.parseInt(
 let started = false;
 let ticking = false;
 
-/** Advance one `running` build whose BuildKit Job has terminated. */
+/**
+ * Advance one `running` build whose BuildKit Job has terminated.
+ *
+ * The build Job is read from `buildNamespace()` — the SAME seam the dispatcher
+ * launches it through — not from a second literal. This watcher held its own
+ * `CI_NAMESPACE = "hanzo"`, so it polled the application namespace for a Job
+ * that only ever existed in `hanzo-build`: the read found nothing, `done` was
+ * never true, and EVERY build stayed `running` with a null digest forever. The
+ * builds themselves succeeded, so the failure was silent — deploy, e2e and
+ * publish simply never fired, and the image had to be pinned into universe by
+ * hand. One namespace, one seam; a literal here is the bug.
+ */
 async function advanceRunning(job: BuildJob): Promise<void> {
 	if (!job.buildJobName) return; // not dispatched to a BuildKit Job (shouldn't happen)
-	const outcome = await readBuildOutcome(CI_NAMESPACE, job.buildJobName);
+	const outcome = await readBuildOutcome(buildNamespace(), job.buildJobName);
 	if (!outcome.done) return;
 	await completeBuild({
 		buildJobId: job.buildJobId,
