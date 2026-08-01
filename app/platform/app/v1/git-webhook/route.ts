@@ -202,9 +202,14 @@ export async function POST(req: Request) {
 			branch: decoded.branch,
 		});
 		if (!result) {
+			// Two ways to mean the same thing, and the message must not claim the
+			// first when it was the second: the repo has no hanzo.yml, OR it has one
+			// that declares no image (a `test:`-only gate for hanzoai/ci, which is
+			// most of the estate). Naming only the missing file sent a reader looking
+			// for a file that was right there.
 			return Response.json(
 				{
-					message: `Accepted; ${decoded.repo} has no hanzo.yml (nothing to build)`,
+					message: `Accepted; ${decoded.repo} declares no image to build`,
 				},
 				{ status: 202 },
 			);
