@@ -382,7 +382,13 @@ function parseImageEntry(entry: unknown, i: number): BuildConfig {
  *   - `images:` (hanzo.yml) — a list of { name, repo, context, … }, one per image.
  *   - `build:`  (legacy .platform.yml) — a single image block.
  */
-export function validatePlatformConfig(raw: unknown): PlatformConfig {
+export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
+	// An EMPTY document declares nothing, and `yaml` parses a comments-only file
+	// to null. That is a real and deliberate state, not a malformed one:
+	// hanzo/insights' `.platform.yml` is fourteen lines of prose ending "No
+	// build/deploy stanza: this repo produces no served surface".
+	if (raw === null || raw === undefined) return null;
+
 	if (!isObject(raw)) {
 		throw new PlatformConfigError(
 			"config must be a YAML mapping at the top level",
@@ -404,9 +410,25 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig {
 		}
 	} else if (isObject(raw.build)) {
 		builds = [parseBuildBlock(raw.build)];
+	} else if (raw.deploy === undefined) {
+		// Declares no image AND nothing to roll out: this file exists for the
+		// OTHER reader. `hanzo.yml` is the estate's ONE CI manifest and it has two
+		// consumers — hanzoai/ci runs its `test:` gate, platform builds its
+		// `images:` — so a repo that declares tests and no image is COMPLETE, not
+		// broken. hanzoai/cloud's says exactly that in prose ("NO images: lane
+		// HERE ... CI's only job here is the TEST GATE on every push").
+		//
+		// Returning null routes it to the signal the build lane already has for
+		// "nothing for me here". Making it an ERROR meant 54 repos answered every
+		// push with a 500, which is how a deliberate declaration ends up looking
+		// like a broken pipeline.
+		return null;
 	} else {
+		// `deploy:` with nothing to build is INCOHERENT — there is no image to roll
+		// out — so this one stays loud. The distinction is the whole point: silence
+		// about builds is a choice, a rollout of nothing is a mistake.
 		throw new PlatformConfigError(
-			"config requires either an `images:` list (hanzo.yml) or a `build:` block (.platform.yml)",
+			"config declares `deploy:` but neither an `images:` list (hanzo.yml) nor a `build:` block (.platform.yml)",
 		);
 	}
 
@@ -481,15 +503,20 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig {
 	};
 }
 
-/** Parse + validate `.platform.yml` text. Throws `PlatformConfigError` on bad input. */
-export function parsePlatformConfig(yamlText: string): PlatformConfig {
+/**
+ * Parse + validate a repo's CI config text.
+ *
+ * Returns null when the document declares nothing for the BUILD lane — empty,
+ * comments-only, or `test:`-only — which is a legitimate state, not a failure.
+ * Throws `PlatformConfigError` on input that is genuinely wrong: unparseable
+ * YAML, a non-mapping document, a `deploy:` with no build, a malformed image.
+ */
+export function parsePlatformConfig(yamlText: string): PlatformConfig | null {
 	let raw: unknown;
 	try {
 		raw = parseYaml(yamlText);
 	} catch (err) {
-		throw new PlatformConfigError(
-			`.platform.yml is not valid YAML: ${(err as Error).message}`,
-		);
+		throw new PlatformConfigError(`not valid YAML: ${(err as Error).message}`);
 	}
 	return validatePlatformConfig(raw);
 }

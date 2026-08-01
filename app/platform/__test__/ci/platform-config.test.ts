@@ -4,8 +4,8 @@ import {
 	PlatformConfigError,
 	parsePlatformConfig,
 	resolveTag,
-	tagFromRef,
 	runnerPoolFor,
+	tagFromRef,
 	validatePlatformConfig,
 } from "@hanzo/platform/services/ci/platform-config";
 import { describe, expect, it } from "vitest";
@@ -31,9 +31,32 @@ deploy:
     name: zip
 `;
 
+/**
+ * Parse a config that MUST declare a build, and fail the test if it does not.
+ *
+ * `parsePlatformConfig` returns null for a document that declares nothing for
+ * the build lane — empty, comments-only, or `test:`-only — which is a real state
+ * this suite covers explicitly below. Every OTHER case here is about a config
+ * that does declare one, so asserting it up front keeps those tests reading as
+ * statements about builds rather than about null-checks.
+ */
+function built(yamlText: string) {
+	const cfg = parsePlatformConfig(yamlText);
+	if (!cfg)
+		throw new Error(`expected a build declaration, got none:\n${yamlText}`);
+	return cfg;
+}
+
+/** {@link built}, for the pre-parsed-object form. */
+function declared(raw: unknown) {
+	const cfg = validatePlatformConfig(raw);
+	if (!cfg) throw new Error("expected a build declaration, got none");
+	return cfg;
+}
+
 describe("parsePlatformConfig", () => {
 	it("parses a full valid config", () => {
-		const cfg = parsePlatformConfig(VALID);
+		const cfg = built(VALID);
 		expect(cfg.builds).toHaveLength(1);
 		expect(cfg.builds[0]!.matrix).toHaveLength(2);
 		expect(cfg.builds[0]!.image).toBe("ghcr.io/hanzoai/zip");
@@ -43,7 +66,7 @@ describe("parsePlatformConfig", () => {
 	});
 
 	it("applies defaults for optional build fields", () => {
-		const cfg = parsePlatformConfig(`
+		const cfg = built(`
 build:
   matrix:
     - { os: linux, arch: amd64 }
@@ -60,6 +83,51 @@ build:
 		expect(() => parsePlatformConfig("deploy: {}")).toThrow(
 			PlatformConfigError,
 		);
+	});
+
+	// A config that declares NOTHING for the build lane is a real, deliberate
+	// state, not a malformed one — and treating it as an error is what made 54
+	// repos answer every push with a 500 once the forge started delivering.
+	//
+	// `hanzo.yml` is the estate's ONE CI manifest with TWO readers: hanzoai/ci
+	// runs its `test:` gate, platform builds its `images:`. Declaring tests and no
+	// image is therefore complete. hanzoai/cloud's config says so in prose ("NO
+	// images: lane HERE ... CI's only job here is the TEST GATE"), and
+	// hanzo/insights' `.platform.yml` is comments-only, ending "No build/deploy
+	// stanza: this repo produces no served surface".
+	it("reads a test-only config as nothing to build, not as an error", () => {
+		expect(parsePlatformConfig("test:\n  - go test ./...\n")).toBeNull();
+	});
+
+	it("reads a comments-only config as nothing to build", () => {
+		expect(parsePlatformConfig("# no build/deploy stanza\n")).toBeNull();
+	});
+
+	it("reads an empty config as nothing to build", () => {
+		expect(parsePlatformConfig("")).toBeNull();
+	});
+
+	// The distinction that keeps the above from swallowing real mistakes: silence
+	// about builds is a choice, a rollout of nothing is incoherent.
+	it("still rejects a deploy: with nothing to build", () => {
+		expect(() =>
+			parsePlatformConfig(
+				"deploy:\n  on: [main]\n  target:\n    cluster: c\n    namespace: n\n    operator: hanzo-operator\n    name: x\n",
+			),
+		).toThrow(PlatformConfigError);
+	});
+
+	// A declared image that is missing a required field is a mistake, and must
+	// stay loud — hanzo-fi/ledger and hanzoai/operator both hit exactly this.
+	it("still rejects an image entry with no repo", () => {
+		expect(() =>
+			parsePlatformConfig("images:\n  - name: ledger\n    context: .\n"),
+		).toThrow(/repo/);
+	});
+
+	// A document that parses to a scalar or a list is malformed, not silent.
+	it("still rejects a non-mapping document", () => {
+		expect(() => parsePlatformConfig("just a string")).toThrow(/YAML mapping/);
 	});
 
 	it("rejects an empty matrix", () => {
@@ -143,7 +211,7 @@ build:
 	});
 
 	it("accepts the App CRD — the kind the fleet actually runs", () => {
-		const cfg = validatePlatformConfig({
+		const cfg = declared({
 			build: { matrix: [{ os: "linux", arch: "amd64" }], image: "x/y" },
 			deploy: {
 				on: ["main"],
@@ -161,7 +229,7 @@ build:
 
 	it("defaults an omitted crd to App", () => {
 		// `App` is ~99% of the fleet, so omitting the kind must not be an error.
-		const cfg = validatePlatformConfig({
+		const cfg = declared({
 			build: { matrix: [{ os: "linux", arch: "amd64" }], image: "x/y" },
 			deploy: {
 				on: ["main"],
@@ -210,7 +278,7 @@ kms: { path: /deploy, environment: prod }
 
 describe("images (hanzo.yml multi-image)", () => {
 	it("parses a list of images into builds", () => {
-		const cfg = parsePlatformConfig(MULTI_IMAGE);
+		const cfg = built(MULTI_IMAGE);
 		expect(cfg.builds).toHaveLength(2);
 		expect(cfg.builds[0]!.name).toBe("api");
 		expect(cfg.builds[0]!.image).toBe("ghcr.io/bootnode/bootnode");
@@ -242,7 +310,7 @@ describe("images (hanzo.yml multi-image)", () => {
 		).toThrow(/duplicate image name/);
 	});
 	it("treats a Deployment-style deploy (services) as build-only", () => {
-		const cfg = validatePlatformConfig({
+		const cfg = declared({
 			images: [{ name: "api", repo: "x/y" }],
 			deploy: { on: ["main"], cluster: "c", namespace: "n", services: [] },
 		});
@@ -366,7 +434,7 @@ describe("buildable arch gate (arm64 paused)", () => {
 	it("a config may still DECLARE arm64 (schema-valid) — the gate is runtime, not schema", () => {
 		// A dual-arch config parses fine; the scheduler skips the arm64 entry at
 		// dispatch time. Keeps validation and build-time policy orthogonal.
-		const cfg = parsePlatformConfig(`
+		const cfg = built(`
 build:
   matrix:
     - { os: linux, arch: amd64 }

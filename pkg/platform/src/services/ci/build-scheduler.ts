@@ -116,11 +116,16 @@ async function resolveProvider(
  */
 const CONFIG_NAMES = ["hanzo.yml", ".platform.yml"] as const;
 
-/** Decode + parse a base64 GitHub `getContent` file response. */
+/**
+ * Decode + parse a base64 GitHub `getContent` file response.
+ *
+ * Null means the file exists and declares no build — same signal as no file at
+ * all, because to this lane they mean the same thing.
+ */
 function parseContentResponse(
 	data: { content?: string; encoding?: string },
 	where: string,
-): PlatformConfig {
+): PlatformConfig | null {
 	if (!data.content || data.encoding !== "base64") {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
