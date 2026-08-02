@@ -179,7 +179,10 @@ describe("POST /v1/git-webhook — Hanzo Git", () => {
 		expect(scheduleBuilds).not.toHaveBeenCalled();
 	});
 
-	it("202s a repo with no hanzo.yml instead of failing the push", async () => {
+	it("202s a repo with nothing to build instead of failing the push", async () => {
+		// `scheduleBuilds` returns null for BOTH "no hanzo.yml" and "hanzo.yml
+		// declares no image", so the message names the observable outcome rather
+		// than guessing which of the two it was.
 		scheduleBuilds.mockResolvedValue(null);
 		const res = await post({
 			"x-hanzo-event": "push",
@@ -187,7 +190,7 @@ describe("POST /v1/git-webhook — Hanzo Git", () => {
 		});
 		expect(res.status).toBe(202);
 		await expect(res.json()).resolves.toMatchObject({
-			message: expect.stringContaining("no hanzo.yml"),
+			message: expect.stringContaining("declares no image to build"),
 		});
 	});
 });

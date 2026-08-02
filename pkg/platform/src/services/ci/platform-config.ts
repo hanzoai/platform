@@ -248,6 +248,32 @@ function parseStringList(obj: object, key: string, path: string): string[] {
 	});
 }
 
+/**
+ * A repo-relative path taken from `hanzo.yml`.
+ *
+ * These strings end up inside a GENERATED SHELL SCRIPT in the publish Job —
+ * `cargoCrates` is interpolated unquoted into `for c in …` because the loop
+ * needs word-splitting. So the safety has to live HERE, at the boundary, not at
+ * each use site: an allowlisted charset means no value can ever carry a shell
+ * metacharacter (`;`, `|`, `$`, backtick, newline, quote) into that script.
+ * Validating once at parse time keeps every consumer safe by construction.
+ *
+ * Also rejects upward traversal, so a path cannot escape the checked-out repo.
+ */
+function requireRelativePath(value: string, path: string): string {
+	if (!/^[A-Za-z0-9._][A-Za-z0-9._/-]*$/.test(value)) {
+		throw new PlatformConfigError(
+			`${path} must be a repo-relative path made of [A-Za-z0-9._/-] and may not start with "-" or "/" (got ${JSON.stringify(value)})`,
+		);
+	}
+	if (value.split("/").includes("..")) {
+		throw new PlatformConfigError(
+			`${path} must not traverse upward with ".." (got ${JSON.stringify(value)})`,
+		);
+	}
+	return value;
+}
+
 /** Parse + validate the optional `publish:` block. */
 function parsePublish(raw: unknown): PublishConfig | undefined {
 	if (raw === undefined) return undefined;
@@ -266,8 +292,13 @@ function parsePublish(raw: unknown): PublishConfig | undefined {
 		npm,
 		pypi,
 		cargo,
-		cargoCrates: parseStringList(raw, "cargoCrates", "publish"),
-		packageDir: optionalStringOrUndef(raw, "packageDir", "publish") ?? ".",
+		cargoCrates: parseStringList(raw, "cargoCrates", "publish").map((c, i) =>
+			requireRelativePath(c, `publish.cargoCrates[${i}]`),
+		),
+		packageDir: requireRelativePath(
+			optionalStringOrUndef(raw, "packageDir", "publish") ?? ".",
+			"publish.packageDir",
+		),
 		dryRun: boolField(raw, "dryRun", "publish"),
 	};
 }
