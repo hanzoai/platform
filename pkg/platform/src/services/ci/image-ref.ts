@@ -1,21 +1,42 @@
 /**
- * Split a docker image reference into [repository, tag]. Strict-mode safe.
+ * Split a docker image reference into [repository, tag, digest]. Strict-mode safe.
  *
- * `postgres:16-alpine`        -> `["postgres", "16-alpine"]`
- * `postgres`                  -> `["postgres", ""]`
- * `ghcr.io/hanzoai/zip:abc1`  -> `["ghcr.io/hanzoai/zip", "abc1"]`
- * `ghcr.io:5000/x/y`          -> `["ghcr.io:5000/x/y", ""]` (registry port, no tag)
+ * `postgres:16-alpine`        -> `["postgres", "16-alpine", ""]`
+ * `postgres`                  -> `["postgres", "", ""]`
+ * `ghcr.io/hanzoai/zip:abc1`  -> `["ghcr.io/hanzoai/zip", "abc1", ""]`
+ * `ghcr.io:5000/x/y`          -> `["ghcr.io:5000/x/y", "", ""]` (registry port, no tag)
+ * `ghcr.io/hanzoai/cloud:v1.801.371@sha256:76e3…`
+ *                             -> `["ghcr.io/hanzoai/cloud", "v1.801.371", "sha256:76e3…"]`
+ *
+ * A reference has THREE parts, not two. The digest was previously smuggled into
+ * the tag: `lastIndexOf(":")` lands inside `sha256:` on a digest-pinned ref, so
+ * the split returned repository `ghcr.io/hanzoai/cloud:v1.801.371@sha256` and
+ * tag `76e30c92…` — the hex. Every consumer then treated that hex as the running
+ * VERSION: the fleet board printed a digest where an operator reads a version,
+ * and `computeDrift` flagged `floating-running` ("not semver") on 43 rows that
+ * were in fact pinned correctly. The board went red exactly where the estate was
+ * right. Digest-pinning is the convention here (116 values files carry `digest:`
+ * beside `tag:`), so this was the common case, not the edge.
+ *
+ * Returned as a 3-tuple so existing `const [repo, tag] = …` call sites are
+ * unchanged; only a caller that must PRESERVE pinning names the third element.
  *
  * Single canonical implementation shared by the CR builder and the deploy
  * executor — do not re-derive this elsewhere.
  */
-export function parseImageRef(ref: string): [string, string] {
-	const idx = ref.lastIndexOf(":");
-	if (idx <= 0) return [ref, ""];
-	const afterColon = ref.slice(idx + 1);
+export function parseImageRef(ref: string): [string, string, string] {
+	// The digest is delimited by `@` and always trails the tag, so peel it first;
+	// what remains is an ordinary `repository[:tag]`.
+	const at = ref.indexOf("@");
+	const digest = at === -1 ? "" : ref.slice(at + 1);
+	const rest = at === -1 ? ref : ref.slice(0, at);
+
+	const idx = rest.lastIndexOf(":");
+	if (idx <= 0) return [rest, "", digest];
+	const afterColon = rest.slice(idx + 1);
 	// A `/` after the colon means it was a registry `host:port/` — not a tag.
-	if (afterColon.includes("/")) return [ref, ""];
-	return [ref.slice(0, idx), afterColon];
+	if (afterColon.includes("/")) return [rest, "", digest];
+	return [rest.slice(0, idx), afterColon, digest];
 }
 
 /**

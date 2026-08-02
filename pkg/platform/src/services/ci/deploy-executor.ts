@@ -113,7 +113,12 @@ export async function executeDeploy(
 		});
 	}
 
-	const [repository, tag] = parseImageRef(job.image);
+	// The operator formats the container ref as `repository:tag`, so a digest
+	// must ride along in `tag` or pinning is LOST — the CR would name a floating
+	// tag and the next pull could serve different bytes under the same version.
+	// `repository` stays clean; the digest stays attached to what it pins.
+	const [repository, refTag, digest] = parseImageRef(job.image);
+	const tag = digest ? `${refTag}@${digest}` : refTag;
 
 	// Multi-cluster bridge — ONE choke point. resolveOrgClusterClients pins the
 	// rollout to the org's selected cluster (dedicated DOKS or attached BYO), else
