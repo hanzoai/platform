@@ -56,7 +56,12 @@ export const buildJob = sqliteTable("build_job", {
 	 * The build-watcher reads this Job's status to advance the row.
 	 */
 	buildJobName: text("buildJobName"),
-	/** Image digest (`sha256:…`) the Kaniko build wrote to /dev/termination-log. */
+	/**
+	 * Image digest (`sha256:…`) this build pushed — which BYTES it produced, as
+	 * opposed to the tag it produced them under. Read from the BuildKit log by
+	 * `parseImageDigest`, or reported by an external builder via
+	 * /v1/build-callback. Null when the log was unreadable; never guessed.
+	 */
 	imageDigest: text("imageDigest"),
 	/** Append-only build log (MVP: stored inline; large logs move to object storage). */
 	logs: text("logs").notNull().default(""),
