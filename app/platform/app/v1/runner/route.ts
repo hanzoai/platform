@@ -33,13 +33,46 @@ interface EnqueueBody {
 	context?: string;
 	/** Docker build stage (`--target`) for multi-stage Dockerfiles. */
 	dockerTarget?: string;
+	/**
+	 * `--build-arg` pairs. `VERSION` is derived from the image tag already, so
+	 * state it here only to override that.
+	 */
+	buildArgs?: Record<string, string>;
 	os?: "linux" | "darwin" | "windows";
 	arch?: "amd64" | "arm64";
 	organizationId?: string;
 }
 
+/** A Dockerfile `ARG` name — the shape an environment identifier may take. */
+const ARG_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * Read `buildArgs` off an untrusted body as a flat string map.
+ *
+ * Returns the message when the field is not that, else null. Values are free
+ * text (they ride as their own argv element, never through a shell), but a key
+ * is spliced into `--opt=build-arg:<key>=<value>`, so anything that is not an
+ * ARG name would silently build a different option than it reads like.
+ */
+export function buildArgsProblem(value: unknown): string | null {
+	if (value === undefined) return null;
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		return "buildArgs must be an object of string values";
+	}
+	for (const [k, v] of Object.entries(value)) {
+		if (!ARG_NAME.test(k)) {
+			return `buildArgs key "${k}" is not a valid Dockerfile ARG name`;
+		}
+		if (typeof v !== "string") {
+			return `buildArgs value for "${k}" must be a string`;
+		}
+	}
+	return null;
+}
+
 /** Registry orgs we publish. Upstream images are none of our business. */
-const FIRST_PARTY = /^ghcr\.io\/(luxfi|hanzoai|zooai|parsdao|adnexus|hanzobot|zenlm)\//;
+const FIRST_PARTY =
+	/^ghcr\.io\/(luxfi|hanzoai|zooai|parsdao|adnexus|hanzobot|zenlm)\//;
 const SEMVER_TAG = /^v?\d+\.\d+\.\d+$/;
 
 /**
@@ -71,10 +104,10 @@ export function firstPartyTagProblem(image: string): string | null {
 
 	return (
 		`Refusing to build ${image}: "${tag}" is not semver. ` +
-		`First-party images must publish vX.Y.Z — no :latest, no branch names, ` +
-		`no sha- or -amd64 or -<suffix> tags. Cut a release (x.y.z+1 off the last ` +
-		`patch) and build that. An image nothing can trace back to a version is ` +
-		`one nobody can rebuild or patch.`
+		"First-party images must publish vX.Y.Z — no :latest, no branch names, " +
+		"no sha- or -amd64 or -<suffix> tags. Cut a release (x.y.z+1 off the last " +
+		"patch) and build that. An image nothing can trace back to a version is " +
+		"one nobody can rebuild or patch."
 	);
 }
 
@@ -82,13 +115,18 @@ export async function POST(req: Request) {
 	const expected = process.env.PLATFORM_BUILD_CALLBACK_TOKEN;
 	if (!expected) {
 		return Response.json(
-			{ message: "PLATFORM_BUILD_CALLBACK_TOKEN is not configured on the server" },
+			{
+				message:
+					"PLATFORM_BUILD_CALLBACK_TOKEN is not configured on the server",
+			},
 			{ status: 500 },
 		);
 	}
 	// Constant-time bearer check (no early-exit on the token — timingSafeEqual).
 	const header = req.headers.get("authorization") ?? "";
-	const provided = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+	const provided = header.startsWith("Bearer ")
+		? header.slice("Bearer ".length)
+		: "";
 	if (!provided || !safeEqual(provided, expected)) {
 		return Response.json({ message: "Invalid enqueue token" }, { status: 401 });
 	}
@@ -106,7 +144,13 @@ export async function POST(req: Request) {
 		return Response.json({ message: tagProblem }, { status: 400 });
 	}
 
-	const organizationId = body.organizationId ?? process.env.DEFAULT_BUILD_ORG_ID;
+	const argsProblem = buildArgsProblem(body.buildArgs);
+	if (argsProblem) {
+		return Response.json({ message: argsProblem }, { status: 400 });
+	}
+
+	const organizationId =
+		body.organizationId ?? process.env.DEFAULT_BUILD_ORG_ID;
 	if (!organizationId) {
 		return Response.json(
 			{
@@ -127,6 +171,7 @@ export async function POST(req: Request) {
 			dockerfile: body.dockerfile,
 			context: body.context,
 			dockerTarget: body.dockerTarget,
+			buildArgs: body.buildArgs,
 			os: body.os,
 			arch: body.arch,
 			organizationId,

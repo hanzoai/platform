@@ -316,7 +316,12 @@ function archOf(target: string): BuildArch {
 async function dispatchBuild(
 	job: BuildJob,
 	gitRef: string,
-	opts: { dockerfile?: string; context?: string; dockerTarget?: string },
+	opts: {
+		dockerfile?: string;
+		context?: string;
+		dockerTarget?: string;
+		buildArgs?: Record<string, string>;
+	},
 ): Promise<BuildJob> {
 	const launch = await launchBuildJob({
 		repo: job.repo,
@@ -325,6 +330,7 @@ async function dispatchBuild(
 		dockerfile: opts.dockerfile,
 		context: opts.context,
 		dockerTarget: opts.dockerTarget,
+		buildArgs: opts.buildArgs,
 		arch: archOf(job.target),
 		buildJobId: job.buildJobId,
 	});
@@ -355,6 +361,11 @@ export interface DirectBuildInput {
 	context?: string;
 	/** Optional Docker build stage (`--target`) for multi-stage Dockerfiles. */
 	dockerTarget?: string;
+	/**
+	 * `--build-arg` pairs for the Dockerfile. `VERSION` is already derived from
+	 * the destination tag, so state it here only to override that.
+	 */
+	buildArgs?: Record<string, string>;
 	push?: boolean;
 	/** Build target os/arch (default linux/amd64). Drives the pool + platform. */
 	os?: BuildOS;
@@ -406,6 +417,7 @@ export async function enqueueDirectBuild(
 		dockerfile: input.dockerfile,
 		context: input.context,
 		dockerTarget: input.dockerTarget,
+		buildArgs: input.buildArgs,
 	});
 }
 
