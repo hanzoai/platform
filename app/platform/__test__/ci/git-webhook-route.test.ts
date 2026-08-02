@@ -191,7 +191,46 @@ describe("POST /v1/git-webhook — Hanzo Git", () => {
 		expect(res.status).toBe(202);
 		await expect(res.json()).resolves.toMatchObject({
 			message: expect.stringContaining("declares no image to build"),
+			scheduled: 0,
 		});
+	});
+
+	// The three outcomes below share ONE status code, so `scheduled` is what
+	// tells them apart. Accepting a push and building nothing is defensible;
+	// being indistinguishable from accepting a push and building something is
+	// not, and that is the trap this whole route is otherwise careful about.
+	it("distinguishes built-nothing from building by more than prose", async () => {
+		// The state that had no test and reads as success: the repo DOES declare
+		// images, but every matrix entry was skipped (arm64 paused, `{{git.tag}}`
+		// empty on a branch push). It takes the scheduled branch with an empty
+		// array, so a caller keying on `buildJobIds` being present calls this
+		// "building". Only `scheduled: 0` says otherwise.
+		scheduleBuilds.mockResolvedValue({ jobs: [] });
+		const none = await post({
+			"x-hanzo-event": "push",
+			"x-hanzo-signature": goodSig,
+		});
+		expect(none.status).toBe(202);
+		const noneBody = (await none.json()) as {
+			scheduled: number;
+			buildJobIds: string[];
+		};
+		expect(noneBody.buildJobIds).toEqual([]);
+		expect(noneBody.scheduled).toBe(0);
+
+		scheduleBuilds.mockResolvedValue({ jobs: [{ buildJobId: "bj-1" }] });
+		const built = await post({
+			"x-hanzo-event": "push",
+			"x-hanzo-signature": goodSig,
+		});
+		expect(built.status).toBe(202);
+		await expect(built.json()).resolves.toMatchObject({
+			scheduled: 1,
+			buildJobIds: ["bj-1"],
+		});
+
+		// Same code, same key present, opposite meaning — which is the point.
+		expect(none.status).toBe(built.status);
 	});
 });
 
