@@ -4,6 +4,7 @@ import {
 	buildkitArgs,
 	buildkitWrapperScript,
 	buildNamespace,
+	parseImageDigest,
 } from "@hanzo/platform/services/ci/buildkit-job";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -390,5 +391,70 @@ describe("buildBuildkitJob — fleet dual-push wiring", () => {
 			"registry-credentials",
 		);
 		expect(fleetInGhcr).toBe(false);
+	});
+});
+
+/**
+ * parseImageDigest turns a build's log into the one fact the build row could
+ * never state: WHICH BYTES it produced. The traps are all near-misses — a
+ * BuildKit export prints a config digest and a digest per layer right next to
+ * the manifest digest, and picking the wrong one yields a confident wrong
+ * answer that is worse than NULL, because drift detection would compare
+ * against it and flag every deploy forever.
+ */
+const MANIFEST = `sha256:${"1".repeat(64)}`;
+const CONFIG = `sha256:${"2".repeat(64)}`;
+const LAYER = `sha256:${"3".repeat(64)}`;
+
+describe("parseImageDigest", () => {
+	it("takes the pushed MANIFEST digest, never the config or a layer", () => {
+		const log = [
+			"#15 exporting to image",
+			`#15 exporting layers ${LAYER} 2.3s done`,
+			`#15 exporting manifest ${MANIFEST} done`,
+			`#15 exporting config ${CONFIG} done`,
+			`#15 pushing manifest for ghcr.io/hanzoai/app:v1.2.3@${MANIFEST}`,
+			"#15 DONE 6.2s",
+		].join("\n");
+		expect(parseImageDigest(log)).toBe(MANIFEST);
+	});
+
+	it("returns ONE digest for a dual-push, where two refs carry one manifest", () => {
+		// FLEET_REGISTRY_HOST makes the single build push the same manifest to
+		// GHCR and registry.hanzo.ai — two lines, one truth.
+		const log = [
+			`#15 pushing manifest for ghcr.io/hanzoai/app:v1.2.3@${MANIFEST}`,
+			`#15 pushing manifest for registry.hanzo.ai/hanzoai/app:v1.2.3@${MANIFEST}`,
+		].join("\n");
+		expect(parseImageDigest(log)).toBe(MANIFEST);
+	});
+
+	it("falls back to the exported manifest when the log has no push line", () => {
+		expect(parseImageDigest(`#15 exporting manifest ${MANIFEST} done`)).toBe(
+			MANIFEST,
+		);
+	});
+
+	it("reads a multi-arch `exporting manifest list`", () => {
+		expect(
+			parseImageDigest(`#15 exporting manifest list ${MANIFEST} done`),
+		).toBe(MANIFEST);
+	});
+
+	it("is undefined when nothing was pushed or exported", () => {
+		const log = [
+			"#8 [builder 3/5] RUN go build ./...",
+			`#9 sha256:${"f".repeat(64)}`, // bare digest — a layer ref, not a manifest
+			"#15 DONE 6.2s",
+		].join("\n");
+		expect(parseImageDigest(log)).toBeUndefined();
+	});
+
+	it("is undefined for an empty log rather than throwing", () => {
+		expect(parseImageDigest("")).toBeUndefined();
+	});
+
+	it("ignores a config digest even when it is the only sha256 present", () => {
+		expect(parseImageDigest(`#15 exporting config ${CONFIG} done`)).toBeUndefined();
 	});
 });

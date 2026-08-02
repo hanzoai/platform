@@ -20,6 +20,8 @@ interface CallbackBody {
 	buildJobId?: string;
 	outcome?: string;
 	installationId?: string;
+	/** Image digest (`sha256:…`) the builder pushed. */
+	digest?: string;
 	log?: string;
 	error?: string;
 }
@@ -55,6 +57,7 @@ export async function POST(req: Request) {
 			buildJobId: body.buildJobId,
 			outcome: body.outcome,
 			installationId: body.installationId,
+			digest: body.digest,
 			log: body.log,
 			error: body.error,
 		});
