@@ -260,7 +260,13 @@ function dockerAuthWiring(fleetHost?: string): {
 			{ mountPath: "/tmp/fleet-cred", name: "fleet-cred", readOnly: true },
 		],
 		volumes: [
-			{ name: "docker-config", emptyDir: {} },
+			// Holds exactly one composed config.json (two `auths` entries, a few
+			// hundred bytes). An emptyDir is charged to the NODE's ephemeral storage,
+			// so it is capped even at this size — an unbounded writable dir inside a
+			// privileged build container is a way to fill a node's rootfs, and the
+			// cap makes the pod that does it the one that gets evicted. 1Mi, not a
+			// build-sized number: this is the credential dir, not a workspace.
+			{ name: "docker-config", emptyDir: { sizeLimit: "1Mi" } },
 			{ name: "ghcr-cred", secret: ghcrCred },
 			{
 				name: "fleet-cred",
