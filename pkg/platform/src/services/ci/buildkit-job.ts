@@ -189,7 +189,7 @@ export interface BuildOutcome {
 	/** The Job has reached a terminal state (succeeded or failed). */
 	done: boolean;
 	succeeded: boolean;
-	/** Image digest, when an external builder reported one via /v1/build-callback. */
+	/** Image digest (`sha256:…`) of the manifest this build pushed. */
 	digest?: string;
 	/** Failure detail when `done && !succeeded`. */
 	reason?: string;
@@ -481,10 +481,90 @@ export async function readJobStatus(
 }
 
 /**
- * Read a build Job's terminal outcome. The image is its own evidence — the
- * pushed `ghcr.io/<repo>:<tag>` either exists or it doesn't; BuildKit does not
- * write a digest into the pod, so the in-cluster path leaves `digest` unset (an
- * external builder may supply one via /v1/build-callback).
+ * Digest of the manifest a `--progress=plain` BuildKit run pushed, read from its
+ * log. Undefined when the log shows no push (nothing was published) or is gone.
+ *
+ * Anchored on the two lines that name a MANIFEST:
+ *   #N pushing manifest for ghcr.io/hanzoai/app:v1.2.3@sha256:<64hex>
+ *   #N exporting manifest sha256:<64hex>          (also "manifest list", multi-arch)
+ *
+ * Never on a bare `sha256:` — every layer line carries one — and never on
+ * `exporting config sha256:…`, which is the CONFIG digest and is a different
+ * value from the manifest digest that `<ref>@sha256:…` resolves. Pulling the
+ * config digest here would be worse than NULL: a confident wrong answer that
+ * drift detection would compare against and always flag.
+ *
+ * `pushing manifest for` wins over `exporting manifest` because it is proof the
+ * bytes reached the registry, not just that they were assembled. With dual-push
+ * (FLEET_REGISTRY_HOST) the SAME manifest goes to two hosts, so there are two
+ * such lines carrying one digest; last wins and they agree.
+ */
+export function parseImageDigest(log: string): string | undefined {
+	const pushed = [
+		...log.matchAll(/pushing manifest for \S*?@(sha256:[0-9a-f]{64})/g),
+	];
+	const lastPushed = pushed.at(-1)?.[1];
+	if (lastPushed) return lastPushed;
+	const exported = [
+		...log.matchAll(/exporting manifest(?: list)? (sha256:[0-9a-f]{64})/g),
+	];
+	return exported.at(-1)?.[1];
+}
+
+/**
+ * Tail of a build Job's pod log. Bounded: the export/push vertices are the last
+ * thing BuildKit prints, so the digest is always in the tail, and a big build's
+ * plain log is far too large to pull whole every 15s watcher tick.
+ */
+const DIGEST_LOG_TAIL = 400;
+
+/**
+ * Read the build container's log. Never throws — a missing pod (TTL-reaped) or a
+ * denied read degrades to `undefined`, i.e. exactly today's behaviour, rather
+ * than failing a build that actually succeeded.
+ */
+async function readBuildLog(
+	namespace: string,
+	jobName: string,
+): Promise<string | undefined> {
+	const clients = getDefaultClients();
+	try {
+		// `job-name` is set by the Job controller, so this needs nothing from our
+		// own label block. backoffLimit:1 means a retried build leaves a failed
+		// sibling behind — the succeeded pod is the one that pushed.
+		const pods = await clients.core.listNamespacedPod({
+			namespace,
+			labelSelector: `job-name=${jobName}`,
+		});
+		const items = pods.items ?? [];
+		const pod =
+			items.find((p) => p.status?.phase === "Succeeded") ??
+			items[items.length - 1];
+		const name = pod?.metadata?.name;
+		if (!name) return undefined;
+		return await clients.core.readNamespacedPodLog({
+			name,
+			namespace,
+			container: "build",
+			tailLines: DIGEST_LOG_TAIL,
+		});
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Read a build Job's terminal outcome, INCLUDING which bytes it produced.
+ *
+ * A build that cannot name its own output makes the build row unusable as a
+ * system of record: verifying a deploy then means reading Job logs and GHCR by
+ * hand. It matters more than it sounds, because universe values pin both `tag:`
+ * and `digest:` and the kubelet honours the DIGEST — bump the tag alone and it
+ * renders `newtag@olddigest` and serves old bytes under a new SHA. Persisting
+ * the digest here is what lets that be checked automatically.
+ *
+ * The digest is best-effort: it is read from the log, so an unreadable log
+ * leaves it unset and the build still completes. It is never guessed.
  */
 export async function readBuildOutcome(
 	namespace: string,
@@ -492,7 +572,14 @@ export async function readBuildOutcome(
 ): Promise<BuildOutcome> {
 	const status = await readJobStatus(namespace, jobName);
 	if (!status.done) return { done: false, succeeded: false };
-	if (status.succeeded) return { done: true, succeeded: true };
+	if (status.succeeded) {
+		const log = await readBuildLog(namespace, jobName);
+		return {
+			done: true,
+			succeeded: true,
+			digest: log ? parseImageDigest(log) : undefined,
+		};
+	}
 	return {
 		done: true,
 		succeeded: false,
