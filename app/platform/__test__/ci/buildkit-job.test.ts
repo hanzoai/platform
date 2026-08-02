@@ -91,7 +91,61 @@ describe("buildkitArgs", () => {
 		);
 		// exactly one — the caller's — so precedence is explicit rather than a bet
 		// on which duplicate `--opt` BuildKit happens to keep.
-		expect(emitted).toEqual(["--opt=build-arg:BUILDKIT_CONTEXT_KEEP_GIT_DIR=0"]);
+		expect(emitted).toEqual([
+			"--opt=build-arg:BUILDKIT_CONTEXT_KEEP_GIT_DIR=0",
+		]);
+	});
+
+	// Regression: `ghcr.io/hanzoai/iam:v1.34.1` built through /v1/runner answered
+	// `iam dev` from `/iam version` — the Dockerfile's `ARG VERSION=dev` default
+	// was never overridden, so a running pod could not name its own release. The
+	// forge workflow passed `--build-arg VERSION=<tag>`; platform did not, so one
+	// commit built through two front doors self-reported two different versions.
+	it("passes the destination tag as VERSION so the binary can name its release", () => {
+		const args = buildkitArgs({
+			repo: "hanzoai/iam",
+			gitRef: "refs/tags/v1.34.1",
+			image: "ghcr.io/hanzoai/iam:v1.34.1",
+			buildJobId: "j1",
+		});
+		expect(args).toContain("--opt=build-arg:VERSION=v1.34.1");
+	});
+
+	it("lets an explicit VERSION win, emitted exactly once", () => {
+		const args = buildkitArgs({
+			repo: "o/r",
+			gitRef: "main",
+			image: "ghcr.io/hanzoai/x:v9.9.9",
+			buildJobId: "j",
+			buildArgs: { VERSION: "1.2.3" },
+		});
+		expect(
+			args.filter((a) => a.startsWith("--opt=build-arg:VERSION=")),
+		).toEqual(["--opt=build-arg:VERSION=1.2.3"]);
+	});
+
+	// A digest names bytes, not a release. Passing the digest hex as VERSION
+	// would be a lineage claim nothing backs.
+	it("invents no VERSION for a digest-only destination", () => {
+		const args = buildkitArgs({
+			repo: "o/r",
+			gitRef: "main",
+			image: "ghcr.io/hanzoai/x@sha256:0123456789abcdef",
+			buildJobId: "j",
+		});
+		expect(args.some((a) => a.startsWith("--opt=build-arg:VERSION="))).toBe(
+			false,
+		);
+	});
+
+	it("reads the tag, not the digest, when a ref pins both", () => {
+		const args = buildkitArgs({
+			repo: "o/r",
+			gitRef: "main",
+			image: "ghcr.io/hanzoai/x:v1.2.3@sha256:0123456789abcdef",
+			buildJobId: "j",
+		});
+		expect(args).toContain("--opt=build-arg:VERSION=v1.2.3");
 	});
 
 	it("strips a leading ./ from the dockerfile", () => {
@@ -455,6 +509,8 @@ describe("parseImageDigest", () => {
 	});
 
 	it("ignores a config digest even when it is the only sha256 present", () => {
-		expect(parseImageDigest(`#15 exporting config ${CONFIG} done`)).toBeUndefined();
+		expect(
+			parseImageDigest(`#15 exporting config ${CONFIG} done`),
+		).toBeUndefined();
 	});
 });

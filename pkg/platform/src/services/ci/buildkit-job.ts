@@ -31,7 +31,11 @@
  */
 import { TRPCError } from "@trpc/server";
 import { getDefaultClients } from "../k8s/k8s-client";
-import { pushSecretForImage, withRegistryHost } from "./image-ref";
+import {
+	parseImageRef,
+	pushSecretForImage,
+	withRegistryHost,
+} from "./image-ref";
 import type { BuildArch } from "./platform-config";
 
 /** BuildKit executor image — the canonical in-cluster builder (proven contract). */
@@ -216,6 +220,18 @@ export function buildJobName(repo: string, buildJobId: string): string {
 }
 
 /**
+ * The version an image ref names — its tag, or "" when it names none.
+ *
+ * The digest is peeled first: `…@sha256:<hex>` names bytes, not a release, and a
+ * ref may pin both (`:v1.2.3@sha256:…`), where the version is the tag. Parsing
+ * itself stays in `parseImageRef` — one implementation, per that module's rule.
+ */
+export function imageVersion(ref: string): string {
+	const at = ref.indexOf("@");
+	return parseImageRef(at === -1 ? ref : ref.slice(0, at))[1];
+}
+
+/**
  * `buildctl-daemonless.sh` args for a build — pure, so the unit test can assert
  * the contract. Mirrors the proven hand-applied BuildKit Jobs: dockerfile.v0
  * frontend, HTTPS git context, image output pushed to GHCR. When a fleet
@@ -257,6 +273,24 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	if (!("BUILDKIT_CONTEXT_KEEP_GIT_DIR" in buildArgs)) {
 		args.push("--opt=build-arg:BUILDKIT_CONTEXT_KEEP_GIT_DIR=1");
 	}
+	// A build already knows the version it is building: the destination tag IS
+	// it. Passing it as VERSION is what lets the binary inside name its own
+	// lineage — the near-universal `ARG VERSION` + `-ldflags -X main.version`
+	// pattern. Measured: `ghcr.io/hanzoai/iam:v1.34.1` built through /v1/runner
+	// answered `iam dev` from `/iam version`, because the Dockerfile's
+	// `ARG VERSION=dev` default was never overridden, so an operator holding a
+	// running pod could not tell which release it was. The forge workflow passed
+	// `--build-arg VERSION=<tag>` and platform did not, so the same commit built
+	// through two front doors produced two different self-reports.
+	//
+	// Derived, not asked for: a caller cannot forget it, and it cannot disagree
+	// with the tag it ships under — the two identifiers are one string. Same
+	// default-not-hard-code precedence as KEEP_GIT_DIR above; a digest-pinned
+	// destination names no version, so nothing is invented for it.
+	if (!("VERSION" in buildArgs)) {
+		const version = imageVersion(input.image);
+		if (version) args.push(`--opt=build-arg:VERSION=${version}`);
+	}
 	for (const [k, v] of Object.entries(buildArgs)) {
 		args.push(`--opt=build-arg:${k}=${v}`);
 	}
@@ -294,7 +328,10 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
  *    config, so both secrets mount read-only and `DOCKER_CONFIG` is a writable
  *    `emptyDir` the wrapper composes into (see `buildkitWrapperScript`).
  */
-function dockerAuthWiring(pushSecret: string, fleetHost?: string): {
+function dockerAuthWiring(
+	pushSecret: string,
+	fleetHost?: string,
+): {
 	volumeMounts: Array<{ mountPath: string; name: string; readOnly?: boolean }>;
 	volumes: Array<Record<string, unknown>>;
 } {
