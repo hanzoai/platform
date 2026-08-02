@@ -201,6 +201,23 @@ export async function POST(req: Request) {
 			ref: decoded.ref,
 			branch: decoded.branch,
 		});
+		// `scheduled` is the ONE machine-readable answer to the only question a
+		// caller actually has: did this push cause a build? It is on EVERY 202,
+		// and `scheduled: 0` means nothing is building whatever the reason.
+		//
+		// Without it the three outcomes below are one status code and two body
+		// SHAPES, and the shapes lie. A repo that declares images but skips every
+		// matrix entry (arm64 paused, `{{git.tag}}` empty on a branch push) takes
+		// the second branch with an empty array, so a caller branching on the
+		// presence of `buildJobIds` classifies "built nothing" as "building" —
+		// which is the fleet-wide trap this route is otherwise careful about, and
+		// the only thing separating them was the prose "0 build(s)".
+		//
+		// This body is not just for machines: Hanzo Git persists it
+		// (models/webhook/hooktask.go) and renders it in the delivery-history
+		// Response tab, and it is the ONLY artifact this path produces — no log
+		// line, no metric, no row. Whatever it says here is the entire record
+		// that the push was accepted and did nothing.
 		if (!result) {
 			// Two ways to mean the same thing, and the message must not claim the
 			// first when it was the second: the repo has no hanzo.yml, OR it has one
@@ -210,6 +227,7 @@ export async function POST(req: Request) {
 			return Response.json(
 				{
 					message: `Accepted; ${decoded.repo} declares no image to build`,
+					scheduled: 0,
 				},
 				{ status: 202 },
 			);
@@ -217,6 +235,7 @@ export async function POST(req: Request) {
 		return Response.json(
 			{
 				message: `Accepted; scheduled ${result.jobs.length} build(s)`,
+				scheduled: result.jobs.length,
 				buildJobIds: result.jobs.map((j) => j.buildJobId),
 			},
 			{ status: 202 },
