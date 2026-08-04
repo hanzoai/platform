@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { EnterpriseFeatureLocked } from "@/components/enterprise/enterprise-feature-gate";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -203,18 +202,16 @@ export const AddUserPermissions = ({ userId, role }: Props) => {
 			enabled: isOpen,
 		},
 	);
-	const { data: haveValidLicense } =
-		api.licenseKey.haveValidLicenseKey.useQuery();
 
 	const { data: gitProviders } = api.gitProvider.allForPermissions.useQuery(
 		undefined,
 		{
-			enabled: isOpen && !!haveValidLicense,
+			enabled: isOpen,
 		},
 	);
 
 	const { data: servers } = api.server.allForPermissions.useQuery(undefined, {
-		enabled: isOpen && !!haveValidLicense,
+		enabled: isOpen,
 	});
 
 	const { data, refetch } = api.user.one.useQuery(
@@ -896,7 +893,6 @@ export const AddUserPermissions = ({ userId, role }: Props) => {
 								</FormItem>
 							)}
 						/>
-						{haveValidLicense ? (
 							<FormField
 								control={form.control}
 								name="accessedGitProviders"
@@ -959,16 +955,6 @@ export const AddUserPermissions = ({ userId, role }: Props) => {
 									</FormItem>
 								)}
 							/>
-						) : (
-							<div className="md:col-span-2">
-								<EnterpriseFeatureLocked
-									compact
-									title="Git Provider Assignment"
-									description="Assign specific Git Providers to users with an Enterprise license."
-								/>
-							</div>
-						)}
-						{haveValidLicense ? (
 							<FormField
 								control={form.control}
 								name="accessedServers"
@@ -1032,15 +1018,6 @@ export const AddUserPermissions = ({ userId, role }: Props) => {
 									</FormItem>
 								)}
 							/>
-						) : (
-							<div className="md:col-span-2">
-								<EnterpriseFeatureLocked
-									compact
-									title="Server Assignment"
-									description="Assign specific Servers to users with an Enterprise license."
-								/>
-							</div>
-						)}
 						<DialogFooter className="flex w-full flex-row justify-end md:col-span-2">
 							<Button
 								isLoading={isPending}

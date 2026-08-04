@@ -7,7 +7,6 @@ import {
 	getHanzoUrl,
 	getUserByToken,
 	getWebServerSettings,
-	hasValidLicense,
 	IS_CLOUD,
 	removeUserById,
 	renderInvitationEmail,
@@ -406,18 +405,14 @@ export const userRouter = createTRPCRouter({
 
 				const { id, accessedGitProviders, accessedServers, ...rest } = input;
 
-				const licensed = await hasValidLicense(
-					ctx.session?.activeOrganizationId || "",
-				);
-
 				await db
 					.update(member)
 					.set({
 						...rest,
-						...(licensed && accessedGitProviders !== undefined
+						...(accessedGitProviders !== undefined
 							? { accessedGitProviders }
 							: {}),
-						...(licensed && accessedServers !== undefined
+						...(accessedServers !== undefined
 							? { accessedServers }
 							: {}),
 					})

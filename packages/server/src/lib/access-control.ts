@@ -51,11 +51,10 @@ export const statements = {
 } as const;
 
 /**
- * Enterprise-only resources. For static roles (owner/admin/member),
- * permission checks on these resources are bypassed — they only apply
- * when using custom roles with an enterprise license.
+ * Resources whose per-resource permission check is bypassed for the static
+ * roles (owner/admin/member); it applies only under custom roles.
  */
-export const enterpriseOnlyResources = new Set<string>([
+export const staticRoleBypassResources = new Set<string>([
 	"volume",
 	"deployment",
 	"envVars",
@@ -172,7 +171,7 @@ export const memberRole = ac.newRole({
 	gitProviders: [],
 	traefikFiles: [],
 	api: [],
-	// Service-level enterprise resources — member can do everything within services they have access to
+	// Service-level bypass resources — member can do everything within services they have access to
 	volume: ["read", "create", "delete"],
 	deployment: ["read", "create", "cancel"],
 	envVars: ["read", "write"],
@@ -184,7 +183,7 @@ export const memberRole = ac.newRole({
 	domain: ["read", "create", "delete"],
 	logs: ["read"],
 	monitoring: ["read"],
-	// Org-level enterprise resources — member cannot manage these
+	// Org-level bypass resources — member cannot manage these
 	server: [],
 	registry: [],
 	certificate: [],

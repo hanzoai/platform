@@ -6,8 +6,7 @@ import superjson from "superjson";
 import { ToggleEnforceSSO } from "@/components/dashboard/settings/servers/actions/toggle-enforce-sso";
 import { ToggleRemoteServersOnly } from "@/components/dashboard/settings/servers/actions/toggle-remote-servers-only";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
-import { EnterpriseFeatureGate } from "@/components/enterprise/enterprise-feature-gate";
-import { SSOSettings } from "@/components/enterprise/sso/sso-settings";
+import { SSOSettings } from "@/components/dashboard/settings/sso/sso-settings";
 import {
 	Card,
 	CardContent,
@@ -28,30 +27,13 @@ const Page = ({ isCloud }: Props) => {
 				<Card className="h-full bg-sidebar p-2.5 rounded-xl mx-auto w-full">
 					<div className="rounded-xl bg-background shadow-md">
 						<div className="p-6">
-							<EnterpriseFeatureGate
-								lockedProps={{
-									title: "Enterprise SSO",
-									description:
-										"Single sign-on (SSO) with OIDC and SAML is part of Hanzo Platform Enterprise. Add a valid license to configure it.",
-									ctaLabel: "Go to License",
-								}}
-							>
 								<SSOSettings />
-							</EnterpriseFeatureGate>
 						</div>
 					</div>
 				</Card>
 				{!isCloud && (
 					<Card className="h-full bg-sidebar p-2.5 rounded-xl mx-auto w-full">
 						<div className="rounded-xl bg-background shadow-md">
-							<EnterpriseFeatureGate
-								lockedProps={{
-									title: "Self-hosted Restrictions",
-									description:
-										"Deployment and authentication restrictions are part of Dokploy Enterprise. Add a valid license to configure them.",
-									ctaLabel: "Go to License",
-								}}
-							>
 								<CardHeader>
 									<CardTitle className="text-xl">
 										Self-hosted Restrictions
@@ -64,7 +46,6 @@ const Page = ({ isCloud }: Props) => {
 									<ToggleRemoteServersOnly />
 									<ToggleEnforceSSO />
 								</CardContent>
-							</EnterpriseFeatureGate>
 						</div>
 					</Card>
 				)}

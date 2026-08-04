@@ -7,7 +7,6 @@ import {
 	findUserById,
 	getAccessibleServerIds,
 	getPublicIpWithFallback,
-	hasValidLicense,
 	haveActiveServices,
 	IS_CLOUD,
 	removeDeploymentsByServerId,
@@ -130,16 +129,6 @@ export const serverRouter = createTRPCRouter({
 		return result.filter((s) => accessibleIds.has(s.serverId));
 	}),
 	allForPermissions: withPermission("member", "update")
-		.use(async ({ ctx, next }) => {
-			const licensed = await hasValidLicense(ctx.session.activeOrganizationId);
-			if (!licensed) {
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message: "Valid enterprise license required",
-				});
-			}
-			return next();
-		})
 		.query(async ({ ctx }) => {
 			return await db.query.server.findMany({
 				columns: {
