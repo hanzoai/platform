@@ -1,4 +1,3 @@
-import { useHanzoAuth } from "@hanzo/ui/navigation";
 import { ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +11,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
+import { signOutIam } from "@/lib/iam-browser";
 import { getFallbackAvatarInitials } from "@/lib/utils";
 import { api } from "@/utils/api";
 import { ModeToggle } from "../ui/modeToggle";
@@ -21,7 +21,6 @@ const _AUTO_CHECK_UPDATES_INTERVAL_MINUTES = 7;
 
 export const UserNav = () => {
 	const router = useRouter();
-	const { signOut } = useHanzoAuth();
 	const { data } = api.user.get.useQuery();
 	const { data: permissions } = api.user.getPermissions.useQuery();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
@@ -148,10 +147,11 @@ export const UserNav = () => {
 					className="cursor-pointer"
 					onClick={async () => {
 						// Clear the residual Better Auth session (api-key/org/sso
-						// plugins) first, then the canonical IAM logout: useHanzoAuth
-						// clears the IAM localStorage token and redirects to hanzo.id.
+						// plugins) first, then the canonical IAM logout: signOutIam
+						// clears the httpOnly session cookie and the IAM token, then
+						// redirects to hanzo.id.
 						await authClient.signOut();
-						signOut();
+						await signOutIam();
 					}}
 				>
 					Log out
