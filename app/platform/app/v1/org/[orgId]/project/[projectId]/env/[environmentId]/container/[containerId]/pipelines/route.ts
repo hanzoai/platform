@@ -1,7 +1,7 @@
 /**
  * GET /v1/org/{orgId}/project/{projectId}/env/{environmentId}/container/{containerId}/pipelines
  *
- * Lists a container's deployment history (Dokploy `deployment` rows) as the
+ * Lists a container's deployment history (`deployment` rows) as the
  * console's PipelineRun[]. Returns [] when the app has never been deployed
  * through platform's own deploy flow.
  *

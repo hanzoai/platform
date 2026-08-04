@@ -690,10 +690,7 @@ export const composeRouter = createTRPCRouter({
 					return githubTemplates;
 				}
 			} catch (error) {
-				console.warn(
-					"Failed to fetch templates from GitHub, falling back to local templates:",
-					error,
-				);
+				console.warn("Failed to fetch templates from the catalog:", error);
 			}
 			return [];
 		}),

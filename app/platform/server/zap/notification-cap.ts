@@ -705,7 +705,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			try {
 				await sendCustomNotification(input, {
 					title: "Test Notification",
-					message: "Hi, From Dokploy 👋",
+					message: "Hi, From Hanzo Platform 👋",
 					timestamp: new Date().toISOString(),
 				});
 				return true;
@@ -763,7 +763,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 				await sendLarkNotification(input, {
 					msg_type: "text",
 					content: {
-						text: "Hi, From Dokploy 👋",
+						text: "Hi, From Hanzo Platform 👋",
 					},
 				});
 				return true;
@@ -818,7 +818,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 			try {
 				await sendTeamsNotification(input, {
 					title: "🤚 Test Notification",
-					facts: [{ name: "Message", value: "Hi, From Dokploy 👋" }],
+					facts: [{ name: "Message", value: "Hi, From Hanzo Platform 👋" }],
 				});
 				return true;
 			} catch (error) {
@@ -875,7 +875,7 @@ async function dispatch(ctx: NotificationCtx, call: Call): Promise<unknown> {
 				await sendPushoverNotification(
 					input,
 					"Test Notification",
-					"Hi, From Dokploy 👋",
+					"Hi, From Hanzo Platform 👋",
 				);
 				return true;
 			} catch (_error) {

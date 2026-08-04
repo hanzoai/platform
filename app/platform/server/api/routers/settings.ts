@@ -1,3 +1,4 @@
+import { generateOpenApiDocument } from "@dokploy/trpc-openapi";
 import {
 	CLEANUP_CRON_JOB,
 	checkGPUStatus,
@@ -49,14 +50,13 @@ import {
 	writeTraefikSetup,
 } from "@hanzo/platform";
 import { db } from "@hanzo/platform/db";
-import { generateOpenApiDocument } from "@dokploy/trpc-openapi";
+import { checkPermission } from "@hanzo/platform/services/permission";
 import { TRPCError } from "@trpc/server";
 import { eq, sql } from "drizzle-orm";
 import { scheduledJobs, scheduleJob } from "node-schedule";
 import { parse, stringify } from "yaml";
 import { z } from "zod";
 import { audit } from "@/server/api/utils/audit";
-import { checkPermission } from "@hanzo/platform/services/permission";
 import {
 	apiAssignDomain,
 	apiEnableDashboard,
@@ -152,7 +152,7 @@ export const settingsRouter = createTRPCRouter({
 			await audit(ctx, {
 				action: "reload",
 				resourceType: "settings",
-				resourceName: "dokploy-traefik",
+				resourceName: "platform-traefik",
 			});
 			return true;
 		}),
@@ -568,7 +568,7 @@ export const settingsRouter = createTRPCRouter({
 			await audit(ctx, {
 				action: "update",
 				resourceType: "settings",
-				resourceName: "dokploy-version",
+				resourceName: "platform-version",
 			});
 		}
 
@@ -1095,12 +1095,11 @@ export const settingsRouter = createTRPCRouter({
 		return getLogCleanupStatus();
 	}),
 
-	// NOTE: DOKPLOY_CLOUD_IPS env var kept for backward compatibility
 	getHanzoCloudIps: adminProcedure.query(async () => {
 		if (!IS_CLOUD) {
 			return [];
 		}
-		const ips = (process.env.HANZO_CLOUD_IPS ?? process.env.DOKPLOY_CLOUD_IPS)?.split(",");
+		const ips = process.env.HANZO_CLOUD_IPS?.split(",");
 		return ips;
 	}),
 });

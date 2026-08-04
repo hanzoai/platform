@@ -285,7 +285,7 @@ export const ContainerFreeMonitoring = ({
 						</CardContent>
 					</Card>
 				)}
-				{appName === "dokploy" && (
+				{appName === "platform" && (
 					<Card className="bg-background">
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 							<CardTitle className="text-sm font-medium">

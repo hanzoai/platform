@@ -2,7 +2,7 @@
  * Shared helpers for the PaaS container REST API (/v1/org/.../container*).
  *
  * These endpoints back the Hanzo console "PaaS" page. They are a thin,
- * read-mostly REST surface over the Dokploy `application` data model, shaped to
+ * read-mostly REST surface over the `application` data model, shaped to
  * match exactly what the console expects (console
  * web/src/features/platform/types.ts): PaasContainer / PipelineRun.
  *
@@ -14,15 +14,16 @@
  * side. The pattern mirrors app/v1/build-callback/route.ts.
  *
  * These handlers are additive — they introduce a new /v1 surface and never touch
- * existing Dokploy routes, services, or data.
+ * existing routes, services, or data.
  */
-import { eq } from "drizzle-orm";
+
 import { db } from "@hanzo/platform/db";
 import { applications } from "@hanzo/platform/db/schema";
+import { eq } from "drizzle-orm";
 import {
 	methodNotAllowed,
-	type ServiceTokenResult,
 	requireServiceToken as requireServiceTokenFor,
+	type ServiceTokenResult,
 } from "@/server/v1/http";
 
 // Generic /v1 transport helpers live in server/v1/http.ts — re-exported here so
@@ -94,7 +95,7 @@ export async function listApplicationsInScope(
 }
 
 // ---------------------------------------------------------------------------
-// Status mapping (Dokploy enums -> console unions). The console mappers are
+// Status mapping (platform enums -> console unions). The console mappers are
 // substring-lenient, but we normalize explicitly to the canonical values.
 // ---------------------------------------------------------------------------
 
@@ -160,7 +161,9 @@ export function mapApplicationToContainer(app: any, live?: K8sLiveInfo) {
 	}
 
 	const createdAt: string =
-		typeof app.createdAt === "string" ? app.createdAt : new Date(0).toISOString();
+		typeof app.createdAt === "string"
+			? app.createdAt
+			: new Date(0).toISOString();
 
 	return {
 		id: app.applicationId,
