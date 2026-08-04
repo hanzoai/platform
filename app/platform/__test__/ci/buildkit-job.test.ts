@@ -62,6 +62,42 @@ describe("buildkitArgs", () => {
 		expect(args.some((a) => a.startsWith("--opt=target="))).toBe(false);
 	});
 
+	// Regression: the build Job is one-shot and the namespace has no PVC, so
+	// buildkitd's snapshot store dies with the pod. Without a registry cache EVERY
+	// build was cold and redid the whole dependency install — measured 19-21 min
+	// for hanzoai/docs on a push that never touched its lockfile.
+	it("imports and exports a per-arch registry layer cache", () => {
+		const args = buildkitArgs({
+			repo: "hanzoai/docs",
+			gitRef: "refs/heads/main",
+			image: "ghcr.io/hanzoai/docs:v1.2.3",
+			buildJobId: "j1",
+		});
+		expect(args).toContain(
+			"--import-cache=type=registry,ref=ghcr.io/hanzoai/docs:buildcache-amd64",
+		);
+		// mode=max or the export covers only the final (slim runtime) stage and
+		// caches none of the install that costs the minutes.
+		expect(args).toContain(
+			"--export-cache=type=registry,ref=ghcr.io/hanzoai/docs:buildcache-amd64,mode=max,ignore-error=true",
+		);
+	});
+
+	// A cross-arch import is a guaranteed miss, so the two arches must not share
+	// one ref — and must not evict each other's cache on export.
+	it("keys the cache per arch", () => {
+		const args = buildkitArgs({
+			repo: "hanzoai/docs",
+			gitRef: "refs/heads/main",
+			image: "ghcr.io/hanzoai/docs:v1.2.3",
+			buildJobId: "j1",
+			arch: "arm64",
+		});
+		expect(args).toContain(
+			"--import-cache=type=registry,ref=ghcr.io/hanzoai/docs:buildcache-arm64",
+		);
+	});
+
 	// Regression: without KEEP_GIT_DIR, BuildKit's git context has no .git, so a
 	// Dockerfile's `git describe --tags` fails and the version silently falls back
 	// to a checked-in (stale) file. The image is then tagged with the NEW version
