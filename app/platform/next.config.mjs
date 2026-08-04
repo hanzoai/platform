@@ -9,7 +9,33 @@ const nextConfig = {
 	typescript: {
 		ignoreBuildErrors: true,
 	},
-	transpilePackages: ["@hanzo/platform", "@hanzo/ui"],
+	// @hanzo/ui 8 renders through @hanzo/gui, which ships untranspiled ESM using
+	// React-Native module resolution. Next has to compile those packages and point
+	// `react-native` at the web implementation — that pair IS the browser story for
+	// the gui substrate, and omitting either one fails at bundle time, not at
+	// runtime. Same shape hanzo.ai already builds with.
+	transpilePackages: [
+		"@hanzo/platform",
+		"@hanzo/ui",
+		"@hanzo/gui",
+		"react-native-web",
+	],
+	webpack: (config) => {
+		config.resolve.alias = {
+			...config.resolve.alias,
+			"react-native$": "react-native-web",
+		};
+		// gui ships `.web.*` platform variants; without these extensions webpack
+		// picks the native file and pulls in RN internals that have no browser build.
+		config.resolve.extensions = [
+			".web.tsx",
+			".web.ts",
+			".web.jsx",
+			".web.js",
+			...(config.resolve.extensions || []),
+		];
+		return config;
+	},
 	// Native node modules must never enter the webpack bundle — they ship a
 	// prebuilt `.node` binary webpack cannot parse. The App Router /v1 routes are
 	// server-only and reach these transitively through @hanzo/platform (e.g.

@@ -25,7 +25,6 @@
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
     "@types/node": "^24.13.2",
-    "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "dotenv": "16.4.5",
     "esbuild": "0.20.2",
     "lint-staged": "^15.5.2",
@@ -86,9 +85,5 @@
       "tree-sitter",
       "tree-sitter-json"
     ]
-  },
-  "dependencies": {
-    "@hanzo/iam": "^0.13.8",
-    "@hanzo/ui": "link:../ui/pkg/ui"
   }
 }

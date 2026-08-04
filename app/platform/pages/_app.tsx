@@ -10,6 +10,7 @@ import type { ReactElement, ReactNode } from "react";
 import { SearchCommand } from "@/components/dashboard/search-command";
 import { WhitelabelingProvider } from "@/components/enterprise/whitelabeling/whitelabeling-provider";
 import { AnalyticsRoot } from "@/components/providers/analytics";
+import { GuiProvider } from "@/components/providers/gui";
 import { Toaster } from "@/components/ui/sonner";
 import { api } from "@/utils/api";
 
@@ -49,12 +50,14 @@ const MyApp = ({
 				disableTransitionOnChange
 				forcedTheme={Component.theme}
 			>
-				<AnalyticsRoot>
-					<NextTopLoader color="hsl(var(--sidebar-ring))" />
-					<Toaster richColors />
-					<SearchCommand />
-					{getLayout(<Component {...pageProps} />)}
-				</AnalyticsRoot>
+				<GuiProvider>
+					<AnalyticsRoot>
+						<NextTopLoader color="hsl(var(--sidebar-ring))" />
+						<Toaster richColors />
+						<SearchCommand />
+						{getLayout(<Component {...pageProps} />)}
+					</AnalyticsRoot>
+				</GuiProvider>
 			</ThemeProvider>
 		</div>
 	);
