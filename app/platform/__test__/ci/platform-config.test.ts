@@ -497,12 +497,13 @@ describe("publish paths cannot inject shell", () => {
 
 	it("still accepts ordinary workspace crate paths", () => {
 		const cfg = pub({ cargoCrates: ["crates/core", "crates/cli", "."] });
-		expect(cfg.publish?.cargoCrates).toEqual([
+		expect(cfg).not.toBeNull();
+		expect(cfg?.publish?.cargoCrates).toEqual([
 			"crates/core",
 			"crates/cli",
 			".",
 		]);
-		expect(pub({ packageDir: "packages/sdk" }).publish?.packageDir).toBe(
+		expect(pub({ packageDir: "packages/sdk" })?.publish?.packageDir).toBe(
 			"packages/sdk",
 		);
 	});
