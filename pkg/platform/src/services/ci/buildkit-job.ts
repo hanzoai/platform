@@ -139,9 +139,33 @@ export interface BuildResources {
 	limits: { cpu: string; memory: string; "ephemeral-storage": string };
 }
 
+// ephemeral-storage is requested and limited at the SAME value, unlike cpu/memory.
+//
+// The scheduler packs by REQUEST, but the node evicts by ACTUAL USE — and an
+// ephemeral-storage eviction does not fall on the greedy pod, it falls on
+// whichever pod the kubelet picks. With request 24Gi / limit 60Gi on an 88Gi
+// node, three builds schedule (3 x 24 = 72Gi, inside the ~73Gi usable after the
+// ~15Gi eviction threshold) and any ONE of them may then grow to 60Gi and take
+// the other two down with it. Measured after the layer cache landed: build-docs
+// and pf-runner were both Evicted for "node was low on resource:
+// ephemeral-storage", and four commerce builds could not schedule at all
+// ("6 Insufficient ephemeral-storage") — none of them the build that overran.
+//
+// Making the two equal is what confines the blast radius to the offender: a
+// build that exceeds its own limit is killed on its own, its neighbours keep
+// running, and the number the scheduler reasons about is the number the node
+// actually experiences. Guaranteed-QoS for the one resource whose overrun is
+// externalized onto other pods.
+//
+// The registry layer cache (see buildkitArgs) is what made this binding: mode=max
+// retains every intermediate stage's layers rather than only the final stage's,
+// which is exactly why it is worth having — a cold docs build took 21m07s — and
+// also why per-build disk went up. The cache is correct; the envelope had to
+// stop lying about it. Raise this only alongside the node pool's allocatable,
+// never past (allocatable - eviction threshold) / concurrent-builds.
 const DEFAULT_RESOURCES: BuildResources = {
 	requests: { cpu: "2", memory: "6Gi", "ephemeral-storage": "24Gi" },
-	limits: { cpu: "8", memory: "16Gi", "ephemeral-storage": "60Gi" },
+	limits: { cpu: "8", memory: "16Gi", "ephemeral-storage": "24Gi" },
 };
 
 export interface BuildJobLaunchInput {
