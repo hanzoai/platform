@@ -1,1 +1,0 @@
-ALTER TABLE "user" ADD COLUMN "isEnterpriseCloud" boolean DEFAULT false NOT NULL;

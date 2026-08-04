@@ -1,1 +1,0 @@
-ALTER TABLE "gitlab" ADD COLUMN "gitlabInternalUrl" text;

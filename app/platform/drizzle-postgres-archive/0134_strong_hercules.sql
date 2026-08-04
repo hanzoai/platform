@@ -1,1 +1,0 @@
-ALTER TABLE "application" ALTER COLUMN "railpackVersion" SET DEFAULT '0.15.4';

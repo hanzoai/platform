@@ -1,1 +1,0 @@
-ALTER TABLE "destination" ADD COLUMN "additionalFlags" text[];

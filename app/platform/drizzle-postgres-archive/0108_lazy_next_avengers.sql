@@ -1,1 +1,0 @@
-ALTER TABLE "environment" ADD COLUMN "env" text DEFAULT '' NOT NULL;

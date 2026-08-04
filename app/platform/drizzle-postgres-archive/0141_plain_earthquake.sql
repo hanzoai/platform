@@ -1,1 +1,0 @@
-ALTER TABLE "gitea" ADD COLUMN "giteaInternalUrl" text;
