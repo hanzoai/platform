@@ -11,14 +11,26 @@
  * every Hanzo surface renders @hanzo/ui at the same sizes, radii and spacing. A
  * private copy here would be a second scale that drifts.
  *
- * `disableRootThemeClass`: next-themes already owns the `class` attribute on
- * <html> (`attribute="class"` in _app), and gui writing its own theme class onto
- * the same element fights it. gui follows next-themes instead, via
- * `defaultTheme`.
+ * gui writes its OWN theme class (`t_dark`/`t_light`) onto <html>, and it has to
+ * — that class is what every `$color12`/`$background` reference resolves
+ * through. It does not fight next-themes: both use `classList`, so `dark` and
+ * `t_dark` sit side by side on the element. `disableRootThemeClass` suppresses
+ * gui's half, and does it silently: `defaultTheme` still reads as accepted while
+ * nothing it says can reach the root. Measured on the production build, with the
+ * flag gone: a dark-preferring client gets `class="font-sans t_dark dark"` and
+ * `--background: hsla(0,0%,8%,1)`, a light one `t_light light` and
+ * `hsla(0,0%,97%,1)`. With the flag set there is no `t_*` class at all, so both
+ * resolve the same way and the toggle does nothing.
  *
- * CSS injection is left ON. hanzo.ai turns it off because it pre-generates the
- * sheet in a `prebuild` step; this app has no such step, so the runtime sheet is
- * the only source and disabling it would render everything unstyled.
+ * So next-themes stays the source of truth for WHICH theme, and gui applies it.
+ *
+ * `disableInjectCSS` is paired with `styles/gui.css`, which
+ * `scripts/gen-gui-css.mjs` writes from this same config. Injected at runtime,
+ * that sheet is the one node whose TEXT differs between server and client — it
+ * accumulates as components construct — so React 18 threw #425 and fell back to
+ * client-rendering the entire root (#423) on every page. Measured on the
+ * production build. Per-component atomic rules are untouched: they ride React's
+ * own `<style href precedence>` hoisting, which reconciles by href.
  */
 "use client";
 
@@ -34,7 +46,7 @@ export const GuiProvider = ({ children }: { children: ReactNode }) => {
 		<Gui
 			config={guiConfig}
 			defaultTheme={resolvedTheme === "light" ? "light" : "dark"}
-			disableRootThemeClass
+			disableInjectCSS
 		>
 			{children}
 		</Gui>
