@@ -1,0 +1,66 @@
+/**
+ * Alert — plain CSS on the theme's custom properties.
+ *
+ * `@hanzo/ui` 5.x exported an `Alert` from `@hanzo/ui/alert`; 8.x does not export
+ * one at all, so the component has to live here. It is written as CSS rather than
+ * `@hanzo/gui` style props because its whole layout is expressed in terms of a
+ * CHILD it does not own: the icon a caller drops in as the first child is pulled
+ * out of flow and the text is inset around it. That is a descendant selector
+ * (`> svg`), and style props — gui's or anyone's — cannot express one. gui also
+ * has no `display: grid`; its display union is React-Native-derived and stops at
+ * flex.
+ *
+ * The tokens are the ones `styles/globals.css` already declares, so this file
+ * introduces no new colour and follows the theme automatically.
+ */
+
+.hz-alert {
+  position: relative;
+  width: 100%;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  padding: 1rem;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* The caller's leading icon: lifted out of flow, text inset to clear it. */
+.hz-alert > svg {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  color: hsl(var(--foreground));
+}
+
+.hz-alert > svg ~ * {
+  padding-left: 1.75rem;
+}
+
+/* Optical alignment: the first text block sits a hair high against the icon. */
+.hz-alert > svg + div {
+  transform: translateY(-3px);
+}
+
+.hz-alert[data-variant="destructive"] {
+  border-color: hsl(var(--destructive) / 0.5);
+  color: hsl(var(--destructive));
+}
+
+.hz-alert[data-variant="destructive"] > svg {
+  color: hsl(var(--destructive));
+}
+
+.hz-alert-title {
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.hz-alert-description {
+  font-size: 0.875rem;
+}
+
+.hz-alert-description p {
+  line-height: 1.625;
+}

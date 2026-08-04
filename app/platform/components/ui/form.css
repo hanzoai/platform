@@ -1,0 +1,29 @@
+/**
+ * Form — plain CSS on the theme's custom properties.
+ *
+ * Same reasoning as `alert.css`: `@hanzo/ui` 5.x shipped these wrappers, 8.x does
+ * not, and what they express is typography and spacing bound to the theme's own
+ * tokens. No utility classes, no component library — the tokens in
+ * `styles/globals.css` are the whole palette.
+ */
+
+.hz-form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hz-form-label[data-invalid="true"] {
+  color: hsl(var(--destructive));
+}
+
+.hz-form-description {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.hz-form-message {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: hsl(var(--destructive));
+}
