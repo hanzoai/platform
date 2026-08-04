@@ -302,6 +302,39 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	const push = input.fleetRegistryHost
 		? `--output=type=image,"name=${input.image},${withRegistryHost(input.image, input.fleetRegistryHost)}",push=true`
 		: `--output=type=image,name=${input.image},push=true`;
+	// Layer cache, and the reason a build takes minutes instead of seconds.
+	//
+	// Every build runs `buildctl-daemonless.sh` in a FRESH one-shot Job pod: the
+	// buildkitd it starts keeps its snapshot store on the pod filesystem, which is
+	// destroyed when the Job ends, and the namespace has no PVC. So with no cache
+	// flags EVERY build was 100% cold — re-pulling every base layer and re-running
+	// `pnpm install` / `go mod download` from scratch each time. Measured on the
+	// live fleet: docs 19-21 min, console 2-3 min, for repos whose lockfiles had
+	// not moved. The dependency install was being redone on every single push.
+	//
+	// A registry-backed cache is the only store that outlives the pod, so it is
+	// the one that can help here. `mode=max` is what makes it worth having: the
+	// default `min` exports only the FINAL stage's layers, and every Dockerfile we
+	// build is multi-stage with a slim runtime stage — so `min` would cache
+	// precisely the cheap half and none of the install that costs the 19 minutes.
+	//
+	// `ignore-error=true` on the export: a cache push is an optimization and must
+	// never be able to fail a build that otherwise succeeded (a missing scope on
+	// the push credential would otherwise turn a green build red).
+	//
+	// The ref is derived from the destination image, so it needs no new
+	// configuration and cannot drift from what it caches — same repository, a
+	// dedicated `buildcache-<arch>` tag, kept per-arch because a cross-arch import
+	// is a guaranteed miss. Digest-pinned destinations name no repository we can
+	// safely append to, hence the guard.
+	const [cacheRepo] = parseImageRef(input.image);
+	if (cacheRepo) {
+		const cacheRef = `${cacheRepo}:buildcache-${arch}`;
+		args.push(
+			`--import-cache=type=registry,ref=${cacheRef}`,
+			`--export-cache=type=registry,ref=${cacheRef},mode=max,ignore-error=true`,
+		);
+	}
 	args.push(
 		"--secret=id=GIT_AUTH_TOKEN,env=GIT_AUTH_TOKEN",
 		"--secret=id=gh_token,env=GH_TOKEN",
