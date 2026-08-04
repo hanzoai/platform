@@ -953,7 +953,6 @@ async function dispatch(ctx: SettingsCtx, call: Call): Promise<unknown> {
 					"customRole",
 					"whitelabeling",
 					"sso",
-					"licenseKey",
 					"organization",
 					"previewDeployment",
 				],

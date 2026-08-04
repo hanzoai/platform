@@ -42,7 +42,6 @@ import {
 	getHanzoUrl,
 	getUserByToken,
 	getWebServerSettings,
-	hasValidLicense,
 	IS_CLOUD,
 	removeUserById,
 	renderInvitationEmail,
@@ -552,19 +551,14 @@ async function dispatch(ctx: UserCtx, call: Call): Promise<unknown> {
 				// gap stayed hidden — fork data-model gap).
 				const { id, accessedGitProviders, accessedServers, ...rest } = input;
 
-				// hasValidLicense resolves from @hanzo/platform/services/license.
-				const licensed = await hasValidLicense(
-					ctx.session?.activeOrganizationId || "",
-				);
-
 				await db
 					.update(member)
 					.set({
 						...rest,
-						...(licensed && accessedGitProviders !== undefined
+						...(accessedGitProviders !== undefined
 							? { accessedGitProviders }
 							: {}),
-						...(licensed && accessedServers !== undefined
+						...(accessedServers !== undefined
 							? { accessedServers }
 							: {}),
 					})
