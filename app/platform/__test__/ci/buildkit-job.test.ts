@@ -62,6 +62,29 @@ describe("buildkitArgs", () => {
 		expect(args.some((a) => a.startsWith("--opt=target="))).toBe(false);
 	});
 
+	// Regression: ephemeral-storage overrun is externalized onto OTHER pods — the
+	// kubelet evicts by node pressure and does not necessarily pick the greedy
+	// one. Measured after the layer cache landed (mode=max retains intermediate
+	// layers, so per-build disk rose): build-docs and pf-runner were Evicted and
+	// four commerce builds could not schedule, none of them the overrunning build.
+	// Equal request/limit is what keeps a build that overruns from taking its
+	// neighbours down, and keeps the number the scheduler packs by equal to the
+	// number the node experiences.
+	it("requests and limits ephemeral-storage at the same value", () => {
+		const job = buildBuildkitJob({
+			repo: "hanzoai/docs",
+			gitRef: "refs/heads/main",
+			image: "ghcr.io/hanzoai/docs:v1.2.3",
+			buildJobId: "j1",
+		});
+		const res = job.spec.template.spec.containers[0].resources;
+		expect(res.limits["ephemeral-storage"]).toBe(res.requests["ephemeral-storage"]);
+		// cpu and memory stay burstable on purpose — exceeding those throttles or
+		// OOM-kills the offender alone, so overcommit there costs nobody else.
+		expect(res.limits.cpu).not.toBe(res.requests.cpu);
+		expect(res.limits.memory).not.toBe(res.requests.memory);
+	});
+
 	// Regression: the build Job is one-shot and the namespace has no PVC, so
 	// buildkitd's snapshot store dies with the pod. Without a registry cache EVERY
 	// build was cold and redid the whole dependency install — measured 19-21 min
