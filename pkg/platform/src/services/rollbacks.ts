@@ -19,12 +19,12 @@ import {
 import { execAsync, execAsyncRemote } from "../utils/process/execAsync";
 import { getRemoteDocker } from "../utils/servers/remote-docker";
 import { type Application, findApplicationById } from "./application";
-import { safeDockerLoginCommand } from "./registry";
 import { findDeploymentById } from "./deployment";
 import type { Mount } from "./mount";
 import type { Port } from "./port";
 import type { Project } from "./project";
 import type { Registry } from "./registry";
+import { safeDockerLoginCommand } from "./registry";
 
 export const createRollback = async (
 	input: z.infer<typeof createRollbackSchema>,
@@ -256,7 +256,7 @@ const rollbackApplication = async (
 	);
 
 	// Build the full registry image path if rollbackRegistry is available
-	// e.g., "appName:v5" -> "siumauricio/appName:v5" or "registry.com/prefix/appName:v5"
+	// e.g., "appName:v5" -> "hanzoai/appName:v5" or "registry.com/prefix/appName:v5"
 	let rollbackImage = image;
 	if (fullContext.rollbackRegistry) {
 		rollbackImage = getRegistryTag(fullContext.rollbackRegistry, image);

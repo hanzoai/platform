@@ -108,8 +108,8 @@ export const UpdateDatabasePassword = ({
 				{error && <AlertBlock type="error">{error}</AlertBlock>}
 				<AlertBlock type="warning" className="my-4">
 					This will change the {label.toLowerCase()} both in the running
-					database container and in Dokploy. The container must be running for
-					this operation to succeed.
+					database container and in Hanzo Platform. The container must be
+					running for this operation to succeed.
 				</AlertBlock>
 				<Form {...form}>
 					<form

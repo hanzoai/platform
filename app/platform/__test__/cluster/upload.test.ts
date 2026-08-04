@@ -47,15 +47,13 @@ describe("getRegistryTag", () => {
 		});
 
 		it("should handle complex image name with username", () => {
-			const registry = createMockRegistry({ username: "siumauricio" });
+			const registry = createMockRegistry({ username: "hanzoai" });
 			const result = getRegistryTag(
 				registry,
-				"siumauricio/app-parse-multi-byte-port-e32uh7",
+				"hanzoai/app-parse-multi-byte-port-e32uh7",
 			);
 			// Should not duplicate username
-			expect(result).toBe(
-				"docker.io/siumauricio/app-parse-multi-byte-port-e32uh7",
-			);
+			expect(result).toBe("docker.io/hanzoai/app-parse-multi-byte-port-e32uh7");
 		});
 
 		it("should handle image name with different username (should not duplicate)", () => {
@@ -208,12 +206,12 @@ describe("getRegistryTag", () => {
 	});
 
 	describe("special characters in username", () => {
-		it("should handle Harbor robot account username with $ (e.g. robot$library+dokploy)", () => {
+		it("should handle Harbor robot account username with $ (e.g. robot$library+platform)", () => {
 			const registry = createMockRegistry({
-				username: "robot$library+dokploy",
+				username: "robot$library+platform",
 			});
 			const result = getRegistryTag(registry, "caddy");
-			expect(result).toBe("docker.io/robot$library+dokploy/caddy");
+			expect(result).toBe("docker.io/robot$library+platform/caddy");
 		});
 
 		it("should handle username with $ and other special characters", () => {

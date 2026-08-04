@@ -29,6 +29,7 @@
 // audit.
 
 import type { IncomingMessage } from "node:http";
+import { generateOpenApiDocument } from "@dokploy/trpc-openapi";
 import {
 	CLEANUP_CRON_JOB,
 	checkGPUStatus,
@@ -82,7 +83,6 @@ import {
 import { db } from "@hanzo/platform/db";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import { checkPermission } from "@hanzo/platform/services/permission";
-import { generateOpenApiDocument } from "@dokploy/trpc-openapi";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
@@ -90,10 +90,7 @@ import { Status } from "@zap-proto/zap";
 import { eq, sql } from "drizzle-orm";
 import { scheduledJobs, scheduleJob } from "node-schedule";
 import { parse, stringify } from "yaml";
-import {
-	projects,
-	server,
-} from "@/server/db/schema";
+import { projects, server } from "@/server/db/schema";
 import { cleanAllDeploymentQueue } from "@/server/queues/queueSetup";
 import { removeJob, schedule } from "@/server/utils/backup";
 import packageInfo from "../../package.json";
@@ -304,10 +301,10 @@ async function dispatch(ctx: SettingsCtx, call: Call): Promise<unknown> {
 					console.error("reloadTraefik background:", err);
 				},
 			);
-			console.info("[audit] settings.dokploy-traefik", {
+			console.info("[audit] settings.platform-traefik", {
 				action: "reload",
 				resourceType: "settings",
-				resourceName: "dokploy-traefik",
+				resourceName: "platform-traefik",
 				organizationId: ctx.organizationId,
 				userId: ctx.userId,
 				userEmail: ctx.email,
@@ -795,10 +792,10 @@ async function dispatch(ctx: SettingsCtx, call: Call): Promise<unknown> {
 					`hanzoai/platform:${data.latestVersion}`,
 					"hanzo",
 				]);
-				console.info("[audit] settings.dokploy-version", {
+				console.info("[audit] settings.platform-version", {
 					action: "update",
 					resourceType: "settings",
-					resourceName: "dokploy-version",
+					resourceName: "platform-version",
 					organizationId: ctx.organizationId,
 					userId: ctx.userId,
 					userEmail: ctx.email,
@@ -1306,9 +1303,7 @@ async function dispatch(ctx: SettingsCtx, call: Call): Promise<unknown> {
 
 		case SettingsMethod.updateLogCleanup: {
 			requireSession(ctx);
-			const input = decodeArgs<{ cronExpression: string | null }>(
-				call.payload,
-			);
+			const input = decodeArgs<{ cronExpression: string | null }>(call.payload);
 			if (IS_CLOUD) {
 				return true;
 			}
@@ -1336,13 +1331,10 @@ async function dispatch(ctx: SettingsCtx, call: Call): Promise<unknown> {
 
 		case SettingsMethod.getHanzoCloudIps: {
 			requireAdmin(ctx);
-			// NOTE: DOKPLOY_CLOUD_IPS env var kept for backward compatibility
 			if (!IS_CLOUD) {
 				return [];
 			}
-			const ips = (
-				process.env.HANZO_CLOUD_IPS ?? process.env.DOKPLOY_CLOUD_IPS
-			)?.split(",");
+			const ips = process.env.HANZO_CLOUD_IPS?.split(",");
 			return ips;
 		}
 
