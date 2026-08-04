@@ -1,6 +1,5 @@
 import type { findEnvironmentById } from "@hanzo/platform";
 import { validateRequest } from "@hanzo/platform/lib/auth";
-import { useWhitelabeling } from "@/utils/hooks/use-whitelabeling";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import {
 	Ban,
@@ -110,6 +109,7 @@ import {
 import { cn } from "@/lib/utils";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
+import { useWhitelabeling } from "@/utils/hooks/use-whitelabeling";
 
 export type Services = {
 	serverId?: string | null;
@@ -400,7 +400,7 @@ const EnvironmentPage = (
 			{ enabled: !!selectedTargetProject },
 		);
 	const { config: whitelabeling } = useWhitelabeling();
-	const appName = whitelabeling?.appName || "Dokploy";
+	const appName = whitelabeling?.appName || "Hanzo Platform";
 
 	const emptyServices =
 		!currentEnvironment ||
@@ -1028,7 +1028,8 @@ const EnvironmentPage = (
 			<AdvanceBreadcrumb />
 			<Head>
 				<title>
-					Environment: {currentEnvironment.name} | {projectData?.name} | Hanzo Platform
+					Environment: {currentEnvironment.name} | {projectData?.name} | Hanzo
+					Platform
 				</title>
 			</Head>
 			<div className="w-full">

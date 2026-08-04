@@ -137,7 +137,7 @@ async function dispatch(ctx: SwarmCtx, call: Call): Promise<unknown> {
 				}
 			}
 			// PRE-EXISTING: getAllContainerStats is not exported by the fork; the old
-			// tRPC swarmRouter imports it from @dokploy/server too. Return an empty
+			// tRPC swarmRouter imports it from @hanzo/platform too. Return an empty
 			// stats array to preserve compile + the method's return shape.
 			// return await getAllContainerStats(input.serverId);
 			return [];

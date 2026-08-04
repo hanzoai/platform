@@ -23,7 +23,7 @@ Platform login is **Hanzo IAM via PKCE. No Better Auth login, no `genericOAuth`,
 against the **gateway** `https://hanzo.id` → `/v1/iam/*`. client_id
 `hanzo-platform`. No email/password, no GitHub/Google, no Better Auth login.
 
-**Why staged, not one deploy:** Dokploy is built on Better Auth. `validateRequest`
+**Why staged, not one deploy:** the upstream fork this app derives from is built on Better Auth. `validateRequest`
 (`pkg/platform/src/lib/auth.ts:283`, ~30 callers) returns `{session, user}` where
 `user` is a row in the `user`/`member`/`organization`/`apikey` tables, and every
 `project`/`deployment`/`domain` FKs into them. So this is a data-model migration.

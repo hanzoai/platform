@@ -1,16 +1,16 @@
 /**
  * GET /v1/org/{orgId}/project/{projectId}/env/{environmentId}/container
  *
- * Lists the "containers" (Dokploy applications) in an environment, shaped as the
+ * Lists the "containers" (platform applications) in an environment, shaped as the
  * console's PaasContainer[]. Backs the console PaaS dashboard's main query.
  *
  * Auth: shared service bearer token (PAAS_SERVICE_TOKEN). See server/paas/container-api.ts.
  */
 import {
-	PAAS_NAMESPACE,
 	getLiveIndex,
 	listApplicationsInScope,
 	mapApplicationToContainer,
+	PAAS_NAMESPACE,
 	requireServiceToken,
 } from "@/server/paas/container-api";
 

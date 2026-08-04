@@ -152,7 +152,7 @@ async function dispatch(ctx: DockerCtx, call: Call): Promise<unknown> {
 			}
 			// PRE-EXISTING: containerStart not exported by fork (docker.ts exports
 			// only containerRestart); the old tRPC dockerRouter imports it from
-			// @dokploy/server too. No-op to preserve compile + dispatch shape.
+			// @hanzo/platform too. No-op to preserve compile + dispatch shape.
 			// await containerStart(input.containerId, input.serverId);
 			console.info("[audit] docker.start", {
 				action: "start",
@@ -180,7 +180,7 @@ async function dispatch(ctx: DockerCtx, call: Call): Promise<unknown> {
 				}
 			}
 			// PRE-EXISTING: containerStop not exported by fork; old tRPC dockerRouter
-			// imports it from @dokploy/server too. No-op to preserve compile.
+			// imports it from @hanzo/platform too. No-op to preserve compile.
 			// await containerStop(input.containerId, input.serverId);
 			console.info("[audit] docker.stop", {
 				action: "stop",
@@ -208,7 +208,7 @@ async function dispatch(ctx: DockerCtx, call: Call): Promise<unknown> {
 				}
 			}
 			// PRE-EXISTING: containerKill not exported by fork; old tRPC dockerRouter
-			// imports it from @dokploy/server too. No-op to preserve compile.
+			// imports it from @hanzo/platform too. No-op to preserve compile.
 			// await containerKill(input.containerId, input.serverId);
 			console.info("[audit] docker.stop", {
 				action: "stop",
@@ -236,7 +236,7 @@ async function dispatch(ctx: DockerCtx, call: Call): Promise<unknown> {
 				}
 			}
 			// PRE-EXISTING: containerRemove not exported by fork; old tRPC
-			// dockerRouter imports it from @dokploy/server too. No-op to preserve
+			// dockerRouter imports it from @hanzo/platform too. No-op to preserve
 			// compile.
 			// await containerRemove(input.containerId, input.serverId);
 			console.info("[audit] docker.delete", {

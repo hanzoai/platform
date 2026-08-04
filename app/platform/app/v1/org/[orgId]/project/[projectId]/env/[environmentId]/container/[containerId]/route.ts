@@ -1,16 +1,16 @@
 /**
  * GET /v1/org/{orgId}/project/{projectId}/env/{environmentId}/container/{containerId}
  *
- * Returns one container (Dokploy application) as the console's PaasContainer.
+ * Returns one container (platform application) as the console's PaasContainer.
  *
  * Auth: shared service bearer token (PAAS_SERVICE_TOKEN).
  */
 import { findApplicationById } from "@hanzo/platform/services/application";
 import {
-	PAAS_NAMESPACE,
 	appInScope,
 	getLiveIndex,
 	mapApplicationToContainer,
+	PAAS_NAMESPACE,
 	requireServiceToken,
 } from "@/server/paas/container-api";
 

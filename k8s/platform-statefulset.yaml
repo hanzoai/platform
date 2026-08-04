@@ -1,4 +1,4 @@
-# Platform (Dokploy-derived TypeScript app, hanzoai/platform) — persistent
+# Platform (the hanzoai/platform TypeScript app) — persistent
 # production deployment on Kubernetes.
 #
 # WHY A STATEFULSET, NOT A DEPLOYMENT

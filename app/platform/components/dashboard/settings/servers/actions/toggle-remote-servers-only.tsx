@@ -42,8 +42,8 @@ export const ToggleRemoteServersOnly = () => {
 					<TooltipContent side="top" className="max-w-sm">
 						<p>
 							When enabled, all services (applications, databases, compose) must
-							be deployed to a remote server. Deploying directly to the Dokploy
-							host VM is not allowed.
+							be deployed to a remote server. Deploying directly to the Hanzo
+							Platform host VM is not allowed.
 						</p>
 					</TooltipContent>
 				</Tooltip>

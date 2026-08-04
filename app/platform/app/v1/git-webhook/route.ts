@@ -23,7 +23,7 @@
  * GitHub App's configured delivery URL points there and rewiring a live App
  * is not worth the outage window. It re-exports; it does not re-implement.
  *
- * Distinct from /v1/deploy/github (Dokploy app-redeploy webhook). That route
+ * Distinct from /v1/deploy/github (the app-redeploy webhook). That route
  * redeploys already-defined platform *applications*; THIS route builds and
  * rolls out *services from source* per the repo's `hanzo.yml`.
  *

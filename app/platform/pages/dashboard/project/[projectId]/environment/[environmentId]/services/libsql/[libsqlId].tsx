@@ -73,8 +73,8 @@ const Libsql = (
 			<div className="flex flex-col gap-4">
 				<Head>
 					<title>
-						Database: {data?.name} - {data?.environment?.project?.name} |
-						Dokploy
+						Database: {data?.name} - {data?.environment?.project?.name} | Hanzo
+						Platform
 					</title>
 				</Head>
 				<Card className="h-full bg-sidebar  p-2.5 rounded-xl w-full">
@@ -118,7 +118,7 @@ const Libsql = (
 													: "destructive"
 										}
 									>
-										{data?.server?.name || "Dokploy Server"}
+										{data?.server?.name || "Hanzo Platform"}
 									</Badge>
 									{data?.server?.serverStatus === "inactive" && (
 										<TooltipProvider delayDuration={0}>

@@ -58,7 +58,7 @@ import { validateRequest } from "@hanzo/platform/lib/auth";
 
 // PRE-EXISTING: the module `@hanzo/platform/services/permission` does not exist
 // in the Hanzo fork (the old tRPC applicationRouter imported the same four names
-// from `@dokploy/server/services/permission`, equally broken). `addNewService` /
+// from `@hanzo/platform/services/permission`, equally broken). `addNewService` /
 // `checkServiceAccess` live in services/user, while `checkServicePermissionAndAccess`
 // / `findMemberByUserId` have no fork equivalent. To keep this cap self-contained
 // and compiling, the four are stubbed locally to permissive no-ops that match each
@@ -73,6 +73,7 @@ async function findMemberByUserId(
 ): Promise<{ accessedServices: string[] }> {
 	return { accessedServices: [] };
 }
+
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
@@ -141,7 +142,7 @@ const permCtx = (ctx: ApplicationCtx) => ({
 
 /**
  * getAccessibleServerIds — PRE-EXISTING fork gap: the fork never exported this
- * (the old tRPC applicationRouter imported it from @dokploy/server and was equally
+ * (the old tRPC applicationRouter imported it from @hanzo/platform and was equally
  * broken). The original returned the set of serverIds a member may use; here we
  * substitute the fork's actual auth pattern (doks-cap style) and scope by
  * `ctx.organizationId` directly — every server owned by the caller's org.
@@ -1237,9 +1238,7 @@ async function dispatch(ctx: ApplicationCtx, call: Call): Promise<unknown> {
 			// Zod input defaults applied inline post-decode (limit 20, offset 0).
 			const limit = input.limit ?? 20;
 			const offset = input.offset ?? 0;
-			const baseConditions = [
-				eq(projects.organizationId, ctx.organizationId),
-			];
+			const baseConditions = [eq(projects.organizationId, ctx.organizationId)];
 
 			if (input.projectId) {
 				baseConditions.push(eq(environments.projectId, input.projectId));
@@ -1372,7 +1371,7 @@ async function dispatch(ctx: ApplicationCtx, call: Call): Promise<unknown> {
 				);
 			}
 			// PRE-EXISTING: getContainerLogs is not exported by the fork (the old
-			// tRPC applicationRouter imported it from @dokploy/server too). Org
+			// tRPC applicationRouter imported it from @hanzo/platform too). Org
 			// ownership is already verified above; with no log provider available in
 			// the fork, return an empty log payload to preserve compile + shape.
 			// return await getContainerLogs(

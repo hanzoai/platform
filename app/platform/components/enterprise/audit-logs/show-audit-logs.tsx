@@ -89,7 +89,7 @@ export function ShowAuditLogs() {
 					lockedProps={{
 						title: "Audit Logs",
 						description:
-							"Get full visibility into every action performed across your organization. Audit logs are available as part of Dokploy Enterprise.",
+							"Get full visibility into every action performed across your organization. Audit logs are available as part of Hanzo Platform Enterprise.",
 						ctaLabel: "Manage License",
 					}}
 				>

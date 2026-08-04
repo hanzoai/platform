@@ -98,7 +98,7 @@ const createMockApplication = (
 		name: "Real Test App",
 		appName: `real-test-${Date.now()}`,
 		sourceType: "git" as const,
-		customGitUrl: "https://github.com/Dokploy/examples.git",
+		customGitUrl: "https://github.com/hanzoai/docs.git",
 		customGitBranch: "main",
 		customGitSSHKeyId: null,
 		customGitBuildPath: "/astro",

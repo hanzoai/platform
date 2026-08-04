@@ -1,7 +1,7 @@
 /**
  * GitHub App deploy webhook — POST /v1/deploy/github
  *
- * The Dokploy GitHub-App webhook: verifies the delivery HMAC, then maps push /
+ * The application GitHub-App webhook: verifies the delivery HMAC, then maps push /
  * pull_request / tag events onto the platform applications & compose stacks
  * configured to auto-deploy. Payload parsing helpers are shared from
  * `server/deploy/webhook.ts`.
@@ -40,7 +40,10 @@ export async function POST(req: Request) {
 	const headers = foldHeaders(req);
 	const signature = headers["x-hub-signature-256"] as string | undefined;
 	if (!signature) {
-		return Response.json({ message: "Missing signature header" }, { status: 401 });
+		return Response.json(
+			{ message: "Missing signature header" },
+			{ status: 401 },
+		);
 	}
 
 	const githubBody = (await req.json().catch(() => null)) as any;
@@ -205,7 +208,9 @@ export async function POST(req: Request) {
 			const totalApps = apps.length + composeApps.length;
 
 			if (totalApps === 0) {
-				return Response.json({ message: "No apps configured to deploy on tag" });
+				return Response.json({
+					message: "No apps configured to deploy on tag",
+				});
 			}
 
 			return Response.json({
@@ -254,7 +259,10 @@ export async function POST(req: Request) {
 					server: !!app.serverId,
 				};
 
-				const shouldDeployPaths = shouldDeploy(app.watchPaths, normalizedCommits);
+				const shouldDeployPaths = shouldDeploy(
+					app.watchPaths,
+					normalizedCommits,
+				);
 
 				if (!shouldDeployPaths) {
 					continue;
@@ -350,7 +358,9 @@ export async function POST(req: Request) {
 			if (previewDeploymentResult.length > 0) {
 				for (const previewDeployment of previewDeploymentResult) {
 					try {
-						await removePreviewDeployment(previewDeployment.previewDeploymentId);
+						await removePreviewDeployment(
+							previewDeployment.previewDeploymentId,
+						);
 					} catch (error) {
 						console.log(error);
 					}

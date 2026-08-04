@@ -5,9 +5,9 @@ import type { ReactElement } from "react";
 import superjson from "superjson";
 import { ToggleEnforceSSO } from "@/components/dashboard/settings/servers/actions/toggle-enforce-sso";
 import { ToggleRemoteServersOnly } from "@/components/dashboard/settings/servers/actions/toggle-remote-servers-only";
-import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { EnterpriseFeatureGate } from "@/components/enterprise/enterprise-feature-gate";
 import { SSOSettings } from "@/components/enterprise/sso/sso-settings";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import {
 	Card,
 	CardContent,
@@ -48,7 +48,7 @@ const Page = ({ isCloud }: Props) => {
 								lockedProps={{
 									title: "Self-hosted Restrictions",
 									description:
-										"Deployment and authentication restrictions are part of Dokploy Enterprise. Add a valid license to configure them.",
+										"Deployment and authentication restrictions are part of Hanzo Platform Enterprise. Add a valid license to configure them.",
 									ctaLabel: "Go to License",
 								}}
 							>

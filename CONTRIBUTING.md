@@ -102,8 +102,8 @@ pnpm run platform:build
 To build the docker image first run commands to copy .env files
 
 ```bash
-cp apps/dokploy/.env.production.example .env.production
-cp apps/dokploy/.env.production.example apps/dokploy/.env.production
+cp app/platform/.env.production.example .env.production
+cp app/platform/.env.production.example app/platform/.env.production
 ```
 
 then run build command

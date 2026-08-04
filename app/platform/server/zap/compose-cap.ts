@@ -56,7 +56,7 @@ import { validateRequest } from "@hanzo/platform/lib/auth";
 
 // PRE-EXISTING: the module `@hanzo/platform/services/permission` does not exist in
 // the Hanzo fork (the old tRPC composeRouter imported the same four names from
-// `@dokploy/server/services/permission`, equally broken). `addNewService` /
+// `@hanzo/platform/services/permission`, equally broken). `addNewService` /
 // `checkServiceAccess` live in services/user, while `checkServicePermissionAndAccess`
 // / `findMemberByUserId` have no fork equivalent. To keep this cap self-contained
 // and compiling, the four are stubbed locally to permissive no-ops matching each
@@ -71,6 +71,7 @@ async function findMemberByUserId(
 ): Promise<{ accessedServices: string[] }> {
 	return { accessedServices: [] };
 }
+
 import {
 	type CompleteTemplate,
 	fetchTemplateFiles,
@@ -149,7 +150,7 @@ const permCtx = (ctx: ComposeCtx) => ({
 
 /**
  * getAccessibleServerIds — PRE-EXISTING fork gap: the fork never exported this
- * (the old tRPC composeRouter imported it from @dokploy/server and was equally
+ * (the old tRPC composeRouter imported it from @hanzo/platform and was equally
  * broken). The original returned the set of serverIds a member may use; here we
  * substitute the fork's actual auth pattern (doks-cap style) and scope by the
  * caller's organization directly — every server owned by that org.
@@ -274,9 +275,7 @@ async function dispatch(ctx: ComposeCtx, call: Call): Promise<unknown> {
 			await checkServiceAccess(permCtx(ctx), input.composeId, "read");
 
 			const compose = await findComposeById(input.composeId);
-			if (
-				compose.environment.project.organizationId !== ctx.organizationId
-			) {
+			if (compose.environment.project.organizationId !== ctx.organizationId) {
 				throw new UnauthorizedError(
 					"You are not authorized to access this compose",
 				);
@@ -367,8 +366,7 @@ async function dispatch(ctx: ComposeCtx, call: Call): Promise<unknown> {
 			const composeResult = await findComposeById(input.composeId);
 
 			if (
-				composeResult.environment.project.organizationId !==
-				ctx.organizationId
+				composeResult.environment.project.organizationId !== ctx.organizationId
 			) {
 				throw new UnauthorizedError(
 					"You are not authorized to delete this compose",
@@ -1267,9 +1265,7 @@ async function dispatch(ctx: ComposeCtx, call: Call): Promise<unknown> {
 				limit: number;
 				offset: number;
 			}>(call.payload);
-			const baseConditions = [
-				eq(projects.organizationId, ctx.organizationId),
-			];
+			const baseConditions = [eq(projects.organizationId, ctx.organizationId)];
 
 			if (input.projectId) {
 				baseConditions.push(eq(environments.projectId, input.projectId));
@@ -1371,15 +1367,13 @@ async function dispatch(ctx: ComposeCtx, call: Call): Promise<unknown> {
 			}>(call.payload);
 			await checkServiceAccess(permCtx(ctx), input.composeId, "read");
 			const compose = await findComposeById(input.composeId);
-			if (
-				compose.environment.project.organizationId !== ctx.organizationId
-			) {
+			if (compose.environment.project.organizationId !== ctx.organizationId) {
 				throw new UnauthorizedError(
 					"You are not authorized to access this compose",
 				);
 			}
 			// PRE-EXISTING: getContainerLogs is not exported by the fork (the old
-			// tRPC composeRouter imported it from @dokploy/server too). Org
+			// tRPC composeRouter imported it from @hanzo/platform too). Org
 			// ownership is already verified above; with no log provider available in
 			// the fork, return an empty log payload to preserve compile + shape.
 			// return await getContainerLogs(
