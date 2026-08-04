@@ -178,7 +178,7 @@ export const HandleServers = ({ serverId, asButton = false }: Props) => {
 					<ul className="list-inside list-disc pl-4 text-sm text-muted-foreground mt-4">
 						<li>
 							<a
-								href="https://www.hostinger.com/vps-hosting?REFERRALCODE=1SIUMAURICI97"
+								href="https://www.hostinger.com/vps-hosting"
 								className="text-link underline"
 							>
 								Hostinger - Get 20% Discount
@@ -186,7 +186,7 @@ export const HandleServers = ({ serverId, asButton = false }: Props) => {
 						</li>
 						<li>
 							<a
-								href=" https://app.americancloud.com/register?ref=hanzo"
+								href="https://app.americancloud.com/register?ref=hanzo"
 								className="text-link underline"
 							>
 								American Cloud - Get $20 Credits
@@ -194,7 +194,7 @@ export const HandleServers = ({ serverId, asButton = false }: Props) => {
 						</li>
 						<li>
 							<a
-								href="https://m.do.co/c/db24efd43f35"
+								href="https://www.digitalocean.com/pricing/droplets"
 								className="text-link underline"
 							>
 								DigitalOcean - Get $200 Credits
@@ -202,7 +202,7 @@ export const HandleServers = ({ serverId, asButton = false }: Props) => {
 						</li>
 						<li>
 							<a
-								href="https://hetzner.cloud/?ref=vou4fhxJ1W2D"
+								href="https://www.hetzner.com/cloud"
 								className="text-link underline"
 							>
 								Hetzner - Get €20 Credits
@@ -210,7 +210,7 @@ export const HandleServers = ({ serverId, asButton = false }: Props) => {
 						</li>
 						<li>
 							<a
-								href="https://www.vultr.com/?ref=9679828"
+								href="https://www.vultr.com/pricing/"
 								className="text-link underline"
 							>
 								Vultr
