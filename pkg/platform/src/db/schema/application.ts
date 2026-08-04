@@ -42,7 +42,7 @@ import { sshKeys } from "./ssh-key";
 import { APP_NAME_MESSAGE, APP_NAME_REGEX, generateAppName } from "./utils";
 
 // Deploy target: where the built artifact ends up. Default 'local'
-// preserves Dokploy's existing Docker / Swarm behavior; 'cloud'
+// preserves the existing Docker / Swarm behavior; 'cloud'
 // routes through Hanzo Cloud; 'k8s' invokes the Agnost-port at
 // services/k8s for direct Kubernetes deploys.
 
