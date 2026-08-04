@@ -1,33 +1,25 @@
+/**
+ * DashboardLayout — the signed-in shell: the app's navigation (`side.tsx`) plus
+ * the two conditional bars that ride above it.
+ *
+ * It used to ALSO mount `HanzoHeader` and `HanzoCommandPalette` from
+ * `@hanzo/ui/navigation`. 8.x drops that subpath, and both were duplicates of
+ * chrome this app already has:
+ *
+ *   • the header restated `side.tsx`'s own `SidebarHeader` — org mark, org
+ *     switcher, identity menu (`UserNav` in the `SidebarFooter`) — so a session
+ *     was rendered twice, in two places, from two sources;
+ *   • the palette was a second ⌘K bound over `SearchCommand`, which `_app.tsx`
+ *     already mounts globally and which searches the REAL projects, services and
+ *     environments rather than five hardcoded links.
+ *
+ * One navigation, one palette. The five links the palette hardcoded (Projects,
+ * Settings, Monitoring, Users, Docs) are all in the sidebar already.
+ */
 import { api } from "@/utils/api";
 import { ImpersonationBar } from "../dashboard/impersonation/impersonation-bar";
 import { HubSpotWidget } from "../shared/HubSpotWidget";
 import Page from "./side";
-import { HanzoHeader, HanzoCommandPalette, useHanzoAuth } from "@hanzo/ui/navigation";
-import type { HanzoCommandItem } from "@hanzo/ui/navigation";
-
-const PLATFORM_COMMANDS: HanzoCommandItem[] = [
-	{ id: "projects", title: "Projects", description: "View all projects", href: "/dashboard/projects", category: "Platform", keywords: ["project", "app"] },
-	{ id: "settings", title: "Settings", description: "Platform settings", href: "/dashboard/settings/server", category: "Platform", keywords: ["config"] },
-	{ id: "monitoring", title: "Monitoring", description: "System monitoring", href: "/dashboard/monitoring", category: "Platform", keywords: ["metrics", "logs"] },
-	{ id: "users", title: "Users", description: "Manage users", href: "/dashboard/settings/users", category: "Platform", keywords: ["team", "members"] },
-	{ id: "docs", title: "Documentation", description: "Platform docs", href: "https://docs.hanzo.ai/platform", category: "Resources", external: true, keywords: ["help", "guide"] },
-];
-
-function PlatformHanzoHeader() {
-	const { user, organizations, currentOrgId, switchOrg, signOut } = useHanzoAuth();
-
-	return (
-		<HanzoHeader
-			currentApp="Platform"
-			currentAppId="platform"
-			user={user}
-			organizations={organizations}
-			currentOrgId={currentOrgId}
-			onOrgSwitch={switchOrg}
-			onSignOut={signOut}
-		/>
-	);
-}
 
 interface Props {
 	children: React.ReactNode;
@@ -48,20 +40,11 @@ export const DashboardLayout = ({ children }: Props) => {
 
 	return (
 		<div className="flex min-h-dvh flex-col">
-			<PlatformHanzoHeader />
 			<div className="flex-1">
 				<Page>{children}</Page>
-				{isChatEnabled && (
-					<>
-						<HubSpotWidget />
-					</>
-				)}
+				{isChatEnabled && <HubSpotWidget />}
 				{haveRootAccess === true && <ImpersonationBar />}
 			</div>
-			<HanzoCommandPalette
-				currentAppId="platform"
-				commands={PLATFORM_COMMANDS}
-			/>
 		</div>
 	);
 };
