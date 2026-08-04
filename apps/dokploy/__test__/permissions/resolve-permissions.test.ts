@@ -50,7 +50,7 @@ vi.mock("@dokploy/server/services/license", () => ({
 const { resolvePermissions } = await import(
 	"@dokploy/server/services/permission"
 );
-const { enterpriseOnlyResources, statements } = await import(
+const { staticRoleBypassResources, statements } = await import(
 	"@dokploy/server/lib/access-control"
 );
 
@@ -68,7 +68,7 @@ describe("enterprise resources for static roles", () => {
 		memberToReturn = mockMemberData("owner");
 		const perms = await resolvePermissions(ctx);
 
-		for (const resource of enterpriseOnlyResources) {
+		for (const resource of staticRoleBypassResources) {
 			const actions = statements[resource as keyof typeof statements];
 			for (const action of actions) {
 				expect((perms as any)[resource][action]).toBe(true);
@@ -80,7 +80,7 @@ describe("enterprise resources for static roles", () => {
 		memberToReturn = mockMemberData("admin");
 		const perms = await resolvePermissions(ctx);
 
-		for (const resource of enterpriseOnlyResources) {
+		for (const resource of staticRoleBypassResources) {
 			const actions = statements[resource as keyof typeof statements];
 			for (const action of actions) {
 				expect((perms as any)[resource][action]).toBe(true);

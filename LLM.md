@@ -729,3 +729,89 @@ subpath `@hanzo/platform/*` to pkg source, so tsc fell through to the package
 Fix (PR #58, branch `fix/platform-typecheck`): add the bare-root path mapping to
 `app/api/tsconfig.json`, matching `app/schedules` which already carried both. Now:
 **all 5 projects `Done`.** (`pkg/zap` is a Rust crate, no `typecheck` script.)
+
+## No enterprise tier — the carve-out is gone, and it stays gone
+
+Hanzo Platform ships zero "enterprise edition" code and zero licence gating.
+This is a product rule, not only a licensing one, so it holds even where the
+licensing argument does not.
+
+Worth stating plainly, because it contradicts the usual framing: **this repo's
+`LICENSE.MD` is Apache-2.0 with no carve-out at all.** The upstream Dokploy
+proprietary (DSAL) code was already stripped in `774a816e5` ("strip Dokploy
+DSAL /proprietary — Apache-only"). So what sat under `enterprise/` here was not
+commercially-licensed code we were unable to sell — it was Apache-2.0 code we
+own, wearing a directory name that implied otherwise. That distinction changes
+the remedy, not the verdict: the namespace still had to go.
+
+The remedy was therefore split by what each file actually *was*, because
+"matches the word enterprise" and "is a paywall" are different questions.
+
+**Pure gating was deleted outright.** `enterprise-feature-gate.tsx` rendered a
+padlock and a "this feature is part of Hanzo Platform Enterprise, add a valid
+license" CTA — that is the paywall itself, so its call sites now render their
+children unconditionally. With it went the licence-key machinery end to end:
+`server/utils/enterprise.ts` (a live client POSTing to `LICENSE_KEY_URL/licenses/
+{validate,activate,deactivate}`), the `licenseKey` tRPC router, `license-key-cap`
+and its generated zap schema, the settings page, and `services/license.ts`'s
+`hasValidLicense`. `enterpriseProcedure` was already just an alias of
+`adminProcedure`, so its call sites moved to `adminProcedure` and the alias
+went — one name for one concept.
+
+**Real capabilities were kept, ungated, and moved out of the namespace.** Audit
+logs, SSO, whitelabeling and custom roles are things the product genuinely
+does; deleting 4,600 lines of working admin UI that live routes render would be
+a regression, not a paywall removal. They moved to
+`components/dashboard/settings/{audit-logs,sso,whitelabeling,roles}/` and
+`server/api/routers/`, and eleven of those moves are byte-identical renames
+(`R100`) precisely so review can see nothing changed but the path.
+
+Three behavioural consequences are deliberate and worth knowing, because they
+are not simply "more is allowed now":
+
+- `createAuditLog` used to early-return when the org was unlicensed, i.e. it
+  **silently dropped audit records** for unlicensed orgs. Auditing is a security
+  control, not a paid add-on. It is now unconditional — strictly more logging.
+- `getAccessibleServerIds` used to return **every** org server when unlicensed,
+  because per-member server assignment was the paid feature and the fallback had
+  to be permissive. With assignment always on, it now returns only assigned
+  servers. This *tightens* access, and is the correct semantics.
+- `resolveRole` used to return null for custom roles when unlicensed; custom
+  roles now always resolve.
+
+`enterpriseOnlyResources` was **renamed, not deleted**, to
+`staticRoleBypassResources`. Its real meaning is "resources whose per-resource
+check owner/admin bypass, applying only under custom roles" — the enterprise
+framing was incidental to the value. Deleting the set would have silently
+changed permission behaviour for every privileged role, which is a security
+change masquerading as a cleanup.
+
+`apps/dokploy` and `packages/server` got the same treatment even though
+`pnpm-workspace.yaml` does not include them (they are the orphaned pre-rename
+twins of `app/platform` and `pkg/platform`; see the workspace note above).
+Nothing typechecks or builds them, so the edits there are unverified by the
+gate — they were made for consistency, not because anything consumes them.
+
+Two things were **not** done, on purpose. The billing plan tier literally named
+`"enterprise"` in `pricing.ts` / `quota.ts` / `billing-cap.ts` is Hanzo's own
+product pricing in our own tree, not a fork's carve-out; deleting it would
+break billing. And `user.enableEnterpriseFeatures` / `isValidEnterpriseLicense`
+/ `licenseKey` remain as **columns** in `db/schema/user.ts`: no code reads them
+any more (verified by grep across both trees), but dropping them needs a drizzle
+migration, and the existing migration snapshots under `drizzle/` and
+`drizzle-postgres-archive/` are applied history that must not be rewritten.
+That migration is the one piece of follow-up this pass leaves behind.
+
+Verification for the purge was `pnpm -r --no-bail run typecheck` and the
+vitest suite, each run on a pristine `origin/main` worktree and on the branch
+in the same invocation. Both sides: **4 pass / 1 fail** with the same two
+pre-existing errors in `__test__/ci/platform-config.test.ts`, and **865 passed
+/ 14 failed / 1 skipped of 880**. Zero added. (LLM.md previously claimed all 5
+projects typecheck clean — that is stale; `app/platform` has carried those two
+`TS18047`/`TS2531` errors independently of this work.)
+
+One process note that cost time here: **do not run `biome check --write` to
+tidy this repo's diffs.** `origin/main` is not biome-clean, so the formatter
+reflows unrelated imports in every file it touches — it turned a 257-line
+insertion into 492 and broke the byte-identical renames that make an
+audit-critical change reviewable.

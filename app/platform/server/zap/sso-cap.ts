@@ -183,29 +183,7 @@ async function dispatch(ctx: SsoCtx, call: Call): Promise<unknown> {
 
 	switch (call.method) {
 		case SsoMethod.showSignInWithSSO: {
-			if (IS_CLOUD) {
-				return true;
-			}
-			const owner = await db.query.member.findFirst({
-				where: eq(member.role, "owner"),
-				with: {
-					user: {
-						columns: {
-							enableEnterpriseFeatures: true,
-							isValidEnterpriseLicense: true,
-						},
-					},
-				},
-				orderBy: [asc(member.createdAt)],
-			});
-
-			if (!owner) {
-				return false;
-			}
-
-			return (
-				owner.user.enableEnterpriseFeatures && owner.user.isValidEnterpriseLicense
-			);
+			return true;
 		}
 
 		case SsoMethod.enforceSSO: {

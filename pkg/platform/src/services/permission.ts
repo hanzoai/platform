@@ -1,12 +1,11 @@
 import { db } from "@hanzo/platform/db";
 import { member, organizationRole } from "@hanzo/platform/db/schema";
-import { hasValidLicense } from "@hanzo/platform/services/license";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import {
 	ac,
 	adminRole,
-	enterpriseOnlyResources,
+	staticRoleBypassResources,
 	memberRole,
 	ownerRole,
 	statements,
@@ -44,11 +43,6 @@ const resolveRole = async (
 		return staticRoles[roleName];
 	}
 
-	const licensed = await hasValidLicense(organizationId);
-	if (!licensed) {
-		return null;
-	}
-
 	const customRoles = await db.query.organizationRole.findMany({
 		where: and(
 			eq(organizationRole.organizationId, organizationId),
@@ -84,10 +78,10 @@ export const checkPermission = async (
 	const isPrivilegedStaticRole =
 		memberRecord.role === "owner" || memberRecord.role === "admin";
 	if (isPrivilegedStaticRole) {
-		const allEnterprise = Object.keys(permissions).every((r) =>
-			enterpriseOnlyResources.has(r),
+		const allBypassed = Object.keys(permissions).every((r) =>
+			staticRoleBypassResources.has(r),
 		);
-		if (allEnterprise) return;
+		if (allBypassed) return;
 	}
 
 	const role = await resolveRole(memberRecord.role, organizationId);
@@ -192,7 +186,7 @@ export const resolvePermissions = async (
 	for (const [resource, actions] of Object.entries(statements)) {
 		const resourcePerms = {} as Record<string, boolean>;
 		for (const action of actions) {
-			if (isPrivilegedRole && enterpriseOnlyResources.has(resource)) {
+			if (isPrivilegedRole && staticRoleBypassResources.has(resource)) {
 				resourcePerms[action] = true;
 				continue;
 			}
