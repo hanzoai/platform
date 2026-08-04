@@ -36,11 +36,10 @@ import { portRouter } from "./routers/port";
 import { postgresRouter } from "./routers/postgres";
 import { previewDeploymentRouter } from "./routers/preview-deployment";
 import { projectRouter } from "./routers/project";
-import { auditLogRouter } from "./routers/enterprise/audit-log";
-import { customRoleRouter } from "./routers/enterprise/custom-role";
-import { licenseKeyRouter } from "./routers/enterprise/license-key";
-import { ssoRouter } from "./routers/enterprise/sso";
-import { whitelabelingRouter } from "./routers/enterprise/whitelabeling";
+import { auditLogRouter } from "./routers/audit-log";
+import { customRoleRouter } from "./routers/custom-role";
+import { ssoRouter } from "./routers/sso";
+import { whitelabelingRouter } from "./routers/whitelabeling";
 import { redirectsRouter } from "./routers/redirects";
 import { redisRouter } from "./routers/redis";
 // registryRouter migrated to native @zap-proto/web (server/zap/registry-cap.ts).
@@ -116,7 +115,6 @@ export const appRouter = createTRPCRouter({
 	// ai: migrated to native @zap-proto/web — see utils/zap-ai.ts (browser)
 	// and server/zap/ai-cap.ts (server). No tRPC ai router remains.
 	organization: organizationRouter,
-	licenseKey: licenseKeyRouter,
 	sso: ssoRouter,
 	whitelabeling: whitelabelingRouter,
 	customRole: customRoleRouter,

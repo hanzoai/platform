@@ -4,7 +4,7 @@ import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";
 import superjson from "superjson";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
-import { ShowAuditLogs } from "@/components/enterprise/audit-logs/show-audit-logs";
+import { ShowAuditLogs } from "@/components/dashboard/settings/audit-logs/show-audit-logs";
 import { appRouter } from "@/server/api/root";
 
 const Page = () => {

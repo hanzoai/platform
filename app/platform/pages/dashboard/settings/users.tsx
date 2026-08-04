@@ -6,7 +6,7 @@ import superjson from "superjson";
 import { ShowInvitations } from "@/components/dashboard/settings/users/show-invitations";
 import { ShowUsers } from "@/components/dashboard/settings/users/show-users";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
-import { ManageCustomRoles } from "@/components/enterprise/roles/manage-custom-roles";
+import { ManageCustomRoles } from "@/components/dashboard/settings/roles/manage-custom-roles";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
 

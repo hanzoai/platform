@@ -26,7 +26,6 @@ import type { IncomingMessage } from "node:http";
 // mirroring doks-cap's org-ownership pattern.
 import {
 	findGitProviderById,
-	hasValidLicense,
 	removeGitProvider,
 	updateGitProvider,
 } from "@hanzo/platform";
@@ -171,10 +170,6 @@ async function dispatch(ctx: GitProviderCtx, call: Call): Promise<unknown> {
 		}
 
 		case GitProviderMethod.allForPermissions: {
-			const licensed = await hasValidLicense(ctx.organizationId);
-			if (!licensed) {
-				throw new ForbiddenError("Valid enterprise license required");
-			}
 			return await db.query.gitProvider.findMany({
 				columns: {
 					gitProviderId: true,

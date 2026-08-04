@@ -3,7 +3,7 @@
 // audit-log-cap.ts — the native @zap-proto/web AuditLog capability.
 //
 // Binary-ZAP replacement for the tRPC `auditLogRouter`
-// (server/api/routers/enterprise/audit-log.ts). The single method `all` was
+// (server/api/routers/audit-log.ts). The single method `all` was
 // `withPermission("auditLog", "read")` — an authenticated caller whose
 // permission to read audit logs is enforced at the mint/permission boundary —
 // with an additional `.use(...)` middleware requiring a valid enterprise
@@ -16,7 +16,6 @@
 
 import type { IncomingMessage } from "node:http";
 import { validateRequest } from "@hanzo/platform/lib/auth";
-import { hasValidLicense } from "@hanzo/platform/services/license";
 import type { CallHandler } from "@zap-proto/web";
 import type { MintCap } from "@zap-proto/web/auth";
 import type { Call, Response } from "@zap-proto/zap";
@@ -129,14 +128,6 @@ async function dispatch(ctx: AuditLogCtx, call: Call): Promise<unknown> {
 
 	switch (call.method) {
 		case AuditLogMethod.all: {
-			// `.use(...)` middleware: require a valid enterprise license.
-			const licensed = await hasValidLicense(ctx.organizationId);
-			if (!licensed) {
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message: "Valid enterprise license required",
-				});
-			}
 			const input = decodeArgs<{
 				userId?: string;
 				userEmail?: string;

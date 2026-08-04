@@ -1,7 +1,6 @@
 import {
 	findGitProviderById,
 	getAccessibleGitProviderIds,
-	hasValidLicense,
 	removeGitProvider,
 	updateGitProvider,
 } from "@hanzo/platform";
@@ -73,16 +72,6 @@ export const gitProviderRouter = createTRPCRouter({
 		}),
 
 	allForPermissions: withPermission("member", "update")
-		.use(async ({ ctx, next }) => {
-			const licensed = await hasValidLicense(ctx.session.activeOrganizationId);
-			if (!licensed) {
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message: "Valid enterprise license required",
-				});
-			}
-			return next();
-		})
 		.query(async ({ ctx }) => {
 			return await db.query.gitProvider.findMany({
 				columns: {

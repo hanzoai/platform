@@ -6,7 +6,6 @@ import {
 	IS_CLOUD,
 	initCancelDeployments,
 	initCronJobs,
-	initEnterpriseBackupCronJobs,
 	initializeNetwork,
 	initSchedules,
 	initVolumeBackupsCronJobs,
@@ -81,10 +80,6 @@ import {
 } from "./zap/git-provider-cap";
 import { gitlabMintCap, gitlabRootCap } from "./zap/gitlab-cap";
 import { k8sMintCap, k8sRootCap } from "./zap/k8s-cap";
-import {
-	licenseKeyMintCap,
-	licenseKeyRootCap,
-} from "./zap/license-key-cap";
 import { mariadbMintCap, mariadbRootCap } from "./zap/mariadb-cap";
 import { mongoMintCap, mongoRootCap } from "./zap/mongo-cap";
 import { mountMintCap, mountRootCap } from "./zap/mount-cap";
@@ -484,35 +479,28 @@ void app.prepare().then(async () => {
 			rootCap: rollbackRootCap,
 			onError: (err) => console.error("[zap/rollback]", err),
 		});
-		// License-key capability (enterprise) — replaces the tRPC licenseKeyRouter.
-		serve(server, {
-			path: "/zap/license-key",
-			mintCap: licenseKeyMintCap,
-			rootCap: licenseKeyRootCap,
-			onError: (err) => console.error("[zap/license-key]", err),
-		});
-		// Custom-role capability (enterprise) — replaces the tRPC customRoleRouter.
+		// Custom-role capability — replaces the tRPC customRoleRouter.
 		serve(server, {
 			path: "/zap/custom-role",
 			mintCap: customRoleMintCap,
 			rootCap: customRoleRootCap,
 			onError: (err) => console.error("[zap/custom-role]", err),
 		});
-		// SSO capability (enterprise) — replaces the tRPC ssoRouter.
+		// SSO capability — replaces the tRPC ssoRouter.
 		serve(server, {
 			path: "/zap/sso",
 			mintCap: ssoMintCap,
 			rootCap: ssoRootCap,
 			onError: (err) => console.error("[zap/sso]", err),
 		});
-		// Whitelabeling capability (enterprise) — replaces the tRPC whitelabelingRouter.
+		// Whitelabeling capability — replaces the tRPC whitelabelingRouter.
 		serve(server, {
 			path: "/zap/whitelabeling",
 			mintCap: whitelabelingMintCap,
 			rootCap: whitelabelingRootCap,
 			onError: (err) => console.error("[zap/whitelabeling]", err),
 		});
-		// Audit-log capability (enterprise) — replaces the tRPC auditLogRouter.
+		// Audit-log capability — replaces the tRPC auditLogRouter.
 		serve(server, {
 			path: "/zap/audit-log",
 			mintCap: auditLogMintCap,
@@ -619,7 +607,6 @@ void app.prepare().then(async () => {
 		if (process.env.ZAP_ENABLED !== "false") {
 			createPlatformZapServer();
 		}
-		await initEnterpriseBackupCronJobs();
 
 		if (!IS_CLOUD) {
 			console.log("Starting Deployment Worker");

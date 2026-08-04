@@ -1,6 +1,5 @@
 import { db } from "@hanzo/platform/db";
 import { gitProvider, member } from "@hanzo/platform/db/schema";
-import { hasValidLicense } from "@hanzo/platform/services/license";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 
@@ -70,10 +69,7 @@ export const getAccessibleGitProviderIds = async (session: {
 		return new Set(allOrgProviders.map((p) => p.gitProviderId));
 	}
 
-	const licensed = await hasValidLicense(activeOrganizationId);
-	const assignedSet = licensed
-		? new Set(memberRecord?.accessedGitProviders ?? [])
-		: new Set<string>();
+	const assignedSet = new Set(memberRecord?.accessedGitProviders ?? []);
 
 	const result = new Set<string>();
 	for (const p of allOrgProviders) {

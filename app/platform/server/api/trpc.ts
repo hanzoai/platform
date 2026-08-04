@@ -263,8 +263,3 @@ export const adminProcedure = t.procedure.use(({ ctx, next }) => {
 	});
 });
 
-/**
- * Enterprise procedure -- all features are available (no license gating).
- * Kept as an alias of adminProcedure for backward compatibility.
- */
-export const enterpriseProcedure = adminProcedure;
