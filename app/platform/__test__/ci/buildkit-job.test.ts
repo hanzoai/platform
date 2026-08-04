@@ -77,8 +77,12 @@ describe("buildkitArgs", () => {
 			image: "ghcr.io/hanzoai/docs:v1.2.3",
 			buildJobId: "j1",
 		});
-		const res = job.spec.template.spec.containers[0].resources;
-		expect(res.limits["ephemeral-storage"]).toBe(res.requests["ephemeral-storage"]);
+		const container = job.spec.template.spec.containers[0];
+		expect(container).toBeDefined();
+		const res = container!.resources;
+		expect(res.limits["ephemeral-storage"]).toBe(
+			res.requests["ephemeral-storage"],
+		);
 		// cpu and memory stay burstable on purpose — exceeding those throttles or
 		// OOM-kills the offender alone, so overcommit there costs nobody else.
 		expect(res.limits.cpu).not.toBe(res.requests.cpu);

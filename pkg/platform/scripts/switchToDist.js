@@ -23,7 +23,13 @@ pkg.exports = {
 	"./lib/auth": "./dist/lib/auth.js",
 	"./services/ci": "./dist/services/ci/index.js",
 	"./services/*": "./dist/services/*.js",
+	// Directory entry points need an explicit entry: the "./templates/*" and
+	// "./utils/*" patterns resolve to "./dist/templates.js" /
+	// "./dist/utils/builders.js", which esbuild never emits — it preserves the
+	// source tree, so the real files are "<dir>/index.js".
+	"./templates": "./dist/templates/index.js",
 	"./templates/*": "./dist/templates/*.js",
+	"./utils/builders": "./dist/utils/builders/index.js",
 	"./utils/*": "./dist/utils/*.js",
 	"./utils/ai/*": "./dist/utils/ai/*.js",
 	"./utils/backups/*": "./dist/utils/backups/*.js",
