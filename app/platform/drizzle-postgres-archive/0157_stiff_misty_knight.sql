@@ -1,2 +1,0 @@
-ALTER TABLE "member" ADD COLUMN "accessedGitProviders" text[] DEFAULT ARRAY[]::text[] NOT NULL;--> statement-breakpoint
-ALTER TABLE "git_provider" ADD COLUMN "sharedWithOrganization" boolean DEFAULT false NOT NULL;

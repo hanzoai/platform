@@ -1,1 +1,0 @@
-ALTER TYPE "public"."deploymentStatus" ADD VALUE 'cancelled';
