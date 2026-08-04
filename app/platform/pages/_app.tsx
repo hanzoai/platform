@@ -1,4 +1,9 @@
 import "@/styles/globals.css";
+// @hanzo/gui's base sheet, generated from @hanzo/ui/gui-config by
+// scripts/gen-gui-css.mjs. It is a file rather than a runtime <style> because
+// the runtime one is the only node in the tree whose text differs between
+// server and client, which cost every page its server render. See the script.
+import "@/styles/gui.css";
 
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
