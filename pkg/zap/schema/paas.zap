@@ -3,7 +3,7 @@
 # ============================================================================
 #
 # ZAP schema for the Hanzo PaaS platform.
-# Extends platform.capnp with Dokploy-derived interfaces for managed
+# Extends platform.capnp with the managed-service interfaces for
 # databases, compose stacks, certificates, domains, backups,
 # notifications, monitoring, servers, swarm, and billing.
 #

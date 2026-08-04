@@ -663,7 +663,7 @@ export const uploadFileToContainer = async (
 		: `/${destinationPath}`;
 
 	const base64Content = fileBuffer.toString("base64");
-	const tempFileName = `dokploy-upload-${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+	const tempFileName = `platform-upload-${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
 	const tempPath = `/tmp/${tempFileName}`;
 
 	const command = `echo '${base64Content}' | base64 -d > "${tempPath}" && docker cp "${tempPath}" "${containerId}:${normalizedPath}" ; rm -f "${tempPath}"`;
