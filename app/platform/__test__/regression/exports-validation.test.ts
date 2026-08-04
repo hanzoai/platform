@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const SCRIPTS_DIR = path.resolve(__dirname, "../../../../packages/server/scripts");
+const SCRIPTS_DIR = path.resolve(__dirname, "../../../../pkg/platform/scripts");
 
 function parseExports(filePath: string): Record<string, unknown> {
 	const content = fs.readFileSync(filePath, "utf-8");
