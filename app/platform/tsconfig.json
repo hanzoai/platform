@@ -1,52 +1,63 @@
 {
-	"compilerOptions": {
-		/* Base Options: */
-		"esModuleInterop": true,
-		"skipLibCheck": true,
-		"target": "es2022",
-		"allowJs": true,
-		"resolveJsonModule": true,
-		"moduleDetection": "force",
-		"isolatedModules": true,
-		/* Strictness */
-		"strict": true,
-		"noUncheckedIndexedAccess": true,
-		"checkJs": true,
-		/* Bundled projects */
-		"lib": ["dom", "dom.iterable", "ES2022"],
-		"noEmit": true,
-		"module": "ESNext",
-		"moduleResolution": "Bundler",
-		"jsx": "react-jsx",
-		"plugins": [
-			{
-				"name": "next"
-			}
-		],
+  "compilerOptions": {
+    /* Base Options: */
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "es2022",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    /* Strictness */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "checkJs": true,
+    /* Bundled projects */
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "ES2022"
+    ],
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "incremental": true,
-		"paths": {
-			"@/*": ["./*"],
-			"@hanzo/platform": ["../../pkg/platform/src/index.ts"],
-			"@hanzo/platform/*": ["../../pkg/platform/src/*"]
-		}
-	},
-	"include": [
-		"next-env.d.ts",
-		"**/*.ts",
-		"**/*.tsx",
-		"**/*.cjs",
-		"**/*.js",
-		".next/types/**/*.ts",
-		"env.js",
-		"next.config.mjs"
-	],
-	"exclude": [
-		"node_modules",
-		"hanzo",
-		"config",
-		"dist",
-		"webpack.config.server.js",
-		"migration.ts",
-		"setup.ts"
-	]
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@hanzo/platform": [
+        "../../pkg/platform/src/index.ts"
+      ],
+      "@hanzo/platform/*": [
+        "../../pkg/platform/src/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.cjs",
+    "**/*.js",
+    ".next/types/**/*.ts",
+    "env.js",
+    "next.config.mjs",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "hanzo",
+    "config",
+    "dist",
+    "webpack.config.server.js",
+    "migration.ts",
+    "setup.ts"
+  ]
 }
