@@ -37,22 +37,24 @@ export const InvitationEmail = ({
 			<Head />
 			<Preview>{previewText}</Preview>
 			<Tailwind
-				config={{
-					theme: {
-						extend: {
-							colors: {
-								brand: "#007291",
+				config={
+					{
+						theme: {
+							extend: {
+								colors: {
+									brand: "#007291",
+								},
 							},
 						},
-					},
-				} as any}
+					} as any
+				}
 			>
 				<Body className="bg-white my-auto mx-auto font-sans px-2">
 					<Container className="border border-solid border-[#eaeaea] rounded-lg my-[40px] mx-auto p-[20px] max-w-[465px]">
 						<Section className="mt-[32px]">
 							<Img
 								src={
-									"https://raw.githubusercontent.com/Hanzo/platform/refs/heads/canary/apps/platform/logo.png"
+									"https://raw.githubusercontent.com/hanzoai/platform/main/app/platform/logo.png"
 								}
 								width="100"
 								height="50"
@@ -87,9 +89,9 @@ export const InvitationEmail = ({
 						<Hr className="border border-solid border-[#eaeaea] my-[26px] mx-0 w-full" />
 						<Text className="text-[#666666] text-[12px] leading-[24px]">
 							This invitation was intended for {toEmail}. This invite was sent
-							from <strong className="text-black">hanzo.ai</strong>. If you
-							were not expecting this invitation, you can ignore this email. If
-							you are concerned about your account's safety, please reply to
+							from <strong className="text-black">hanzo.ai</strong>. If you were
+							not expecting this invitation, you can ignore this email. If you
+							are concerned about your account's safety, please reply to
 						</Text>
 					</Container>
 				</Body>

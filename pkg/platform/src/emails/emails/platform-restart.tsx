@@ -24,15 +24,17 @@ export const HanzoRestartEmail = ({
 		<Html>
 			<Preview>{previewText}</Preview>
 			<Tailwind
-				config={{
-					theme: {
-						extend: {
-							colors: {
-								brand: "#007291",
+				config={
+					{
+						theme: {
+							extend: {
+								colors: {
+									brand: "#007291",
+								},
 							},
 						},
-					},
-				} as any}
+					} as any
+				}
 			>
 				<Head />
 
@@ -41,7 +43,7 @@ export const HanzoRestartEmail = ({
 						<Section className="mt-[32px]">
 							<Img
 								src={
-									"https://raw.githubusercontent.com/Hanzo/platform/refs/heads/canary/apps/platform/logo.png"
+									"https://raw.githubusercontent.com/hanzoai/platform/main/app/platform/logo.png"
 								}
 								width="100"
 								height="50"

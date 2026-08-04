@@ -202,7 +202,7 @@ export const WelcomeSubscription = () => {
 											</li>
 											<li>
 												<a
-													href=" https://app.americancloud.com/register?ref=platform"
+													href="https://app.americancloud.com/register?ref=hanzo"
 													className="text-link underline"
 												>
 													American Cloud - Get $20 Credits
@@ -210,7 +210,7 @@ export const WelcomeSubscription = () => {
 											</li>
 											<li>
 												<a
-													href="https://m.do.co/c/db24efd43f35"
+													href="https://www.digitalocean.com/pricing/droplets"
 													className="text-link underline"
 												>
 													DigitalOcean - Get $200 Credits
@@ -218,7 +218,7 @@ export const WelcomeSubscription = () => {
 											</li>
 											<li>
 												<a
-													href="https://hetzner.cloud/?ref=vou4fhxJ1W2D"
+													href="https://www.hetzner.com/cloud"
 													className="text-link underline"
 												>
 													Hetzner - Get €20 Credits
@@ -226,7 +226,7 @@ export const WelcomeSubscription = () => {
 											</li>
 											<li>
 												<a
-													href="https://www.vultr.com/?ref=9679828"
+													href="https://www.vultr.com/pricing/"
 													className="text-link underline"
 												>
 													Vultr
@@ -317,8 +317,7 @@ export const WelcomeSubscription = () => {
 												that your server can handle?
 											</p>
 											<p className="text-muted-foreground">
-												Here are some of the things you can do with Hanzo
-												Cloud:
+												Here are some of the things you can do with Hanzo Cloud:
 											</p>
 										</div>
 
@@ -349,7 +348,7 @@ export const WelcomeSubscription = () => {
 											<div className="flex flex-row gap-4">
 												<Button className="rounded-full bg-[#5965F2] hover:bg-[#4A55E0] w-fit">
 													<Link
-														href="https://discord.gg/2tBnJ3jDJc"
+														href="https://github.com/hanzoai/platform/issues"
 														aria-label="Hanzo on GitHub"
 														target="_blank"
 														className="flex flex-row items-center gap-2 text-white"
@@ -367,7 +366,7 @@ export const WelcomeSubscription = () => {
 												</Button>
 												<Button className="rounded-full  w-fit">
 													<Link
-														href="https://github.com/Hanzo/platform"
+														href="https://github.com/hanzoai/platform"
 														aria-label="Hanzo on GitHub"
 														target="_blank"
 														className="flex flex-row items-center gap-2 "

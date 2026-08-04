@@ -28,7 +28,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 
-const BILLING_PORTAL_URL = process.env.NEXT_PUBLIC_BILLING_PORTAL_URL || "https://billing.hanzo.ai";
+const BILLING_PORTAL_URL =
+	process.env.NEXT_PUBLIC_BILLING_PORTAL_URL || "https://billing.hanzo.ai";
 
 /** Precio legacy / Hobby: $4.50/mo primer servidor, $3.50 siguientes; anual $45.90 primero, $35.70 siguientes. */
 export const calculatePrice = (count: number, isAnnual = false) => {
@@ -620,7 +621,7 @@ export const ShowBilling = () => {
 								</span>
 								<Button className="rounded-full bg-[#5965F2] hover:bg-[#4A55E0] w-fit">
 									<Link
-										href="https://discord.gg/2tBnJ3jDJc"
+										href="https://github.com/hanzoai/platform/issues"
 										aria-label="Hanzo Platform on GitHub"
 										target="_blank"
 										className="flex flex-row items-center gap-2 text-white"

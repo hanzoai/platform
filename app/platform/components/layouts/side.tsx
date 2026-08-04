@@ -457,7 +457,7 @@ const MENU: Menu = {
 		},
 		{
 			name: "Support",
-			url: "https://discord.gg/2tBnJ3jDJc",
+			url: "https://github.com/hanzoai/platform/issues",
 			icon: CircleHelp,
 		},
 	],
