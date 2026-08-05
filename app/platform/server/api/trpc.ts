@@ -12,7 +12,7 @@ import { db } from "@hanzo/platform/db";
 import { statements } from "@hanzo/platform/lib/access-control";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import { checkPermission } from "@hanzo/platform/services/permission";
-import type { OpenApiMeta } from "@dokploy/trpc-openapi";
+import type { OpenApiMeta } from "@hanzo/platform/openapi";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
 import type { Session, User } from "better-auth";

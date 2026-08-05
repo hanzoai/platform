@@ -1,4 +1,4 @@
-import { generateOpenApiDocument } from "@dokploy/trpc-openapi";
+import { generateOpenApiDocument } from "@hanzo/platform/openapi";
 import {
 	CLEANUP_CRON_JOB,
 	checkGPUStatus,
