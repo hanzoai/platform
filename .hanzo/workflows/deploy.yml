@@ -25,12 +25,64 @@ jobs:
       - name: Log in to GHCR
         run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
 
+      # The publishable ingest key, from KMS — the only store secrets come from.
+      # Same surface and same key name every other Hanzo web build reads, so the
+      # value has ONE name and ONE home no matter which pipeline builds it.
+      #
+      # ABSENCE IS FATAL, and it says which call failed. An unkeyed bundle is not
+      # a degraded build: api.hanzo.ai refuses a logged-out beacon that carries no
+      # resolvable key (401 ingest_key_required) while the page looks perfectly
+      # healthy, so the failure is invisible until someone reads the warehouse and
+      # finds platform.hanzo.ai missing. A missing image is loud; a keyless one is
+      # not, so the missing image is the better failure.
+      #
+      # Each curl is rescued (`|| true`) so the CHECK decides rather than bash -e
+      # aborting the step before any guard can print — an aborted step reports a
+      # bare exit code and names neither call.
+      - name: Fetch the ingest key from KMS
+        id: ingest
+        env:
+          KMS_CLIENT_ID: ${{ secrets.KMS_CLIENT_ID }}
+          KMS_CLIENT_SECRET: ${{ secrets.KMS_CLIENT_SECRET }}
+          KMS_ENDPOINT: ${{ vars.KMS_ENDPOINT || 'https://api.hanzo.ai' }}
+        run: |
+          set -uo pipefail
+          if [ -z "${KMS_CLIENT_ID:-}" ] || [ -z "${KMS_CLIENT_SECRET:-}" ]; then
+            echo "::error::KMS credentials absent (KMS_CLIENT_ID/KMS_CLIENT_SECRET) — refusing to ship a bundle with no ingest key"
+            exit 1
+          fi
+          TOKEN=$(curl -sS -m 30 "$KMS_ENDPOINT/v1/kms/auth/login" \
+            -H 'Content-Type: application/json' \
+            -d "{\"clientId\":\"$KMS_CLIENT_ID\",\"clientSecret\":\"$KMS_CLIENT_SECRET\"}" \
+            2>/dev/null | jq -r '.accessToken // empty' || true)
+          if [ -z "$TOKEN" ]; then
+            echo "::error::KMS login failed at $KMS_ENDPOINT/v1/kms/auth/login — refusing to ship a bundle with no ingest key"; exit 1
+          fi
+          # Embedded KMS (HIP-0106): org from the token, flat {"value"}.
+          V=$(curl -sS -m 30 "$KMS_ENDPOINT/v1/kms/secrets/deploy/EVENT_INGEST_KEY?env=prod" \
+            -H "Authorization: Bearer $TOKEN" 2>/dev/null | jq -r '.value // empty' || true)
+          if [ -z "$V" ]; then
+            echo "::error::EVENT_INGEST_KEY absent from KMS (path deploy, env prod) — refusing to ship a bundle with no ingest key"; exit 1
+          fi
+          echo "::add-mask::$V"
+          echo "key=$V" >> "$GITHUB_OUTPUT"
+          echo "ingest key resolved (${#V} chars)"
+
       - name: Build + push
+        env:
+          # Through the environment, not the command line: an inline --build-arg
+          # written into the `run:` script would put the key in the job log.
+          EVENT_INGEST_KEY: ${{ steps.ingest.outputs.key }}
         run: |
           set -euo pipefail
           SHA="${GITHUB_SHA}"
           IMAGE="ghcr.io/hanzoai/platform:${SHA}"
-          docker build --target platform -f Dockerfile -t "$IMAGE" .
+          # Build-time by necessity: Next inlines NEXT_PUBLIC_* into the client
+          # bundle, so a key set on the pod arrives too late to reach a browser.
+          # The Dockerfile's build-platform stage gates on this and fails closed.
+          docker build --target platform -f Dockerfile \
+            --build-arg EVENT_INGEST_KEY="$EVENT_INGEST_KEY" \
+            -t "$IMAGE" .
           docker push "$IMAGE"
           echo "built $IMAGE"
 
