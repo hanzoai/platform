@@ -9,7 +9,7 @@ import {
 	enterpriseProcedure,
 	protectedProcedure,
 } from "../../trpc";
-import { audit } from "../../utils/audit";
+import { audit } from "@/server/api/utils/audit";
 
 const permissionsSchema = z.record(z.string(), z.array(z.string()));
 
