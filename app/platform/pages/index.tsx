@@ -1,8 +1,4 @@
-import {
-	getWebServerSettings,
-	IS_CLOUD,
-	isAdminPresent,
-} from "@hanzo/platform";
+import { getWebServerSettings, IS_CLOUD } from "@hanzo/platform";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { GetServerSidePropsContext } from "next";
 import { type ReactElement, useEffect, useState } from "react";
@@ -11,7 +7,7 @@ import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardDescription } from "@/components/ui/card";
-import { createIam } from "@/lib/iam-browser";
+import { startSignIn } from "@/lib/iam-browser";
 import { useWhitelabelingPublic } from "@/utils/hooks/use-whitelabeling";
 
 /**
@@ -28,7 +24,7 @@ export default function Home() {
 		setError(null);
 		setIsRedirecting(true);
 		try {
-			await createIam().signinRedirect();
+			await startSignIn();
 		} catch (err) {
 			setIsRedirecting(false);
 			setError(
@@ -107,17 +103,9 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 		return { props: {} };
 	}
 
-	// Self-hosted first-run still needs an initial admin before IAM is wired.
-	const hasAdmin = await isAdminPresent();
-	if (!hasAdmin) {
-		return {
-			redirect: {
-				permanent: false,
-				destination: "/register",
-			},
-		};
-	}
-
+	// No first-run admin bootstrap: the first identity to sign in through IAM
+	// gets its home organization and an `owner` membership created for it by
+	// syncIamOrgMembership. There is no local account to create first.
 	const { user } = await validateRequest(context.req);
 	if (user) {
 		return {

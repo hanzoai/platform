@@ -1,387 +1,155 @@
-import { getUserByToken, IS_CLOUD } from "@hanzo/platform";
-import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
+import { getUserByToken } from "@hanzo/platform";
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { type ReactElement, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { type ReactElement, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardDescription, CardTitle } from "@/components/ui/card";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { api } from "@/utils/api";
-import { useWhitelabelingPublic } from "@/utils/hooks/use-whitelabeling";
-
-const registerSchema = z
-	.object({
-		name: z.string().min(1, {
-			message: "First name is required",
-		}),
-		lastName: z.string().min(1, {
-			message: "Last name is required",
-		}),
-		email: z
-			.string()
-			.min(1, {
-				message: "Email is required",
-			})
-			.email({
-				message: "Email must be a valid email",
-			}),
-		password: z
-			.string()
-			.min(1, {
-				message: "Password is required",
-			})
-			.refine((password) => password === "" || password.length >= 8, {
-				message: "Password must be at least 8 characters",
-			}),
-		confirmPassword: z
-			.string()
-			.min(1, {
-				message: "Password is required",
-			})
-			.refine(
-				(confirmPassword) =>
-					confirmPassword === "" || confirmPassword.length >= 8,
-				{
-					message: "Password must be at least 8 characters",
-				},
-			),
-	})
-	.refine((data) => data.password === data.confirmPassword, {
-		message: "Passwords do not match",
-		path: ["confirmPassword"],
-	});
-
-type Register = z.infer<typeof registerSchema>;
+import { startSignIn } from "@/lib/iam-browser";
 
 interface Props {
 	token: string;
-	invitation: Awaited<ReturnType<typeof getUserByToken>>;
-	isCloud: boolean;
-	userAlreadyExists: boolean;
+	email: string | null;
+	/** Whether the visitor already has a platform session. */
+	isSignedIn: boolean;
 }
 
-const Invitation = ({
-	token,
-	invitation,
-	isCloud,
-	userAlreadyExists,
-}: Props) => {
+/**
+ * Accept an organization invitation.
+ *
+ * Identity is Hanzo IAM (HIP-0111), so this page never creates an account and
+ * never asks for a password — it only accepts. A signed-out visitor is handed
+ * to IAM and comes straight back here (the callback honours the parked return
+ * path), at which point accepting is one click.
+ *
+ * It used to render a full name/email/password registration form calling
+ * `authClient.signUp.email`. The server configures no `emailAndPassword`
+ * provider, so that form could only ever fail — and had it worked, it would
+ * have been the platform minting its own credentials.
+ */
+const Invitation = ({ token, email, isSignedIn }: Props) => {
 	const router = useRouter();
-	const { config: whitelabeling } = useWhitelabelingPublic();
-	const { data } = api.user.getUserByToken.useQuery(
-		{
-			token,
-		},
-		{
-			enabled: !!token,
-			initialData: invitation,
-		},
-	);
+	const [isWorking, setIsWorking] = useState(false);
 
-	const form = useForm<Register>({
-		defaultValues: {
-			name: "",
-			lastName: "",
-			email: "",
-			password: "",
-			confirmPassword: "",
-		},
-		resolver: zodResolver(registerSchema),
-	});
-
-	useEffect(() => {
-		if (data?.email) {
-			form.reset({
-				email: data?.email || "",
-				password: "",
-				confirmPassword: "",
-			});
-		}
-	}, [form, form.reset, form.formState.isSubmitSuccessful, data]);
-
-	const onSubmit = async (values: Register) => {
+	const accept = async () => {
+		setIsWorking(true);
 		try {
-			const { error } = await authClient.signUp.email({
-				email: values.email,
-				password: values.password,
-				name: values.name,
-				lastName: values.lastName,
-				fetchOptions: {
-					headers: {
-						"x-iam-token": token,
-					},
-				},
-			});
-
-			if (error) {
-				toast.error(error.message);
-				return;
-			}
-
-			const _result = await authClient.organization.acceptInvitation({
+			const { error } = await authClient.organization.acceptInvitation({
 				invitationId: token,
 			});
-
-			toast.success("Account created successfully");
+			if (error) {
+				toast.error(error.message ?? "Could not accept the invitation");
+				setIsWorking(false);
+				return;
+			}
+			toast.success("Invitation accepted");
 			router.push("/dashboard/projects");
 		} catch {
-			toast.error("An error occurred while creating your account");
+			toast.error("Could not accept the invitation");
+			setIsWorking(false);
+		}
+	};
+
+	const signIn = async () => {
+		setIsWorking(true);
+		try {
+			// Come back to this invitation once IAM has authenticated the user.
+			await startSignIn(`/invitation?token=${encodeURIComponent(token)}`);
+		} catch (err) {
+			setIsWorking(false);
+			toast.error(
+				err instanceof Error ? err.message : "Could not start sign-in",
+			);
 		}
 	};
 
 	return (
-		<div>
-			<div className="flex  h-screen w-full items-center justify-center ">
-				<div className="flex flex-col items-center gap-4 w-full">
-					<CardTitle className="text-2xl font-bold flex items-center gap-2">
-						<Link
-							href="https://hanzo.ai"
-							target="_blank"
-							className="flex flex-row items-center gap-2"
-						>
-							<Logo className="size-12" />
-						</Link>
-						Invitation
-					</CardTitle>
-					{userAlreadyExists ? (
-						<div className="flex flex-col gap-4 justify-center items-center">
-							<AlertBlock type="success">
-								<div className="flex flex-col gap-2">
-									<span className="font-medium">Valid Invitation!</span>
-									<span className="text-sm text-green-600 dark:text-green-400">
-										We detected that you already have an account with this
-										email. Please sign in to accept the invitation.
-									</span>
-								</div>
-							</AlertBlock>
+		<div className="flex h-screen w-full items-center justify-center">
+			<div className="flex w-full flex-col items-center gap-4">
+				<CardTitle className="flex items-center gap-2 text-2xl font-bold">
+					<Link
+						href="https://hanzo.ai"
+						target="_blank"
+						className="flex flex-row items-center gap-2"
+					>
+						<Logo className="size-12" />
+					</Link>
+					Invitation
+				</CardTitle>
 
-							<Button asChild variant="default" className="w-full">
-								<Link href="/">Sign In</Link>
-							</Button>
-						</div>
-					) : (
-						<>
-							<CardDescription>
-								Fill the form below to create your account
-							</CardDescription>
-							<div className="w-full">
-								<div className="p-3" />
+				<AlertBlock type="success">
+					<div className="flex flex-col gap-2">
+						<span className="font-medium">You have been invited</span>
+						{email && (
+							<span className="text-sm text-green-600 dark:text-green-400">
+								This invitation is for {email}.
+							</span>
+						)}
+					</div>
+				</AlertBlock>
 
-								{/* {isError && (
-									<div className="mx-5 my-2 flex flex-row items-center gap-2 rounded-lg bg-red-50 p-2 dark:bg-red-950">
-										<AlertTriangle className="text-red-600 dark:text-red-400" />
-										<span className="text-sm text-red-600 dark:text-red-400">
-											{error?.message}
-										</span>
-									</div>
-								)} */}
+				<CardDescription className="text-center">
+					{isSignedIn
+						? "Accept to join the organization."
+						: "Sign in with Hanzo to accept this invitation."}
+				</CardDescription>
 
-								<CardContent className="p-0">
-									<Form {...form}>
-										<form
-											onSubmit={form.handleSubmit(onSubmit)}
-											className="grid gap-4"
-										>
-											<div className="space-y-4">
-												<FormField
-													control={form.control}
-													name="name"
-													render={({ field }) => (
-														<FormItem>
-															<FormLabel>First Name</FormLabel>
-															<FormControl>
-																<Input placeholder="John" {...field} />
-															</FormControl>
-															<FormMessage />
-														</FormItem>
-													)}
-												/>
-												<FormField
-													control={form.control}
-													name="lastName"
-													render={({ field }) => (
-														<FormItem>
-															<FormLabel>Last Name</FormLabel>
-															<FormControl>
-																<Input placeholder="Doe" {...field} />
-															</FormControl>
-															<FormMessage />
-														</FormItem>
-													)}
-												/>
-												<FormField
-													control={form.control}
-													name="email"
-													render={({ field }) => (
-														<FormItem>
-															<FormLabel>Email</FormLabel>
-															<FormControl>
-																<Input
-																	disabled
-																	placeholder="Email"
-																	{...field}
-																/>
-															</FormControl>
-															<FormMessage />
-														</FormItem>
-													)}
-												/>
-												<FormField
-													control={form.control}
-													name="password"
-													render={({ field }) => (
-														<FormItem>
-															<FormLabel>Password</FormLabel>
-															<FormControl>
-																<Input
-																	type="password"
-																	placeholder="Password"
-																	{...field}
-																/>
-															</FormControl>
-															<FormMessage />
-														</FormItem>
-													)}
-												/>
-
-												<FormField
-													control={form.control}
-													name="confirmPassword"
-													render={({ field }) => (
-														<FormItem>
-															<FormLabel>Confirm Password</FormLabel>
-															<FormControl>
-																<Input
-																	type="password"
-																	placeholder="Confirm Password"
-																	{...field}
-																/>
-															</FormControl>
-															<FormMessage />
-														</FormItem>
-													)}
-												/>
-
-												<Button
-													type="submit"
-													isLoading={form.formState.isSubmitting}
-													className="w-full"
-												>
-													Register
-												</Button>
-											</div>
-
-											<div className="mt-4 text-sm flex flex-row justify-between gap-2 w-full">
-												{isCloud && (
-													<>
-														<Link
-															className="hover:underline text-muted-foreground"
-															href="/"
-														>
-															Login
-														</Link>
-														<Link
-															className="hover:underline text-muted-foreground"
-															href="/send-reset-password"
-														>
-															Lost your password?
-														</Link>
-													</>
-												)}
-											</div>
-										</form>
-									</Form>
-								</CardContent>
-							</div>
-						</>
-					)}
-				</div>
+				<CardContent className="w-full p-0">
+					<Button
+						className="w-full"
+						isLoading={isWorking}
+						onClick={() => void (isSignedIn ? accept() : signIn())}
+					>
+						{isSignedIn ? "Accept invitation" : "Sign in with Hanzo"}
+					</Button>
+				</CardContent>
 			</div>
 		</div>
 	);
 };
-// http://localhost:3000/invitation?token=CZK4BLrUdMa32RVkAdZiLsPDdvnPiAgZ
-// /f7af93acc1a99eae864972ab4c92fee089f0d83473d415ede8e821e5dbabe79c
+
 export default Invitation;
+
 Invitation.getLayout = (page: ReactElement) => {
 	return <OnboardingLayout>{page}</OnboardingLayout>;
 };
+
 export async function getServerSideProps(ctx: GetServerSidePropsContext) {
-	const { query } = ctx;
-
-	const token = query.token;
-
-	// if (IS_CLOUD) {
-	// 	return {
-	// 		redirect: {
-	// 			permanent: true,
-	// 			destination: "/",
-	// 		},
-	// 	};
-	// }
+	const token = ctx.query.token;
 
 	if (typeof token !== "string") {
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/",
-			},
-		};
+		return { redirect: { permanent: true, destination: "/" } };
 	}
 
 	try {
 		const invitation = await getUserByToken(token);
 
-		if (invitation.userAlreadyExists) {
-			return {
-				props: {
-					isCloud: IS_CLOUD,
-					token: token,
-					invitation: invitation,
-					userAlreadyExists: true,
-				},
-			};
+		if (invitation.isExpired) {
+			return { redirect: { permanent: true, destination: "/" } };
 		}
 
-		if (invitation.isExpired) {
-			return {
-				redirect: {
-					permanent: true,
-					destination: "/",
-				},
-			};
+		let isSignedIn = false;
+		try {
+			const { user } = await validateRequest(ctx.req);
+			isSignedIn = !!user;
+		} catch {
+			isSignedIn = false;
 		}
 
 		return {
 			props: {
-				isCloud: IS_CLOUD,
-				token: token,
-				invitation: invitation,
+				token,
+				email: invitation.email ?? null,
+				isSignedIn,
 			},
 		};
-	} catch (error) {
-		console.log("error", error);
-		return {
-			redirect: {
-				permanent: true,
-				destination: "/",
-			},
-		};
+	} catch {
+		return { redirect: { permanent: true, destination: "/" } };
 	}
 }
