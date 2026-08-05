@@ -1,16 +1,18 @@
 #!/usr/bin/env tsx
 
 /**
- * Script to generate OpenAPI specification locally
- * This runs in CI/CD to generate the openapi.json file
- * which can then be consumed by the documentation website
+ * Write the checked-in `openapi.json` — the document the docs site consumes.
+ *
+ * The document itself is built by `server/api/openapi-document.ts`, the same
+ * builder the running instance serves from, so the published file and the live
+ * one cannot describe different APIs. This script only chooses the public base
+ * URL and decides where the bytes land.
  */
 
 import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { generateOpenApiDocument } from "@hanzo/platform/openapi";
-import { appRouter } from "../server/api/root";
+import { buildOpenApiDocument } from "../server/api/openapi-document";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,96 +21,10 @@ async function generateOpenAPI() {
 	try {
 		console.log("🔄 Generating OpenAPI specification...");
 
-		const openApiDocument = generateOpenApiDocument(appRouter, {
-			title: "Hanzo Platform API",
-			version: "1.0.0",
+		const openApiDocument = buildOpenApiDocument({
 			baseUrl: "https://platform.hanzo.ai/v1",
-			docsUrl: "https://docs.hanzo.ai/v1",
-			tags: [
-				"admin",
-				"docker",
-				"compose",
-				"registry",
-				"cluster",
-				"user",
-				"domain",
-				"destination",
-				"backup",
-				"deployment",
-				"mounts",
-				"certificates",
-				"settings",
-				"security",
-				"redirects",
-				"port",
-				"project",
-				"application",
-				"mysql",
-				"postgres",
-				"redis",
-				"mongo",
-				"mariadb",
-				"sshRouter",
-				"gitProvider",
-				"bitbucket",
-				"github",
-				"gitlab",
-				"gitea",
-				"server",
-				"swarm",
-				"ai",
-				"organization",
-				"schedule",
-				"rollback",
-				"volumeBackups",
-				"environment",
-			],
 		});
 
-		// Enhance metadata
-		openApiDocument.info = {
-			title: "Hanzo Platform API",
-			description:
-				"Complete API documentation for Hanzo Platform - Deploy applications, manage databases, and orchestrate your infrastructure. This API allows you to programmatically manage all aspects of your Hanzo Platform instance.",
-			version: "1.0.0",
-			contact: {
-				name: "Hanzo Platform Team",
-				url: "https://hanzo.ai",
-			},
-			license: {
-				name: "Apache 2.0",
-				url: "https://github.com/hanzoai/platform/blob/canary/LICENSE",
-			},
-		};
-
-		// Add security schemes
-		openApiDocument.components = {
-			...openApiDocument.components,
-			securitySchemes: {
-				apiKey: {
-					type: "apiKey",
-					in: "header",
-					name: "x-api-key",
-					description:
-						"API key authentication. Generate an API key from your Hanzo Platform dashboard under Settings > API Keys.",
-				},
-			},
-		};
-
-		// Apply global security
-		openApiDocument.security = [
-			{
-				apiKey: [],
-			},
-		];
-
-		// Add external docs
-		openApiDocument.externalDocs = {
-			description: "Full documentation",
-			url: "https://docs.hanzo.ai",
-		};
-
-		// Write to root of repo
 		const outputPath = resolve(__dirname, "../../../openapi.json");
 		writeFileSync(
 			outputPath,

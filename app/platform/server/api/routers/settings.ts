@@ -1,4 +1,3 @@
-import { generateOpenApiDocument } from "@hanzo/platform/openapi";
 import {
 	CLEANUP_CRON_JOB,
 	checkGPUStatus,
@@ -56,6 +55,7 @@ import { eq, sql } from "drizzle-orm";
 import { scheduledJobs, scheduleJob } from "node-schedule";
 import { parse, stringify } from "yaml";
 import { z } from "zod";
+import { buildOpenApiDocumentForRequest } from "../openapi-document";
 import { audit } from "@/server/api/utils/audit";
 import {
 	apiAssignDomain,
@@ -73,7 +73,6 @@ import {
 import { cleanAllDeploymentQueue } from "@/server/queues/queueSetup";
 import { removeJob, schedule } from "@/server/utils/backup";
 import packageInfo from "../../../package.json";
-import { appRouter } from "../root";
 import {
 	adminProcedure,
 	createTRPCRouter,
@@ -655,88 +654,11 @@ export const settingsRouter = createTRPCRouter({
 		}),
 
 	getOpenApiDocument: protectedProcedure.query(
-		async ({ ctx }): Promise<unknown> => {
-			const protocol = ctx.req.headers["x-forwarded-proto"];
-			const url = `${protocol}://${ctx.req.headers.host}/api`;
-			const openApiDocument = generateOpenApiDocument(appRouter, {
-				title: "tRPC OpenAPI",
-				version: packageInfo.version,
-				baseUrl: url,
-				docsUrl: `${url}/settings.getOpenApiDocument`,
-				tags: [
-					"admin",
-					"docker",
-					"compose",
-					"registry",
-					"cluster",
-					"user",
-					"domain",
-					"destination",
-					"backup",
-					"deployment",
-					"mounts",
-					"certificates",
-					"settings",
-					"security",
-					"redirects",
-					"port",
-					"project",
-					"application",
-					"mysql",
-					"postgres",
-					"redis",
-					"mongo",
-					"libsql",
-					"mariadb",
-					"sshRouter",
-					"gitProvider",
-					"bitbucket",
-					"ai",
-					"github",
-					"gitlab",
-					"gitea",
-					"tag",
-					"patch",
-					"server",
-					"volumeBackups",
-					"environment",
-					"auditLog",
-					"customRole",
-					"whitelabeling",
-					"sso",
-					"licenseKey",
-					"organization",
-					"previewDeployment",
-				],
-			});
-
-			openApiDocument.info = {
-				title: "Hanzo Platform API",
-				description: "Endpoints for Hanzo Platform",
-				version: packageInfo.version,
-			};
-
-			// Add security schemes configuration
-			openApiDocument.components = {
-				...openApiDocument.components,
-				securitySchemes: {
-					apiKey: {
-						type: "apiKey",
-						in: "header",
-						name: "x-api-key",
-						description: "API key authentication",
-					},
-				},
-			};
-
-			// Apply security globally to all endpoints
-			openApiDocument.security = [
-				{
-					apiKey: [],
-				},
-			];
-			return openApiDocument;
-		},
+		async ({ ctx }): Promise<unknown> =>
+			buildOpenApiDocumentForRequest(
+				ctx.req.headers["x-forwarded-proto"] as string | undefined,
+				ctx.req.headers.host,
+			),
 	),
 	readTraefikEnv: adminProcedure
 		.input(apiServerSchema)
