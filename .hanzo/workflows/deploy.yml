@@ -59,10 +59,10 @@ jobs:
             echo "::error::KMS login failed at $KMS_ENDPOINT/v1/kms/auth/login — refusing to ship a bundle with no ingest key"; exit 1
           fi
           # Embedded KMS (HIP-0106): org from the token, flat {"value"}.
-          V=$(curl -sS -m 30 "$KMS_ENDPOINT/v1/kms/secrets/deploy/EVENT_INGEST_KEY?env=prod" \
+          V=$(curl -sS -m 30 "$KMS_ENDPOINT/v1/kms/secrets/deploy/PUBLISHABLE_KEY?env=prod" \
             -H "Authorization: Bearer $TOKEN" 2>/dev/null | jq -r '.value // empty' || true)
           if [ -z "$V" ]; then
-            echo "::error::EVENT_INGEST_KEY absent from KMS (path deploy, env prod) — refusing to ship a bundle with no ingest key"; exit 1
+            echo "::error::PUBLISHABLE_KEY absent from KMS (path deploy, env prod) — refusing to ship a bundle with no ingest key"; exit 1
           fi
           echo "::add-mask::$V"
           echo "key=$V" >> "$GITHUB_OUTPUT"
@@ -72,7 +72,7 @@ jobs:
         env:
           # Through the environment, not the command line: an inline --build-arg
           # written into the `run:` script would put the key in the job log.
-          EVENT_INGEST_KEY: ${{ steps.ingest.outputs.key }}
+          PUBLISHABLE_KEY: ${{ steps.ingest.outputs.key }}
         run: |
           set -euo pipefail
           SHA="${GITHUB_SHA}"
@@ -81,7 +81,7 @@ jobs:
           # bundle, so a key set on the pod arrives too late to reach a browser.
           # The Dockerfile's build-platform stage gates on this and fails closed.
           docker build --target platform -f Dockerfile \
-            --build-arg EVENT_INGEST_KEY="$EVENT_INGEST_KEY" \
+            --build-arg PUBLISHABLE_KEY="$PUBLISHABLE_KEY" \
             -t "$IMAGE" .
           docker push "$IMAGE"
           echo "built $IMAGE"

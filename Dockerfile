@@ -52,7 +52,7 @@ FROM deps AS build-platform
 # Safe to ship in the bundle — pk- is ingest-only by construction, so it can
 # write events and cannot read anything.
 #
-# EVENT_INGEST_KEY is the name in KMS (deploy/EVENT_INGEST_KEY, env prod) and on
+# PUBLISHABLE_KEY is the name in KMS (deploy/PUBLISHABLE_KEY, env prod) and on
 # the --build-arg; NEXT_PUBLIC_ is added HERE because that prefix is what makes
 # Next inline a var. The prefix is a property of this build, so it is applied in
 # this build file and the secret store keeps the ONE plain name.
@@ -60,16 +60,16 @@ FROM deps AS build-platform
 # This stage is the right home for it because it is the only place `next build`
 # runs: BOTH shipped targets that serve the app (`platform` and `cloud`) COPY
 # --from=build-platform, so one gate covers both and neither can ship unkeyed.
-ARG EVENT_INGEST_KEY
-ENV NEXT_PUBLIC_EVENT_INGEST_KEY=$EVENT_INGEST_KEY
+ARG PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_PUBLISHABLE_KEY=$PUBLISHABLE_KEY
 
 # Fail closed, BEFORE the expensive build. An empty key builds, serves and looks
 # correct while every anonymous event is dropped at the edge. Refuse the artifact
 # instead — a missing image is loud, a keyless one is not.
-RUN case "$EVENT_INGEST_KEY" in \
+RUN case "$PUBLISHABLE_KEY" in \
       pk-*) : ;; \
-      '')   echo "EVENT_INGEST_KEY is empty - pass --build-arg EVENT_INGEST_KEY=<pk-...> (KMS deploy/EVENT_INGEST_KEY, env prod)" >&2; exit 1 ;; \
-      *)    echo "EVENT_INGEST_KEY is not a publishable key (expected a pk- prefix)" >&2; exit 1 ;; \
+      '')   echo "PUBLISHABLE_KEY is empty - pass --build-arg PUBLISHABLE_KEY=<pk-...> (KMS deploy/PUBLISHABLE_KEY, env prod)" >&2; exit 1 ;; \
+      *)    echo "PUBLISHABLE_KEY is not a publishable key (expected a pk- prefix)" >&2; exit 1 ;; \
     esac
 
 RUN pnpm --filter=./app/platform run build \
@@ -82,13 +82,13 @@ RUN pnpm --filter=./app/platform run build \
 # absent from .next/static cannot reach a browser — which is how a fully green
 # run ships a bundle that reports nothing. Checked on the COPY that ships
 # (/prod/out/.next), so what is verified is what the runtime stages take.
-RUN if [ -z "${NEXT_PUBLIC_EVENT_INGEST_KEY}" ]; then \
-      echo "ERROR: NEXT_PUBLIC_EVENT_INGEST_KEY is empty after a successful build - the ARG gate should have caught this, so the ENV was cleared between the two." >&2; \
+RUN if [ -z "${NEXT_PUBLIC_PUBLISHABLE_KEY}" ]; then \
+      echo "ERROR: NEXT_PUBLIC_PUBLISHABLE_KEY is empty after a successful build - the ARG gate should have caught this, so the ENV was cleared between the two." >&2; \
       exit 1; \
-    elif grep -rqF "${NEXT_PUBLIC_EVENT_INGEST_KEY}" /prod/out/.next/static; then \
+    elif grep -rqF "${NEXT_PUBLIC_PUBLISHABLE_KEY}" /prod/out/.next/static; then \
       echo ">> ingest key inlined into .next/static, verified"; \
     else \
-      echo "ERROR: NEXT_PUBLIC_EVENT_INGEST_KEY was supplied but is NOT present in /prod/out/.next/static." >&2; \
+      echo "ERROR: NEXT_PUBLIC_PUBLISHABLE_KEY was supplied but is NOT present in /prod/out/.next/static." >&2; \
       echo "       Next inlines NEXT_PUBLIC_* at build; a value absent from the client bundle cannot reach the browser." >&2; \
       echo "       Check that nothing re-declares it as an ARG after the ENV above - a build arg declared after an ENV of the same name shadows it." >&2; \
       exit 1; \
