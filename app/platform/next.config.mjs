@@ -3,6 +3,13 @@
  * for Docker builds.
  */
 
+import { createRequire } from "node:module";
+
+// dist/root.js imports the sheet RELATIVELY (`./styles.css`), so the webpack
+// alias below has to name the absolute file, not the bare specifier.
+const require = createRequire(import.meta.url);
+const hanzoUiStylesCss = require.resolve("@hanzo/ui/styles.css");
+
 /** @type {import("next").NextConfig} */
 const nextConfig = {
 	reactStrictMode: true,
@@ -31,6 +38,20 @@ const nextConfig = {
 		config.resolve.alias = {
 			...config.resolve.alias,
 			"react-native$": "react-native-web",
+			// @hanzo/ui ≥8.0.45 imports its shipped design-token sheet from root.js.
+			// That sheet and this app define the SAME custom-property names in
+			// incompatible dialects: the sheet says `--background:#0a0a0a` (full
+			// values, consumed as var(--background)); this app's globals.css says
+			// `--background: 0 0% 0%` (bare HSL triples, consumed as
+			// hsl(var(--background)) by every Tailwind-styled file). Whichever
+			// loads last silently breaks the other side's colors — and the sheet's
+			// native `@layer base` also errors in Tailwind v3's PostCSS. Until the
+			// utility-class migration replaces the app's token dialect, the app
+			// stays the ONE token source and the sheet stays out of the document —
+			// exactly the CSS delivery 8.0.44 had (its dist never imported the
+			// sheet), which is the visually-verified state. Components are
+			// unaffected: they style through @hanzo/gui props, not sheet classes.
+			[hanzoUiStylesCss]: false,
 		};
 		// gui ships `.web.*` platform variants; without these extensions webpack
 		// picks the native file and pulls in RN internals that have no browser build.

@@ -300,8 +300,20 @@ Platform's filesystem does not survive restarts, so it must never hold a real DB
 - STILL radix (5 pkgs, deliberate): dialog (app-owned behavior: modal=false +
   cmdk-aware outside-click + footer-pinned scroll layout — port it with e2e
   eyes, not blind), sheet (rides radix dialog), accordion + file-tree,
-  alert-dialog, context-menu, radio-group. @hanzo/ui 8.0.44 has no equivalents
-  for accordion/alert-dialog/context-menu/radio-group/sheet yet.
+  alert-dialog, context-menu, radio-group. @hanzo/ui 8.0.46 (checked file by
+  file) still has no equivalents for accordion/alert-dialog/context-menu/
+  radio-group/sheet.
+- @hanzo/ui ≥8.0.45 root.js imports its shipped `dist/styles.css` — and that
+  sheet's token DIALECT collides with this app's: same custom-property names,
+  `--background:#0a0a0a` (full values) vs globals.css `--background: 0 0% 0%`
+  (bare HSL triples for Tailwind's `hsl(var())`). Whichever loads last silently
+  breaks the other side's colors, and its native `@layer base` also hard-errors
+  in Tailwind v3 PostCSS. next.config.mjs aliases the resolved sheet path to
+  `false` (root.js imports it RELATIVELY, so the alias must be the absolute
+  file) — the exact CSS delivery 8.0.44 had. Components are unaffected (they
+  style via gui props, verified zero class handles in dist Button). When the
+  utility-class migration replaces the app token dialect, delete the alias and
+  let the sheet in.
 - STAY local by design (no radix): input (password generator), textarea
   (react-hook-form takes DOM onChange; gui's field is onChangeText), badge
   (status variants red/yellow/green/blue/blank), table, skeleton, calendar,
@@ -317,6 +329,25 @@ Platform's filesystem does not survive restarts, so it must never hold a real DB
   strip so far removed it from the tailwind config scan + gui.css is
   pre-generated (`scripts/gen-gui-css.mjs`). Full utility-class removal is the
   remaining convergence work, alongside the 5 radix holdouts above.
+- Current pins: @hanzo/ui 8.0.46 + @hanzo/gui 8.0.2 (npm latest, via
+  pkg.hanzo.ai — a live upstream proxy; a 404 on a fresh version means its
+  packument cache hasn't refreshed, request the packument once and retry).
+- The dead upstream-Dokploy trees `apps/` + `packages/server` (outside the pnpm
+  workspace, zero references) are DELETED — with them the last vendored
+  shadcn/radix/tailwind copies. `__test__/regression/exports-validation.test.ts`
+  died with them (it asserted the dead tree's export map; the live
+  switchToDist/switchToSrc scripts never had that shape).
+- TypeScript: root/pkg-platform/schedules/mcp are on 7.0.2 (the native Go
+  compiler — bin is an ELF with a Go BuildID). app/platform stays 5.9.3 (Next
+  16.1 drives the TS API; see the TS7-paths commit) and app/api stays 5.9.3
+  (its tsconfig `paths` pull pkg/platform SOURCES into the program; TS7
+  requires an explicit rootDir and then emits the out-of-root files beside
+  their sources — recompiling a sibling package into api's dist is wrong, so
+  5.x until api consumes @hanzo/platform's built d.ts).
+- vitest: 72/72 files, 872 passed / 1 skipped / 0 failed. The REAL docker
+  deploy suite needs swarm + the `platform-network` overlay (create it exactly
+  as `setup/server-setup.ts` does); registry-tag + template-domain fixtures
+  were drift (caddy leftovers, sslip.io→traefik.me) and are fixed.
 
 ## Versioning — ONE line, `v4.x` (HIP-0111)
 There is exactly one version line: **`v4.x`**. `app/platform/package.json`,
