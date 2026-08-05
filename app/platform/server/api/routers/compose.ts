@@ -79,7 +79,7 @@ import {
 import { cancelDeployment, deploy } from "@/server/utils/deploy";
 import { generatePassword } from "@/templates/utils";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { audit } from "../utils/audit";
+import { audit } from "@/server/api/utils/audit";
 
 export const composeRouter = createTRPCRouter({
 	create: protectedProcedure
