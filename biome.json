@@ -14,6 +14,7 @@
 			"!**/dist",
 			"!**/drizzle/**",
 			"!node_modules/**",
+			"!pkg/platform/src/vendor/**",
 			"!packages/server/package.json"
 		],
 		"maxSize": 2097152
