@@ -350,6 +350,59 @@ and real `audit()` calls in the caps, (3) only then retire the router and
 repoint its UI call sites. `openapi.zap.json` (581 paths) replaces
 `openapi.json` (407) when the last router goes.
 
+## Docker/Swarm → cloud `/v1/platform` — SCOPED, deliberately not started
+
+The Docker execution model (dockerode + ssh2 + `docker` CLI) is upstream's, and
+the Go-native replacement is real and live. **The Go path is
+`~/work/hanzo/cloud/apps/platform`** — NOT `clients/platform`, which was
+renamed by `f873d1a18` and is still mis-cited in cloud's own Goa design file.
+
+Measured, not estimated:
+
+| | |
+|---|---|
+| Platform's Docker/SSH layer | 71 files, 22,508 lines, feeding 406 tRPC procedures + 55 caps |
+| Cloud `/v1/platform` | 27 files, 11,750 lines of Go, **32 operations**, K8s-only (zero docker, zero ssh) |
+| Capability parity | **6 equivalent / 7 partial / 12 absent** |
+| Net-new Go to close the gap | ~10-17k lines — about the size of cloud's platform app again |
+
+**The load-bearing fact: most of the Docker layer is already dead in
+production.** The pod has no `/var/run/docker.sock` (`k8s/platform-statefulset.yaml`
+mounts only `/app/data`), so those paths `ENOENT` in-cluster. Apps deploy by
+`services/ci/deploy-executor.ts` patching an operator CR — the same CR, in the
+same cluster, that cloud's `k8s.go` writes. That duplication is the one worth
+collapsing first. Databases, backups, volume backups, terminals and compose
+still route through Docker code that cannot run in the pod.
+
+Order, if this is picked up:
+1. Re-point `deploy-executor.ts` at `POST /v1/platform/projects/{p}/apps/{a}/deploy`
+   behind a per-org flag. Both sides patch the same CR, so a mistake is a
+   routing bug, not data loss. This is the only capability at full parity today.
+2. Move the fleet/app READ surface onto `GET /v1/platform/fleet`.
+3. Env + domains — cloud's env is KMS-sealed, which is a security upgrade over
+   platform's plaintext-in-DB.
+
+**Do NOT attempt yet**, each for its own reason:
+- the SSH remote-server fleet (`setup/server-setup.ts` + friends, ~1,040 lines)
+  manages VMs, not containers. Decide if that product survives before porting.
+- managed databases — cloud has literally zero (`postgres|mysql|mongo|redis|mariadb`
+  matches 0 files). ~9k lines here have no target. Platform's own
+  `provisionDatastore`/`cr-builder.ts` already builds correct operator CRs and
+  has NO production callers; wire that first.
+- compose/stack — Swarm stacks have no faithful K8s translation. Product
+  decision, not a port.
+- removing `dockerode` from package.json — still the local-dev and
+  SSH-attached-server path. Gate it, don't delete it.
+- the WS terminals — the one thing that genuinely works over SSH, and
+  `/v1/platform` has no streaming plane to receive them.
+
+Note `USE_K8S_OPERATOR` appears only in COMMENTS — `process.env.USE_K8S_OPERATOR`
+is read nowhere. It is not a feature flag; don't treat it as one.
+
+Blocker to fix before coding against the contract: cloud's Goa design declares
+17 methods while the implementation serves 32 (rollback, promote, preview, env,
+domains, fleet are undeclared), and `design/gen/http/openapi3.json` is 0 bytes.
+
 ## Versioning — ONE line, `v4.x` (HIP-0111)
 There is exactly one version line: **`v4.x`**. `app/platform/package.json`,
 git tags, and the published `ghcr.io/hanzoai/platform` image tag are the SAME
