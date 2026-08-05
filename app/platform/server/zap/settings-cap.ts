@@ -29,7 +29,6 @@
 // audit.
 
 import type { IncomingMessage } from "node:http";
-import { generateOpenApiDocument } from "@hanzo/platform/openapi";
 import {
 	CLEANUP_CRON_JOB,
 	checkGPUStatus,
@@ -94,7 +93,7 @@ import { projects, server } from "@/server/db/schema";
 import { cleanAllDeploymentQueue } from "@/server/queues/queueSetup";
 import { removeJob, schedule } from "@/server/utils/backup";
 import packageInfo from "../../package.json";
-import { appRouter } from "../api/root";
+import { buildOpenApiDocumentForRequest } from "../api/openapi-document";
 import { decodeArgs } from "./args";
 import { encodeResult } from "./result";
 import { SettingsMethod } from "./schema/settings_zap";
@@ -899,100 +898,9 @@ async function dispatch(ctx: SettingsCtx, call: Call): Promise<unknown> {
 
 		case SettingsMethod.getOpenApiDocument: {
 			requireSession(ctx);
-			// ctx.req.headers["x-forwarded-proto"] / ctx.req.headers.host were the
-			// only tRPC-only ctx reads in the router; they are captured at the mint
-			// boundary (reqProto / reqHost) and threaded in here.
-			const protocol = ctx.reqProto;
-			const url = `${protocol}://${ctx.reqHost}/api`;
-			const openApiDocument = generateOpenApiDocument(appRouter, {
-				title: "tRPC OpenAPI",
-				version: packageInfo.version,
-				baseUrl: url,
-				docsUrl: `${url}/settings.getOpenApiDocument`,
-				tags: [
-					"admin",
-					"docker",
-					"compose",
-					"registry",
-					"cluster",
-					"user",
-					"domain",
-					"destination",
-					"backup",
-					"deployment",
-					"mounts",
-					"certificates",
-					"settings",
-					"security",
-					"redirects",
-					"port",
-					"project",
-					"application",
-					"mysql",
-					"postgres",
-					"redis",
-					"mongo",
-					"libsql",
-					"mariadb",
-					"sshRouter",
-					"gitProvider",
-					"bitbucket",
-					"ai",
-					"github",
-					"gitlab",
-					"gitea",
-					"tag",
-					"patch",
-					"server",
-					"volumeBackups",
-					"environment",
-					"auditLog",
-					"customRole",
-					"whitelabeling",
-					"sso",
-					"licenseKey",
-					"organization",
-					"previewDeployment",
-				],
-			});
-
-			openApiDocument.info = {
-				title: "Hanzo Platform API",
-				description: "Endpoints for Hanzo Platform",
-				version: packageInfo.version,
-			};
-
-			// Add security schemes configuration
-			openApiDocument.components = {
-				...openApiDocument.components,
-				securitySchemes: {
-					apiKey: {
-						type: "apiKey",
-						in: "header",
-						name: "x-api-key",
-						description: "API key authentication",
-					},
-				},
-			};
-
-			// Apply security globally to all endpoints
-			openApiDocument.security = [
-				{
-					apiKey: [],
-				},
-			];
-			return openApiDocument;
-		}
-
-		case SettingsMethod.readTraefikEnv: {
-			requireAdmin(ctx);
-			// biome-ignore lint/suspicious/noExplicitAny: apiServerSchema input, ported verbatim
-			const input = decodeArgs<any>(call.payload);
-			const envVars = await readEnvironmentVariables(
-				"platform-traefik",
-				input?.serverId,
-			);
-			return envVars;
+			// reqProto / reqHost are captured at the mint boundary: a cap has no
+			// tRPC ctx to read request headers from.
+			return buildOpenApiDocumentForRequest(ctx.reqProto, ctx.reqHost);
 		}
 
 		case SettingsMethod.writeTraefikEnv: {
