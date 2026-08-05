@@ -12,7 +12,7 @@ import { appRouter } from "./root";
  * nine tags the other two had (auditLog, customRole, libsql, licenseKey,
  * patch, previewDeployment, sso, tag, whitelabeling) and carried three they
  * did not (rollback, schedule, swarm). None of the three is kept — the list
- * is derived from the router now; see `OPENAPI_TAGS`.
+ * is derived from the router now; see `openApiTags`.
  *
  * The drift was not only in the tags. All three declared the `x-api-key`
  * scheme, but the two runtime copies published a bare `info` (title,
@@ -39,14 +39,22 @@ import { appRouter } from "./root";
  * right now: billing, buildJob, dedicatedCluster, deployProvider,
  * notification, sshKey, stripe. Their operations were tagged with a group the
  * document never declared.
+ *
+ * Computed on CALL, never at module load. `root.ts` imports the settings
+ * router, which imports this module, so reading `appRouter` while this module
+ * is being evaluated hits the binding in its temporal dead zone — a webpack
+ * production build fails collecting page data with "Cannot access 'aa' before
+ * initialization". By the time anyone asks for a document, the graph is built.
  */
-export const OPENAPI_TAGS: string[] = [
-	...new Set(
-		Object.keys(appRouter._def.procedures).map(
-			(path) => path.split(".")[0] ?? "default",
+export function openApiTags(): string[] {
+	return [
+		...new Set(
+			Object.keys(appRouter._def.procedures).map(
+				(path) => path.split(".")[0] ?? "default",
+			),
 		),
-	),
-].sort();
+	].sort();
+}
 
 export interface OpenApiDocumentOptions {
 	/** Origin + mount the operations hang off, e.g. `https://host/v1`. */
@@ -59,7 +67,7 @@ export function buildOpenApiDocument({ baseUrl }: OpenApiDocumentOptions) {
 		version: packageInfo.version,
 		baseUrl,
 		docsUrl: "https://docs.hanzo.ai",
-		tags: OPENAPI_TAGS,
+		tags: openApiTags(),
 	});
 
 	document.info = {
