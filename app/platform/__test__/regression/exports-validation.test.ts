@@ -1,42 +1,21 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+// The ONE table both switch scripts render. Testing it directly (rather than
+// re-parsing the generated package.json out of each script's source) is what
+// makes "src and dist agree" checkable at all.
+import {
+	DIRECTORY_ENTRIES,
+	exportsFor,
+} from "../../../../pkg/platform/scripts/exports-map.js";
 
-const SCRIPTS_DIR = path.resolve(__dirname, "../../../../pkg/platform/scripts");
-const PKG_SRC = path.resolve(__dirname, "../../../../pkg/platform/src");
+const REPO_ROOT = path.resolve(__dirname, "../../../..");
+const PKG_SRC = path.join(REPO_ROOT, "pkg/platform/src");
 
-function parseExports(filePath: string): Record<string, unknown> {
-	const content = fs.readFileSync(filePath, "utf-8");
-	// Extract the exports object: match from `pkg.exports = {` to the matching `};`
-	const start = content.indexOf("pkg.exports = {");
-	if (start === -1)
-		throw new Error(`Could not find pkg.exports in ${filePath}`);
-	const objStart = content.indexOf("{", start);
+const distExports = exportsFor("dist");
+const srcExports = exportsFor("src");
 
-	// Find matching closing brace by counting depth
-	let depth = 0;
-	let end = -1;
-	for (let i = objStart; i < content.length; i++) {
-		if (content[i] === "{") depth++;
-		if (content[i] === "}") {
-			depth--;
-			if (depth === 0) {
-				end = i + 1;
-				break;
-			}
-		}
-	}
-	if (end === -1) throw new Error(`Unmatched braces in ${filePath}`);
-
-	const objLiteral = content.slice(objStart, end);
-	// Evaluate the object literal (safe — our own build scripts)
-	const fn = new Function(`return ${objLiteral}`);
-	return fn();
-}
-
-describe("@hanzo/platform switchToDist.js export map", () => {
-	const distExports = parseExports(path.join(SCRIPTS_DIR, "switchToDist.js"));
-
+describe("@hanzo/platform export map", () => {
 	it("has the base entries every consumer relies on", () => {
 		for (const key of [".", "./db", "./db/schema", "./constants"]) {
 			expect(distExports).toHaveProperty(key);
@@ -45,45 +24,113 @@ describe("@hanzo/platform switchToDist.js export map", () => {
 
 	it("has a catch-all ./* entry", () => {
 		expect(distExports).toHaveProperty("./*");
+		expect(srcExports).toHaveProperty("./*");
 	});
 
 	/**
-	 * The regression this file exists for. esbuild is configured with
-	 * `entryPoints: ["./src/**\/*.ts"]` + `outdir: "./dist"`, so it preserves the
-	 * source tree: `src/utils/builders/index.ts` emits to
-	 * `dist/utils/builders/index.js`, NOT `dist/utils/builders.js`.
-	 *
-	 * A wildcard like `"./utils/*": "./dist/utils/*.js"` therefore resolves a
-	 * directory import to a file that is never emitted, and the import fails at
-	 * runtime in a dist build while working fine in dev (where tsconfig paths
-	 * resolve straight to source). Every directory that is imported bare needs
-	 * its own explicit entry pointing at `<dir>/index.js`.
+	 * The divergence this file now exists for. `switch:dev` and `switch:prod`
+	 * are one map over two trees, but they used to be two hand-written literals
+	 * — dist grew to 19 entries while src still had 4, so running `switch:dev`
+	 * silently deleted the resolution for `./lib/auth`, `./services/*`,
+	 * `./templates`, `./db/schema` and the `./*` catch-all.
+	 */
+	it("resolves the same subpaths in src and dist", () => {
+		expect(Object.keys(srcExports).sort()).toEqual(
+			Object.keys(distExports).sort(),
+		);
+	});
+
+	it("points each tree at its own files", () => {
+		for (const [key, target] of Object.entries(distExports)) {
+			if (key === "./package.json") continue;
+			expect(target, key).toMatch(/^\.\/dist\/.*\.js$/);
+		}
+		for (const [key, target] of Object.entries(srcExports)) {
+			if (key === "./package.json") continue;
+			expect(target, key).toMatch(/^\.\/src\/.*\.ts$/);
+		}
+	});
+
+	/**
+	 * Both builders preserve the source tree, so `src/utils/builders/index.ts`
+	 * emits `dist/utils/builders/index.js` and never `dist/utils/builders.js`.
+	 * A wildcard therefore resolves a bare directory import to a file that is
+	 * never emitted — it works in dev (tsconfig paths hit source directly) and
+	 * fails only in a dist build.
 	 */
 	it("gives every bare-imported directory an explicit index entry", () => {
-		const dirEntryPoints = [
-			"./templates",
-			"./utils/builders",
-			"./utils/restore",
-			"./services/ci",
-		];
-		for (const key of dirEntryPoints) {
-			expect(
-				distExports,
-				`${key} must be explicit, not left to a wildcard`,
-			).toHaveProperty(key);
+		for (const dir of DIRECTORY_ENTRIES) {
+			const key = `./${dir}`;
+			expect(distExports, `${key} must be explicit`).toHaveProperty(key);
 			expect(String(distExports[key])).toMatch(/\/index\.js$/);
+			expect(String(srcExports[key])).toMatch(/\/index\.ts$/);
 		}
 	});
 
 	it("only claims directory entries that actually have an index", () => {
-		for (const key of Object.keys(distExports)) {
-			const target = distExports[key];
-			if (typeof target !== "string" || !target.endsWith("/index.js")) continue;
-			const rel = target.replace(/^\.\/dist\//, "").replace(/\/index\.js$/, "");
+		for (const dir of DIRECTORY_ENTRIES) {
 			expect(
-				fs.existsSync(path.join(PKG_SRC, rel, "index.ts")),
-				`${key} -> ${target} but src/${rel}/index.ts does not exist`,
+				fs.existsSync(path.join(PKG_SRC, dir, "index.ts")),
+				`./${dir} is declared but src/${dir}/index.ts does not exist`,
 			).toBe(true);
 		}
+	});
+});
+
+/** Every `.ts`/`.tsx` file in the workspace, skipping build and dep output. */
+function sourceFiles(dir: string, out: string[] = []): string[] {
+	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+		if (
+			entry.name === "node_modules" ||
+			entry.name === "dist" ||
+			entry.name === ".next" ||
+			entry.name.startsWith(".")
+		) {
+			continue;
+		}
+		const full = path.join(dir, entry.name);
+		if (entry.isDirectory()) sourceFiles(full, out);
+		else if (/\.tsx?$/.test(entry.name)) out.push(full);
+	}
+	return out;
+}
+
+/**
+ * The test that would have caught `@hanzo/platform/services/k8s`.
+ *
+ * The earlier fix added explicit entries for the four directories that were
+ * broken at the time; `services/k8s` and `services/k8s/operator` were imported
+ * bare too and stayed broken, because nothing checked the map against what the
+ * workspace actually imports. This derives the requirement from the imports
+ * instead of from a hand-kept list.
+ */
+describe("@hanzo/platform bare directory imports", () => {
+	it("are all declared in the export map", () => {
+		const imported = new Set<string>();
+		for (const dir of ["app", "pkg", "e2e"]) {
+			const root = path.join(REPO_ROOT, dir);
+			if (!fs.existsSync(root)) continue;
+			for (const file of sourceFiles(root)) {
+				const text = fs.readFileSync(file, "utf-8");
+				for (const m of text.matchAll(/["']@hanzo\/platform\/([^"']+)["']/g)) {
+					const subpath = m[1];
+					if (subpath) imported.add(subpath);
+				}
+			}
+		}
+
+		const bareDirectories = [...imported].filter((subpath) =>
+			fs.existsSync(path.join(PKG_SRC, subpath, "index.ts")),
+		);
+		// Sanity: the scan found real imports, so an empty result can't pass.
+		expect(bareDirectories.length).toBeGreaterThan(0);
+
+		const undeclared = bareDirectories.filter(
+			(subpath) => !DIRECTORY_ENTRIES.includes(subpath),
+		);
+		expect(
+			undeclared,
+			`imported bare but resolved by the ./* wildcard to a file no build emits: ${undeclared.join(", ")}`,
+		).toEqual([]);
 	});
 });
