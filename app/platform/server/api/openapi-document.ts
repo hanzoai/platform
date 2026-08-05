@@ -8,11 +8,11 @@ import { appRouter } from "./root";
  * It was built in three places — `scripts/generate-openapi.ts`,
  * the `settings.getOpenApiDocument` tRPC procedure, and the
  * `SettingsMethod.getOpenApiDocument` ZAP cap — each with its own copy of the
- * tag list. They had already drifted: the script was missing nine tags the
- * other two had (auditLog, customRole, libsql, licenseKey, patch,
- * previewDeployment, sso, tag, whitelabeling) and carried three they did not
- * (rollback, schedule, swarm), so operations under those tags were grouped
- * differently depending on which copy answered. This is their union.
+ * tag list. They had already drifted from each other: the script was missing
+ * nine tags the other two had (auditLog, customRole, libsql, licenseKey,
+ * patch, previewDeployment, sso, tag, whitelabeling) and carried three they
+ * did not (rollback, schedule, swarm). None of the three is kept — the list
+ * is derived from the router now; see `OPENAPI_TAGS`.
  *
  * The drift was not only in the tags. All three declared the `x-api-key`
  * scheme, but the two runtime copies published a bare `info` (title,
@@ -22,54 +22,31 @@ import { appRouter } from "./root";
  * docs site serves described the same API differently. Building the whole
  * document here — not just the tag list — is what makes it a single fact.
  */
-export const OPENAPI_TAGS = [
-	"admin",
-	"docker",
-	"compose",
-	"registry",
-	"cluster",
-	"user",
-	"domain",
-	"destination",
-	"backup",
-	"deployment",
-	"mounts",
-	"certificates",
-	"settings",
-	"security",
-	"redirects",
-	"port",
-	"project",
-	"application",
-	"mysql",
-	"postgres",
-	"redis",
-	"mongo",
-	"libsql",
-	"mariadb",
-	"sshRouter",
-	"gitProvider",
-	"bitbucket",
-	"ai",
-	"github",
-	"gitlab",
-	"gitea",
-	"tag",
-	"patch",
-	"server",
-	"volumeBackups",
-	"environment",
-	"auditLog",
-	"customRole",
-	"whitelabeling",
-	"sso",
-	"licenseKey",
-	"organization",
-	"previewDeployment",
-	"rollback",
-	"schedule",
-	"swarm",
-] as const;
+/**
+ * The tags the document declares — derived, never hand-written.
+ *
+ * trpc-openapi tags each operation with the first segment of its procedure
+ * path (`utils/procedure.ts`: `tags: [path.split(".")[0] ?? "default"]`), i.e.
+ * the name of the router it is mounted under. So the document's tag
+ * declarations are not a matter of taste: they ARE the mounted router names,
+ * and any list typed out by hand is a copy of something the router already
+ * knows.
+ *
+ * Every copy of that list had gone stale in both directions. It declared five
+ * tags for routers that no longer exist — `ai`, `cluster`, `destination`,
+ * `registry` (migrated to ZAP and deleted; see `api/root.ts` tombstones) and
+ * `sshRouter` (renamed `sshKey`) — and omitted seven routers that are mounted
+ * right now: billing, buildJob, dedicatedCluster, deployProvider,
+ * notification, sshKey, stripe. Their operations were tagged with a group the
+ * document never declared.
+ */
+export const OPENAPI_TAGS: string[] = [
+	...new Set(
+		Object.keys(appRouter._def.procedures).map(
+			(path) => path.split(".")[0] ?? "default",
+		),
+	),
+].sort();
 
 export interface OpenApiDocumentOptions {
 	/** Origin + mount the operations hang off, e.g. `https://host/v1`. */
@@ -82,7 +59,7 @@ export function buildOpenApiDocument({ baseUrl }: OpenApiDocumentOptions) {
 		version: packageInfo.version,
 		baseUrl,
 		docsUrl: "https://docs.hanzo.ai",
-		tags: [...OPENAPI_TAGS],
+		tags: OPENAPI_TAGS,
 	});
 
 	document.info = {
