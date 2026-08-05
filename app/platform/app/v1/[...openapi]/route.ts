@@ -2,7 +2,7 @@ import { validateRequest } from "@hanzo/platform/lib/auth";
 import { appRouter } from "@/server/api/root";
 import { createFetchContext } from "@/server/api/trpc";
 import { asIncomingMessage } from "@/server/v1/request";
-import { createOpenApiFetchHandler } from "@dokploy/trpc-openapi";
+import { createOpenApiFetchHandler } from "@hanzo/platform/openapi";
 
 // OpenAPI REST mapping of the tRPC router, served at /v1/<procedure> by the App
 // Router. This is a CATCH-ALL: specific /v1 routes (health, auth, trpc, org,
