@@ -27,3 +27,41 @@ export function createIam(): IAM {
 	};
 	return new IAM(config);
 }
+
+/**
+ * Where to land after the IAM round trip. The callback route is fixed (IAM
+ * redirects to exactly one registered `redirect_uri`), so a page that needs the
+ * user to come back to IT rather than to the dashboard parks the path here
+ * first. Session-scoped: an abandoned sign-in must not redirect a later one.
+ */
+const RETURN_TO_KEY = "hanzo_iam_return_to";
+
+/** Start the PKCE redirect, optionally returning to `returnTo` afterwards. */
+export async function startSignIn(returnTo?: string): Promise<void> {
+	if (typeof window !== "undefined") {
+		if (returnTo) {
+			window.sessionStorage.setItem(RETURN_TO_KEY, returnTo);
+		} else {
+			window.sessionStorage.removeItem(RETURN_TO_KEY);
+		}
+	}
+	await createIam().signinRedirect();
+}
+
+/**
+ * Read and clear the parked destination, defaulting to the dashboard.
+ *
+ * Only a same-origin absolute path is honoured — anything else (a full URL, or
+ * the `//evil.com` form a browser reads as protocol-relative) is discarded, so
+ * this can never become an open redirect off the back of a login.
+ */
+export function consumeReturnTo(): string {
+	const fallback = "/dashboard/home";
+	if (typeof window === "undefined") return fallback;
+	const parked = window.sessionStorage.getItem(RETURN_TO_KEY);
+	window.sessionStorage.removeItem(RETURN_TO_KEY);
+	if (!parked || !parked.startsWith("/") || parked.startsWith("//")) {
+		return fallback;
+	}
+	return parked;
+}

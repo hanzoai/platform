@@ -4,7 +4,6 @@ import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";
 import superjson from "superjson";
 import { ShowApiKeys } from "@/components/dashboard/settings/api/show-api-keys";
-import { LinkingAccount } from "@/components/dashboard/settings/linking-account/linking-account";
 import { ProfileForm } from "@/components/dashboard/settings/profile/profile-form";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { appRouter } from "@/server/api/root";
@@ -12,13 +11,11 @@ import { api } from "@/utils/api";
 
 const Page = () => {
 	const { data: permissions } = api.user.getPermissions.useQuery();
-	const { data: isCloud } = api.settings.isCloud.useQuery();
 
 	return (
 		<div className="w-full">
 			<div className="h-full rounded-xl max-w-5xl mx-auto flex flex-col gap-4">
 				<ProfileForm />
-				{isCloud && <LinkingAccount />}
 				{permissions?.api.read && <ShowApiKeys />}
 			</div>
 		</div>
@@ -48,7 +45,6 @@ export async function getServerSideProps(
 		transformer: superjson,
 	});
 
-	await helpers.settings.isCloud.prefetch();
 	await helpers.user.get.prefetch();
 
 	if (!user) {

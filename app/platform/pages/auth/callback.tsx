@@ -4,7 +4,7 @@ import { AlertBlock } from "@/components/shared/alert-block";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { CardDescription, CardTitle } from "@/components/ui/card";
-import { createIam } from "@/lib/iam-browser";
+import { consumeReturnTo, createIam } from "@/lib/iam-browser";
 
 /**
  * IAM OAuth2 callback. The @hanzo/iam PKCE flow lands here after the user
@@ -39,7 +39,9 @@ export default function AuthCallback() {
 				}
 
 				// Full-page navigation so getServerSideProps sees the new cookie.
-				window.location.replace("/dashboard/home");
+				// Returns to whatever page parked a destination (e.g. an
+				// invitation link), else the dashboard.
+				window.location.replace(consumeReturnTo());
 			} catch (err) {
 				setError(
 					err instanceof Error ? err.message : "Sign-in could not be completed",
