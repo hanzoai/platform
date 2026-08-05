@@ -282,7 +282,73 @@ Platform's filesystem does not survive restarts, so it must never hold a real DB
 
 ## Auth (HIP-0111, one way) + Node-24 build
 - Platform login = Hanzo IAM PKCE via **`hanzo.id`** (no Better Auth login, no genericOAuth). The settled flow + files live in `IAM_MIGRATION.md` (CANONICAL header). Don't re-add a `signIn.social`/`signIn.oauth2` button.
+- **The login UI is now IAM-only in fact, not just by convention.** The fork's
+  own auth screens were deleted (2026-08): `pages/register.tsx`,
+  `pages/{send-,}reset-password.tsx`, `components/auth/sign-in-with-{github,google}.tsx`,
+  the enterprise duplicates, and `linking-account/`. The server configures no
+  `emailAndPassword`, `emailVerification` or `socialProviders`, so all of them
+  called endpoints that do not exist. `/register` was NOT unreachable —
+  `pages/index.tsx` sent self-hosted first-run traffic to it, so the documented
+  bootstrap was a form that could only fail. **There is no first-run admin
+  bootstrap:** the first identity to sign in through IAM gets its home org and
+  an `owner` membership from `syncIamOrgMembership`. Don't re-add one.
+- `pages/invitation.tsx` accepts, it never registers. Signed-out visitors go to
+  IAM and come back to the invitation via `startSignIn(returnTo)` /
+  `consumeReturnTo()` in `lib/iam-browser.ts` (same-origin absolute paths only —
+  it must never become an open redirect).
+- **Better Auth is NOT gone.** It still hosts the `apiKey`, `organization`,
+  `sso` and `admin` plugins and owns the `account`/`session`/`verification`
+  tables. Remaining stages are in `IAM_MIGRATION.md`. Do not claim platform is
+  "off Better Auth" — its login surface is gone; its plugin surface is not.
 - Node 24 build: keep the pnpm override `nan: 2.27.0` (native deps `ssh2`/`node-pty` won't compile on Node 24 without it).
+
+## One-way surfaces (things that were built twice)
+Standing list of "one and only one way" repairs, so they are not re-split:
+- **The `/v1` OpenAPI document** — `app/platform/server/api/openapi-document.ts`
+  is the ONLY builder. It was assembled three times (the generate script, the
+  `settings.getOpenApiDocument` tRPC procedure, the `SettingsMethod.getOpenApiDocument`
+  ZAP cap), each with its own tag list, and they had drifted by 12 tags. The
+  runtime copies also advertised `baseUrl = <host>/api`, which the app does not
+  serve (the REST surface mounts at `/v1`), and titled themselves "tRPC OpenAPI".
+- **`@hanzo/platform`'s export map** — `pkg/platform/scripts/exports-map.js` is
+  the ONE table; `switchToSrc`/`switchToDist` only render it. They had drifted
+  to 19 vs 4 entries. Bare directory imports need an explicit `<dir>/index`
+  entry (the `./*` wildcard resolves them to a file no build emits); the
+  regression test derives that requirement from the imports the workspace
+  actually contains, so adding a new bare directory import fails the test.
+- **The audit sink** — `server/api/utils/audit.ts` (DB-backed) is the only one.
+  A second stdout-only `server/utils/audit.ts` existed, orphaned, waiting for an
+  `auditLog` table that already exists.
+- **`trpc-openapi`** — vendored at `pkg/platform/src/vendor/trpc-openapi`
+  (MIT, upstream `dokploy/trpc-openapi` @ 0.0.17) and reached ONLY through
+  `@hanzo/platform/openapi`. The `@dokploy/*` npm dependency is gone.
+
+## Still dual: tRPC routers vs ZAP caps (the big one, NOT finished)
+`app/platform/server/api/routers/*` (49 files, ~19.1k lines) and
+`app/platform/server/zap/*-cap.ts` (53 files, ~24.3k lines) implement the same
+operations twice. **ZAP is live** — `server/server.ts` registers 53 `serve()`
+mounts on the same HTTP server as Next, and 44 UI files call `@/utils/zap-*`
+clients — so `server/zap/` cannot be deleted. Nine caps have no router at all
+(ai, cluster, destination, digitalocean, dns, doks, gateway, registry, k8s);
+five routers have no cap (build-job, dedicated-cluster, libsql, server, tag).
+**44 surfaces are dual-implemented right now.**
+
+The duplication is in the request shell, not the domain logic: both sides call
+the same `@hanzo/platform` service barrel. But ~40% of each file reaches past
+the services straight to drizzle, and it is exactly that inline code that got
+copy-pasted, which is why caps run 20-100% longer than their routers.
+
+Two REGRESSIONS in the cap layer, to fix before deleting any router:
+- caps decode input with `decodeArgs<any>` — the routers' zod `.input()`
+  validation is simply gone.
+- several caps record audit events as `console.info("[audit] …")` instead of
+  calling `audit()`, so those actions write no `auditLog` row.
+
+Convergence order that does not break anything: (1) push the inline `db.*` work
+in each pair down into `pkg/platform/src/services/`, (2) restore zod validation
+and real `audit()` calls in the caps, (3) only then retire the router and
+repoint its UI call sites. `openapi.zap.json` (581 paths) replaces
+`openapi.json` (407) when the last router goes.
 
 ## Versioning — ONE line, `v4.x` (HIP-0111)
 There is exactly one version line: **`v4.x`**. `app/platform/package.json`,

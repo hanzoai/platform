@@ -11,6 +11,30 @@ Platform login is **Hanzo IAM via PKCE. No Better Auth login, no `genericOAuth`,
 
 **`sign-in-with-hanzo.tsx` (genericOAuth button) was DELETED 2026-06-20** — dead (imported nowhere) and the sole thing that made the model look contradictory. Better Auth survives only as the host for api-key / organization / sso plugins (Stages 2–4).
 
+### Where it actually stands (2026-08) — read this before claiming a stage is done
+
+| Stage | State |
+|---|---|
+| 1 — identity → IAM | **DONE.** `validateRequest` verifies the IAM token against hanzo.id's JWKS (issuer + audience pinned, fails closed) and resolves it onto the local user row. |
+| 2 — orgs → IAM | **DONE.** `lib/iam-org.ts#syncIamOrgMembership` derives the org/membership graph from the IAM claims. This is also the first-run bootstrap: the first identity to sign in gets its home org and an `owner` membership. |
+| — login UI | **DONE (2026-08).** The fork's own auth screens are deleted — registration, password reset, GitHub/Google sign-in, social account linking. The server configures no `emailAndPassword`/`emailVerification`/`socialProviders`, so they were calling endpoints that do not exist, and `pages/index.tsx` was routing self-hosted first-run traffic into one of them. `pages/invitation.tsx` now only accepts an invitation; it never creates an account. |
+| 3 — API keys → IAM | **NOT STARTED.** `validateRequest`'s `x-api-key` branch still calls Better Auth's `api.verifyApiKey`, and the `apikey` table is still Better Auth's. |
+| 4 — delete the shell | **NOT STARTED.** `betterAuth()` still runs. |
+
+**Better Auth is still here.** It hosts four plugins — `apiKey`, `organization`
+(invitations + `acceptInvitation`), `sso`, `admin` (impersonation) — and owns
+the `account`, `session`, `verification` and `apikey` tables. What is gone is
+its *login* surface: there is no second way to authenticate a human. Do not
+describe the platform as "off Better Auth" until Stages 3 and 4 land.
+
+Known gaps, stated rather than hidden:
+- the `sso` plugin is itself a "SSO of our own" under the AUTH rule. Its only UI
+  (`components/enterprise/sso/sign-in-with-sso.tsx`) is imported by nothing, but
+  the server surface and the `sso` table remain. Stage 3/4 work.
+- 2FA UI (`enable-2fa` / `configure-2fa`) is still rendered while the server's
+  `twoFactor()` plugin is commented out, so it is dead the same way the
+  password screens were. Removing it is safe and untaken.
+
 **If `platform.hanzo.ai` login breaks, suspect a STALE deployed image first, not the auth code.** Deployed: `ghcr.io/hanzoai/platform:vX.Y.Z`; bump in `universe/infra/k8s/paas/kustomization.yaml`.
 
 **Build (Node 24):** builds on `node:24.4.0`. Native deps (`ssh2`/`node-pty`) use `nan`; `nan` < 2.23 fails to compile on Node 24's V8 (`FunctionCallbackInfo has no member named 'Holder'`). Fixed by pnpm override **`nan: 2.27.0`** + `ssh2@1.17.0`. Do NOT remove the override while on Node 24.
