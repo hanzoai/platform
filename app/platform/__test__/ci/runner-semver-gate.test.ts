@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	buildArgsProblem,
 	firstPartyTagProblem,
-} from "../../app/v1/runner/route";
+} from "../../server/v1/build-request";
 
 /**
  * Owner directive: everything we publish carries real semver, no ad-hoc tags.
