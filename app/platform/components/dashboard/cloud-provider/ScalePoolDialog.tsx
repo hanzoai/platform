@@ -6,21 +6,23 @@
  * count, size, region, and node type selectors.
  */
 
-import { useState, type ReactNode } from "react";
-import { type ControllerRenderProps, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Plus, Minus, Loader2, Server, AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2, Minus, Plus, Server } from "lucide-react";
+import { type ReactNode, useState } from "react";
+import { type ControllerRenderProps, useForm } from "react-hook-form";
 import { toast } from "sonner";
-
+import { z } from "zod";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-	DialogFooter,
 } from "@/components/ui/dialog";
 import {
 	Form,
@@ -31,6 +33,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -38,10 +41,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { digitalocean } from "@/utils/zap-digitalocean";
 
 // ============================================================================
@@ -67,7 +66,7 @@ const scaleSchema = z
 		{
 			message: "Size, region, and node type are required when scaling up",
 			path: ["size"],
-		}
+		},
 	);
 
 type ScaleInput = z.infer<typeof scaleSchema>;
@@ -110,14 +109,10 @@ export function ScalePoolDialog({
 	const utils = digitalocean.useUtils();
 
 	// Fetch available sizes and regions
-	const { data: sizes, isLoading: isLoadingSizes } = digitalocean.listSizes.useQuery(
-		{ providerId },
-		{ enabled: open }
-	);
-	const { data: regions, isLoading: isLoadingRegions } = digitalocean.listRegions.useQuery(
-		{ providerId },
-		{ enabled: open }
-	);
+	const { data: sizes, isLoading: isLoadingSizes } =
+		digitalocean.listSizes.useQuery({ providerId }, { enabled: open });
+	const { data: regions, isLoading: isLoadingRegions } =
+		digitalocean.listRegions.useQuery({ providerId }, { enabled: open });
 
 	// Scale mutations
 	const scaleUpMutation = digitalocean.scaleUp.useMutation({
@@ -269,7 +264,9 @@ export function ScalePoolDialog({
 											min={1}
 											max={direction === "down" ? currentNodes : 10}
 											{...field}
-											onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+											onChange={(e) =>
+												field.onChange(Number.parseInt(e.target.value) || 1)
+											}
 										/>
 									</FormControl>
 									<FormDescription>
@@ -299,10 +296,9 @@ export function ScalePoolDialog({
 											<Select
 												onValueChange={field.onChange}
 												defaultValue={field.value}
-												disabled={isLoadingSizes}
 											>
 												<FormControl>
-													<SelectTrigger>
+													<SelectTrigger disabled={isLoadingSizes}>
 														<SelectValue placeholder="Select size" />
 													</SelectTrigger>
 												</FormControl>
@@ -339,10 +335,9 @@ export function ScalePoolDialog({
 											<Select
 												onValueChange={field.onChange}
 												defaultValue={field.value}
-												disabled={isLoadingRegions}
 											>
 												<FormControl>
-													<SelectTrigger>
+													<SelectTrigger disabled={isLoadingRegions}>
 														<SelectValue placeholder="Select region" />
 													</SelectTrigger>
 												</FormControl>
@@ -370,7 +365,10 @@ export function ScalePoolDialog({
 									}) => (
 										<FormItem>
 											<FormLabel>Node Type</FormLabel>
-											<Select onValueChange={field.onChange} defaultValue={field.value}>
+											<Select
+												onValueChange={field.onChange}
+												defaultValue={field.value}
+											>
 												<FormControl>
 													<SelectTrigger>
 														<SelectValue placeholder="Select type" />
@@ -443,7 +441,10 @@ export function ScalePoolDialog({
 									}) => (
 										<FormItem>
 											<FormLabel>Removal Strategy</FormLabel>
-											<Select onValueChange={field.onChange} defaultValue={field.value}>
+											<Select
+												onValueChange={field.onChange}
+												defaultValue={field.value}
+											>
 												<FormControl>
 													<SelectTrigger>
 														<SelectValue placeholder="Select strategy" />
@@ -477,7 +478,8 @@ export function ScalePoolDialog({
 												</SelectContent>
 											</Select>
 											<FormDescription>
-												Nodes will be drained before removal to migrate workloads
+												Nodes will be drained before removal to migrate
+												workloads
 											</FormDescription>
 											<FormMessage />
 										</FormItem>
@@ -488,8 +490,8 @@ export function ScalePoolDialog({
 									<Alert variant="destructive">
 										<AlertTriangle className="h-4 w-4" />
 										<AlertDescription>
-											This will remove all nodes from the pool. Workloads will be
-											unavailable.
+											This will remove all nodes from the pool. Workloads will
+											be unavailable.
 										</AlertDescription>
 									</Alert>
 								)}

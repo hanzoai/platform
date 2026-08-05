@@ -17,7 +17,7 @@ import {
 } from "@/components/icons/data-tools-icons";
 import { DialogAction } from "@/components/shared/dialog-action";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -234,29 +234,25 @@ export const ShowGitProviders = () => {
 																		>
 																			Action Required
 																		</Badge>
-																		<Link
-																			href={`${gitProvider?.github?.githubAppName}/installations/new?state=gh_setup:${gitProvider?.github.githubId}`}
-																			className={buttonVariants({
-																				size: "icon",
-																				variant: "ghost",
-																			})}
-																		>
-																			<ImportIcon className="size-4 text-primary" />
-																		</Link>
+																		<Button asChild size="icon" variant="ghost">
+																			<Link
+																				href={`${gitProvider?.github?.githubAppName}/installations/new?state=gh_setup:${gitProvider?.github.githubId}`}
+																			>
+																				<ImportIcon className="size-4 text-primary" />
+																			</Link>
+																		</Button>
 																	</div>
 																)}
 																{haveGithubRequirements && isGithub && (
 																	<div className="flex flex-col gap-1">
-																		<Link
-																			href={`${gitProvider?.github?.githubAppName}`}
-																			target="_blank"
-																			className={buttonVariants({
-																				size: "icon",
-																				variant: "ghost",
-																			})}
-																		>
-																			<ExternalLinkIcon className="size-4 text-primary" />
-																		</Link>
+																		<Button asChild size="icon" variant="ghost">
+																			<Link
+																				href={`${gitProvider?.github?.githubAppName}`}
+																				target="_blank"
+																			>
+																				<ExternalLinkIcon className="size-4 text-primary" />
+																			</Link>
+																		</Button>
 																	</div>
 																)}
 																{!haveGitlabRequirements && isGitlab && (
@@ -267,20 +263,19 @@ export const ShowGitProviders = () => {
 																		>
 																			Action Required
 																		</Badge>
-																		<Link
-																			href={getGitlabUrl(
-																				gitProvider.gitlab?.applicationId || "",
-																				gitProvider.gitlab?.gitlabId || "",
-																				gitProvider.gitlab?.gitlabUrl,
-																			)}
-																			target="_blank"
-																			className={buttonVariants({
-																				size: "icon",
-																				variant: "ghost",
-																			})}
-																		>
-																			<ImportIcon className="size-4 text-primary" />
-																		</Link>
+																		<Button asChild size="icon" variant="ghost">
+																			<Link
+																				href={getGitlabUrl(
+																					gitProvider.gitlab?.applicationId ||
+																						"",
+																					gitProvider.gitlab?.gitlabId || "",
+																					gitProvider.gitlab?.gitlabUrl,
+																				)}
+																				target="_blank"
+																			>
+																				<ImportIcon className="size-4 text-primary" />
+																			</Link>
+																		</Button>
 																	</div>
 																)}
 

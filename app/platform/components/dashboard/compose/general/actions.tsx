@@ -1,4 +1,3 @@
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { Ban, CheckCircle2, RefreshCcw, Rocket, Terminal } from "lucide-react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
@@ -8,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import {
 	Tooltip,
 	TooltipContent,
+	TooltipPortal,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -71,13 +71,13 @@ export const ComposeActions = ({ composeId }: Props) => {
 										Deploy
 									</div>
 								</TooltipTrigger>
-								<TooltipPrimitive.Portal>
+								<TooltipPortal>
 									<TooltipContent sideOffset={5} className="z-[60]">
 										<p>
 											Downloads the source code and performs a complete build
 										</p>
 									</TooltipContent>
-								</TooltipPrimitive.Portal>
+								</TooltipPortal>
 							</Tooltip>
 						</Button>
 					</DialogAction>
@@ -112,11 +112,11 @@ export const ComposeActions = ({ composeId }: Props) => {
 										Reload
 									</div>
 								</TooltipTrigger>
-								<TooltipPrimitive.Portal>
+								<TooltipPortal>
 									<TooltipContent sideOffset={5} className="z-[60]">
 										<p>Reload the compose without rebuilding it</p>
 									</TooltipContent>
-								</TooltipPrimitive.Portal>
+								</TooltipPortal>
 							</Tooltip>
 						</Button>
 					</DialogAction>
@@ -153,13 +153,13 @@ export const ComposeActions = ({ composeId }: Props) => {
 											Start
 										</div>
 									</TooltipTrigger>
-									<TooltipPrimitive.Portal>
+									<TooltipPortal>
 										<TooltipContent sideOffset={5} className="z-[60]">
 											<p>
 												Start the compose (requires a previous successful build)
 											</p>
 										</TooltipContent>
-									</TooltipPrimitive.Portal>
+									</TooltipPortal>
 								</Tooltip>
 							</Button>
 						</DialogAction>
@@ -192,11 +192,11 @@ export const ComposeActions = ({ composeId }: Props) => {
 											Stop
 										</div>
 									</TooltipTrigger>
-									<TooltipPrimitive.Portal>
+									<TooltipPortal>
 										<TooltipContent sideOffset={5} className="z-[60]">
 											<p>Stop the currently running compose</p>
 										</TooltipContent>
-									</TooltipPrimitive.Portal>
+									</TooltipPortal>
 								</Tooltip>
 							</Button>
 						</DialogAction>

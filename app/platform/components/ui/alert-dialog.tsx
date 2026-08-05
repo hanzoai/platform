@@ -1,8 +1,23 @@
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import * as React from "react";
 
-import { type ButtonProps, buttonVariants } from "@/components/ui/button";
+import type { ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+// 8.x buttonVariants() returns bare class handles with no shipped CSS, so the
+// button look of Action/Cancel is spelled out here in plain utilities.
+const btnBase =
+	"inline-flex items-center justify-center gap-2 whitespace-nowrap select-none rounded-lg text-sm font-medium h-10 px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
+const btnVariant: Record<string, string> = {
+	default: "bg-primary text-primary-foreground hover:bg-primary/90",
+	destructive:
+		"bg-destructive text-destructive-foreground hover:bg-destructive/70",
+	outline:
+		"border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+	secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+	ghost: "hover:bg-accent hover:text-accent-foreground",
+	link: "text-primary underline-offset-4 hover:underline",
+};
 
 const AlertDialog = AlertDialogPrimitive.Root;
 
@@ -104,7 +119,7 @@ const AlertDialogAction = React.forwardRef<
 >(({ className, variant, ...props }, ref) => (
 	<AlertDialogPrimitive.Action
 		ref={ref}
-		className={cn(buttonVariants({ variant }), className)}
+		className={cn(btnBase, btnVariant[variant ?? "default"], className)}
 		{...props}
 	/>
 ));
@@ -116,11 +131,7 @@ const AlertDialogCancel = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<AlertDialogPrimitive.Cancel
 		ref={ref}
-		className={cn(
-			buttonVariants({ variant: "outline" }),
-			"mt-2 sm:mt-0",
-			className,
-		)}
+		className={cn(btnBase, btnVariant.outline, "mt-2 sm:mt-0", className)}
 		{...props}
 	/>
 ));

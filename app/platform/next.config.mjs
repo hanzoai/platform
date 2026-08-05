@@ -19,6 +19,13 @@ const nextConfig = {
 		"@hanzo/ui",
 		"@hanzo/gui",
 		"react-native-web",
+		// Pages-router SERVER builds externalize CJS deps; these two ship CJS
+		// that `require("react-native")` — the Flow-typed native entry Node
+		// cannot parse. Transpiling forces them through webpack, where the
+		// react-native -> react-native-web alias applies. hanzo.ai (App Router)
+		// does not need this because app-router server builds bundle deps.
+		"react-native-svg",
+		"@hanzogui/lucide-icons-2",
 	],
 	webpack: (config) => {
 		config.resolve.alias = {
