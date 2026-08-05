@@ -104,8 +104,7 @@ export const SearchCommand = () => {
 								// Find default environment from accessible environments, or fall back to first accessible environment
 								const defaultEnvironment =
 									project.environments.find(
-										(environment: SearchEnvironment) =>
-											environment.isDefault,
+										(environment: SearchEnvironment) => environment.isDefault,
 									) || project?.environments?.[0];
 
 								if (!defaultEnvironment) return null;
@@ -178,7 +177,7 @@ export const SearchCommand = () => {
 						</CommandList>
 					</CommandGroup>
 					<CommandSeparator />
-					<CommandGroup heading={"Application"} hidden={true}>
+					<CommandGroup heading={"Application"} display="none">
 						<CommandItem
 							onSelect={() => {
 								router.push("/dashboard/home");

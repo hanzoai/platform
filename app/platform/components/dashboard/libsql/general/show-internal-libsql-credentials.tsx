@@ -1,4 +1,3 @@
-import { SelectGroup } from "@radix-ui/react-select";
 import { ToggleVisibilityInput } from "@/components/shared/toggle-visibility-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
+	SelectGroup,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
@@ -32,8 +32,8 @@ export const ShowInternalLibsqlCredentials = ({ libsqlId }: Props) => {
 							</div>
 							<div className="flex flex-col gap-2">
 								<Label>Sqld Node</Label>
-								<Select value={data?.sqldNode} disabled>
-									<SelectTrigger>
+								<Select value={data?.sqldNode}>
+									<SelectTrigger disabled>
 										<SelectValue placeholder="Select Node type" />
 									</SelectTrigger>
 									<SelectContent>
@@ -76,14 +76,13 @@ export const ShowInternalLibsqlCredentials = ({ libsqlId }: Props) => {
 							<div className="flex flex-col gap-2">
 								<Label>Enable Namespaces</Label>
 								<Select
-									disabled
 									defaultValue={
 										data?.enableNamespaces
 											? String(data?.enableNamespaces)
 											: "false"
 									}
 								>
-									<SelectTrigger>
+									<SelectTrigger disabled>
 										<SelectValue placeholder={"false"} />
 									</SelectTrigger>
 									<SelectContent>

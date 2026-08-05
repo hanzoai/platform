@@ -44,7 +44,7 @@ export const Dropzone = React.forwardRef<HTMLDivElement, DropzoneProps>(
 		};
 		return (
 			<Card
-				ref={ref}
+				ref={ref as never}
 				className={cn(
 					"border-2 border-dashed bg-muted/20 hover:cursor-pointer hover:border-muted-foreground/50 ",
 					classNameWrapper,

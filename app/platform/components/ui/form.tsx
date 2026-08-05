@@ -29,9 +29,17 @@ import {
 	useFormState,
 } from "react-hook-form";
 
-import { Label } from "@/components/ui/label";
+import { Label as UiLabel } from "@/components/ui/label";
 
 import "./form.css";
+
+// The gui Label types its props from the cross-platform text stack, which
+// names no DOM attribute; FormLabel's contract IS the DOM label surface.
+// Unrecognised props are forwarded to the rendered <label> on web, so the
+// widening is a type statement, not a behaviour change.
+const Label = UiLabel as unknown as (
+	props: Record<string, unknown>,
+) => ReactElement;
 
 const join = (...parts: (string | undefined)[]) =>
 	parts.filter(Boolean).join(" ");
@@ -83,11 +91,7 @@ const FormItem = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
 		const id = useId();
 		return (
 			<FormItemContext.Provider value={{ id }}>
-				<div
-					ref={ref}
-					className={join("hz-form-item", className)}
-					{...props}
-				/>
+				<div ref={ref} className={join("hz-form-item", className)} {...props} />
 			</FormItemContext.Provider>
 		);
 	},
@@ -101,7 +105,7 @@ const FormLabel = forwardRef<
 	const { error, formItemId } = useFormField();
 	return (
 		<Label
-			ref={ref}
+			ref={ref as never}
 			data-invalid={error ? "true" : undefined}
 			className={join("hz-form-label", className)}
 			htmlFor={formItemId}

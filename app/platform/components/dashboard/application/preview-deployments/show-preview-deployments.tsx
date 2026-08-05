@@ -1,4 +1,3 @@
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import {
 	ExternalLink,
 	FileText,
@@ -27,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import {
 	Tooltip,
 	TooltipContent,
+	TooltipPortal,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -241,7 +241,7 @@ export const ShowPreviewDeployments = ({ applicationId }: Props) => {
 																				Rebuild
 																			</div>
 																		</TooltipTrigger>
-																		<TooltipPrimitive.Portal>
+																		<TooltipPortal>
 																			<TooltipContent
 																				sideOffset={5}
 																				className="z-[60]"
@@ -251,7 +251,7 @@ export const ShowPreviewDeployments = ({ applicationId }: Props) => {
 																					downloading new code
 																				</p>
 																			</TooltipContent>
-																		</TooltipPrimitive.Portal>
+																		</TooltipPortal>
 																	</Tooltip>
 																</TooltipProvider>
 															</Button>

@@ -283,6 +283,40 @@ Platform's filesystem does not survive restarts, so it must never hold a real DB
 ## Auth (HIP-0111, one way) + Node-24 build
 - Platform login = Hanzo IAM PKCE via **`hanzo.id`** (no Better Auth login, no genericOAuth). The settled flow + files live in `IAM_MIGRATION.md` (CANONICAL header). Don't re-add a `signIn.social`/`signIn.oauth2` button.
 - Node 24 build: keep the pnpm override `nan: 2.27.0` (native deps `ssh2`/`node-pty` won't compile on Node 24 without it).
+- The build MUST run on Node 24 (`engines` says so): node_modules' better-sqlite3
+  is NODE_MODULE_VERSION 137, and page-data collection loads it — under the
+  system Node 20 it dies with ERR_DLOPEN_FAILED. `pnpm env use --global 24`.
+
+## UI — 8.x convergence state (@hanzo/ui on @hanzo/gui)
+`components/ui/*` is the ONE compat seam between this Dokploy-derived app and
+@hanzo/ui 8.x; call sites never import @hanzo/ui or radix directly.
+- ON @hanzo/ui (radix + cmdk deps deleted): avatar, button, card, checkbox,
+  collapsible, command, dropdown-menu, label, popover, progress, scroll-area,
+  select, separator, switch, tabs, tooltip. Radix-era props that gui doesn't
+  take (`side/align/sideOffset` on floats, `modal`, `delayDuration`,
+  `TooltipPortal`, trigger `type`) are bridged/dropped INSIDE those wrappers —
+  never at call sites. `lib/slot.tsx` is the local `asChild` slot
+  (breadcrumb/sidebar); toggle is a local plain <button>.
+- STILL radix (5 pkgs, deliberate): dialog (app-owned behavior: modal=false +
+  cmdk-aware outside-click + footer-pinned scroll layout — port it with e2e
+  eyes, not blind), sheet (rides radix dialog), accordion + file-tree,
+  alert-dialog, context-menu, radio-group. @hanzo/ui 8.0.44 has no equivalents
+  for accordion/alert-dialog/context-menu/radio-group/sheet yet.
+- STAY local by design (no radix): input (password generator), textarea
+  (react-hook-form takes DOM onChange; gui's field is onChangeText), badge
+  (status variants red/yellow/green/blue/blank), table, skeleton, calendar,
+  chart, sonner/use-toast.
+- `buttonVariants()` in 8.x returns bare class handles (`btn btn-ghost`) with
+  NO shipped CSS — never use it as a className; use `<Button asChild>` (the
+  remaining internal consumers alert-dialog/calendar carry plain utilities).
+- Pages-router SERVER builds externalize CJS deps: react-native-svg +
+  @hanzogui/lucide-icons-2 must stay in `transpilePackages` or page-data
+  collection parses Flow-typed react-native and dies (`Unexpected token
+  'typeof'`).
+- Tailwind is still the styling substrate of ~430 component files; the 8.x
+  strip so far removed it from the tailwind config scan + gui.css is
+  pre-generated (`scripts/gen-gui-css.mjs`). Full utility-class removal is the
+  remaining convergence work, alongside the 5 radix holdouts above.
 
 ## Versioning — ONE line, `v4.x` (HIP-0111)
 There is exactly one version line: **`v4.x`**. `app/platform/package.json`,

@@ -191,12 +191,8 @@ export function TemplateDeployDialog({
 
 								<div className="flex flex-col gap-2">
 									<Label>Environment</Label>
-									<Select
-										value={envId}
-										onValueChange={setEnvId}
-										disabled={!projectId}
-									>
-										<SelectTrigger>
+									<Select value={envId} onValueChange={setEnvId}>
+										<SelectTrigger disabled={!projectId}>
 											<SelectValue placeholder="Select an environment" />
 										</SelectTrigger>
 										<SelectContent>
