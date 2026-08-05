@@ -1,8 +1,6 @@
-import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 import * as React from "react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -15,6 +13,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Slot } from "@/lib/slot";
 import { cn } from "@/lib/utils";
 
 export const SIDEBAR_COOKIE_NAME = "sidebar:state";
@@ -213,7 +212,9 @@ const Sidebar = React.forwardRef<
 						}
 						side={side}
 					>
-						<div className="flex h-full w-full flex-col overflow-hidden">{children}</div>
+						<div className="flex h-full w-full flex-col overflow-hidden">
+							{children}
+						</div>
 					</SheetContent>
 				</Sheet>
 			);
@@ -591,7 +592,7 @@ const SidebarMenuButton = React.forwardRef<
 				<TooltipContent
 					side="right"
 					align="center"
-					hidden={state !== "collapsed" || isMobile}
+					display={state !== "collapsed" || isMobile ? "none" : undefined}
 					{...tooltip}
 				/>
 			</Tooltip>

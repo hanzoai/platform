@@ -1,4 +1,3 @@
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { Ban, CheckCircle2, RefreshCcw, Rocket, Terminal } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -9,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Tooltip,
 	TooltipContent,
+	TooltipPortal,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -98,11 +98,11 @@ export const ShowGeneralMariadb = ({ mariadbId }: Props) => {
 													Deploy
 												</div>
 											</TooltipTrigger>
-											<TooltipPrimitive.Portal>
+											<TooltipPortal>
 												<TooltipContent sideOffset={5} className="z-[60]">
 													<p>Downloads and sets up the MariaDB database</p>
 												</TooltipContent>
-											</TooltipPrimitive.Portal>
+											</TooltipPortal>
 										</Tooltip>
 									</Button>
 								</DialogAction>
@@ -140,11 +140,11 @@ export const ShowGeneralMariadb = ({ mariadbId }: Props) => {
 													Reload
 												</div>
 											</TooltipTrigger>
-											<TooltipPrimitive.Portal>
+											<TooltipPortal>
 												<TooltipContent sideOffset={5} className="z-[60]">
 													<p>Restart the MariaDB service without rebuilding</p>
 												</TooltipContent>
-											</TooltipPrimitive.Portal>
+											</TooltipPortal>
 										</Tooltip>
 									</Button>
 								</DialogAction>
@@ -182,14 +182,14 @@ export const ShowGeneralMariadb = ({ mariadbId }: Props) => {
 														Start
 													</div>
 												</TooltipTrigger>
-												<TooltipPrimitive.Portal>
+												<TooltipPortal>
 													<TooltipContent sideOffset={5} className="z-[60]">
 														<p>
 															Start the MariaDB database (requires a previous
 															successful setup)
 														</p>
 													</TooltipContent>
-												</TooltipPrimitive.Portal>
+												</TooltipPortal>
 											</Tooltip>
 										</Button>
 									</DialogAction>
@@ -224,11 +224,11 @@ export const ShowGeneralMariadb = ({ mariadbId }: Props) => {
 														Stop
 													</div>
 												</TooltipTrigger>
-												<TooltipPrimitive.Portal>
+												<TooltipPortal>
 													<TooltipContent sideOffset={5} className="z-[60]">
 														<p>Stop the currently running MariaDB database</p>
 													</TooltipContent>
-												</TooltipPrimitive.Portal>
+												</TooltipPortal>
 											</Tooltip>
 										</Button>
 									</DialogAction>
@@ -249,11 +249,11 @@ export const ShowGeneralMariadb = ({ mariadbId }: Props) => {
 											Open Terminal
 										</div>
 									</TooltipTrigger>
-									<TooltipPrimitive.Portal>
+									<TooltipPortal>
 										<TooltipContent sideOffset={5} className="z-[60]">
 											<p>Open a terminal to the MariaDB container</p>
 										</TooltipContent>
-									</TooltipPrimitive.Portal>
+									</TooltipPortal>
 								</Tooltip>
 							</Button>
 						</DockerTerminalModal>

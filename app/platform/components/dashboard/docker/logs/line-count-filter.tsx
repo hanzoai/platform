@@ -1,9 +1,15 @@
-import { Command as CommandPrimitive } from "cmdk";
 import debounce from "lodash/debounce";
-import { CheckIcon, Hash } from "lucide-react";
+import { CheckIcon } from "lucide-react";
 import React, { useCallback, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	Command,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
 import {
 	Popover,
 	PopoverContent,
@@ -112,41 +118,37 @@ export function LineCountFilter({
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent className="w-[200px] p-0" align="start">
-				<CommandPrimitive className="overflow-hidden rounded-md border border-none bg-popover text-popover-foreground">
-					<div className="flex items-center border-b px-3">
-						<Hash className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-						<CommandPrimitive.Input
-							placeholder="Number of lines"
-							value={inputValue}
-							onValueChange={handleInputChange}
-							className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-							onKeyDown={(e) => {
-								if (e.key === "Enter") {
-									e.preventDefault();
-									const numValue = Number.parseInt(
-										inputValue.replace(/[^0-9]/g, ""),
-									);
-									if (
-										!Number.isNaN(numValue) &&
-										numValue > 0 &&
-										numValue !== value &&
-										numValue !== pendingValueRef.current
-									) {
-										handleSelect(inputValue);
-									}
+				<Command>
+					<CommandInput
+						placeholder="Number of lines"
+						value={inputValue}
+						onValueChange={handleInputChange}
+						onKeyDown={(e: React.KeyboardEvent) => {
+							if (e.key === "Enter") {
+								e.preventDefault();
+								const numValue = Number.parseInt(
+									inputValue.replace(/[^0-9]/g, ""),
+								);
+								if (
+									!Number.isNaN(numValue) &&
+									numValue > 0 &&
+									numValue !== value &&
+									numValue !== pendingValueRef.current
+								) {
+									handleSelect(inputValue);
 								}
-							}}
-						/>
-					</div>
-					<CommandPrimitive.List className="max-h-[300px] overflow-y-auto overflow-x-hidden">
-						<CommandPrimitive.Group className="px-2 py-1.5">
+							}
+						}}
+					/>
+					<CommandList>
+						<CommandGroup>
 							{lineCountOptions.map((option) => {
 								const isSelected = value === option.value;
 								return (
-									<CommandPrimitive.Item
+									<CommandItem
 										key={option.value}
+										value={option.label}
 										onSelect={() => handleSelect(option.label)}
-										className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 aria-selected:bg-accent aria-selected:text-accent-foreground"
 									>
 										<div
 											className={cn(
@@ -159,12 +161,12 @@ export function LineCountFilter({
 											<CheckIcon className={cn("h-4 w-4")} />
 										</div>
 										<span>{option.label}</span>
-									</CommandPrimitive.Item>
+									</CommandItem>
 								);
 							})}
-						</CommandPrimitive.Group>
-					</CommandPrimitive.List>
-				</CommandPrimitive>
+						</CommandGroup>
+					</CommandList>
+				</Command>
 			</PopoverContent>
 		</Popover>
 	);

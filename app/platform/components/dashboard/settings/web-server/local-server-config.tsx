@@ -8,7 +8,7 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
 	Form,
 	FormControl,
@@ -65,9 +65,11 @@ const LocalServerConfig = ({ onSave }: Props) => {
 	return (
 		<Accordion collapsible type="single">
 			<AccordionItem value="connectionSettings">
+				{/* buttonVariants() returns bare class handles in 8.x (no shipped CSS),
+				    so the ghost-button look is spelled out here instead. */}
 				<AccordionTrigger
 					className={cn(
-						buttonVariants({ variant: "ghost" }),
+						"inline-flex items-center justify-center rounded-lg text-sm font-medium hover:bg-accent hover:text-accent-foreground",
 						"hover:no-underline px-1 mb-2 active:hover:transform-none",
 					)}
 				>

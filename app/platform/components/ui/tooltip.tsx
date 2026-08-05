@@ -1,48 +1,70 @@
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
-import * as React from "react";
+/**
+ * Tooltip — @hanzo/ui 8.x on @hanzo/gui, with this app's radix-era prop
+ * surface bridged in ONE place so ~68 call sites stay untouched:
+ *
+ * - `TooltipProvider delayDuration` -> gui `delay` (gui requires one; the old
+ *   radix default of 700ms is kept when unspecified). `skipDelayDuration` and
+ *   `disableHoverableContent` have no gui counterpart and are dropped.
+ * - `Tooltip delayDuration` -> gui `delay`.
+ * - `TooltipTrigger type` is dropped: the radix trigger rendered a <button>,
+ *   the gui trigger is a pressable stack, so the attribute has nothing to do.
+ * - `TooltipContent side/align/alignOffset` are dropped: gui content is
+ *   popper-positioned from the root and does not take a side. Placement falls
+ *   back to gui's default.
+ * - `TooltipPortal` is the identity — gui content mounts its own float.
+ */
 
-import { cn } from "@/lib/utils";
+import {
+	Tooltip as UiTooltip,
+	TooltipContent as UiTooltipContent,
+	TooltipProvider as UiTooltipProvider,
+	TooltipTrigger as UiTooltipTrigger,
+} from "@hanzo/ui";
+import type { ComponentProps, ReactNode } from "react";
 
-const TooltipProvider = TooltipPrimitive.Provider;
+type UiProviderProps = ComponentProps<typeof UiTooltipProvider>;
 
-const Tooltip = TooltipPrimitive.Root;
+export const TooltipProvider = ({
+	delayDuration,
+	skipDelayDuration: _skip,
+	disableHoverableContent: _hoverable,
+	delay,
+	...props
+}: Omit<UiProviderProps, "delay"> & {
+	delay?: UiProviderProps["delay"];
+	delayDuration?: number;
+	skipDelayDuration?: number;
+	disableHoverableContent?: boolean;
+}) => <UiTooltipProvider delay={delay ?? delayDuration ?? 700} {...props} />;
 
-const TooltipTrigger = React.forwardRef<
-	React.ElementRef<typeof TooltipPrimitive.Trigger>,
-	React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Trigger>
->(({ className, ...props }, ref) => (
-	<TooltipPrimitive.Trigger
-		ref={ref}
-		className={cn(
-			"focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1",
-			className,
-		)}
+export const Tooltip = ({
+	delayDuration,
+	...props
+}: ComponentProps<typeof UiTooltip> & { delayDuration?: number }) => (
+	<UiTooltip
+		{...(delayDuration !== undefined ? { delay: delayDuration } : {})}
 		{...props}
 	/>
-));
+);
 
-const TooltipPortal = TooltipPrimitive.Portal;
+export const TooltipTrigger = ({
+	type: _type,
+	...props
+}: ComponentProps<typeof UiTooltipTrigger> & { type?: string }) => (
+	<UiTooltipTrigger {...props} />
+);
 
-const TooltipContent = React.forwardRef<
-	React.ElementRef<typeof TooltipPrimitive.Content>,
-	React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
-	<TooltipPrimitive.Content
-		ref={ref}
-		sideOffset={sideOffset}
-		className={cn(
-			"z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ",
-			className,
-		)}
-		{...props}
-	/>
-));
-TooltipContent.displayName = TooltipPrimitive.Content.displayName;
+export const TooltipContent = ({
+	side: _side,
+	align: _align,
+	alignOffset: _alignOffset,
+	...props
+}: ComponentProps<typeof UiTooltipContent> & {
+	side?: "top" | "right" | "bottom" | "left";
+	align?: "start" | "center" | "end";
+	alignOffset?: number;
+}) => <UiTooltipContent {...props} />;
 
-export {
-	Tooltip,
-	TooltipTrigger,
-	TooltipContent,
-	TooltipProvider,
-	TooltipPortal,
-};
+export const TooltipPortal = ({ children }: { children?: ReactNode }) => (
+	<>{children}</>
+);
