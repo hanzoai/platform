@@ -23,7 +23,7 @@ const HOST = "https://api.hanzo.ai";
  *  ALL THREE lenses (web + product + error) accept platform's cross-origin events
  *  with no cookie/bearer. Unset → events are best-effort anonymous (dropped at the
  *  edge when no tenant is resolvable), so this is REQUIRED for platform to emit. */
-const INGEST_KEY = process.env.NEXT_PUBLIC_EVENT_INGEST_KEY?.trim() || undefined;
+const INGEST_KEY = process.env.NEXT_PUBLIC_PUBLISHABLE_KEY?.trim() || undefined;
 
 /** Honor an explicit browser opt-out (Global Privacy Control, then legacy DNT).
  *  SSR (no navigator) defaults to enabled; the browser reads the real signal. A
