@@ -311,9 +311,17 @@ const CI_CALLER_PATH = ".hanzo/workflows/cicd.yml";
  * this deployment's KMS access is a KMSSecret CRD with a statically declared
  * key list that cannot serve a name discovered at some SHA.
  *
- * Fail OPEN on a transport error. A forge blip must not silently stop builds
- * fleet-wide; the redundant-build state is the status quo and is survivable,
- * a stuck fleet is not.
+ * TWO conditions, because the file is a CLAIM and Actions is whether the forge
+ * will honour it. hanzoai/postgres and hanzoai/stream both carry the caller and
+ * both have `has_actions: false` — Actions is administratively off, their
+ * cicd.yml has never produced a single run, and this lane is the only thing
+ * building them. Yielding on the file alone would have stopped them dead, on
+ * repos being pushed to the same day. A repo that cannot run ci is not a repo
+ * ci owns.
+ *
+ * Fail OPEN on a transport error, and on anything unproven. A forge blip must
+ * not silently stop builds fleet-wide; the redundant-build state it falls back
+ * to is the status quo and is survivable, a stuck fleet is not.
  */
 export async function ciOwnsBuild(
 	cfg: Pick<HanzoGitConfig, "url" | "token">,
@@ -324,9 +332,17 @@ export async function ciOwnsBuild(
 	if (!owner || !name) return false;
 	const headers: Record<string, string> = { Accept: "application/json" };
 	if (cfg.token) headers.Authorization = `token ${cfg.token}`;
-	const url = `${cfg.url}/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${CI_CALLER_PATH}?ref=${encodeURIComponent(ref)}`;
+	const base = `${cfg.url}/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
 	try {
-		return (await fetch(url, { headers })).ok;
+		const repoRes = await fetch(base, { headers });
+		if (!repoRes.ok) return false;
+		const { has_actions } = (await repoRes.json()) as { has_actions?: boolean };
+		if (has_actions === false) return false;
+		const caller = await fetch(
+			`${base}/contents/${CI_CALLER_PATH}?ref=${encodeURIComponent(ref)}`,
+			{ headers },
+		);
+		return caller.ok;
 	} catch {
 		return false;
 	}
