@@ -29,6 +29,8 @@ import {
 	updateBuildJob,
 } from "./build-job";
 import { launchBuildJob } from "./buildkit-job";
+import { assertBuildableFromCanonicalSource } from "./forge-source";
+import { githubReachability, readForgeRepoFacts } from "./forge-source-probe";
 import {
 	type BuildArch,
 	type BuildOS,
@@ -449,6 +451,26 @@ export async function scheduleBuilds(
 		});
 	}
 	if (!config) return null;
+
+	// The forge is what this path reads; GitHub is where the code was reviewed.
+	// Nothing keeps those equal on its own — a repo whose mirror row is gone
+	// serves its last state forever, and the build off it looks exactly like a
+	// healthy one. So before enqueuing anything, confirm this commit is on the
+	// canonical source. Refuse loudly if it is not; never repair it here.
+	//
+	// Only for forge-triggered builds: a GitHub delivery IS the canonical side,
+	// so there is nothing to compare it against.
+	if (input.source.forge === "hanzo-git") {
+		const cfg = hanzoGitConfig();
+		const why = await assertBuildableFromCanonicalSource({
+			forgeRepo: input.source.sourceRepo,
+			sha: input.sha,
+			declared: config.source,
+			facts: await readForgeRepoFacts(cfg, input.source.sourceRepo),
+			probe: githubReachability,
+		});
+		console.info(`[build] source check passed: ${why}`);
+	}
 
 	const jobs: BuildJob[] = [];
 	// One job per (image, matrix entry). The target key includes the image name
