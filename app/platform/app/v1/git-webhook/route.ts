@@ -34,6 +34,7 @@
 import { db } from "@hanzo/platform/db";
 import { github } from "@hanzo/platform/db/schema";
 import {
+	ciOwnsBuild,
 	type ConfigSource,
 	decodeWebhook,
 	detectForge,
@@ -188,6 +189,25 @@ export async function POST(req: Request) {
 
 	if (decoded.event === "ping") {
 		return Response.json({ message: "pong" });
+	}
+
+	// ONE LANE. A forge push fans out to both this webhook and the repo's
+	// `.hanzo/workflows/cicd.yml`, and only the second one is gated — so where
+	// a ci caller exists, it owns the build and this lane yields. Checked
+	// BEFORE scheduleBuilds so no row, no Job and no image can exist for a
+	// commit ci has not finished gating. See `ciOwnsBuild` for the measurement
+	// that made this necessary.
+	if (delivery.source.forge === "hanzo-git") {
+		const cfg = hanzoGitConfig();
+		if (await ciOwnsBuild(cfg, delivery.source.sourceRepo, decoded.sha)) {
+			return Response.json(
+				{
+					message: `Accepted; hanzoai/ci builds ${decoded.repo} (.hanzo/workflows/cicd.yml) — not scheduling a second, ungated build`,
+					scheduled: 0,
+				},
+				{ status: 202 },
+			);
+		}
 	}
 
 	// ACK fast: enqueue + dispatch happen synchronously here but the heavy
