@@ -1,0 +1,19 @@
+# hanzoai/platform — platform.hanzo.ai (pnpm workspace: app/platform,
+# app/api, app/schedules, pkg/platform, pkg/mcp).
+#
+# Gate only, no `images:`. ghcr.io/hanzoai/platform is built and rolled by
+# .hanzo/workflows/deploy.yml, which also fetches the publishable ingest key
+# from KMS and fails closed without it. A second producer behind one image name
+# means two builds can disagree about what platform.hanzo.ai is running.
+#
+# `pnpm typecheck` is `pnpm -r run typecheck`, and every one of the five
+# packages defines it as `tsc --noEmit` — so this compiles the type surface of
+# the whole workspace, including the boundary between pkg/platform and the apps
+# that import it. That boundary is where this repo actually breaks: a schema or
+# client type changed in pkg/ typechecks fine on its own and fails in app/.
+test:
+  - name: typecheck
+    run: |
+      set -e
+      pnpm install --frozen-lockfile
+      pnpm typecheck
