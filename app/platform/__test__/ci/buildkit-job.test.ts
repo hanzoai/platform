@@ -45,7 +45,13 @@ describe("buildkitArgs", () => {
 			image: "ghcr.io/hanzoai/pricing:v1.2.3",
 			buildJobId: "j1",
 		});
-		expect(args[0]).toBe("build");
+		// The persistent builder is addressed FIRST: `--addr` is a buildctl global
+		// flag, so it must precede the `build` verb or buildctl rejects it.
+		expect(args[0]).toBe("--addr");
+		expect(args[1]).toBe(
+			"tcp://buildkitd-0.buildkitd.hanzo-build.svc.cluster.local:1234",
+		);
+		expect(args[2]).toBe("build");
 		expect(args).toContain("--frontend=dockerfile.v0");
 		expect(args).toContain(
 			"--opt=context=https://github.com/hanzoai/pricing.git#refs/heads/main",
@@ -62,15 +68,14 @@ describe("buildkitArgs", () => {
 		expect(args.some((a) => a.startsWith("--opt=target="))).toBe(false);
 	});
 
-	// Regression: ephemeral-storage overrun is externalized onto OTHER pods — the
-	// kubelet evicts by node pressure and does not necessarily pick the greedy
-	// one. Measured after the layer cache landed (mode=max retains intermediate
-	// layers, so per-build disk rose): build-docs and pf-runner were Evicted and
-	// four commerce builds could not schedule, none of them the overrunning build.
-	// Equal request/limit is what keeps a build that overruns from taking its
-	// neighbours down, and keeps the number the scheduler packs by equal to the
-	// number the node experiences.
-	it("requests and limits ephemeral-storage at the same value", () => {
+	// The Job no longer compiles anything — it is a gRPC client of the persistent
+	// buildkitd — so every resource is requested AND limited at the same small
+	// value: Guaranteed QoS. This subsumes the older ephemeral-storage-only rule,
+	// which existed because a build that overran its 60Gi limit got its NEIGHBOURS
+	// evicted (build-docs and pf-runner died for a third build's overrun, and four
+	// commerce builds could not schedule at 24Gi apiece on an 88Gi node). A client
+	// that cannot overrun cannot evict anyone.
+	it("requests and limits every resource at the same value (Guaranteed)", () => {
 		const job = buildBuildkitJob({
 			repo: "hanzoai/docs",
 			gitRef: "refs/heads/main",
@@ -79,17 +84,19 @@ describe("buildkitArgs", () => {
 		});
 		const res = job.spec.template.spec.containers[0].resources;
 		expect(res.limits["ephemeral-storage"]).toBe(res.requests["ephemeral-storage"]);
-		// cpu and memory stay burstable on purpose — exceeding those throttles or
-		// OOM-kills the offender alone, so overcommit there costs nobody else.
-		expect(res.limits.cpu).not.toBe(res.requests.cpu);
-		expect(res.limits.memory).not.toBe(res.requests.memory);
+		expect(res.limits.cpu).toBe(res.requests.cpu);
+		expect(res.limits.memory).toBe(res.requests.memory);
+		// Small enough that it cannot be the reason a build waits for a node.
+		expect(res.requests.cpu).toBe("100m");
+		expect(res.requests.memory).toBe("256Mi");
 	});
 
-	// Regression: the build Job is one-shot and the namespace has no PVC, so
-	// buildkitd's snapshot store dies with the pod. Without a registry cache EVERY
-	// build was cold and redid the whole dependency install — measured 19-21 min
-	// for hanzoai/docs on a push that never touched its lockfile.
-	it("imports and exports a per-arch registry layer cache", () => {
+	// The builder's PVC is the cache now. The registry ref is kept ONLY as
+	// cold-start seed for a replica with a fresh volume (1.2s when the local store
+	// already has the layers). The EXPORT is deliberately gone: against a
+	// persistent store it wrote a cache nothing reads, and mode=max made that
+	// 221.3s of the 17-minute hanzo-inc/cloud build — 22% of the wall clock.
+	it("imports, but never exports, the per-arch registry layer cache", () => {
 		const args = buildkitArgs({
 			repo: "hanzoai/docs",
 			gitRef: "refs/heads/main",
@@ -99,25 +106,21 @@ describe("buildkitArgs", () => {
 		expect(args).toContain(
 			"--import-cache=type=registry,ref=ghcr.io/hanzoai/docs:buildcache-amd64",
 		);
-		// mode=max or the export covers only the final (slim runtime) stage and
-		// caches none of the install that costs the minutes.
-		expect(args).toContain(
-			"--export-cache=type=registry,ref=ghcr.io/hanzoai/docs:buildcache-amd64,mode=max,ignore-error=true",
-		);
+		expect(args.some((a) => a.startsWith("--export-cache"))).toBe(false);
 	});
 
 	// A cross-arch import is a guaranteed miss, so the two arches must not share
-	// one ref — and must not evict each other's cache on export.
+	// one ref. amd64 is the only arch with a builder today; the arm64 half of this
+	// contract is pinned by the refusal test below.
 	it("keys the cache per arch", () => {
 		const args = buildkitArgs({
 			repo: "hanzoai/docs",
 			gitRef: "refs/heads/main",
 			image: "ghcr.io/hanzoai/docs:v1.2.3",
 			buildJobId: "j1",
-			arch: "arm64",
 		});
 		expect(args).toContain(
-			"--import-cache=type=registry,ref=ghcr.io/hanzoai/docs:buildcache-arm64",
+			"--import-cache=type=registry,ref=ghcr.io/hanzoai/docs:buildcache-amd64",
 		);
 	});
 
@@ -233,15 +236,42 @@ describe("buildkitArgs", () => {
 		expect(args).toContain("--opt=build-arg:VERSION=1.2.3");
 	});
 
-	it("targets the arm64 platform when arch=arm64", () => {
-		const args = buildkitArgs({
-			repo: "o/r",
-			gitRef: "main",
-			image: "i:t",
-			arch: "arm64",
-			buildJobId: "j",
-		});
-		expect(args).toContain("--opt=platform=linux/arm64");
+	// arm64 has no persistent builder yet. REFUSE at dispatch rather than launch a
+	// Job that dials a replica which does not exist: the old code pinned such a
+	// Job to a nonexistent node pool and left it Pending forever, which reads as a
+	// stuck queue rather than a missing builder. Scale the StatefulSet and raise
+	// BUILDER_REPLICAS.arm64 together, and this becomes a normal build.
+	it("refuses arm64 until an arm64 builder exists, naming the fix", () => {
+		expect(() =>
+			buildkitArgs({
+				repo: "o/r",
+				gitRef: "main",
+				image: "i:t",
+				arch: "arm64",
+				buildJobId: "j",
+			}),
+		).toThrow(/no persistent buildkitd for arm64/);
+	});
+
+	// The whole win rides on this: buildkitd's Go build cache and its
+	// `--mount=type=cache` contents live on ONE replica's PVC. Measured on
+	// hanzo-inc/cloud, same commit and flags: 7m19s on the builder that had built
+	// it before, 14m00s on a cold one. A hash that is not stable across restarts
+	// would silently re-shard the fleet on every platform deploy and pay that
+	// 14-minute path for every repo.
+	it("pins a repo to one builder, stably, and spreads different repos", () => {
+		const addrOf = (repo: string) =>
+			buildkitArgs({ repo, gitRef: "main", image: "i:t", buildJobId: "j" })[1];
+		expect(addrOf("hanzo-inc/cloud")).toBe(addrOf("hanzo-inc/cloud"));
+		expect(addrOf("hanzo-inc/cloud")).toMatch(
+			/^tcp:\/\/buildkitd-[01]\.buildkitd\.hanzo-build\.svc\.cluster\.local:1234$/,
+		);
+		const spread = new Set(
+			["hanzoai/docs", "hanzoai/pricing", "hanzo-inc/cloud", "hanzoai/iam"].map(
+				addrOf,
+			),
+		);
+		expect(spread.size).toBeGreaterThan(1);
 	});
 
 	it("stays single-GHCR (proven form) when no fleet registry is set", () => {
@@ -342,7 +372,7 @@ describe("buildkitWrapperScript", () => {
 	it("is the proven netrc→exec wrapper with no fleet registry", () => {
 		const s = buildkitWrapperScript();
 		expect(s).toContain("/tmp/netrc");
-		expect(s.endsWith('exec buildctl-daemonless.sh "$@"')).toBe(true);
+		expect(s.endsWith('exec buildctl "$@"')).toBe(true);
 		// No docker-cred merge when there is nothing to compose.
 		expect(s).not.toContain("/tmp/fleet-cred");
 	});
@@ -358,7 +388,7 @@ describe("buildkitWrapperScript", () => {
 		expect(s).toContain(
 			"cp /tmp/ghcr-cred/config.json /root/.docker/config.json",
 		);
-		expect(s.endsWith('exec buildctl-daemonless.sh "$@"')).toBe(true);
+		expect(s.endsWith('exec buildctl "$@"')).toBe(true);
 	});
 });
 
@@ -424,17 +454,25 @@ describe("buildBuildkitJob", () => {
 	const pod = job.spec.template.spec;
 	const container = pod.containers[0]!;
 
-	it("runs the privileged BuildKit executor on the CI runner pool", () => {
+	// The Job is a CLIENT of the persistent buildkitd, not a builder. Three things
+	// follow and each is load-bearing:
+	//  - `buildctl`, never `buildctl-daemonless.sh` — the latter would start a
+	//    throwaway daemon in this pod and silently rebuild everything cold, which
+	//    is the 17-minute behaviour this replaced.
+	//  - unprivileged — starting buildkitd in-pod is the ONLY reason the Job ever
+	//    needed privilege. One long-lived privileged pod now, not one per build.
+	//  - no nodeSelector — the builders reserve 7 of 8 cores on each CI-pool node,
+	//    so pinning clients there makes them fight the builders for the last
+	//    ~250m and drives pointless autoscale-ups.
+	it("is an unprivileged buildctl client of the persistent builder", () => {
 		expect(container.image).toBe("moby/buildkit:v0.16.0");
-		// buildctl runs under an `sh -c` wrapper (materializes ~/.netrc); its real
-		// args ride "$@" after the `buildctl-daemonless.sh` $0 placeholder.
 		expect(container.command).toEqual(["/bin/sh", "-c"]);
-		expect(container.args[1]).toBe("buildctl-daemonless.sh");
-		expect(container.args[0]!).toContain('exec buildctl-daemonless.sh "$@"');
-		expect(container.securityContext.privileged).toBe(true);
-		expect(pod.nodeSelector["doks.digitalocean.com/node-pool"]).toBe(
-			"runner-pool-32g",
-		);
+		expect(container.args[1]).toBe("buildctl");
+		expect(container.args[0]!).toContain('exec buildctl "$@"');
+		expect(container.args[0]!).not.toContain("daemonless");
+		expect(container.securityContext.privileged).toBeUndefined();
+		expect(container.securityContext.allowPrivilegeEscalation).toBe(false);
+		expect(pod.nodeSelector).toBeUndefined();
 		expect(pod.tolerations[0]!.value).toBe("ci-runner");
 	});
 
