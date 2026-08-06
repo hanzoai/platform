@@ -71,20 +71,54 @@ export function imageOrg(ref: string): string | undefined {
 }
 
 /**
+ * Registry namespaces this build path is allowed to push to.
+ *
+ * MUST stay in sync with `orgRegistryNamespaces` in the Go scheduler
+ * (hanzoai/cloud apps/platform/runner.go) — the two schedulers mount the same
+ * Secrets and a set that differs between them is a hole in whichever is wider.
+ *
+ * This list is an AUTHORIZATION check, not a naming convention. Without it
+ * `pushSecretForImage` derives a secret name from attacker-influenced input:
+ * an image ref of `ghcr.io/<anything>/x:v1` yields `push-<anything>`, and the
+ * only thing standing between that and a mounted credential is whether such a
+ * Secret happens to exist in `hanzo-build`. Deny by list, not by absence.
+ */
+const PUSH_ORGS = new Set(["hanzoai", "luxfi", "zooai", "parsdao"]);
+
+/**
  * The Kubernetes Secret holding the push credential for an image's org.
  *
- * Registries NEVER mix: a build mounts `push-<org>` and only that, so a token
- * stolen from a hanzo build cannot push to ghcr.io/luxfi. One secret per org is
- * the whole isolation mechanism (hanzoai/universe infra/k8s/hanzo-build), so the
- * secret is DERIVED from the destination rather than configured per call —
- * there is no way to point a build at the wrong org's credential by hand.
+ * The MOUNT is per-org: exactly one `push-<org>` is projected into a build pod,
+ * derived from the destination rather than configured per call, so a build
+ * cannot be pointed at another org's credential by hand.
  *
- * Returns undefined for a ref with no org, so the caller can refuse rather than
- * silently mount someone else's token.
+ * The TOKEN is a separate question, and per-org mounting only bounds blast
+ * radius once the tokens are themselves per-org. MEASURED 2026-08-06 against
+ * the live `hanzo-build` namespace, they are not:
+ *
+ *   - push-hanzoai / push-luxfi / push-zooai carry ONE byte-identical classic
+ *     PAT (`ghp_`) on the personal account `Darkhorse7stars`, member of 16 orgs,
+ *     scopes incl. `admin:enterprise`, `admin:org`, `delete_repo`,
+ *     `delete:packages`, `write:packages`.
+ *   - push-parsdao is a DIFFERENT token but not a narrower one: a `gho_` OAuth
+ *     token on `hanzo-dev`, member of 51 orgs. Its distinct fingerprint reads
+ *     as isolation and is not.
+ *   - All four authorize push to hanzoai, luxfi and zooai. Verified with a
+ *     non-destructive blob-upload probe that returns 403 for orgs the account
+ *     does not belong to, so the positive results are meaningful.
+ *
+ * So a token stolen from a hanzo build CAN today push to ghcr.io/luxfi. The
+ * mechanism here is complete and needs no change; the credential values are the
+ * outstanding half. Remediation and its proof:
+ * hanzoai/universe infra/k8s/hanzo-build/README.md.
+ *
+ * Returns undefined for a ref with no org, or an org outside `PUSH_ORGS`, so
+ * the caller refuses rather than mounting — or naming — someone else's token.
  */
 export function pushSecretForImage(ref: string): string | undefined {
 	const org = imageOrg(ref);
-	return org ? `push-${org}` : undefined;
+	if (!org || !PUSH_ORGS.has(org)) return undefined;
+	return `push-${org}`;
 }
 
 export function withRegistryHost(ref: string, host: string): string {

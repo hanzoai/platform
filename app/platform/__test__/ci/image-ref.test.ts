@@ -3,6 +3,13 @@ import {
 	parseImageRef,
 	withRegistryHost,
 } from "@hanzo/platform/services/ci/image-ref";
+// `pushSecretForImage` is imported from SOURCE, deliberately. The specifier
+// above resolves through the package `exports` map into `dist/`, so a test
+// written against it asserts on the last build, not on the code under edit —
+// it passes green while the source it claims to cover is unbuilt. For a
+// function whose job is refusing to name another org's credential, that is the
+// wrong failure mode.
+import { pushSecretForImage } from "../../../../pkg/platform/src/services/ci/image-ref";
 import { describe, expect, it } from "vitest";
 
 describe("parseImageRef", () => {
@@ -103,5 +110,58 @@ describe("withRegistryHost", () => {
 		expect(
 			withRegistryHost("registry.hanzo.ai/hanzoai/x:t", "registry.hanzo.ai"),
 		).toBe("registry.hanzo.ai/hanzoai/x:t");
+	});
+});
+
+describe("pushSecretForImage", () => {
+	it("derives push-<org> for each org that owns a build credential", () => {
+		expect(pushSecretForImage("ghcr.io/hanzoai/pricing:v1")).toBe(
+			"push-hanzoai",
+		);
+		expect(pushSecretForImage("ghcr.io/luxfi/node:v1.36.35")).toBe("push-luxfi");
+		expect(pushSecretForImage("ghcr.io/zooai/app:v1")).toBe("push-zooai");
+		expect(pushSecretForImage("ghcr.io/parsdao/x:v1")).toBe("push-parsdao");
+	});
+
+	it("attributes the org on a digest-pinned ref", () => {
+		expect(pushSecretForImage("ghcr.io/luxfi/aml-ui:v0.3.8@sha256:80588b9b")).toBe(
+			"push-luxfi",
+		);
+	});
+
+	it("REFUSES an org outside the allowlist rather than naming its secret", () => {
+		// The org is parsed from a caller-supplied image ref. Returning
+		// `push-<org>` for an arbitrary org leaves containment resting on whether
+		// that Secret happens not to exist in hanzo-build — absence is not an
+		// authorization decision. This set must track `orgRegistryNamespaces` in
+		// the Go scheduler (hanzoai/cloud apps/platform/runner.go), which already
+		// fails closed; before this the two disagreed and TypeScript was unbounded.
+		for (const ref of [
+			"ghcr.io/attacker/x:v1",
+			"ghcr.io/hanzo-inc/cloud:v1",
+			"ghcr.io/zoo-labs/x:v1",
+			"registry.hanzo.ai/notanorg/y:v1",
+		]) {
+			expect(pushSecretForImage(ref)).toBeUndefined();
+		}
+	});
+
+	it("does not admit case variants or near-miss org names", () => {
+		expect(pushSecretForImage("ghcr.io/HanzoAI/x:v1")).toBeUndefined();
+		expect(pushSecretForImage("ghcr.io/luxfi2/x:v1")).toBeUndefined();
+		expect(pushSecretForImage("ghcr.io/luxf/x:v1")).toBeUndefined();
+	});
+
+	it("REFUSES a ref with no derivable org", () => {
+		expect(pushSecretForImage("pricing:v1")).toBeUndefined();
+		expect(pushSecretForImage("postgres")).toBeUndefined();
+		// Host-less two-segment ref is Docker Hub `user/image`, not `host/org`.
+		expect(pushSecretForImage("hanzoai/pricing:v1")).toBeUndefined();
+	});
+
+	it("keeps parsing separable from authorizing", () => {
+		// imageOrg stays a parser; the decision lives in pushSecretForImage.
+		expect(imageOrg("ghcr.io/attacker/x:v1")).toBe("attacker");
+		expect(pushSecretForImage("ghcr.io/attacker/x:v1")).toBeUndefined();
 	});
 });

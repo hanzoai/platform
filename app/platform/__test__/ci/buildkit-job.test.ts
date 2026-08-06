@@ -394,6 +394,27 @@ describe("per-org push credential", () => {
 			}),
 		).toThrow(/Cannot derive a push credential/);
 	});
+
+	it("REFUSES an org outside the allowlist instead of naming a secret for it", () => {
+		// The org comes from the caller's image ref. Deriving `push-<org>` for an
+		// arbitrary org leaves containment resting on whether that Secret happens
+		// not to exist — absence is not an authorization decision. Must match
+		// `orgRegistryNamespaces` in the Go scheduler (hanzoai/cloud).
+		for (const image of [
+			"ghcr.io/attacker/x:v1",
+			"ghcr.io/hanzo-inc/cloud:v1",
+			"registry.hanzo.ai/notanorg/y:v1",
+		]) {
+			expect(() =>
+				buildBuildkitJob({
+					repo: "o/r",
+					gitRef: "main",
+					image,
+					buildJobId: "j",
+				}),
+			).toThrow(/Cannot derive a push credential/);
+		}
+	});
 });
 
 describe("buildkitWrapperScript", () => {
