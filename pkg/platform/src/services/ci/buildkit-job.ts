@@ -11,20 +11,39 @@
  * build-watcher owns advancing the buildJob row. It reuses the platform's batch
  * client — the same k8s seam that drives e2e Jobs and operator-CR deploys.
  *
- * The Job is a THIN buildctl CLIENT of a persistent buildkitd (StatefulSet
- * `buildkitd` in the build namespace, one PVC-backed cache per replica). It
- * dials `--addr tcp://buildkitd-<n>.buildkitd.<ns>.svc:1234`, builds with the
- * `dockerfile.v0` frontend over an HTTPS git context, and pushes to
- * `--output=type=image,…,push=true`. Git auth comes from `console-git-token`
- * (the `GIT_AUTH_TOKEN` env BuildKit reads for an authenticated git context) and
- * registry auth from the per-org `push-<org>` secret mounted at `/root/.docker`.
+ * The Job builds with the `dockerfile.v0` frontend over an HTTPS git context and
+ * pushes to `--output=type=image,…,push=true`. Git auth comes from
+ * `console-git-token` (the `GIT_AUTH_TOKEN` env BuildKit reads for an
+ * authenticated git context) and registry auth from the per-org `push-<org>`
+ * secret mounted at `/root/.docker`.
  *
- * It used to start its OWN buildkitd in-pod (`buildctl-daemonless.sh`,
- * privileged, 8 CPU / 16Gi / 24Gi ephemeral on the CI pool). That daemon died
- * with the Job, so every build re-imported and re-exported a registry cache and
- * ran with an EMPTY Go build cache. Measured on hanzo-inc/cloud: 17m00s then,
- * 7m19s now. The privilege, the disk and the node reservation moved to the one
- * long-lived builder; the Job itself is 100m/256Mi and unprivileged.
+ * TWO PATHS, AND WHICH ONE IS DECIDED BY ONE FACT: whether `BUILDKITD_ADDR` names
+ * a daemon.
+ *
+ *   unset (DEFAULT)  `buildctl-daemonless.sh` — the Job starts its own daemon
+ *                    in-pod, privileged, on the CI pool. What runs today.
+ *   set              `buildctl` — a thin client of a shared daemon, unprivileged,
+ *                    100m/256Mi, carrying a client certificate and its trust
+ *                    domain.
+ *
+ * The prize is real and measured on hanzo-inc/cloud: 17m00s in-pod against 7m19s
+ * against a warm daemon, because `--mount=type=cache` contents (`/go/pkg/mod`,
+ * `/root/.cache/go-build`) die with the pod and are not expressible as registry
+ * cache at all. It also retires `privileged: true` — 89 of 89 live build pods
+ * carry it today, one per build, against one rootless daemon.
+ *
+ * ⚠️ IT IS UNSET FOR A REASON. A shared daemon runs `noProcessSandbox`, and one
+ * build can then read a CONCURRENT build's mounted secrets out of
+ * /proc/<pid>/root/run/secrets — measured, no exploit. `hanzo-build` holds
+ * push-hanzoai, push-luxfi, push-zooai and push-parsdao, so that is the
+ * registries-never-mix rule broken from inside. The precondition is a microVM per
+ * build, not anything in this file.
+ *
+ * An earlier cut of this module hardcoded the client path against
+ * `buildkitd-<n>.buildkitd.<ns>.svc` — a Service that does not resolve — with no
+ * fallback, no client certificate and no cache namespace. Committed, every build
+ * would have failed at dial. That is why the two paths are one branch on one
+ * fact rather than a rewrite that assumes its destination already exists.
  *
  * Dual-push (opt-in, gated by `FLEET_REGISTRY_HOST`): when a fleet registry is
  * configured the ONE build pushes the SAME image to both GHCR (public consumers
@@ -114,13 +133,26 @@ const NETRC_SETUP =
  * GHCR-only, so a fleet-registry hiccup never fails the primary push.
  */
 export function buildkitWrapperScript(fleetHost?: string): string {
-	if (!fleetHost) return `${NETRC_SETUP} && exec buildctl "$@"`;
+	const bin = buildkitBinary();
+	if (!fleetHost) return `${NETRC_SETUP} && exec ${bin} "$@"`;
 	const merge =
 		"g=$(sed -e 's/^{\"auths\":{//' -e 's/}}$//' /tmp/ghcr-cred/config.json); " +
 		"f=$(sed -e 's/^{\"auths\":{//' -e 's/}}$//' /tmp/fleet-cred/config.json 2>/dev/null || true); " +
 		'if [ -n "$f" ]; then printf \'{"auths":{%s,%s}}\' "$g" "$f" > /root/.docker/config.json; ' +
 		"else cp /tmp/ghcr-cred/config.json /root/.docker/config.json; fi";
-	return `${NETRC_SETUP} && ${merge} && exec buildctl "$@"`;
+	return `${NETRC_SETUP} && ${merge} && exec ${bin} "$@"`;
+}
+
+/**
+ * `buildctl` when there is a daemon to dial, `buildctl-daemonless.sh` otherwise.
+ *
+ * These are not interchangeable and swapping them unconditionally is what made
+ * the first cut of this change a guaranteed outage: `buildctl` is a pure client
+ * with no in-pod fallback, so with an unreachable address EVERY build fails at
+ * dial rather than quietly building the slow way.
+ */
+export function buildkitBinary(): string {
+	return buildkitdAddr() ? "buildctl" : "buildctl-daemonless.sh";
 }
 /** CI runner taint the build Jobs tolerate. */
 const CI_TOLERATION = {
@@ -131,47 +163,70 @@ const CI_TOLERATION = {
 } as const;
 
 /**
- * How many buildkitd replicas the StatefulSet runs, per arch. A build addresses
- * ONE of them by stable hash of its repo (see `builderAddr`).
+ * Address of the persistent buildkitd, or absent.
  *
- * Raising this needs the StatefulSet scaled to match FIRST, or the extra index
- * resolves to a Pending pod and every repo hashing to it fails to dial.
+ * ABSENT IS THE DEFAULT AND IT MEANS TODAY'S BEHAVIOUR, byte for byte: the Job
+ * runs `buildctl-daemonless.sh` and starts its own daemon in-pod. Set, the Job
+ * becomes a thin `buildctl` client of the daemon at that address. This is not a
+ * feature flag with a policy behind it — it is the daemon's address, and a
+ * client either has one to dial or does not.
+ *
+ * ⚠️ DO NOT SET IT YET. A shared daemon runs with `noProcessSandbox`, which lets
+ * one build read a CONCURRENT build's mounted secrets straight out of
+ * /proc/<pid>/root/run/secrets — measured, no exploit needed. This namespace
+ * holds push-hanzoai, push-luxfi, push-zooai and push-parsdao, so that is the
+ * registries-never-mix rule defeated from inside the daemon. The precondition is
+ * one build per kernel (a microVM per build), not anything in this file.
+ *
+ * What replaced the old `builderAddr`: it hashed the repo (FNV-1a) onto a
+ * StatefulSet replica index to pin cache locality, and it dialled
+ * `buildkitd-<idx>.buildkitd.<ns>.svc` — a Service that does NOT resolve
+ * (`nslookup buildkitd.hanzo-build.svc.cluster.local` -> NXDOMAIN, while
+ * `buildkitd-node...` -> 10.124.63.67). The spike it addressed was retired. The
+ * live daemon is a DaemonSet behind a ClusterIP with `internalTrafficPolicy:
+ * Local`, which pins each client to the daemon on its OWN node — so locality is
+ * the Service's job now and the client neither chooses nor can choose. A hash
+ * that picks an endpoint is not a repair of that, it is a second router
+ * disagreeing with the first.
  */
-const BUILDER_REPLICAS: Record<BuildArch, number> = { amd64: 2, arm64: 0 };
+export function buildkitdAddr(): string | undefined {
+	return process.env.BUILDKITD_ADDR?.trim() || undefined;
+}
 
 /**
- * The persistent builder a repo is pinned to.
- *
- * Cache locality is not a nicety here, it is most of the win. buildkitd's Go
- * build cache and `--mount=type=cache` contents (`/go/pkg/mod`,
- * `/root/.cache/go-build`) live on that replica's PVC and nowhere else, so a
- * build is only fast on a builder that has already built THAT repo. Measured on
- * hanzo-inc/cloud, same commit, same flags, same node type: warm builder 7m19s,
- * cold builder 14m00s. Round-robin over 2 replicas would therefore take the
- * 14-minute path half the time, and the average build would be slower than
- * pinning to a single builder.
- *
- * So the replica is a pure function of the repo — FNV-1a, chosen because it is
- * stable across processes and restarts (a JS string hash that varies would
- * silently re-shard the fleet on deploy and cold-start every repo). Different
- * repos spread across replicas, which is where the concurrency comes from; the
- * same repo always lands on the builder that already knows it.
+ * Where the client mounts the fleet client certificate. `buildctl` needs all
+ * three files; cert-manager writes ca.crt beside the leaf in one Secret.
  */
-export function builderAddr(repo: string, arch: BuildArch, ns: string): string {
-	const replicas = BUILDER_REPLICAS[arch];
-	if (replicas < 1) {
-		throw new TRPCError({
-			code: "PRECONDITION_FAILED",
-			message: `no persistent buildkitd for ${arch} — scale the buildkitd StatefulSet in ${ns} before building ${arch}`,
-		});
-	}
-	let h = 0x811c9dc5;
-	for (let i = 0; i < repo.length; i++) {
-		h ^= repo.charCodeAt(i);
-		h = Math.imul(h, 0x01000193) >>> 0;
-	}
-	const idx = h % replicas;
-	return `tcp://buildkitd-${idx}.buildkitd.${ns}.svc.cluster.local:1234`;
+const CLIENT_TLS_SECRET = "buildkitd-client-tls";
+const CLIENT_TLS_DIR = "/etc/buildkit-client-tls";
+
+/**
+ * Trust domain of the builds this scheduler launches. It is a LABEL on the Job
+ * pod because the daemon's NetworkPolicy admits :1234 only from pods carrying
+ * it, and a CA that signs only this domain's client certificates. Both exist so
+ * that a build of one org can never share a daemon with a build of another —
+ * see charts/app/values/hanzo-build/buildkitd-node.yaml.
+ */
+const TRUST_DOMAIN_LABEL = "hanzo.ai/build-trust-domain";
+const TRUST_DOMAIN = "hanzoai";
+
+/** Node pool an arch builds on. arm64 has no pool yet → such a Job pends visibly (never a silent mis-build). */
+const ARCH_NODE_POOL: Record<BuildArch, string> = {
+	amd64: "runner-pool-32g",
+	arm64: "runner-pool-arm64",
+};
+
+/**
+ * Where a build Job may run. The pool alone when it builds in-pod; the pool AND
+ * the trust domain when it dials a shared daemon, because a daemon exists only
+ * on nodes of its own domain and `internalTrafficPolicy: Local` means a client
+ * on any other node reaches nothing at all.
+ */
+function nodeSelectorFor(arch: BuildArch): Record<string, string> {
+	const pool = { "doks.digitalocean.com/node-pool": ARCH_NODE_POOL[arch] };
+	return buildkitdAddr()
+		? { ...pool, "build-trust-domain": TRUST_DOMAIN }
+		: pool;
 }
 
 /** Build Job resource envelope. Defaults suit a typical service image build. */
@@ -216,10 +271,27 @@ export interface BuildResources {
 // Guaranteed QoS on a deliberately small box — a client that cannot overrun
 // cannot evict a neighbour, which is what the ephemeral-storage note above was
 // really defending against.
+// ⚠️ The envelope follows the PATH, because the two paths do different amounts
+// of work in this pod. Collapsing them to the client-sized box was safe only
+// under the assumption that the remote path is the only path — and a 100m/256Mi
+// pod running `buildctl-daemonless.sh` does not build slowly, it OOMs.
 const DEFAULT_RESOURCES: BuildResources = {
 	requests: { cpu: "100m", memory: "256Mi", "ephemeral-storage": "1Gi" },
 	limits: { cpu: "100m", memory: "256Mi", "ephemeral-storage": "1Gi" },
 };
+
+// The in-pod envelope, unchanged from what builds commerce/chat/cloud today.
+// ephemeral-storage is requested AND limited at the same value because a build
+// that overran its limit got its NEIGHBOURS evicted, not itself.
+const IN_POD_RESOURCES: BuildResources = {
+	requests: { cpu: "2", memory: "6Gi", "ephemeral-storage": "24Gi" },
+	limits: { cpu: "8", memory: "16Gi", "ephemeral-storage": "24Gi" },
+};
+
+/** Client-sized when it dials a daemon; builder-sized when it IS the builder. */
+function defaultResources(): BuildResources {
+	return buildkitdAddr() ? DEFAULT_RESOURCES : IN_POD_RESOURCES;
+}
 
 export interface BuildJobLaunchInput {
 	/** `owner/name` — the source repository. */
@@ -318,16 +390,47 @@ export function imageVersion(ref: string): string {
 export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	const dockerfile = (input.dockerfile ?? "Dockerfile").replace(/^\.\//, "");
 	const arch = input.arch ?? "amd64";
+	const addr = buildkitdAddr();
 	const args = [
 		// Address the persistent buildkitd instead of starting a throwaway one in
-		// this pod. `--addr` is a buildctl GLOBAL flag, so it precedes `build`.
-		"--addr",
-		builderAddr(input.repo, arch, buildNamespace()),
+		// this pod. `--addr` and the TLS flags are buildctl GLOBAL flags, so they
+		// precede `build`.
+		//
+		// The three TLS flags are NOT optional decoration on the address: the
+		// daemon sets `ca` in [grpc.tls], which makes Go demand a client
+		// certificate, and a dial without them dies with "certificate required".
+		// Address and credential ship together or the address is useless — which
+		// is why they are emitted from one branch and cannot drift apart.
+		...(addr
+			? [
+					"--addr",
+					addr,
+					`--tlscacert=${CLIENT_TLS_DIR}/ca.crt`,
+					`--tlscert=${CLIENT_TLS_DIR}/tls.crt`,
+					`--tlskey=${CLIENT_TLS_DIR}/tls.key`,
+				]
+			: []),
 		"build",
 		"--frontend=dockerfile.v0",
 		`--opt=context=https://github.com/${input.repo}.git#${input.gitRef}`,
 		`--opt=filename=${dockerfile}`,
 		`--opt=platform=linux/${arch}`,
+		// Namespace every cache mount this build creates to the repo being built.
+		// UNCONDITIONAL, exactly as in the bootstrap job template beside it: it is
+		// a property of what this builder emits, not of which daemon answers, so
+		// it cannot be forgotten on the day an address is configured.
+		//
+		// Without it BuildKit keys an id-less mount by TARGET PATH, so every repo
+		// mounting /go/pkg/mod shares one directory the moment they share a daemon
+		// — 49 such mounts across the repos that build here.
+		//
+		// ⚠️ It is collision avoidance, NOT authorization, and the difference is
+		// measured: a build asserting ANOTHER repo's namespace reads that repo's
+		// mount (`READS:[VICTIM-SECRET-8f21]`), because the namespace is a
+		// build-arg and buildkit v0.16 has no hook binding it to the caller's
+		// identity. Do not read this line as an isolation boundary between
+		// callers; the daemon's trust domain is that boundary.
+		`--opt=build-arg:BUILDKIT_CACHE_MOUNT_NS=${input.repo}`,
 	];
 	if (input.context && input.context !== ".") {
 		args.push(`--opt=context-subdir=${input.context}`);
@@ -484,7 +587,7 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 	const namespace = input.namespace ?? buildNamespace();
 	const arch = input.arch ?? "amd64";
 	const name = buildJobName(input.repo, input.buildJobId);
-	const resources = input.resources ?? DEFAULT_RESOURCES;
+	const resources = input.resources ?? defaultResources();
 	// Refuse rather than fall back: with no derivable org there is no correct
 	// credential to mount, and guessing one is how a build ends up pushing with
 	// another org's token. A caller sees this immediately; a silent default
@@ -497,11 +600,18 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 		});
 	}
 	const auth = dockerAuthWiring(pushSecret, input.fleetRegistryHost);
+	const remote = !!buildkitdAddr();
 	const labels = {
 		"app.kubernetes.io/name": "build",
 		"app.kubernetes.io/managed-by": "platform",
 		"triggered-by": "platform.hanzo.ai",
 		"hanzo.ai/build-job-id": dnsSafe(input.buildJobId).slice(0, 63),
+		// Only when it actually dials one. The daemon's NetworkPolicy admits
+		// :1234 from pods carrying this label and nothing else, so labelling an
+		// in-pod build would hand it reachability it has no use for — and the
+		// whole point of scoping that policy to a label is that the label is
+		// carried deliberately, by the one workload that needs it.
+		...(remote ? { [TRUST_DOMAIN_LABEL]: TRUST_DOMAIN } : {}),
 	};
 
 	return {
@@ -517,13 +627,20 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 				spec: {
 					automountServiceAccountToken: false,
 					restartPolicy: "Never",
-					// No nodeSelector: a 100m gRPC client has no reason to consume the
-					// CI pool, and it must not — the buildkitd replicas reserve 7 of the
-					// 8 cores on each node there, so pinning clients to that pool makes
-					// them fight the builders for the last ~250m and drives pointless
-					// autoscale-ups. The build's arch is decided by which buildkitd is
-					// dialled (`builderAddr`), not by where the client happens to run.
-					// The toleration stays so the scheduler may still use the CI pool.
+					// The client MUST land on a node that runs a daemon. `No
+					// nodeSelector` was the previous note's conclusion — a 100m gRPC
+					// client has no business consuming the CI pool — and it is wrong
+					// for this topology: the daemon's Service is
+					// `internalTrafficPolicy: Local`, which DROPS traffic on a node
+					// with no local endpoint. A client scheduled on a general pool
+					// would not be slow, it would have nothing to dial.
+					//
+					// So locality is a scheduling constraint, not an optimisation, and
+					// the daemon's own node affinity is the thing to match: the CI
+					// pools, and the trust domain. Without the address configured this
+					// is a plain in-pod build and the CI pool is where those have
+					// always run.
+					nodeSelector: nodeSelectorFor(arch),
 					tolerations: [CI_TOLERATION],
 					containers: [
 						{
@@ -537,22 +654,30 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 							command: ["/bin/sh", "-c"],
 							args: [
 								buildkitWrapperScript(input.fleetRegistryHost),
-								// `buildctl`, not `buildctl-daemonless.sh`: the daemon is the
-								// persistent StatefulSet this dials via `--addr`, not a
-								// throwaway one started inside this pod.
-								"buildctl",
+								// `$0` for the wrapper. Which binary it is follows the
+								// address: a client when there is a daemon to dial, an
+								// in-pod daemon when there is not.
+								buildkitBinary(),
 								...buildkitArgs(input),
 							],
-							// No `privileged` any more. Starting buildkitd in-pod is what
-							// required it; a buildctl client that streams a session over gRPC
-							// needs no privilege, no /dev/fuse and no host mounts. The
-							// privileged surface is now ONE long-lived pod under the
-							// namespace's egress policy instead of one per build.
-							securityContext: {
-								allowPrivilegeEscalation: false,
-								capabilities: { drop: ["ALL"] },
-								runAsNonRoot: false,
-							},
+							// Privilege follows the same fact. Starting buildkitd in-pod is
+							// what requires it, so the in-pod path keeps exactly the
+							// securityContext it has today — dropping it there would break
+							// every build, which is the default path.
+							//
+							// A buildctl client streams a gRPC session and needs no
+							// privilege, no /dev/fuse and no host mounts, so the remote path
+							// drops all of it. That is the real prize here and it is worth
+							// naming: 89 of 89 live build pods run `privileged: true` today,
+							// one per build. Not "the privileged surface moves to one pod" —
+							// the daemon it moves to is rootless and unprivileged.
+							securityContext: remote
+								? {
+										allowPrivilegeEscalation: false,
+										capabilities: { drop: ["ALL"] },
+										runAsNonRoot: false,
+									}
+								: { privileged: true },
 							env: [
 								{
 									name: "GIT_AUTH_TOKEN",
@@ -569,10 +694,34 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 								{ name: "DOCKER_CONFIG", value: "/root/.docker" },
 							],
 							resources,
-							volumeMounts: auth.volumeMounts,
+							// The fleet client certificate, only on the path that dials.
+							// 0440 for the same reason the daemon's server Secret uses it:
+							// a Secret volume's files are owned by root and 0400 would be
+							// unreadable to any non-root client.
+							volumeMounts: remote
+								? [
+										...auth.volumeMounts,
+										{
+											mountPath: CLIENT_TLS_DIR,
+											name: "buildkitd-client-tls",
+											readOnly: true,
+										},
+									]
+								: auth.volumeMounts,
 						},
 					],
-					volumes: auth.volumes,
+					volumes: remote
+						? [
+								...auth.volumes,
+								{
+									name: "buildkitd-client-tls",
+									secret: {
+										secretName: CLIENT_TLS_SECRET,
+										defaultMode: 0o440,
+									},
+								},
+							]
+						: auth.volumes,
 				},
 			},
 		},
