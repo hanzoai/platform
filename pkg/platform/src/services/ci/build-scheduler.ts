@@ -276,6 +276,63 @@ export async function fetchPlatformConfigFromHanzoGit(
 }
 
 /**
+ * The one file that means "hanzoai/ci runs this repo's pipeline". The forge
+ * resolves `.hanzo/workflows`, so a caller here is a caller the forge will
+ * actually execute.
+ */
+const CI_CALLER_PATH = ".hanzo/workflows/cicd.yml";
+
+/**
+ * Does hanzoai/ci own this repo's build at `ref`?
+ *
+ * A push to the forge fans out to BOTH lanes. The forge-wide system webhook
+ * reaches here and builds from `images:`; the same push also starts the repo's
+ * `.hanzo/workflows/cicd.yml`, which runs `hanzoai/ci` — the `test:` gate, the
+ * structural refusals, `gover`, `publishable`. Only one of those two lanes is
+ * gated, and BOTH push the image.
+ *
+ * Measured on hanzoai/cloud@7c50638e: run 36368's `Test (per hanzo.yml)` step
+ * failed, ci therefore skipped its `image` job — and this lane built
+ * `ghcr.io/hanzoai/cloud:sha-7c50638eb180` with `push=true` anyway. The gate
+ * refused to publish and the artifact was published. A gate another lane can
+ * walk around is not a gate.
+ *
+ * So when a repo has a ci caller, this lane yields: ci builds it, on the same
+ * BuildKit, through `mode: delegate` if it wants this pool. Nothing is lost —
+ * for a repo with `images:` and a caller, ci's own build+push step already
+ * produces the same tags, so today the two lanes are redundant for exactly the
+ * repos where the ungated one is dangerous. The 17 repos with a hanzo.yml and
+ * no caller keep building here, unchanged, and gain the gate the moment one is
+ * added. No flag, no list to maintain: the presence of the file IS the answer.
+ *
+ * This reads ONE fact — does the file exist — and no key inside it. Parsing
+ * `test:` here would be a third implementation of a schema that already has
+ * two, and it could not work anyway: the gate needs per-repo KMS names, and
+ * this deployment's KMS access is a KMSSecret CRD with a statically declared
+ * key list that cannot serve a name discovered at some SHA.
+ *
+ * Fail OPEN on a transport error. A forge blip must not silently stop builds
+ * fleet-wide; the redundant-build state is the status quo and is survivable,
+ * a stuck fleet is not.
+ */
+export async function ciOwnsBuild(
+	cfg: Pick<HanzoGitConfig, "url" | "token">,
+	repo: string,
+	ref: string,
+): Promise<boolean> {
+	const [owner, name] = repo.split("/");
+	if (!owner || !name) return false;
+	const headers: Record<string, string> = { Accept: "application/json" };
+	if (cfg.token) headers.Authorization = `token ${cfg.token}`;
+	const url = `${cfg.url}/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${CI_CALLER_PATH}?ref=${encodeURIComponent(ref)}`;
+	try {
+		return (await fetch(url, { headers })).ok;
+	} catch {
+		return false;
+	}
+}
+
+/**
  * Resolve a {@link ConfigSource} to the owning organization plus the repo's
  * config at `sha`. The ONLY place the build path knows which forge it is
  * talking to; everything after this point is forge-agnostic.
