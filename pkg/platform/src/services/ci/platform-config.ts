@@ -117,6 +117,17 @@ export interface PlatformConfig {
 	deploy?: DeployConfig;
 	e2e?: E2eConfig;
 	publish?: PublishConfig;
+	/**
+	 * Which side of this repo is the source of truth — `forge`, or the GitHub
+	 * repo the forge is downstream of (`owner/name`). Absent means "infer from
+	 * the forge's own mirror config", which is right for the ~2,200 repos that
+	 * are ordinary pull mirrors. Declare it only where inference is wrong:
+	 * a forge-primary repo whose GitHub origin is a curated split
+	 * (`source: forge`), or a repo whose upstream the forge no longer records.
+	 *
+	 * Read verbatim; interpreted by services/ci/forge-source.
+	 */
+	source?: string;
 }
 
 const VALID_OS: readonly BuildOS[] = ["linux", "darwin", "windows"];
@@ -549,7 +560,16 @@ export function parsePlatformConfig(yamlText: string): PlatformConfig | null {
 	} catch (err) {
 		throw new PlatformConfigError(`not valid YAML: ${(err as Error).message}`);
 	}
-	return validatePlatformConfig(raw);
+	const config = validatePlatformConfig(raw);
+	// Attached here, once, rather than threaded through validatePlatformConfig's
+	// several return sites — `source:` is orthogonal to what gets built, and
+	// duplicating it into each of those returns is how one of them ends up
+	// forgetting it.
+	if (config && isObject(raw) && typeof raw.source === "string") {
+		const source = raw.source.trim();
+		if (source) config.source = source;
+	}
+	return config;
 }
 
 /**
