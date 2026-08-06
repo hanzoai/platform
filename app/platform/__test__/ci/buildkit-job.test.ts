@@ -45,13 +45,13 @@ describe("buildkitArgs", () => {
 			image: "ghcr.io/hanzoai/pricing:v1.2.3",
 			buildJobId: "j1",
 		});
-		// The persistent builder is addressed FIRST: `--addr` is a buildctl global
-		// flag, so it must precede the `build` verb or buildctl rejects it.
-		expect(args[0]).toBe("--addr");
-		expect(args[1]).toBe(
-			"tcp://buildkitd-0.buildkitd.hanzo-build.svc.cluster.local:1234",
-		);
-		expect(args[2]).toBe("build");
+		// DEFAULT is the in-pod build: no BUILDKITD_ADDR, so no `--addr` and
+		// `build` leads. The previous version of this test pinned
+		// `tcp://buildkitd-0.buildkitd.hanzo-build.svc…`, a Service that does not
+		// resolve (NXDOMAIN — the StatefulSet spike behind it was retired), so it
+		// asserted a contract under which every build fails at dial.
+		expect(args[0]).toBe("build");
+		expect(args).not.toContain("--addr");
 		expect(args).toContain("--frontend=dockerfile.v0");
 		expect(args).toContain(
 			"--opt=context=https://github.com/hanzoai/pricing.git#refs/heads/main",
@@ -75,20 +75,41 @@ describe("buildkitArgs", () => {
 	// evicted (build-docs and pf-runner died for a third build's overrun, and four
 	// commerce builds could not schedule at 24Gi apiece on an 88Gi node). A client
 	// that cannot overrun cannot evict anyone.
-	it("requests and limits every resource at the same value (Guaranteed)", () => {
+	it("sizes the envelope to what the pod actually does", () => {
 		const job = buildBuildkitJob({
 			repo: "hanzoai/docs",
 			gitRef: "refs/heads/main",
 			image: "ghcr.io/hanzoai/docs:v1.2.3",
 			buildJobId: "j1",
 		});
+		// IN-POD (default): this pod IS the builder, so it gets the builder's
+		// envelope — the one that builds commerce/chat/cloud today. A 100m/256Mi
+		// box running buildctl-daemonless.sh does not build slowly, it OOMs.
 		const res = job.spec.template.spec.containers[0].resources;
-		expect(res.limits["ephemeral-storage"]).toBe(res.requests["ephemeral-storage"]);
-		expect(res.limits.cpu).toBe(res.requests.cpu);
-		expect(res.limits.memory).toBe(res.requests.memory);
-		// Small enough that it cannot be the reason a build waits for a node.
-		expect(res.requests.cpu).toBe("100m");
-		expect(res.requests.memory).toBe("256Mi");
+		expect(res.requests.cpu).toBe("2");
+		expect(res.requests.memory).toBe("6Gi");
+		// ephemeral-storage requested AND limited alike: a build that overran its
+		// limit got its NEIGHBOURS evicted, not itself.
+		expect(res.limits["ephemeral-storage"]).toBe(
+			res.requests["ephemeral-storage"],
+		);
+
+		// REMOTE: a gRPC client that cannot overrun cannot evict anyone.
+		process.env.BUILDKITD_ADDR = "tcp://buildkitd-node.hanzo-build.svc:1234";
+		try {
+			const r = buildBuildkitJob({
+				repo: "hanzoai/docs",
+				gitRef: "refs/heads/main",
+				image: "ghcr.io/hanzoai/docs:v1.2.3",
+				buildJobId: "j1",
+			}).spec.template.spec.containers[0].resources;
+			expect(r.requests.cpu).toBe("100m");
+			expect(r.requests.memory).toBe("256Mi");
+			expect(r.limits.cpu).toBe(r.requests.cpu);
+			expect(r.limits.memory).toBe(r.requests.memory);
+		} finally {
+			delete process.env.BUILDKITD_ADDR;
+		}
 	});
 
 	// The builder's PVC is the cache now. The registry ref is kept ONLY as
@@ -236,42 +257,49 @@ describe("buildkitArgs", () => {
 		expect(args).toContain("--opt=build-arg:VERSION=1.2.3");
 	});
 
-	// arm64 has no persistent builder yet. REFUSE at dispatch rather than launch a
-	// Job that dials a replica which does not exist: the old code pinned such a
-	// Job to a nonexistent node pool and left it Pending forever, which reads as a
-	// stuck queue rather than a missing builder. Scale the StatefulSet and raise
-	// BUILDER_REPLICAS.arm64 together, and this becomes a normal build.
-	it("refuses arm64 until an arm64 builder exists, naming the fix", () => {
-		expect(() =>
-			buildkitArgs({
-				repo: "o/r",
-				gitRef: "main",
-				image: "i:t",
-				arch: "arm64",
-				buildJobId: "j",
-			}),
-		).toThrow(/no persistent buildkitd for arm64/);
+	// Cache mounts are namespaced per repo UNCONDITIONALLY — on the in-pod path
+	// too, where it is inert, so the flag is a property of what this builder
+	// emits rather than of which daemon happens to answer. Forgetting it on the
+	// day an address is configured is exactly the kind of thing that does not get
+	// remembered.
+	it("namespaces cache mounts per repo on every path", () => {
+		const args = buildkitArgs({
+			repo: "hanzoai/pricing",
+			gitRef: "main",
+			image: "ghcr.io/hanzoai/pricing:t",
+			buildJobId: "j",
+		});
+		expect(args).toContain(
+			"--opt=build-arg:BUILDKIT_CACHE_MOUNT_NS=hanzoai/pricing",
+		);
 	});
 
-	// The whole win rides on this: buildkitd's Go build cache and its
-	// `--mount=type=cache` contents live on ONE replica's PVC. Measured on
-	// hanzo-inc/cloud, same commit and flags: 7m19s on the builder that had built
-	// it before, 14m00s on a cold one. A hash that is not stable across restarts
-	// would silently re-shard the fleet on every platform deploy and pay that
-	// 14-minute path for every repo.
-	it("pins a repo to one builder, stably, and spreads different repos", () => {
-		const addrOf = (repo: string) =>
-			buildkitArgs({ repo, gitRef: "main", image: "i:t", buildJobId: "j" })[1];
-		expect(addrOf("hanzo-inc/cloud")).toBe(addrOf("hanzo-inc/cloud"));
-		expect(addrOf("hanzo-inc/cloud")).toMatch(
-			/^tcp:\/\/buildkitd-[01]\.buildkitd\.hanzo-build\.svc\.cluster\.local:1234$/,
-		);
-		const spread = new Set(
-			["hanzoai/docs", "hanzoai/pricing", "hanzo-inc/cloud", "hanzoai/iam"].map(
-				addrOf,
-			),
-		);
-		expect(spread.size).toBeGreaterThan(1);
+	// The address and the credential are ONE decision. A dial with `--addr` and
+	// no client certificate dies with "certificate required" against a daemon
+	// that sets `ca` in [grpc.tls] — which ours does — so a build that reached
+	// the daemon without these flags would fail 100% of the time. Emitting them
+	// from one branch is what stops them drifting apart.
+	it("emits address AND client certificate together, never one alone", () => {
+		process.env.BUILDKITD_ADDR = "tcp://buildkitd-node.hanzo-build.svc:1234";
+		try {
+			const args = buildkitArgs({
+				repo: "hanzoai/pricing",
+				gitRef: "main",
+				image: "ghcr.io/hanzoai/pricing:t",
+				buildJobId: "j",
+			});
+			expect(args[0]).toBe("--addr");
+			expect(args[1]).toBe("tcp://buildkitd-node.hanzo-build.svc:1234");
+			expect(args).toContain("--tlscacert=/etc/buildkit-client-tls/ca.crt");
+			expect(args).toContain("--tlscert=/etc/buildkit-client-tls/tls.crt");
+			expect(args).toContain("--tlskey=/etc/buildkit-client-tls/tls.key");
+			// Global flags must precede the verb or buildctl rejects them.
+			expect(args.indexOf("build")).toBeGreaterThan(
+				args.indexOf("--tlskey=/etc/buildkit-client-tls/tls.key"),
+			);
+		} finally {
+			delete process.env.BUILDKITD_ADDR;
+		}
 	});
 
 	it("stays single-GHCR (proven form) when no fleet registry is set", () => {
@@ -372,9 +400,24 @@ describe("buildkitWrapperScript", () => {
 	it("is the proven netrc→exec wrapper with no fleet registry", () => {
 		const s = buildkitWrapperScript();
 		expect(s).toContain("/tmp/netrc");
-		expect(s.endsWith('exec buildctl "$@"')).toBe(true);
+		// DEFAULT is the in-pod daemon. `buildctl` has no in-pod fallback, so
+		// asserting it here — as this test used to — pins a contract under which
+		// every build dies at dial the moment there is no reachable daemon.
+		expect(s.endsWith('exec buildctl-daemonless.sh "$@"')).toBe(true);
 		// No docker-cred merge when there is nothing to compose.
 		expect(s).not.toContain("/tmp/fleet-cred");
+	});
+
+	it("execs the thin client instead once a daemon address is configured", () => {
+		process.env.BUILDKITD_ADDR = "tcp://buildkitd-node.hanzo-build.svc:1234";
+		try {
+			expect(buildkitWrapperScript().endsWith('exec buildctl "$@"')).toBe(true);
+			expect(buildkitWrapperScript("registry.hanzo.ai")).toContain(
+				'exec buildctl "$@"',
+			);
+		} finally {
+			delete process.env.BUILDKITD_ADDR;
+		}
 	});
 
 	it("composes the two docker creds (jq-free) before exec when a fleet host is set", () => {
@@ -388,7 +431,7 @@ describe("buildkitWrapperScript", () => {
 		expect(s).toContain(
 			"cp /tmp/ghcr-cred/config.json /root/.docker/config.json",
 		);
-		expect(s.endsWith('exec buildctl "$@"')).toBe(true);
+		expect(s.endsWith('exec buildctl-daemonless.sh "$@"')).toBe(true);
 	});
 });
 
@@ -454,26 +497,75 @@ describe("buildBuildkitJob", () => {
 	const pod = job.spec.template.spec;
 	const container = pod.containers[0]!;
 
-	// The Job is a CLIENT of the persistent buildkitd, not a builder. Three things
-	// follow and each is load-bearing:
-	//  - `buildctl`, never `buildctl-daemonless.sh` — the latter would start a
-	//    throwaway daemon in this pod and silently rebuild everything cold, which
-	//    is the 17-minute behaviour this replaced.
-	//  - unprivileged — starting buildkitd in-pod is the ONLY reason the Job ever
-	//    needed privilege. One long-lived privileged pod now, not one per build.
-	//  - no nodeSelector — the builders reserve 7 of 8 cores on each CI-pool node,
-	//    so pinning clients there makes them fight the builders for the last
-	//    ~250m and drives pointless autoscale-ups.
-	it("is an unprivileged buildctl client of the persistent builder", () => {
+	// DEFAULT PATH — an in-pod daemon, exactly what runs today. The previous
+	// version of this test asserted the opposite on every line (`buildctl`, no
+	// daemonless, unprivileged, no nodeSelector) and it was pinning a contract
+	// under which every build fails: `buildctl` has no in-pod fallback, so with
+	// no reachable daemon it dies at dial rather than building the slow way.
+	it("builds in-pod, privileged, on the CI pool when no daemon is configured", () => {
 		expect(container.image).toBe("moby/buildkit:v0.16.0");
 		expect(container.command).toEqual(["/bin/sh", "-c"]);
-		expect(container.args[1]).toBe("buildctl");
-		expect(container.args[0]!).toContain('exec buildctl "$@"');
-		expect(container.args[0]!).not.toContain("daemonless");
-		expect(container.securityContext.privileged).toBeUndefined();
-		expect(container.securityContext.allowPrivilegeEscalation).toBe(false);
-		expect(pod.nodeSelector).toBeUndefined();
+		expect(container.args[1]).toBe("buildctl-daemonless.sh");
+		expect(container.args[0]!).toContain('exec buildctl-daemonless.sh "$@"');
+		expect(container.securityContext.privileged).toBe(true);
+		// It MUST land on the CI pool: that is where builds have always run, and
+		// the general pools are 4vCPU/6Gi and full.
+		expect(pod.nodeSelector).toEqual({
+			"doks.digitalocean.com/node-pool": "runner-pool-32g",
+		});
 		expect(pod.tolerations[0]!.value).toBe("ci-runner");
+		// No trust-domain label and no client certificate: it dials nothing, so
+		// handing it reachability or a credential would be surface with no use.
+		expect(
+			job.spec.template.metadata.labels["hanzo.ai/build-trust-domain"],
+		).toBeUndefined();
+		expect(
+			(pod.volumes as Vol[]).some((v) => v.name === "buildkitd-client-tls"),
+		).toBe(false);
+	});
+
+	// REMOTE PATH — everything the client needs to actually reach a daemon, and
+	// each item is a separate way the first cut of this change would have failed:
+	//  - nodeSelector carries the TRUST DOMAIN, because the daemon exists only on
+	//    its own domain's nodes and `internalTrafficPolicy: Local` drops traffic
+	//    on a node with no local endpoint. A client elsewhere reaches nothing.
+	//  - the pod LABEL, because the daemon's NetworkPolicy admits :1234 from
+	//    pods carrying it and nothing else.
+	//  - the client certificate volume, because the daemon demands one.
+	it("carries domain, label and certificate when a daemon IS configured", () => {
+		process.env.BUILDKITD_ADDR = "tcp://buildkitd-node.hanzo-build.svc:1234";
+		try {
+			const j = buildBuildkitJob({
+				repo: "hanzoai/pricing",
+				gitRef: "refs/heads/main",
+				image: "ghcr.io/hanzoai/pricing:t",
+				buildJobId: "abc12345",
+			});
+			const p = j.spec.template.spec;
+			const c = p.containers[0]!;
+			expect(c.args[1]).toBe("buildctl");
+			expect(c.args[0]!).not.toContain("daemonless");
+			expect(c.securityContext.privileged).toBeUndefined();
+			expect(c.securityContext.allowPrivilegeEscalation).toBe(false);
+			expect(p.nodeSelector).toEqual({
+				"doks.digitalocean.com/node-pool": "runner-pool-32g",
+				"build-trust-domain": "hanzoai",
+			});
+			expect(
+				j.spec.template.metadata.labels["hanzo.ai/build-trust-domain"],
+			).toBe("hanzoai");
+			const tls = (p.volumes as Vol[]).find(
+				(v) => v.name === "buildkitd-client-tls",
+			);
+			expect(tls?.secret?.secretName).toBe("buildkitd-client-tls");
+			expect(
+				(c.volumeMounts as Mount[]).find(
+					(m) => m.name === "buildkitd-client-tls",
+				)?.mountPath,
+			).toBe("/etc/buildkit-client-tls");
+		} finally {
+			delete process.env.BUILDKITD_ADDR;
+		}
 	});
 
 	it("wires git + registry auth from the canonical secrets", () => {
