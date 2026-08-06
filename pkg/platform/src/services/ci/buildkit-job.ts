@@ -11,17 +11,20 @@
  * build-watcher owns advancing the buildJob row. It reuses the platform's batch
  * client — the same k8s seam that drives e2e Jobs and operator-CR deploys.
  *
- * The Job spec mirrors the PROVEN, hand-applied build Jobs that already build
- * commerce/chat/cloud on this cluster (`<repo>-build-<sha>`): a privileged
- * `moby/buildkit` pod running `buildctl-daemonless.sh build` with the
- * `dockerfile.v0` frontend over an HTTPS git context, pushing to
+ * The Job is a THIN buildctl CLIENT of a persistent buildkitd (StatefulSet
+ * `buildkitd` in the build namespace, one PVC-backed cache per replica). It
+ * dials `--addr tcp://buildkitd-<n>.buildkitd.<ns>.svc:1234`, builds with the
+ * `dockerfile.v0` frontend over an HTTPS git context, and pushes to
  * `--output=type=image,…,push=true`. Git auth comes from `console-git-token`
- * (the `GIT_AUTH_TOKEN` env BuildKit reads for an authenticated git context),
- * registry auth from the per-org `push-<org>` secret mounted at `/root/.docker`,
- * scheduled onto the `runner-pool-32g` CI pool (tainted `dedicated=ci-runner`).
- * Bridging the
- * scheduler to this is what makes platform-native builds REAL — no human
- * applying Job YAML by hand.
+ * (the `GIT_AUTH_TOKEN` env BuildKit reads for an authenticated git context) and
+ * registry auth from the per-org `push-<org>` secret mounted at `/root/.docker`.
+ *
+ * It used to start its OWN buildkitd in-pod (`buildctl-daemonless.sh`,
+ * privileged, 8 CPU / 16Gi / 24Gi ephemeral on the CI pool). That daemon died
+ * with the Job, so every build re-imported and re-exported a registry cache and
+ * ran with an EMPTY Go build cache. Measured on hanzo-inc/cloud: 17m00s then,
+ * 7m19s now. The privilege, the disk and the node reservation moved to the one
+ * long-lived builder; the Job itself is 100m/256Mi and unprivileged.
  *
  * Dual-push (opt-in, gated by `FLEET_REGISTRY_HOST`): when a fleet registry is
  * configured the ONE build pushes the SAME image to both GHCR (public consumers
@@ -111,13 +114,13 @@ const NETRC_SETUP =
  * GHCR-only, so a fleet-registry hiccup never fails the primary push.
  */
 export function buildkitWrapperScript(fleetHost?: string): string {
-	if (!fleetHost) return `${NETRC_SETUP} && exec buildctl-daemonless.sh "$@"`;
+	if (!fleetHost) return `${NETRC_SETUP} && exec buildctl "$@"`;
 	const merge =
 		"g=$(sed -e 's/^{\"auths\":{//' -e 's/}}$//' /tmp/ghcr-cred/config.json); " +
 		"f=$(sed -e 's/^{\"auths\":{//' -e 's/}}$//' /tmp/fleet-cred/config.json 2>/dev/null || true); " +
 		'if [ -n "$f" ]; then printf \'{"auths":{%s,%s}}\' "$g" "$f" > /root/.docker/config.json; ' +
 		"else cp /tmp/ghcr-cred/config.json /root/.docker/config.json; fi";
-	return `${NETRC_SETUP} && ${merge} && exec buildctl-daemonless.sh "$@"`;
+	return `${NETRC_SETUP} && ${merge} && exec buildctl "$@"`;
 }
 /** CI runner taint the build Jobs tolerate. */
 const CI_TOLERATION = {
@@ -127,11 +130,49 @@ const CI_TOLERATION = {
 	value: "ci-runner",
 } as const;
 
-/** Node pool an arch builds on. arm64 has no pool yet → such a Job pends visibly (never a silent mis-build). */
-const ARCH_NODE_POOL: Record<BuildArch, string> = {
-	amd64: "runner-pool-32g",
-	arm64: "runner-pool-arm64",
-};
+/**
+ * How many buildkitd replicas the StatefulSet runs, per arch. A build addresses
+ * ONE of them by stable hash of its repo (see `builderAddr`).
+ *
+ * Raising this needs the StatefulSet scaled to match FIRST, or the extra index
+ * resolves to a Pending pod and every repo hashing to it fails to dial.
+ */
+const BUILDER_REPLICAS: Record<BuildArch, number> = { amd64: 2, arm64: 0 };
+
+/**
+ * The persistent builder a repo is pinned to.
+ *
+ * Cache locality is not a nicety here, it is most of the win. buildkitd's Go
+ * build cache and `--mount=type=cache` contents (`/go/pkg/mod`,
+ * `/root/.cache/go-build`) live on that replica's PVC and nowhere else, so a
+ * build is only fast on a builder that has already built THAT repo. Measured on
+ * hanzo-inc/cloud, same commit, same flags, same node type: warm builder 7m19s,
+ * cold builder 14m00s. Round-robin over 2 replicas would therefore take the
+ * 14-minute path half the time, and the average build would be slower than
+ * pinning to a single builder.
+ *
+ * So the replica is a pure function of the repo — FNV-1a, chosen because it is
+ * stable across processes and restarts (a JS string hash that varies would
+ * silently re-shard the fleet on deploy and cold-start every repo). Different
+ * repos spread across replicas, which is where the concurrency comes from; the
+ * same repo always lands on the builder that already knows it.
+ */
+export function builderAddr(repo: string, arch: BuildArch, ns: string): string {
+	const replicas = BUILDER_REPLICAS[arch];
+	if (replicas < 1) {
+		throw new TRPCError({
+			code: "PRECONDITION_FAILED",
+			message: `no persistent buildkitd for ${arch} — scale the buildkitd StatefulSet in ${ns} before building ${arch}`,
+		});
+	}
+	let h = 0x811c9dc5;
+	for (let i = 0; i < repo.length; i++) {
+		h ^= repo.charCodeAt(i);
+		h = Math.imul(h, 0x01000193) >>> 0;
+	}
+	const idx = h % replicas;
+	return `tcp://buildkitd-${idx}.buildkitd.${ns}.svc.cluster.local:1234`;
+}
 
 /** Build Job resource envelope. Defaults suit a typical service image build. */
 export interface BuildResources {
@@ -163,9 +204,21 @@ export interface BuildResources {
 // also why per-build disk went up. The cache is correct; the envelope had to
 // stop lying about it. Raise this only alongside the node pool's allocatable,
 // never past (allocatable - eviction threshold) / concurrent-builds.
+//
+// SUPERSEDED by the persistent builder, and this is the envelope of what the Job
+// still does: dial a gRPC session, stream two secrets and a docker config up,
+// stream progress text back. The compile, the layer store and the disk are the
+// buildkitd StatefulSet's (7 CPU / 26Gi / 200Gi PVC, requests==limits so the
+// scheduler truly reserves the node). The old envelope was sized for a build
+// that no longer happens in this pod, and it was the thing serializing the
+// fleet: at 24Gi ephemeral apiece only three builds fit an 88Gi node.
+//
+// Guaranteed QoS on a deliberately small box — a client that cannot overrun
+// cannot evict a neighbour, which is what the ephemeral-storage note above was
+// really defending against.
 const DEFAULT_RESOURCES: BuildResources = {
-	requests: { cpu: "2", memory: "6Gi", "ephemeral-storage": "24Gi" },
-	limits: { cpu: "8", memory: "16Gi", "ephemeral-storage": "24Gi" },
+	requests: { cpu: "100m", memory: "256Mi", "ephemeral-storage": "1Gi" },
+	limits: { cpu: "100m", memory: "256Mi", "ephemeral-storage": "1Gi" },
 };
 
 export interface BuildJobLaunchInput {
@@ -256,7 +309,7 @@ export function imageVersion(ref: string): string {
 }
 
 /**
- * `buildctl-daemonless.sh` args for a build — pure, so the unit test can assert
+ * `buildctl` args for a build — pure, so the unit test can assert
  * the contract. Mirrors the proven hand-applied BuildKit Jobs: dockerfile.v0
  * frontend, HTTPS git context, image output pushed to GHCR. When a fleet
  * registry is set, the single image output carries BOTH refs (GHCR +
@@ -266,6 +319,10 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	const dockerfile = (input.dockerfile ?? "Dockerfile").replace(/^\.\//, "");
 	const arch = input.arch ?? "amd64";
 	const args = [
+		// Address the persistent buildkitd instead of starting a throwaway one in
+		// this pod. `--addr` is a buildctl GLOBAL flag, so it precedes `build`.
+		"--addr",
+		builderAddr(input.repo, arch, buildNamespace()),
 		"build",
 		"--frontend=dockerfile.v0",
 		`--opt=context=https://github.com/${input.repo}.git#${input.gitRef}`,
@@ -326,37 +383,37 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	const push = input.fleetRegistryHost
 		? `--output=type=image,"name=${input.image},${withRegistryHost(input.image, input.fleetRegistryHost)}",push=true`
 		: `--output=type=image,name=${input.image},push=true`;
-	// Layer cache, and the reason a build takes minutes instead of seconds.
+	// Layer cache. The store that matters is now the BUILDER's PVC, not this ref.
 	//
-	// Every build runs `buildctl-daemonless.sh` in a FRESH one-shot Job pod: the
-	// buildkitd it starts keeps its snapshot store on the pod filesystem, which is
-	// destroyed when the Job ends, and the namespace has no PVC. So with no cache
-	// flags EVERY build was 100% cold — re-pulling every base layer and re-running
-	// `pnpm install` / `go mod download` from scratch each time. Measured on the
-	// live fleet: docs 19-21 min, console 2-3 min, for repos whose lockfiles had
-	// not moved. The dependency install was being redone on every single push.
+	// The registry cache existed because every build ran `buildctl-daemonless.sh`
+	// in a FRESH one-shot Job pod: the buildkitd it started kept its snapshot
+	// store on the pod filesystem, destroyed when the Job ended, and the namespace
+	// had no PVC. So EVERY build was 100% cold and a registry round-trip was the
+	// only store that outlived the pod.
 	//
-	// A registry-backed cache is the only store that outlives the pod, so it is
-	// the one that can help here. `mode=max` is what makes it worth having: the
-	// default `min` exports only the FINAL stage's layers, and every Dockerfile we
-	// build is multi-stage with a slim runtime stage — so `min` would cache
-	// precisely the cheap half and none of the install that costs the 19 minutes.
+	// Builds now run against a persistent buildkitd whose store is a PVC, which
+	// fixes the cause rather than compensating for it — and it caches strictly
+	// more, because `--mount=type=cache` contents (`/go/pkg/mod`,
+	// `/root/.cache/go-build`) are NOT expressible as registry cache at all. They
+	// were empty on every single build. Measured on hanzo-inc/cloud: `go mod
+	// download` 39.5s -> 1.0s, `go generate` 355.9s -> 88.5s, the 119-plugin
+	// compile 146.9s -> 114.5s.
 	//
-	// `ignore-error=true` on the export: a cache push is an optimization and must
-	// never be able to fail a build that otherwise succeeded (a missing scope on
-	// the push credential would otherwise turn a green build red).
+	// The EXPORT is therefore gone. It was pure cost against a persistent store:
+	// 221.3s of the 17-minute cloud build — 22% of the wall clock — spent
+	// re-uploading a cache nothing would read. `mode=max` is what made it so
+	// expensive (every intermediate stage's layers, which is also what made it
+	// worth having when the store was a registry).
 	//
-	// The ref is derived from the destination image, so it needs no new
-	// configuration and cannot drift from what it caches — same repository, a
-	// dedicated `buildcache-<arch>` tag, kept per-arch because a cross-arch import
-	// is a guaranteed miss. Digest-pinned destinations name no repository we can
-	// safely append to, hence the guard.
+	// The IMPORT stays, and only as cold-start insurance: a replica whose PVC is
+	// new has no local cache, and seeding the base layers from the registry costs
+	// 1.2s measured when the local store already has them. It is never the fast
+	// path — a build that lands on a cold builder takes 14m00s against 7m19s warm,
+	// which is why `builderAddr` pins a repo to one replica.
 	const [cacheRepo] = parseImageRef(input.image);
 	if (cacheRepo) {
-		const cacheRef = `${cacheRepo}:buildcache-${arch}`;
 		args.push(
-			`--import-cache=type=registry,ref=${cacheRef}`,
-			`--export-cache=type=registry,ref=${cacheRef},mode=max,ignore-error=true`,
+			`--import-cache=type=registry,ref=${cacheRepo}:buildcache-${arch}`,
 		);
 	}
 	args.push(
@@ -460,9 +517,13 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 				spec: {
 					automountServiceAccountToken: false,
 					restartPolicy: "Never",
-					nodeSelector: {
-						"doks.digitalocean.com/node-pool": ARCH_NODE_POOL[arch],
-					},
+					// No nodeSelector: a 100m gRPC client has no reason to consume the
+					// CI pool, and it must not — the buildkitd replicas reserve 7 of the
+					// 8 cores on each node there, so pinning clients to that pool makes
+					// them fight the builders for the last ~250m and drives pointless
+					// autoscale-ups. The build's arch is decided by which buildkitd is
+					// dialled (`builderAddr`), not by where the client happens to run.
+					// The toleration stays so the scheduler may still use the CI pool.
 					tolerations: [CI_TOLERATION],
 					containers: [
 						{
@@ -476,10 +537,22 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 							command: ["/bin/sh", "-c"],
 							args: [
 								buildkitWrapperScript(input.fleetRegistryHost),
-								"buildctl-daemonless.sh",
+								// `buildctl`, not `buildctl-daemonless.sh`: the daemon is the
+								// persistent StatefulSet this dials via `--addr`, not a
+								// throwaway one started inside this pod.
+								"buildctl",
 								...buildkitArgs(input),
 							],
-							securityContext: { privileged: true },
+							// No `privileged` any more. Starting buildkitd in-pod is what
+							// required it; a buildctl client that streams a session over gRPC
+							// needs no privilege, no /dev/fuse and no host mounts. The
+							// privileged surface is now ONE long-lived pod under the
+							// namespace's egress policy instead of one per build.
+							securityContext: {
+								allowPrivilegeEscalation: false,
+								capabilities: { drop: ["ALL"] },
+								runAsNonRoot: false,
+							},
 							env: [
 								{
 									name: "GIT_AUTH_TOKEN",
