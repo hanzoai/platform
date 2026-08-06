@@ -12,7 +12,6 @@
 
 **The deploy plane of the Open AI Cloud.** A free, self-hostable Platform as a Service (PaaS) for shipping AI apps, services, and databases — one command to run, one console to manage, your infra or ours.
 
-> Forked from [Dokploy/dokploy](https://github.com/Dokploy/dokploy) (Apache-2.0). See [NOTICE](NOTICE).
 
 Point Platform at a repo and it builds, deploys, routes, and monitors the result — Node.js, Python, Go, Rust, static sites, containers, or full `compose.yml` stacks — with zero YAML to hand-write. Run it on a single VPS, scale it across a Docker Swarm cluster, or let it drive a dedicated Kubernetes cluster of your own.
 
