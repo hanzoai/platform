@@ -12,3 +12,4 @@ Upstream Dokploy licenses content under any "/proprietary" directory under a
 separate proprietary license (LICENSE_PROPRIETARY). This fork does not include
 that content; all files derived from Dokploy in this repository are licensed
 under the Apache License, Version 2.0.
+
