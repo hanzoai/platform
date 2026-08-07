@@ -83,6 +83,24 @@ jobs:
           docker build --target platform -f Dockerfile \
             --build-arg PUBLISHABLE_KEY="$PUBLISHABLE_KEY" \
             -t "$IMAGE" .
+
+          # THE STAGE IS CHECKED BEFORE THE IMAGE LEAVES THE RUNNER.
+          #
+          # `api` is the LAST stage in the Dockerfile, so a build that loses its
+          # `--target` produces that instead — and every runtime stage starts the
+          # same server, so the mistake is invisible in the registry, survives a
+          # rollout, and only surfaces when a pod is REPLACED. v4.4.13 is that
+          # image: the api stage under the platform name, which crashlooped
+          # platform.hanzo.ai and the build door the moment its pod restarted.
+          # An unpublished failure here costs a red run; a published one costs
+          # the control plane.
+          STAGE=$(docker inspect --format '{{ index .Config.Labels "hanzo.stage" }}' "$IMAGE")
+          if [ "$STAGE" != "platform" ]; then
+            echo "::error::built the '${STAGE:-<unlabelled>}' stage, not 'platform' — refusing to push it under the platform name"
+            exit 1
+          fi
+          echo "stage verified: $STAGE"
+
           docker push "$IMAGE"
           echo "built $IMAGE"
 
