@@ -49,6 +49,8 @@ async function advanceRunning(job: BuildJob): Promise<void> {
 		outcome: outcome.succeeded ? "success" : "failure",
 		digest: outcome.digest,
 		error: outcome.reason,
+		// The `logs` column existed and was never written: 436 failures, 0 logs.
+		log: outcome.log,
 	});
 }
 

@@ -221,6 +221,8 @@ export interface BuildOutcome {
 	digest?: string;
 	/** Failure detail when `done && !succeeded`. */
 	reason?: string;
+	/** Tail of the failed pod's build log, for the `logs` column. */
+	log?: string;
 }
 
 /** RFC1123-safe lowercase segment (k8s names): [a-z0-9-], no leading/trailing dash. */
@@ -674,9 +676,53 @@ export async function readBuildOutcome(
 			digest: log ? parseImageDigest(log) : undefined,
 		};
 	}
+	// Read the log on the failure path too. `readBuildLog` already falls through
+	// to the last pod when none succeeded, so this needs nothing new from k8s.
+	// Without it every failure recorded the same sentence and nothing else:
+	// 436 failed builds in the estate, ZERO with logs captured, so no build
+	// failure was diagnosable once its pod was garbage-collected. The one real
+	// cause (an UNRESOLVED_IMPORT that pinned an app two tags behind for days)
+	// had to be recovered by re-running the build to catch a live pod.
+	const log = await readBuildLog(namespace, jobName);
+	const detail = log ? parseBuildFailure(log) : undefined;
 	return {
 		done: true,
 		succeeded: false,
-		reason: `BuildKit Job ${jobName} failed (backoff exhausted)`,
+		reason: detail
+			? `BuildKit Job ${jobName} failed: ${detail}`
+			: `BuildKit Job ${jobName} failed (backoff exhausted)`,
+		log: log ? log.slice(-LOG_TAIL_CHARS) : undefined,
 	};
+}
+
+/** Bound what a single failure can write into the `logs` column. */
+const LOG_TAIL_CHARS = 8000;
+
+/**
+ * Pull the actionable line out of a BuildKit log.
+ *
+ * BuildKit prints the real cause well before the trailing stack, e.g.
+ *   [UNRESOLVED_IMPORT] Error: Could not resolve './LxGeneric' in …
+ *   ERROR: process "/bin/sh -c … pnpm build" did not complete successfully
+ * and then `error: failed to solve: …`. The last line alone is the least
+ * useful of the three, so prefer the first genuine error and fall back to the
+ * tail only when nothing matches.
+ */
+export function parseBuildFailure(log: string): string | undefined {
+	const lines = log
+		.split("\n")
+		.map((l) => l.replace(/^#\d+\s+[\d.]+\s*/, "").trim())
+		.filter(Boolean);
+
+	const signal =
+		lines.find((l) => /^\[[A-Z_]+\]\s*Error:/.test(l)) ??
+		lines.find((l) => /^ERROR:/.test(l)) ??
+		lines.find((l) => /did not complete successfully/.test(l)) ??
+		lines.find((l) => /^error: failed to solve/.test(l)) ??
+		// Last resort: the final line that reads like a failure. Matching only
+		// /error/i misses the ones that matter most in practice — "permission
+		// denied", "no space left on device", "cannot find module".
+		lines.filter((l) => /error|failed|denied|cannot|not found|no space/i.test(l)).pop();
+
+	return signal?.slice(0, 400);
 }
