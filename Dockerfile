@@ -105,7 +105,19 @@ RUN pnpm --filter=./app/api run build \
     && cp -R app/api/dist /prod/out/dist
 
 # ── Target: platform (full PaaS runtime) ──────────────────────
+# A STAGE SAYS ITS OWN NAME.
+#
+# `api` is the LAST stage in this file, so a build that forgets `--target`
+# silently produces it — and every runtime stage starts the same server, so a
+# wrong-stage image looks correct in the registry, boots on a fresh pod, and
+# only fails when a pod is REPLACED. That is not hypothetical: v4.4.13 is the
+# `api` stage published under the platform name, and the control plane
+# (platform.hanzo.ai + the build door) crashlooped on it the moment its pod was
+# recreated — 'Cannot find module /app/dist/index.js'. The label is what lets
+# anyone check BEFORE pinning: `crane config <ref> | jq '.config.Labels'`,
+# instead of inferring the stage from the shape of its Cmd.
 FROM base AS platform
+LABEL hanzo.stage="platform"
 WORKDIR /app
 ENV NODE_ENV=production
 RUN apt-get update && apt-get install -y \
@@ -134,6 +146,7 @@ CMD ["sh", "-c", "exec pnpm start"]
 
 # ── Target: cloud (light runtime) ─────────────────────────────
 FROM base AS cloud
+LABEL hanzo.stage="cloud"
 WORKDIR /app
 ENV NODE_ENV=production
 RUN apt-get update && apt-get install -y curl unzip apache2-utils && rm -rf /var/lib/apt/lists/*
@@ -144,6 +157,7 @@ CMD ["pnpm", "start"]
 
 # ── Target: schedules ─────────────────────────────────────────
 FROM base AS schedules
+LABEL hanzo.stage="schedules"
 WORKDIR /app
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
@@ -152,6 +166,7 @@ CMD ["pnpm", "start"]
 
 # ── Target: api ───────────────────────────────────────────────
 FROM base AS api
+LABEL hanzo.stage="api"
 WORKDIR /app
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
