@@ -47,12 +47,27 @@ export const findBuildJobByTarget = async (
 	repo: string,
 	sha: string,
 	target: string,
+	/**
+	 * Optional fourth key. The webhook path already separates the images of one
+	 * commit by putting `build.name` into `target`, so it passes three and keeps
+	 * its behaviour. The direct path has no such name and used a bare
+	 * `os/arch`, which collapsed EVERY direct build of a commit into one row:
+	 * asking to build the same sha as a different image returned the earlier
+	 * job and reported the OLD image as the result.
+	 *
+	 * That is not cosmetic. This repo's Dockerfile has four final stages, so one
+	 * commit legitimately yields four images, and a request for the `platform`
+	 * stage was answered with an already-built `api` stage. Deploying what the
+	 * API called success crash-looped the StatefulSet on MODULE_NOT_FOUND.
+	 */
+	image?: string,
 ): Promise<BuildJob | undefined> => {
 	return db.query.buildJob.findFirst({
 		where: and(
 			eq(buildJob.repo, repo),
 			eq(buildJob.sha, sha),
 			eq(buildJob.target, target),
+			...(image ? [eq(buildJob.image, image)] : []),
 		),
 	});
 };

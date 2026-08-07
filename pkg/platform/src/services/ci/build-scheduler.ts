@@ -378,7 +378,8 @@ export interface DirectBuildInput {
 /**
  * Enqueue a single build directly, WITHOUT a GitHub App or webhook. Creates the
  * buildJob row and launches its BuildKit Job in-cluster. Idempotent on
- * (repo, sha, target): re-enqueuing the same target returns the existing job.
+ * (repo, sha, target, image): re-enqueuing the same image returns the existing
+ * job; asking for a different image from the same commit builds it.
  */
 export async function enqueueDirectBuild(
 	input: DirectBuildInput,
@@ -399,7 +400,15 @@ export async function enqueueDirectBuild(
 	const branch = input.branch ?? "main";
 	const ref = input.ref ?? `refs/heads/${branch}`;
 
-	const existing = await findBuildJobByTarget(input.repo, input.sha, target);
+	// Keyed on the image too. Without it a second direct build of the same
+	// commit to a DIFFERENT image returned the first job untouched, so the
+	// caller was handed a success carrying an image it never asked for.
+	const existing = await findBuildJobByTarget(
+		input.repo,
+		input.sha,
+		target,
+		input.image,
+	);
 	if (existing) return existing;
 
 	const job = await createBuildJob({
