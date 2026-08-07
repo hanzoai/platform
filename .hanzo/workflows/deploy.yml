@@ -86,11 +86,28 @@ jobs:
           docker push "$IMAGE"
           echo "built $IMAGE"
 
-      # The cluster is told the exact SHA that was just built. Declared state and
-      # the artifact can never disagree, because they are the same string.
-      - name: Declare the tag
+      # ⚠️ THIS STEP TELLS THE CLUSTER NOTHING. It writes image.txt onto an
+      # ephemeral runner filesystem that is discarded when the job ends, and it
+      # is continue-on-error, so it cannot even fail loudly. The comment that
+      # used to sit here claimed "the cluster is told the exact SHA that was
+      # just built ... declared state and the artifact can never disagree" —
+      # that guarantee does not exist. Publishing and rolling are separate, and
+      # only publishing is automated.
+      #
+      # It also named the wrong file. k8s/platform-statefulset.yaml is real but
+      # the cluster does not read it: the CD Application hanzo-cd/
+      # hanzo-platform-app reads git.hanzo.ai/hanzo/universe, path charts/app,
+      # values/hanzo/platform-app.yaml — and that file pins `tag:` AND
+      # `digest:`, which MOVE TOGETHER. Bumping the tag alone renders
+      # newtag@olddigest: the pod reports the new SHA while serving the old
+      # bytes.
+      #
+      # Keep this step honest rather than deleting it — the printed image ref
+      # is what a human needs to make that edit.
+      - name: Print the image ref for the rollout edit
         run: |
           set -euo pipefail
-          echo "ghcr.io/hanzoai/platform:${GITHUB_SHA}" > image.txt
-          echo "Pin k8s/platform-statefulset.yaml to this tag to roll it out."
+          echo "ghcr.io/hanzoai/platform:${GITHUB_SHA}"
+          echo "To roll it out, set tag AND digest together in"
+          echo "  hanzo/universe charts/app/values/hanzo/platform-app.yaml"
         continue-on-error: true
