@@ -26,11 +26,18 @@ const KMS_ENDPOINT = (process.env.KMS_ENDPOINT ?? "https://api.hanzo.ai").replac
 );
 
 async function kmsLogin(): Promise<string> {
-	const clientId = process.env.IAM_CLIENT_ID;
-	const clientSecret = process.env.IAM_CLIENT_SECRET;
+	// KMS_CLIENT_* is the machine-identity credential (the same names the
+	// ci-reusable and the forge org secrets use); IAM_CLIENT_* is the platform's
+	// OAuth-login credential and is a DIFFERENT secret for the same app — it 401s
+	// at /v1/kms/auth/login. Prefer the KMS credential; fall back to IAM only so a
+	// deployment that has not yet provisioned KMS_CLIENT_* fails with a clear login
+	// error rather than a missing-var one.
+	const clientId = process.env.KMS_CLIENT_ID ?? process.env.IAM_CLIENT_ID;
+	const clientSecret =
+		process.env.KMS_CLIENT_SECRET ?? process.env.IAM_CLIENT_SECRET;
 	if (!clientId || !clientSecret) {
 		throw new Error(
-			"IAM_CLIENT_ID/IAM_CLIENT_SECRET are unset — the platform has no KMS principal to fetch build_secrets with",
+			"KMS_CLIENT_ID/KMS_CLIENT_SECRET are unset — the platform has no KMS principal to fetch build_secrets with",
 		);
 	}
 	const res = await fetch(`${KMS_ENDPOINT}/v1/kms/auth/login`, {
