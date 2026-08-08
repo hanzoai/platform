@@ -45,6 +45,71 @@ export interface BuildConfig {
 	 */
 	tagPattern: string;
 	push: boolean;
+	/**
+	 * Per-image `--build-arg` pairs, declared as `args:` on the image entry.
+	 *
+	 * A Dockerfile that ends in `FROM ${STAGE} AS final` selects what it ships
+	 * from one of these, so dropping them does not fail — it silently builds the
+	 * ARG default and tags it as something else.
+	 */
+	buildArgs: Record<string, string>;
+}
+
+/** A Dockerfile ARG name. Anything else is not one. */
+const ARG_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * Read a flat string map of build args off untrusted input.
+ *
+ * Returns the message when the value is not that, else null. A value rides as
+ * its own argv element and never through a shell, but a KEY is spliced into
+ * `--opt=build-arg:<key>=<value>`, so a key that is not an ARG name would build
+ * a different option than it reads like. Control characters are refused for the
+ * same reason: one arg must stay one arg.
+ *
+ * Shared so the YAML lane and the request-body lane cannot disagree about what
+ * a build arg is.
+ */
+export function buildArgsProblem(value: unknown): string | null {
+	if (value === undefined) return null;
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		return "buildArgs must be an object of string values";
+	}
+	const entries = Object.entries(value);
+	if (entries.length > 64) return "buildArgs may declare at most 64 keys";
+	for (const [k, v] of entries) {
+		if (!ARG_NAME.test(k)) {
+			return `buildArgs key "${k}" is not a valid Dockerfile ARG name`;
+		}
+		if (typeof v !== "string") {
+			return `buildArgs value for "${k}" must be a string`;
+		}
+		if (v.length > 1024) {
+			return `buildArgs value for "${k}" exceeds 1024 bytes`;
+		}
+		if (/[\0\n\r]/.test(v)) {
+			return `buildArgs value for "${k}" contains a control character`;
+		}
+	}
+	return null;
+}
+
+/**
+ * Validate and normalize an `args:` map.
+ *
+ * Keys are sorted so one commit yields one argv and therefore one cache key —
+ * an image whose build args differ only in order is the same image, and should
+ * not miss the cache saying so.
+ */
+function parseBuildArgs(value: unknown, at: string): Record<string, string> {
+	const problem = buildArgsProblem(value);
+	if (problem) throw new PlatformConfigError(`${at}: ${problem}`);
+	if (value === undefined) return {};
+	const out: Record<string, string> = {};
+	for (const k of Object.keys(value as object).sort()) {
+		out[k] = (value as Record<string, string>)[k];
+	}
+	return out;
 }
 
 export interface DeployTarget {
@@ -374,6 +439,7 @@ function parseBuildBlock(build: Record<string, unknown>): BuildConfig {
 		image,
 		tagPattern: optionalString(build, "tag-pattern", "{{git.sha}}"),
 		push: build.push === undefined ? true : build.push === true,
+		buildArgs: parseBuildArgs(build.args, "build.args"),
 	};
 }
 
@@ -412,6 +478,7 @@ function parseImageEntry(entry: unknown, i: number): BuildConfig {
 		image: repo,
 		tagPattern: `{{git.sha}}-amd64-${suffix}`,
 		push: entry.push === undefined ? true : entry.push === true,
+		buildArgs: parseBuildArgs(entry.args, `${at}.args`),
 	};
 }
 
