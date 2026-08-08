@@ -527,16 +527,16 @@ describe("per-image build args", () => {
 
 	it("carries args: through to the build config", () => {
 		const cfg = withArgs("    args:\n      STAGE: dev\n");
-		expect(cfg?.builds[0].buildArgs).toEqual({ STAGE: "dev" });
+		expect(cfg?.builds[0]?.buildArgs).toEqual({ STAGE: "dev" });
 	});
 
 	it("defaults to no args when the key is absent", () => {
-		expect(withArgs("")?.builds[0].buildArgs).toEqual({});
+		expect(withArgs("")?.builds[0]?.buildArgs).toEqual({});
 	});
 
 	it("sorts keys so one commit yields one argv, and one cache key", () => {
 		const cfg = withArgs("    args:\n      ZULU: z\n      ALPHA: a\n");
-		expect(Object.keys(cfg?.builds[0].buildArgs ?? {})).toEqual([
+		expect(Object.keys(cfg?.builds[0]?.buildArgs ?? {})).toEqual([
 			"ALPHA",
 			"ZULU",
 		]);
