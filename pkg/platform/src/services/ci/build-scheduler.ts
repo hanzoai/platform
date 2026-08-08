@@ -602,6 +602,7 @@ export async function scheduleBuilds(
 				await dispatchBuild(job, input.ref, {
 					dockerfile: build.dockerfile,
 					context: build.context,
+					buildArgs: build.buildArgs,
 				}),
 			);
 		}

@@ -508,3 +508,56 @@ describe("publish paths cannot inject shell", () => {
 		);
 	});
 });
+
+/**
+ * `args:` on an image entry selects WHAT THE IMAGE IS when a Dockerfile ends in
+ * `FROM ${STAGE} AS final`. The parser used to read six keys and not this one,
+ * so the value evaporated at parse time: all four hanzoai/bot sandbox classes
+ * built the `ARG STAGE=desktop` default and were tagged exec/dev/desktop/admin
+ * anyway. Nothing failed — the tags simply stopped meaning anything.
+ *
+ * hanzoai/ci's lane always piped `.args` into `--build-arg`, so the same
+ * hanzo.yml produced different images through the two front doors.
+ */
+describe("per-image build args", () => {
+	const withArgs = (args: string) =>
+		parsePlatformConfig(
+			`images:\n  - name: sandbox-dev\n    repo: oci.hanzo.ai/hanzoai/sandbox\n    dockerfile: Dockerfile.sandbox\n    tag-suffix: dev\n${args}`,
+		);
+
+	it("carries args: through to the build config", () => {
+		const cfg = withArgs("    args:\n      STAGE: dev\n");
+		expect(cfg?.builds[0].buildArgs).toEqual({ STAGE: "dev" });
+	});
+
+	it("defaults to no args when the key is absent", () => {
+		expect(withArgs("")?.builds[0].buildArgs).toEqual({});
+	});
+
+	it("sorts keys so one commit yields one argv, and one cache key", () => {
+		const cfg = withArgs("    args:\n      ZULU: z\n      ALPHA: a\n");
+		expect(Object.keys(cfg?.builds[0].buildArgs ?? {})).toEqual([
+			"ALPHA",
+			"ZULU",
+		]);
+	});
+
+	// A key is spliced into `--opt=build-arg:<key>=<value>`; one that is not an
+	// ARG name would build a different option than it reads like.
+	it("rejects a key that is not a Dockerfile ARG name", () => {
+		expect(() => withArgs("    args:\n      'not a name': x\n")).toThrow(
+			/ARG name/,
+		);
+	});
+
+	it("rejects a non-string value", () => {
+		expect(() => withArgs("    args:\n      STAGE: 3\n")).toThrow(/string/);
+	});
+
+	// One arg must stay one argv element.
+	it("rejects a value carrying a newline", () => {
+		expect(() => withArgs('    args:\n      STAGE: "a\\nb"\n')).toThrow(
+			/control character/,
+		);
+	});
+});
