@@ -1,3 +1,7 @@
+import { buildArgsProblem } from "@hanzo/platform/services/ci";
+
+export { buildArgsProblem };
+
 /**
  * Build-enqueue request rules — the pure half of POST /v1/runner.
  *
@@ -8,33 +12,6 @@
  * exporting a helper from the route is a type error and the tests that import
  * these rules cannot reach them. Route = transport, this = policy.
  */
-
-/** A Dockerfile `ARG` name — the shape an environment identifier may take. */
-const ARG_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
-
-/**
- * Read `buildArgs` off an untrusted body as a flat string map.
- *
- * Returns the message when the field is not that, else null. Values are free
- * text (they ride as their own argv element, never through a shell), but a key
- * is spliced into `--opt=build-arg:<key>=<value>`, so anything that is not an
- * ARG name would silently build a different option than it reads like.
- */
-export function buildArgsProblem(value: unknown): string | null {
-	if (value === undefined) return null;
-	if (typeof value !== "object" || value === null || Array.isArray(value)) {
-		return "buildArgs must be an object of string values";
-	}
-	for (const [k, v] of Object.entries(value)) {
-		if (!ARG_NAME.test(k)) {
-			return `buildArgs key "${k}" is not a valid Dockerfile ARG name`;
-		}
-		if (typeof v !== "string") {
-			return `buildArgs value for "${k}" must be a string`;
-		}
-	}
-	return null;
-}
 
 /** Registry orgs we publish. Upstream images are none of our business. */
 const FIRST_PARTY =
