@@ -742,8 +742,8 @@ export interface MigrationPlan {
  * Re-point an org from the shared cluster to its dedicated one. Selects the
  * dedicated cluster as the active target and returns the resolved target.
  *
- * What this does today: every SUBSEQUENT operator-apply (deploy/redeploy via the
- * CI deploy-executor) and inventory pass resolves through
+ * What this does today: every SUBSEQUENT operator-apply and inventory pass
+ * resolves through
  * `resolveOrgClusterTarget` and therefore lands on the dedicated cluster. Moving
  * the org's ALREADY-RUNNING CRs is a re-apply of each Service CR against the new
  * target — wired through the same `resolveOrgClusterTarget` bridge, queued as a
