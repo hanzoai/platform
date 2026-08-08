@@ -106,9 +106,17 @@ function parseBuildArgs(value: unknown, at: string): Record<string, string> {
 	if (problem) throw new PlatformConfigError(`${at}: ${problem}`);
 	if (value === undefined) return {};
 	const out: Record<string, string> = {};
-	for (const k of Object.keys(value as object).sort()) {
-		out[k] = (value as Record<string, string>)[k];
-	}
+	// Entries, not keys-then-index: under `noUncheckedIndexedAccess` a lookup
+	// yields `string | undefined` even for a key that came from Object.keys, so
+	// the indexed form needed a non-null assertion to compile. Iterating entries
+	// carries the value with its key and needs none.
+	//
+	// `a < b` is UTF-16 code-unit order, which is exactly what a bare
+	// `Array.prototype.sort()` on strings does — so the sort this function exists
+	// for is unchanged. (`localeCompare` would NOT be equivalent.)
+	const entries = Object.entries(value as Record<string, string>);
+	entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+	for (const [k, v] of entries) out[k] = v;
 	return out;
 }
 
