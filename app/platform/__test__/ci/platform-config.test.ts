@@ -561,3 +561,72 @@ describe("per-image build args", () => {
 		);
 	});
 });
+
+describe("build_secrets", () => {
+	const withSecrets = (secrets: string) =>
+		`images:\n  - name: app\n    repo: ghcr.io/hanzoai/app\n    build_secrets: [${secrets}]\n`;
+
+	it("parses a publishable build_secret name", () => {
+		expect(built(withSecrets("PUBLISHABLE_KEY")).builds[0]!.buildSecrets).toEqual([
+			"PUBLISHABLE_KEY",
+		]);
+	});
+
+	it("accepts every documented publishable prefix and suffix", () => {
+		expect(
+			built(withSecrets("NEXT_PUBLIC_X, VITE_Y, REACT_APP_Z, A_PUBLIC, B_PUBLISHABLE"))
+				.builds[0]!.buildSecrets,
+		).toEqual(["NEXT_PUBLIC_X", "VITE_Y", "REACT_APP_Z", "A_PUBLIC", "B_PUBLISHABLE"]);
+	});
+
+	it("defaults to an empty list when unset", () => {
+		expect(
+			built("images:\n  - name: app\n    repo: ghcr.io/hanzoai/app\n").builds[0]!
+				.buildSecrets,
+		).toEqual([]);
+	});
+
+	it("REFUSES a non-publishable name — a real credential would leak to docker history", () => {
+		expect(() => parsePlatformConfig(withSecrets("DATABASE_URL"))).toThrow(
+			PlatformConfigError,
+		);
+		expect(() => parsePlatformConfig(withSecrets("API_SECRET"))).toThrow(
+			/not publishable/,
+		);
+	});
+
+	it("REFUSES a name that is not a Dockerfile ARG", () => {
+		expect(() => parsePlatformConfig(withSecrets('"PUBLIC-DASH"'))).toThrow(
+			/Dockerfile ARG name/,
+		);
+	});
+
+	it("REFUSES a scalar where a list is required", () => {
+		expect(() =>
+			parsePlatformConfig(
+				"images:\n  - name: app\n    repo: ghcr.io/hanzoai/app\n    build_secrets: PUBLISHABLE_KEY\n",
+			),
+		).toThrow(/must be a list/);
+	});
+});
+
+describe("kms location", () => {
+	const base = "images:\n  - name: app\n    repo: ghcr.io/hanzoai/app\n";
+
+	it("is undefined when kms is absent (fetch defaults deploy/prod)", () => {
+		expect(built(base).kms).toBeUndefined();
+	});
+
+	it("parses path and environment, trimming slashes", () => {
+		expect(built(`${base}kms:\n  path: /custom/\n  environment: staging\n`).kms).toEqual(
+			{ path: "custom", environment: "staging" },
+		);
+	});
+
+	it("defaults path=deploy env=prod when kms declares only org", () => {
+		expect(built(`${base}kms:\n  org: hanzo\n`).kms).toEqual({
+			path: "deploy",
+			environment: "prod",
+		});
+	});
+});

@@ -53,6 +53,14 @@ export interface BuildConfig {
 	 * ARG default and tags it as something else.
 	 */
 	buildArgs: Record<string, string>;
+	/**
+	 * Publishable build-time secret NAMES (`build_secrets:` on the image entry).
+	 * Each is fetched from KMS at schedule time and merged into buildArgs as
+	 * `--build-arg NAME=<value>`. Only the ci-reusable and the explicit /v1/runner
+	 * buildArgs path used to pass these; the webhook lane did not, so a repo
+	 * declaring one built with an empty value and its Dockerfile refused.
+	 */
+	buildSecrets: string[];
 }
 
 /** A Dockerfile ARG name. Anything else is not one. */
@@ -117,6 +125,43 @@ function parseBuildArgs(value: unknown, at: string): Record<string, string> {
 	const entries = Object.entries(value as Record<string, string>);
 	entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 	for (const [k, v] of entries) out[k] = v;
+	return out;
+}
+
+/**
+ * A build_secret name must be PUBLISHABLE: it is baked into the image as a
+ * `--build-arg` that `docker history` reveals, so it can only ever hold a value
+ * that is public on purpose (a client pixel key, a Mapbox token). The pattern
+ * mirrors the ci-reusable's `bin/publishable` — one rule, two spellings kept in
+ * step by matching messages.
+ */
+const PUBLISHABLE_NAME =
+	/^(?:PUBLISHABLE_|PUBLIC_|NEXT_PUBLIC_|EXPO_PUBLIC_|NUXT_PUBLIC_|VITE_|REACT_APP_)|(?:_PUBLISHABLE|_PUBLIC)$/;
+
+/**
+ * Read `build_secrets:` — a list of publishable KMS secret NAMES. Each becomes a
+ * `--build-arg` once scheduleBuilds fetches its value from KMS. Refuses a name
+ * that is not a Dockerfile ARG or not publishable: a real credential in
+ * `docker history` is the exact leak this gate exists to prevent.
+ */
+function parseBuildSecrets(value: unknown, at: string): string[] {
+	if (value === undefined) return [];
+	if (!Array.isArray(value)) {
+		throw new PlatformConfigError(`${at} must be a list of secret names`);
+	}
+	const out: string[] = [];
+	for (let i = 0; i < value.length; i++) {
+		const name = value[i];
+		if (typeof name !== "string" || !ARG_NAME.test(name)) {
+			throw new PlatformConfigError(`${at}[${i}] must be a Dockerfile ARG name`);
+		}
+		if (!PUBLISHABLE_NAME.test(name)) {
+			throw new PlatformConfigError(
+				`${at}[${i}] "${name}" is not publishable — a build_secret is baked into the image where \`docker history\` reveals it. Rename it (PUBLISHABLE_*, PUBLIC_*, NEXT_PUBLIC_*, VITE_*, REACT_APP_*) if the value is public on purpose; a real credential cannot be a build_secret.`,
+			);
+		}
+		out.push(name);
+	}
 	return out;
 }
 
@@ -201,6 +246,13 @@ export interface PlatformConfig {
 	 * Read verbatim; interpreted by services/ci/forge-source.
 	 */
 	source?: string;
+	/**
+	 * Where `build_secrets:` are read in KMS. `path`/`environment` default to
+	 * `deploy`/`prod`; the tenant is the platform's own KMS principal (the fetch is
+	 * scoped by the access token's `owner`, so it is not restated here). Declared
+	 * as `kms:` in hanzo.yml — the same block the ci-reusable reads.
+	 */
+	kms?: { path: string; environment: string };
 }
 
 const VALID_OS: readonly BuildOS[] = ["linux", "darwin", "windows"];
@@ -448,6 +500,7 @@ function parseBuildBlock(build: Record<string, unknown>): BuildConfig {
 		tagPattern: optionalString(build, "tag-pattern", "{{git.sha}}"),
 		push: build.push === undefined ? true : build.push === true,
 		buildArgs: parseBuildArgs(build.args, "build.args"),
+		buildSecrets: parseBuildSecrets(build.build_secrets, "build.build_secrets"),
 	};
 }
 
@@ -487,6 +540,7 @@ function parseImageEntry(entry: unknown, i: number): BuildConfig {
 		tagPattern: `{{git.sha}}-amd64-${suffix}`,
 		push: entry.push === undefined ? true : entry.push === true,
 		buildArgs: parseBuildArgs(entry.args, `${at}.args`),
+		buildSecrets: parseBuildSecrets(entry.build_secrets, `${at}.build_secrets`),
 	};
 }
 
@@ -549,6 +603,17 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
 		);
 	}
 
+	let kms: PlatformConfig["kms"];
+	if (raw.kms !== undefined) {
+		if (!isObject(raw.kms)) {
+			throw new PlatformConfigError("kms, when present, must be a mapping");
+		}
+		kms = {
+			path: optionalString(raw.kms, "path", "deploy").replace(/^\/+|\/+$/g, ""),
+			environment: optionalString(raw.kms, "environment", "prod"),
+		};
+	}
+
 	let deploy: DeployConfig | undefined;
 	if (raw.deploy !== undefined) {
 		if (!isObject(raw.deploy)) {
@@ -577,6 +642,7 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
 				deploy: undefined,
 				e2e: parseE2e(raw.e2e),
 				publish: parsePublish(raw.publish),
+				kms,
 			};
 		}
 		if (!isObject(d.target)) {
@@ -617,6 +683,7 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
 		deploy,
 		e2e: parseE2e(raw.e2e),
 		publish: parsePublish(raw.publish),
+		kms,
 	};
 }
 

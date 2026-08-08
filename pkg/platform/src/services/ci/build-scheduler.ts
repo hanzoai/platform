@@ -28,6 +28,7 @@ import {
 	findBuildJobByTarget,
 	updateBuildJob,
 } from "./build-job";
+import { fetchBuildSecrets } from "./build-secrets";
 import { launchBuildJob } from "./buildkit-job";
 import { assertBuildableFromCanonicalSource } from "./forge-source";
 import { githubReachability, readForgeRepoFacts } from "./forge-source-probe";
@@ -554,6 +555,20 @@ export async function scheduleBuilds(
 		console.info(`[build] source check passed: ${why}`);
 	}
 
+	// Publishable `build_secrets:` → --build-args, fetched from KMS ONCE for the
+	// whole config (the same value serves every image). The webhook lane never did
+	// this — only the ci-reusable and the explicit /v1/runner buildArgs path — so a
+	// platform-lane repo declaring one built with an EMPTY value and its Dockerfile
+	// refused. Fail closed: fetchBuildSecrets throws if any declared name will not
+	// resolve, stopping the whole delivery rather than baking an empty value.
+	const declaredSecrets = [
+		...new Set(config.builds.flatMap((b) => b.buildSecrets)),
+	];
+	const secretArgs = await fetchBuildSecrets(declaredSecrets, {
+		path: config.kms?.path ?? "deploy",
+		env: config.kms?.environment ?? "prod",
+	});
+
 	const jobs: BuildJob[] = [];
 	// One job per (image, matrix entry). The target key includes the image name
 	// for multi-image repos so two images on the same os/arch don't collide;
@@ -598,11 +613,19 @@ export async function scheduleBuilds(
 				status: "queued",
 				rolloutStatus: "skipped",
 			});
+			// Merge this image's fetched build_secrets over its declared args.
+			// fetchBuildSecrets guaranteed each declared name resolved, so the
+			// value is present; a name absent from secretArgs was never declared.
+			const buildArgs: Record<string, string> = { ...build.buildArgs };
+			for (const name of build.buildSecrets) {
+				const value = secretArgs[name];
+				if (value !== undefined) buildArgs[name] = value;
+			}
 			jobs.push(
 				await dispatchBuild(job, input.ref, {
 					dockerfile: build.dockerfile,
 					context: build.context,
-					buildArgs: build.buildArgs,
+					buildArgs,
 				}),
 			);
 		}
