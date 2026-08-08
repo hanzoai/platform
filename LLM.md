@@ -57,10 +57,10 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
   `build-job` (DB CRUD), `build-scheduler` (dispatch via `launchBuildJob`),
   `buildkit-job` (the build muscle — BuildKit Job + outcome read), `build-watcher`
   (the heartbeat: polls BuildKit Jobs, drives the pipeline), `build-completion`
-  (post-build orchestrator: deploy → e2e → publish, App-free config via
-  `GH_TOKEN`), `deploy-executor` (merge-patch operator `Service` CR
-  `.spec.image`), `e2e-runner` (Playwright Job), `publish-job` (npm/pypi Job,
-  KMS tokens).
+  (post-build orchestrator: promote → e2e → publish, App-free config via
+  `GH_TOKEN`), `promote` (the smoke→pin state machine), `smoke-runner`
+  (candidate pod + verdict), `pin` (the universe commit), `e2e-runner`
+  (Playwright Job), `publish-job` (npm/pypi Job, KMS tokens).
 - DB: `build_job` table (`pkg/platform/src/db/schema/build-job.ts`); migration
   `drizzle/0005_build_pipeline_columns.sql` adds `buildJobName`/`imageDigest`/
   `e2e*`/`publish*` and drops the dead `arcd_runner` table.
@@ -77,13 +77,83 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
 - PROVEN LIVE (v4.4.4): `POST /v1/runner` for `hanzoai/pricing` created a
   `build_job` row → platform launched the BuildKit Job (`build-pricing-*`,
   `managed-by=platform`) → pushed `ghcr.io/hanzoai/pricing:v1.1.2` → the
-  build-watcher flipped the row to `succeeded`. The auto-deploy leg
-  (build-completion → deploy-executor) correctly REFUSED via the tenant gate
-  (pricing's `hanzo.yml` targets system ns `hanzo` ≠ the build org's
-  `tenant-<org>`); system services deploy by patching the operator `Service` CR
-  (`kubectl patch services.hanzo.ai/<svc> .spec.image.tag`) → operator rolls it.
-  The fully-autonomous build→deploy→e2e one-shot is for TENANT apps whose
-  `hanzo.yml` targets their own tenant namespace.
+  build-watcher flipped the row to `succeeded`. The auto-deploy leg correctly
+  REFUSED via the tenant gate (pricing's `hanzo.yml` targets system ns `hanzo` ≠
+  the build org's `tenant-<org>`).
+
+### Promotion is a COMMIT, and a build must START before it earns one
+
+**The change (2026-08).** `build-completion` used to call `executeDeploy`, which
+merge-patched the operator CR's `.spec.image` the instant a build compiled. Three
+things were wrong at once, and the code said all three out loud:
+
+- **No verification.** A build proves the code compiles. api.hanzo.ai went down
+  on an image that compiled and then panicked at init on a duplicate route prefix
+  → CrashLoopBackOff, on a single-writer service (RWO PVC + embedded Kafka,
+  `strategy: Recreate`) with no safe rollback. Nothing between `docker push` and
+  production had ever run those bytes.
+- **The test was post-facto.** `build-completion.ts` itself noted "e2e runs
+  against the LIVE service, so it only fires after a real rollout". The pipeline
+  was build → DEPLOY → test. The test reported; it never gated.
+- **It wrote running state, not declared state.** cd.hanzo.ai reconciles
+  `charts/app/values/*/*.yaml` from `git.hanzo.ai/hanzo/universe@main`
+  (`infra/k8s/hanzo-cd/applicationset-fleet.yaml`). A CR patch moved the cluster
+  and left git saying something else — a deploy with no diff and no history.
+
+**Now:** `BUILT → SMOKE → PIN → (CD reconciles, out of band)`, in
+`services/ci/promote.ts`, with `rolloutStatus` carrying the position
+(`skipped`/`pending`/`smoking`/`smoke-failed`/`promoted`/`failed`). `promoted` is
+the ONLY value meaning an image was declared; `applied` is gone with the patcher.
+
+- **smoke** (`smoke-runner.ts`) starts the exact digest-pinned image in ONE
+  throwaway pod derived from the LIVE Deployment/StatefulSet pod template, and
+  waits for the app's own readiness probe. Prod-faithful (real env, secrets,
+  probes, SA, placement), prod-inert by four departures: labels REPLACED (a
+  Service selects on labels — a candidate wearing the app's would take live
+  traffic), every PVC → `emptyDir`, `restartPolicy: Never` so a crash reads as a
+  crash, `HANZO_SMOKE=1` on every container. Pod name is
+  `<app>-smoke-<digest12>`, so a re-tick adopts the running candidate instead of
+  racing a second. Teardown is in a `finally`, including when the create throws.
+- **pin** (`pin.ts`) commits `image.tag` + `image.digest` to
+  `charts/app/values/<ns>/<name>.yaml` via the forge contents API — GET (blob
+  sha = optimistic concurrency) → one-line edit → PUT. **Both halves, always**:
+  `_helpers.tpl:app.image` renders `repo:tag@digest` and RESOLVES BY DIGEST, so
+  writing one without the other is the failure that succeeds at doing nothing
+  (v1.801.362 reported .362 and ran .361). Verified byte-for-byte against all
+  **117 pinnable values files**: only the tag/digest lines move, the file still
+  parses, both read back as strings, idempotent. **`digest:` is a SIBLING key —
+  never `tag: v1@sha256:…`, which would render `repo:tag@NEW@OLD` and pull
+  nothing.**
+- **Refusals, none of which write anything:** repository must match the file's
+  (a build cannot repoint a service at another image); the values file must
+  already exist (the directory is the inventory — enrolling a service stays
+  deliberate); the build must carry a digest; `authorizeNamespace` runs before
+  anything starts. `promoteBuild` never throws — a refused promotion must not
+  cost a library repo its publish stage.
+
+**Same invariant, two writers.** `universe charts/app/pin.sh` does this edit for
+a service whose own CI has a checkout; this does it from a pod that has none.
+Both stamp `Pinned-by:`, and `pin.sh --verify` checks both in CI.
+
+**Load-bearing fact: the old patcher never fired.** All 1,439 `build_job` rows in
+the live DB read `rolloutStatus: skipped` — `PLATFORM_FLEET_NAMESPACE_OWNERS` is
+unset on the pod, so `fleetNamespaceOwners()` is empty and every fleet deploy was
+refused. The bug was a loaded gun with the safety on by accident. Nothing froze
+when this landed because nothing was flowing; the fleet deploys via `pin.sh` from
+each service's CI.
+
+**Two preconditions before promotion can work at all** — both intentionally
+fail-closed until met: the `platform-app-smoke` Role (`pods: create,get,delete`,
+`k8s/platform-rbac.yaml`) must be applied in the target namespace, and
+`PLATFORM_FLEET_NAMESPACE_OWNERS` must name real org ids. No privilege, no
+deploy — never no privilege, deploy anyway.
+
+**The other gate, which is NOT this one.** `universe
+charts/app/templates/e2e-gate.yaml` is a CD **PreSync** hook that boots the
+candidate beside Playwright and refuses the sync if routes throw. It is a
+different property (does it RENDER) at a different moment (before apply) and it
+is opt-in — measured 2026-08: **1 of 124 values files sets `e2e.enabled`**. The
+smoke here is universal and needs no per-app authoring. Keep both; they compose.
 
 ### Gitea Actions on git.hanzo.ai — the GitHub-Actions-compatible on-ramp
 

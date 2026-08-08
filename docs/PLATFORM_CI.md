@@ -43,19 +43,26 @@ service-token  ─direct──▶ /v1/runner         (Bearer PLATFORM_BUILD_CALL
                         build-watcher ── reads the BuildKit Job status
                               │  succeeded → completeBuild():
                               │     markSucceeded(+digest)
-                              │     → DeployExecutor: merge-patch operator Service CR
-                              │         `.spec.image` → operator rolls out
+                              │     → promoteBuild():
+                              │         SMOKE the exact image in one throwaway pod
+                              │         → passed? PIN tag+digest into universe
+                              │            charts/app/values/<ns>/<name>.yaml
+                              │            → cd.hanzo.ai reconciles, out of band
                               │     → e2e Job (runE2e) against the LIVE service
                               │     → publish Job (npm/pypi) for library/SDK repos
                               ▼
                         reconcilePostBuild() ── polls e2e + publish Jobs to terminal
 ```
 
+Platform NEVER writes running state. Promotion is one commit to one git repo, so
+the worst a bug here can do is fail to deploy — it cannot deploy the wrong thing.
+
 Source: `pkg/platform/src/services/ci/` — `platform-config` (`hanzo.yml`
 parser + validator), `github-webhook` (decoder + HMAC), `build-job` (DB CRUD),
 `build-scheduler` (BuildKit dispatch), `buildkit-job` (the build muscle),
 `build-watcher` (the heartbeat), `build-completion` (the post-build
-orchestrator: deploy → test → publish), `deploy-executor` (operator CR patch),
+orchestrator: promote → test → publish), `promote` (the state machine),
+`smoke-runner` (candidate pod + verdict), `pin` (the universe commit),
 `e2e-runner` (Playwright Job), `publish-job` (npm/pypi Job).
 
 ## The single build path: in-cluster BuildKit
@@ -73,17 +80,20 @@ applied by hand before this was automated:
   with the `dedicated=ci-runner` toleration;
 - `automountServiceAccountToken: false` — the build pod gets no cluster creds.
 
-The `paas` pod's ServiceAccount (`hanzo-paas-sa`) already has the RBAC to
-create + watch Jobs and patch operator `Service` CRs — the same seam the
-e2e-runner and deploy-executor use. There is exactly ONE k8s client.
+The platform pod's ServiceAccount (`platform-app`) reads the estate cluster-wide
+and creates Jobs in `hanzo-build`. Its ONE write grant into an app namespace is
+`platform-app-smoke` (`pods: create,get,delete`, `k8s/platform-rbac.yaml`) — the
+narrowest verbs that can express "run these bytes once". A namespace without that
+Role cannot be smoked into, and a smoke that cannot run does not promote: no
+privilege, no deploy. There is exactly ONE k8s client.
 
 ## The heartbeat: build-watcher
 
 BuildKit Jobs cannot call back, so the watcher (`startBuildWatcher`, started from
 `server/server.ts` in-cluster, gate `BUILD_WATCHER_DISABLED=true`) polls every
 `running` build_job's BuildKit Job. On success it calls `completeBuild`, which
-records the digest, rolls out the deploy, fires the e2e Job, and arms publish;
-on failure it marks the row failed. It then ticks `reconcilePostBuild` for
+records the digest, runs the promotion (smoke → pin), fires the e2e Job, and arms
+publish; on failure it marks the row failed. It then ticks `reconcilePostBuild` for
 succeeded rows until e2e + publish reach a terminal state. The pipeline is
 fully autonomous — no human polls, no callback is required (the
 `/v1/build-callback` REST hook remains for an external builder that wants to
@@ -222,16 +232,25 @@ without a token and without mutating any registry.
    webhook secret matching the provider's `githubWebhookSecret`.
 3. Push a commit; confirm a `build_job` appears (tRPC `buildJob.list`), the
    image lands at `ghcr.io/<org>/<repo>:<sha>`, and (on a deploy branch) the
-   operator Service CR rolls.
+   row reaches `rolloutStatus: promoted` with a commit on
+   `charts/app/values/<ns>/<name>.yaml` in universe.
 
 A repo can also be built with no GitHub App at all via `POST /v1/runner`.
 Repos WITHOUT a `hanzo.yml` are ACKed with 202 and nothing is scheduled.
 
 ## Known limitations (this cut)
 
-- `DeployExecutor` patches an EXISTING operator `Service` CR's `.spec.image`.
-  It does not create the CR — the target service must already be operator-
-  managed. A missing CR yields a real rollout error, never a silent success.
+- Promotion moves an EXISTING values file's pin. It does not create one — the
+  ApplicationSet treats the directory as the inventory, and a new file starts
+  with `cd.automated` off, so enrolling a service stays a deliberate act. A
+  missing file is a named refusal, never a silent success.
+- The smoke needs `platform-app-smoke` (`pods: create,get,delete`) applied in
+  the target namespace. Until it is, every promotion stops at `failed` with the
+  RBAC message and nothing is committed — the intended direction of failure.
+- The e2e Job runs against the LIVE domain, so it races the CD reconcile that
+  the pin triggers. It reports; it has never gated. The gate that runs BEFORE a
+  sync applies is the chart's own PreSync hook
+  (`universe charts/app/templates/e2e-gate.yaml`, per-service `e2e.enabled`).
 - Builds target the `runner-pool-32g` (amd64) pool; an `arm64` matrix entry
   needs an arm64 runner pool (its Job pends visibly until one exists — never a
   silent mis-build).

@@ -5,8 +5,8 @@
  * between forges is *transport* — which header carries the event name, which
  * header carries the signature, how that signature is encoded. What does NOT
  * differ is *meaning*: a commit landed on a ref of a repo. This module owns
- * that split, so everything downstream (BuildScheduler, BuildKit Job,
- * DeployExecutor) is forge-agnostic and never learns who delivered the event.
+ * that split, so everything downstream (BuildScheduler, BuildKit Job, smoke,
+ * pin) is forge-agnostic and never learns who delivered the event.
  *
  * Thin and dependency-free: we deliberately do NOT pull in
  * `@octokit/webhooks` — we only need a handful of fields and the signature

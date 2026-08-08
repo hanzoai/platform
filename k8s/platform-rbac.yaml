@@ -68,3 +68,51 @@ subjects:
   - kind: ServiceAccount
     name: platform-app
     namespace: hanzo
+---
+# The smoke. `services/ci/smoke-runner` starts the exact built image in one
+# throwaway pod and promotes only if it reaches readiness — so it needs to create
+# a pod, watch it, and delete it. NAMESPACED and per-namespace on purpose: this is
+# the one write grant platform holds, and it is the narrowest verb set that can
+# express "run these bytes once".
+#
+# Scope honestly: pod-create in a namespace is the right to mount any Secret in
+# that namespace, which is why this is a Role bound in `hanzo` rather than a line
+# added to the cluster-wide reader above. Two things bound it, and both are in the
+# code rather than in RBAC, which cannot see inside a pod spec:
+#
+#   the SPEC is derived from the LIVE Deployment, never from repo input — so the
+#   secret set is exactly what the app already mounts, and a connected repo has no
+#   way to name a different one;
+#   the NAMESPACE is checked by `authorizeNamespace` before anything is created,
+#   so an org can only smoke into a namespace it already owns.
+#
+# A namespace that has not applied this Role cannot be smoked into, and a smoke
+# that cannot run does not promote. That is the intended failure: no privilege,
+# no deploy — never no privilege, deploy anyway.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: platform-app-smoke
+  namespace: hanzo
+  labels:
+    app.kubernetes.io/part-of: hanzo-platform
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: platform-app-smoke
+  namespace: hanzo
+  labels:
+    app.kubernetes.io/part-of: hanzo-platform
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: platform-app-smoke
+subjects:
+  - kind: ServiceAccount
+    name: platform-app
+    namespace: hanzo
