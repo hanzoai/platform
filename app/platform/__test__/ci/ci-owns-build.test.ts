@@ -17,7 +17,13 @@ const SHA = "7c50638eb180f3d6b0cb95102032d95f91f1cc7f";
 
 /** Serve the two GETs `ciOwnsBuild` makes: the repo, then the caller file. */
 function serve(repo: Response | Error, caller?: Response | Error) {
-	const f = vi.fn(async (url: string) => {
+	// Both parameters, because the code under test calls `fetch(url, init)` and
+	// this file asserts on the init. Declared with one, `f.mock.calls[0]` typed as
+	// `[url: string] | undefined` and the cast to `[string, RequestInit]` was a
+	// TS2352 — a 1-tuple does not overlap a 2-tuple — which failed `tsc --noEmit`
+	// and took the whole cicd lane with it. A mock should carry the signature it
+	// stands in for.
+	const f = vi.fn(async (url: string, _init?: RequestInit) => {
 		const which = url.includes("/contents/") ? caller : repo;
 		if (which instanceof Error) throw which;
 		if (!which) throw new Error(`unexpected fetch: ${url}`);
