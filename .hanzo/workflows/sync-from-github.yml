@@ -1,0 +1,66 @@
+name: Sync from GitHub
+# git.hanzo.ai is the build plane; development also lands on
+# github.com/hanzoai/platform. Without this job nothing pulls one to the other,
+# and the forge quietly serves older source than anyone is reading.
+#
+# That is not hypothetical. On 2026-08-08 the forge sat three commits behind for
+# hours, so `8ea8386` ("carry an image's args: into the build") was never
+# compiled by anything — it carried four type errors and looked fine, because the
+# only thing that would have caught them never saw it. The gap surfaced the
+# moment the forge was fast-forwarded by hand. Every sibling repo (chat, app, id)
+# already had this workflow; platform was the one without it.
+#
+# ONE deterministic direction: an in-cluster PULL. The runner reaches both ends —
+# GitHub outbound and this git via the instance URL actions/checkout already
+# uses — so there is no ingress dependency. Fast-forward ONLY: a real divergence
+# fails loudly here instead of force-pushing either side and losing somebody's
+# commits.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+concurrency:
+  group: sync-from-github
+  cancel-in-progress: false
+jobs:
+  ff-main:
+    runs-on: [hanzo-build-linux-amd64]
+    steps:
+      - name: Checkout main (full history for the ancestry check)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Persist the token-auth remote so the push below reuses it.
+          persist-credentials: true
+      - name: Fast-forward main from github.com/hanzoai/platform
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          set -euo pipefail
+          git fetch --quiet "https://x-access-token:${GH_PAT}@github.com/hanzoai/platform.git" main
+          LOCAL="$(git rev-parse HEAD)"
+          REMOTE="$(git rev-parse FETCH_HEAD)"
+          if [ "$LOCAL" = "$REMOTE" ]; then
+            echo "in sync at $LOCAL"
+            exit 0
+          fi
+          if git merge-base --is-ancestor "$LOCAL" "$REMOTE"; then
+            echo "fast-forwarding $LOCAL -> $REMOTE"
+            git push origin "$REMOTE:refs/heads/main"
+            # A push made with the workflow token does NOT trigger other
+            # workflows (loop prevention), so synced commits would never build.
+            # Dispatch the build explicitly — a real fast-forward means real
+            # commits arrived, which is exactly when a build is wanted.
+            curl -fsS --max-time 20 -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              "${{ github.server_url }}/v1/repos/${{ github.repository }}/actions/workflows/cicd.yml/dispatches" \
+              -d '{"ref":"main"}' \
+              && echo "cicd dispatched" || echo "cicd dispatch failed (non-fatal — next direct push will build)"
+          elif git merge-base --is-ancestor "$REMOTE" "$LOCAL"; then
+            echo "this git is AHEAD of GitHub ($REMOTE ancestor of $LOCAL) — nothing to pull."
+            echo "(GitHub catch-up is a separate concern; never force from here.)"
+          else
+            echo "::error::main DIVERGED between GitHub ($REMOTE) and this git ($LOCAL) — refusing to force. Reconcile manually."
+            exit 1
+          fi
