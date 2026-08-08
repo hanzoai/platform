@@ -16,7 +16,15 @@
  * (same credential as /v1/build-callback) — this is an infra surface, not a
  * user-facing one, so it does not use the IAM session.
  */
-import { enqueueDirectBuild } from "@hanzo/platform/services/ci";
+import {
+	buildArgsProblem,
+	enqueueDirectBuild,
+} from "@hanzo/platform/services/ci";
+
+// One definition, in pkg, so the YAML lane and this request body cannot
+// disagree about what a build arg is. Re-exported because this module is where
+// the gate's tests have always read it from.
+export { buildArgsProblem };
 import { TRPCError } from "@trpc/server";
 import { safeEqual } from "@/server/v1/http";
 
@@ -41,33 +49,6 @@ interface EnqueueBody {
 	os?: "linux" | "darwin" | "windows";
 	arch?: "amd64" | "arm64";
 	organizationId?: string;
-}
-
-/** A Dockerfile `ARG` name — the shape an environment identifier may take. */
-const ARG_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
-
-/**
- * Read `buildArgs` off an untrusted body as a flat string map.
- *
- * Returns the message when the field is not that, else null. Values are free
- * text (they ride as their own argv element, never through a shell), but a key
- * is spliced into `--opt=build-arg:<key>=<value>`, so anything that is not an
- * ARG name would silently build a different option than it reads like.
- */
-export function buildArgsProblem(value: unknown): string | null {
-	if (value === undefined) return null;
-	if (typeof value !== "object" || value === null || Array.isArray(value)) {
-		return "buildArgs must be an object of string values";
-	}
-	for (const [k, v] of Object.entries(value)) {
-		if (!ARG_NAME.test(k)) {
-			return `buildArgs key "${k}" is not a valid Dockerfile ARG name`;
-		}
-		if (typeof v !== "string") {
-			return `buildArgs value for "${k}" must be a string`;
-		}
-	}
-	return null;
 }
 
 /** Registry orgs we publish. Upstream images are none of our business. */
