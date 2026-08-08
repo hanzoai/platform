@@ -3,8 +3,8 @@
  *
  * The platform-build workflow (running on an arcd runner) calls this once it
  * has built and pushed the image to GHCR, reporting the build-job outcome.
- * On success, platform records the result and hands the job to the
- * DeployExecutor for rollout.
+ * On success, platform records the result and hands the job to promotion:
+ * smoke the exact image, then commit its digest to universe for CD to roll.
  *
  * Auth: a shared bearer token (PLATFORM_BUILD_CALLBACK_TOKEN) injected into
  * the build workflow as a secret. This is a machine-to-machine surface, not a

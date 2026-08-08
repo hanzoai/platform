@@ -1,0 +1,290 @@
+/**
+ * promote — the state machine that decides whether a build reaches production.
+ *
+ * ONE PROPERTY MATTERS MORE THAN THE REST, and most of this file is about it:
+ *
+ *   NOTHING IS COMMITTED UNLESS A SMOKE PASSED FIRST.
+ *
+ * Every other outcome — refused, unnamed, unauthorized, errored, timed out —
+ * must leave universe untouched, which means production untouched. So each test
+ * below asserts the pin was NOT written, not merely that a status string changed:
+ * a state machine that reports `smoke-failed` while having already committed is
+ * exactly the bug this replaced.
+ *
+ * The suite also pins the ORDER. `smoke` must be called before `commitPin`, and
+ * `commitPin` must not be reachable from any path where `smoke` did not return
+ * passed — that ordering is the whole design, and it is the thing a later
+ * refactor is most likely to break silently.
+ *
+ * Nothing external is contacted: smoke, pin and the row writer are stubs that
+ * record what they were asked to do.
+ */
+import type { BuildJob } from "@hanzo/platform/db/schema";
+import type { DeployConfig } from "@hanzo/platform/services/ci/platform-config";
+import { promoteBuild } from "@hanzo/platform/services/ci/promote";
+import { tenantNamespace } from "@hanzo/platform/services/k8s/operator/namespace-authz";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const DIGEST =
+	"sha256:60ca34bd76f3472f8c5b4903c6516686bbdfce696b4569aaa80c1fbac4e3085e";
+
+// Production-shaped principals: organization ids are nanoids, never brand names.
+// Testing authorization with readable ids would let a brand-keyed bug pass green.
+const { FLEET_ORG, OTHER_ORG, TENANT_ORG } = vi.hoisted(() => ({
+	FLEET_ORG: "Yb5GFGDBEwcLsv2O8qWjS",
+	OTHER_ORG: "Lx7QpZm2NvKd8RtYeWc1A",
+	TENANT_ORG: "Mx3KpQr9TvBn2WsLdYe5F",
+}));
+
+const spy = vi.hoisted(() => ({
+	/** Every stage call, in order — the ordering assertions read this. */
+	order: [] as string[],
+	smokeInput: null as Record<string, unknown> | null,
+	pinInput: null as Record<string, unknown> | null,
+	rows: [] as Record<string, unknown>[],
+	smokePassed: true,
+	smokeReason: "ready",
+	smokeThrows: null as unknown,
+	pinCommitted: true,
+	pinThrows: null as unknown,
+}));
+
+vi.mock("@hanzo/platform/services/ci/smoke-runner", () => ({
+	smoke: vi.fn(async (input: Record<string, unknown>) => {
+		spy.order.push("smoke");
+		spy.smokeInput = input;
+		if (spy.smokeThrows) throw spy.smokeThrows;
+		return { passed: spy.smokePassed, reason: spy.smokeReason, pod: "p" };
+	}),
+}));
+
+vi.mock("@hanzo/platform/services/ci/pin", () => ({
+	commitPin: vi.fn(async (input: Record<string, unknown>) => {
+		spy.order.push("pin");
+		spy.pinInput = input;
+		if (spy.pinThrows) throw spy.pinThrows;
+		return {
+			committed: spy.pinCommitted,
+			path: "charts/app/values/hanzo/cloud.yaml",
+			tag: "sha-new1234",
+			digest: DIGEST,
+			reason: "pinned",
+		};
+	}),
+}));
+
+vi.mock("@hanzo/platform/services/ci/build-job", () => ({
+	updateBuildJob: vi.fn(async (_id: string, patch: Record<string, unknown>) => {
+		spy.rows.push(patch);
+		return {};
+	}),
+}));
+
+function job(over: Partial<BuildJob> = {}): BuildJob {
+	return {
+		buildJobId: "bj_1",
+		repo: "hanzoai/cloud",
+		branch: "main",
+		image: "ghcr.io/hanzoai/cloud:sha-new1234",
+		imageDigest: DIGEST,
+		status: "succeeded",
+		organizationId: FLEET_ORG,
+		...over,
+	} as BuildJob;
+}
+
+function deploy(over: Partial<DeployConfig["target"]> = {}): DeployConfig {
+	return {
+		on: ["main"],
+		target: {
+			cluster: "hanzo-k8s",
+			namespace: "hanzo",
+			operator: "hanzo-operator",
+			crd: "App",
+			name: "cloud",
+			...over,
+		},
+	};
+}
+
+/** The last rolloutStatus written — where the machine came to rest. */
+const finalState = () =>
+	[...spy.rows].reverse().find((r) => r.rolloutStatus)?.rolloutStatus;
+const committed = () => spy.order.includes("pin");
+
+beforeEach(() => {
+	spy.order = [];
+	spy.smokeInput = null;
+	spy.pinInput = null;
+	spy.rows = [];
+	spy.smokePassed = true;
+	spy.smokeReason = "ready";
+	spy.smokeThrows = null;
+	spy.pinCommitted = true;
+	spy.pinThrows = null;
+	// Fleet authority is DATA, and empty by default. Configure it the way
+	// production does — through the env var the real reader reads.
+	process.env.PLATFORM_FLEET_NAMESPACE_OWNERS = `hanzo=${FLEET_ORG}`;
+});
+
+afterEach(() => {
+	process.env.PLATFORM_FLEET_NAMESPACE_OWNERS = "";
+});
+
+describe("promoteBuild — the one path that promotes", () => {
+	it("smokes the image, THEN commits the pin — in that order", async () => {
+		const res = await promoteBuild(job(), deploy());
+		expect(spy.order).toEqual(["smoke", "pin"]);
+		expect(res).toMatchObject({ promoted: true, state: "promoted" });
+		expect(finalState()).toBe("promoted");
+	});
+
+	it("smokes the digest-pinned reference, not the mutable tag", async () => {
+		await promoteBuild(job(), deploy());
+		// A tag can be overwritten between push and smoke. The bytes cannot.
+		expect(spy.smokeInput?.image).toBe(
+			`ghcr.io/hanzoai/cloud:sha-new1234@${DIGEST}`,
+		);
+		expect(spy.smokeInput).toMatchObject({ namespace: "hanzo", name: "cloud" });
+	});
+
+	it("pins the same digest it smoked — one resolution, used twice", async () => {
+		await promoteBuild(job(), deploy());
+		expect(spy.pinInput?.digest).toBe(DIGEST);
+		expect(spy.smokeInput?.digest).toBe(DIGEST);
+	});
+
+	it("records the target on the row so the board can name it", async () => {
+		await promoteBuild(job(), deploy());
+		expect(spy.rows.some((r) => r.rolloutTarget === "hanzo/cloud")).toBe(true);
+	});
+
+	it("passes through the tenant basis with no special case", async () => {
+		const ns = tenantNamespace(TENANT_ORG);
+		const res = await promoteBuild(
+			job({ organizationId: TENANT_ORG }),
+			deploy({ namespace: ns, name: "api" }),
+		);
+		expect(res.state).toBe("promoted");
+		expect(spy.pinInput).toMatchObject({ namespace: ns, name: "api" });
+	});
+
+	it("reports promoted:false when the file already named this image", async () => {
+		// Idempotence reaching the caller: an unchanged pin gives CD nothing to
+		// reconcile, so the stages that follow a rollout must not re-arm.
+		spy.pinCommitted = false;
+		const res = await promoteBuild(job(), deploy());
+		expect(res).toMatchObject({ promoted: false, state: "promoted" });
+	});
+});
+
+describe("promoteBuild — every other path commits NOTHING", () => {
+	it("stops on a failed smoke, terminally, without pinning", async () => {
+		spy.smokePassed = false;
+		spy.smokeReason = "container cloud is CrashLoopBackOff";
+		const res = await promoteBuild(job(), deploy());
+
+		expect(res).toMatchObject({ promoted: false, state: "smoke-failed" });
+		expect(committed()).toBe(false);
+		expect(spy.order).toEqual(["smoke"]);
+		expect(finalState()).toBe("smoke-failed");
+		// The reason reaches the row, so the board says why.
+		expect(spy.rows.at(-1)?.error).toContain("CrashLoopBackOff");
+	});
+
+	it("stops when the smoke itself errors — an unobserved image is an unverified image", async () => {
+		spy.smokeThrows = new Error("pods is forbidden: cannot create resource");
+		const res = await promoteBuild(job(), deploy());
+		expect(res.state).toBe("failed");
+		expect(committed()).toBe(false);
+		expect(spy.rows.at(-1)?.error).toContain("forbidden");
+	});
+
+	it("stops when the build recorded no digest — it cannot name what it made", async () => {
+		const res = await promoteBuild(job({ imageDigest: null }), deploy());
+		expect(res.state).toBe("failed");
+		expect(spy.order).toEqual([]);
+		expect(res.reason).toContain("no image digest");
+	});
+
+	it("refuses a namespace this org does not own, before starting anything", async () => {
+		const res = await promoteBuild(
+			job({ organizationId: OTHER_ORG }),
+			deploy(),
+		);
+		expect(res.state).toBe("failed");
+		expect(res.reason).toContain("unauthorized");
+		expect(spy.order).toEqual([]);
+	});
+
+	it("refuses another tenant's namespace — ownership is derived, never asserted", async () => {
+		const res = await promoteBuild(
+			job({ organizationId: TENANT_ORG }),
+			deploy({ namespace: tenantNamespace(OTHER_ORG) }),
+		);
+		expect(res.state).toBe("failed");
+		expect(spy.order).toEqual([]);
+	});
+
+	it("refuses a fleet namespace when fleet ownership is unconfigured", async () => {
+		// The live default: an empty table means nobody holds fleet authority by
+		// accident. This is what has held the old CR-patch path shut in production.
+		process.env.PLATFORM_FLEET_NAMESPACE_OWNERS = "";
+		const res = await promoteBuild(job(), deploy());
+		expect(res.state).toBe("failed");
+		expect(spy.order).toEqual([]);
+	});
+
+	it("refuses a namespace inherited from Object.prototype", async () => {
+		for (const ns of ["constructor", "__proto__", "toString"]) {
+			spy.order = [];
+			const res = await promoteBuild(job(), deploy({ namespace: ns }));
+			expect(res.state).toBe("failed");
+			expect(spy.order).toEqual([]);
+		}
+	});
+
+	it("stops when the pin is refused, leaving the row terminal and unpromoted", async () => {
+		spy.pinThrows = new Error(
+			"pin refused: has no charts/app/values/hanzo/cloud.yaml",
+		);
+		const res = await promoteBuild(job(), deploy());
+		expect(res).toMatchObject({ promoted: false, state: "failed" });
+		expect(finalState()).toBe("failed");
+		expect(res.reason).toContain("charts/app/values/hanzo/cloud.yaml");
+	});
+
+	it("skips a branch that is not a deploy branch", async () => {
+		const res = await promoteBuild(job({ branch: "feature/x" }), deploy());
+		expect(res).toMatchObject({ promoted: false, state: "skipped" });
+		expect(spy.order).toEqual([]);
+	});
+
+	it("skips a repo with no deploy block", async () => {
+		const res = await promoteBuild(job(), undefined);
+		expect(res).toMatchObject({ promoted: false, state: "skipped" });
+		expect(spy.order).toEqual([]);
+	});
+
+	it("refuses a build that is not succeeded", async () => {
+		for (const status of [
+			"failed",
+			"running",
+			"queued",
+			"cancelled",
+		] as const) {
+			spy.order = [];
+			const res = await promoteBuild(job({ status }), deploy());
+			expect(res.state).toBe("failed");
+			expect(spy.order).toEqual([]);
+		}
+	});
+
+	it("never throws — a promotion that cannot happen must not cost the build its publish stage", async () => {
+		spy.smokeThrows = new Error("boom");
+		await expect(promoteBuild(job(), deploy())).resolves.toBeDefined();
+		spy.smokeThrows = null;
+		spy.pinThrows = new Error("boom");
+		await expect(promoteBuild(job(), deploy())).resolves.toBeDefined();
+	});
+});

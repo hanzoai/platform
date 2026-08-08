@@ -2,11 +2,11 @@
  * build-completion — the post-build orchestrator.
  *
  * When a build Job terminates, `completeBuild` records the outcome and, on
- * success, drives the rest of the pipeline: DEPLOY (operator CR patch) → TEST
- * (e2e Job) → PUBLISH (npm/pypi Job). It is the single shared brain used by
- * BOTH the build-watcher (which polls the BuildKit Job and calls in when it
- * finishes) and the `/v1/build-callback` REST hook (for an external builder
- * that reports its own result).
+ * success, drives the rest of the pipeline: PROMOTE (smoke the exact image, then
+ * commit its digest to universe) → TEST (e2e Job) → PUBLISH (npm/pypi Job). It
+ * is the single shared brain used by BOTH the build-watcher (which polls the
+ * BuildKit Job and calls in when it finishes) and the `/v1/build-callback` REST
+ * hook (for an external builder that reports its own result).
  *
  * Deploy / e2e / publish intent is read from the repo's `hanzo.yml` via the
  * pod's `GH_TOKEN` — no GitHub App required, so the App-free direct-build path
@@ -30,10 +30,10 @@ import {
 	updateBuildJob,
 } from "./build-job";
 import { fetchPlatformConfigByToken } from "./build-scheduler";
-import { type DeployResult, executeDeploy } from "./deploy-executor";
-import { runE2e } from "./e2e-runner";
 import { readJobStatus } from "./buildkit-job";
+import { runE2e } from "./e2e-runner";
 import type { PublishConfig } from "./platform-config";
+import { type Promotion, promoteBuild } from "./promote";
 import { launchPublishJob } from "./publish-job";
 
 /** Namespace the platform launches its CI Jobs into. */
@@ -54,7 +54,7 @@ export interface BuildCompletionInput {
 
 export interface BuildCompletionResult {
 	status: "succeeded" | "failed";
-	deploy?: DeployResult;
+	promotion?: Promotion;
 }
 
 export async function completeBuild(
@@ -83,28 +83,30 @@ export async function completeBuild(
 		await updateBuildJob(job.buildJobId, { imageDigest: input.digest });
 	}
 	const succeeded = await markBuildSucceeded(job.buildJobId);
-	const deploy = await initPostBuild(succeeded);
-	return { status: "succeeded", deploy };
+	const promotion = await initPostBuild(succeeded);
+	return { status: "succeeded", promotion };
 }
 
 /**
- * On build success: roll out (if `deploy:`), launch e2e (if `e2e:` and a real
- * deploy happened), and arm publish (if `publish:`). Each sub-stage's state is
- * stamped on the row so `reconcilePostBuild` can advance it idempotently and
- * the board reflects the true pipeline position.
+ * On build success: promote (if `deploy:`), launch e2e (if `e2e:` and a new pin
+ * landed), and arm publish (if `publish:`). Each sub-stage's state is stamped on
+ * the row so `reconcilePostBuild` can advance it idempotently and the board
+ * reflects the true pipeline position.
+ *
+ * `promoteBuild` owns the whole promotion decision and never throws, so a
+ * refused or failed promotion cannot cost this build its publish stage. What it
+ * cannot do is promote quietly: `promoted` is true only when a new image was
+ * committed to universe.
  */
-async function initPostBuild(job: BuildJob): Promise<DeployResult | undefined> {
+async function initPostBuild(job: BuildJob): Promise<Promotion> {
 	const config = await fetchPlatformConfigByToken(job.repo, job.branch);
 
-	let deploy: DeployResult | undefined;
-	if (config?.deploy) {
-		deploy = await executeDeploy(job, config.deploy);
-	} else {
-		await updateBuildJob(job.buildJobId, { rolloutStatus: "skipped" });
-	}
-	const deployed = deploy?.rolledOut ?? false;
+	const promotion = await promoteBuild(job, config?.deploy);
+	const deployed = promotion.promoted;
 
-	// e2e runs against the LIVE service, so it only fires after a real rollout.
+	// e2e runs against the LIVE service, so it only fires when a new pin landed —
+	// that is the only case where a rollout is coming. CD reconciles it out of
+	// band, so this races the rollout exactly as it raced the operator before.
 	if (config?.e2e && deployed) {
 		const e2e = await runE2e({
 			spec: config.e2e.spec,
@@ -133,7 +135,7 @@ async function initPostBuild(job: BuildJob): Promise<DeployResult | undefined> {
 		await updateBuildJob(job.buildJobId, { publishStatus: "skipped" });
 	}
 
-	return deploy;
+	return promotion;
 }
 
 /** Launch the publish Job and record its name. */

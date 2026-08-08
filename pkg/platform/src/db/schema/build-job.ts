@@ -8,14 +8,16 @@ import { organization } from "./account";
 /**
  * build-job — system of record for platform-native CI/CD.
  *
- * The GHA billing-freeze incident proved GitHub Actions is a single point
- * of failure. Platform now owns the build+deploy lifecycle: a GitHub webhook
- * (or manual trigger) records a `buildJob`, the BuildScheduler dispatches it
- * to the self-hosted arcd runner pools, and the DeployExecutor rolls the
- * resulting image onto the target cluster via the hanzo operator.
+ * The GHA billing-freeze incident proved GitHub Actions is a single point of
+ * failure. Platform now owns the build lifecycle: a webhook (or manual trigger)
+ * records a `buildJob`, the BuildScheduler dispatches it to the self-hosted
+ * runner pools, the image is smoked, and its digest is committed to universe —
+ * where cd.hanzo.ai reconciles it onto the cluster.
  *
- * This table is the durable source of truth for "what is being built/deployed
- * and why" — independent of GitHub's own run history.
+ * This table is the durable source of truth for "what is being built and how
+ * far it got" — independent of GitHub's own run history. It records what
+ * platform DECIDED; what is running is the cluster's answer, read separately by
+ * the apps inventory.
  */
 
 export const buildJob = sqliteTable("build_job", {
@@ -67,13 +69,35 @@ export const buildJob = sqliteTable("build_job", {
 	logs: text("logs").notNull().default(""),
 	/** Human-readable failure reason when status=failed. */
 	error: text("error"),
-	/** Rollout state once a successful build hands off to the DeployExecutor. */
+	/**
+	 * How far a successful build got toward being deployed. The states are the
+	 * arrows of `services/ci/promote`, in order of increasing commitment:
+	 *
+	 *   skipped       nothing to promote — no `deploy:` block, or not a deploy branch
+	 *   pending       a target is resolved and the run has begun
+	 *   smoking       the exact image is running in an isolated pod, being watched
+	 *   smoke-failed  it did not reach readiness — TERMINAL, nothing was written
+	 *   promoted      its tag + digest are committed to universe; CD reconciles
+	 *   failed        refused or errored — TERMINAL, nothing was written
+	 *
+	 * `promoted` is the ONLY value that means an image was declared. It replaced
+	 * `applied`, which meant platform had patched a CR's image itself — a cluster
+	 * write with no verification and no record in git. Platform no longer writes
+	 * running state; it writes the declaration and CD does the rest.
+	 */
 	rolloutStatus: text("rolloutStatus", {
-		enum: ["pending", "applied", "running", "failed", "skipped"],
+		enum: [
+			"skipped",
+			"pending",
+			"smoking",
+			"smoke-failed",
+			"promoted",
+			"failed",
+		],
 	})
 		.notNull()
 		.default("skipped"),
-	/** Name of the operator CR the rollout targeted (kind=Service). */
+	/** `<namespace>/<name>` — the workload whose universe declaration this moves. */
 	rolloutTarget: text("rolloutTarget"),
 	/** Name of the in-cluster Playwright e2e Job fired after a successful deploy. */
 	e2eJobName: text("e2eJobName"),
