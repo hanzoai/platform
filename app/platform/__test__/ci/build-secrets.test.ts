@@ -13,8 +13,8 @@ function jsonRes(status: number, body: unknown): Response {
 describe("fetchBuildSecrets", () => {
 	const OLD = { ...process.env };
 	beforeEach(() => {
-		process.env.IAM_CLIENT_ID = "hanzo-platform";
-		process.env.IAM_CLIENT_SECRET = "secret";
+		process.env.KMS_CLIENT_ID = "hanzo-platform";
+		process.env.KMS_CLIENT_SECRET = "secret";
 		process.env.KMS_ENDPOINT = "https://api.hanzo.ai";
 	});
 	afterEach(() => {
@@ -51,6 +51,7 @@ describe("fetchBuildSecrets", () => {
 	});
 
 	it("THROWS (fail-closed) when the platform has no KMS credential", async () => {
+		process.env.KMS_CLIENT_ID = "";
 		process.env.IAM_CLIENT_ID = "";
 		vi.stubGlobal("fetch", vi.fn());
 		await expect(
