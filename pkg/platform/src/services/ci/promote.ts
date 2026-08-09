@@ -40,16 +40,24 @@ import type { DeployConfig } from "./platform-config";
 import { smoke } from "./smoke-runner";
 
 /**
- * Where a build stopped. Stamped verbatim on `buildJob.rolloutStatus`, so the
+ * Where a build got to. Stamped verbatim on `buildJob.rolloutStatus`, so the
  * board shows the position rather than a boolean that cannot say why.
  *
- * `promoted` is the only value that means an image was written down. Everything
- * else is terminal WITHOUT a commit — there is no state from which promotion
- * resumes, because a re-run is a new build of the same commit and goes through
- * the same three arrows.
+ *   skipped → pending → smoking → { promoted | smoke-failed | failed }
+ *
+ * `skipped` is the column default and the one honest resting place that is not
+ * an outcome: no `deploy:` block, or not a deploy branch. `pending` and
+ * `smoking` are IN FLIGHT — a row resting on either is a promotion that was
+ * interrupted, which is a fact worth being able to see.
+ *
+ * `promoted` is the only value that means an image was written down. The other
+ * two ends are terminal WITHOUT a commit; there is no state from which
+ * promotion resumes, because a re-run is a new build of the same commit and
+ * walks the same arrows again.
  */
 export type PromotionState =
 	| "skipped"
+	| "pending"
 	| "smoking"
 	| "smoke-failed"
 	| "promoted"
@@ -101,6 +109,22 @@ export async function promoteBuild(
 
 	const { namespace, name } = deploy.target;
 	const target = `${namespace}/${name}`;
+
+	// ENTERED, outcome unknown. Everything from here can refuse, and a pod that
+	// dies mid-promotion writes nothing further — so the row has to say a
+	// promotion began before one does.
+	//
+	// `skipped` is the column DEFAULT, and it means "there was nothing to do".
+	// Without this write, a run that started and vanished is indistinguishable
+	// from one that was never asked to do anything, which is precisely how the
+	// old path stayed invisible: 1,439 rows read `skipped` and not one of them
+	// meant it. A row resting at `pending` is a promotion that did not finish.
+	await stamp(job, {
+		promoted: false,
+		state: "pending",
+		target,
+		reason: `promoting ${target}`,
+	});
 
 	const authz = authorizeNamespace(
 		namespace,
@@ -184,12 +208,22 @@ export async function promoteBuild(
 
 /** Record the position on the row and hand the same value back to the caller. */
 async function stamp(job: BuildJob, p: Promotion): Promise<Promotion> {
+	// SAY IT OUT LOUD. A stop is readable in the row, but only by someone already
+	// querying the row; the operator watching the pod sees nothing. That silence
+	// is the whole reason an unconfigured fleet table went unnoticed across 1,439
+	// builds — the refusal was correct, and nobody was told. A refusal that
+	// nothing announces is indistinguishable from a feature that is off.
+	if (p.state === "failed" || p.state === "smoke-failed") {
+		console.error(
+			`[promote] ${job.buildJobId} ${p.state}${p.target ? ` ${p.target}` : ""}: ${p.reason}`,
+		);
+	}
 	await updateBuildJob(job.buildJobId, {
 		rolloutStatus: p.state,
 		...(p.target ? { rolloutTarget: p.target } : {}),
-		// `skipped` and `smoking` are positions, not problems; only a stop worth
-		// reading lands in `error`, and it does not overwrite a build failure
-		// because a build that failed never reaches here.
+		// `skipped`, `pending` and `smoking` are positions, not problems; only a
+		// stop worth reading lands in `error`, and it does not overwrite a build
+		// failure because a build that failed never reaches here.
 		...(p.state === "failed" || p.state === "smoke-failed"
 			? { error: p.reason }
 			: {}),
