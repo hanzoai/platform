@@ -29,7 +29,7 @@ describe("getRegistryTag", () => {
 		it("should handle image name with tag", () => {
 			const registry = createMockRegistry({ username: "myuser" });
 			const result = getRegistryTag(registry, "httpd:alpine");
-			expect(result).toBe("docker.io/myuser/caddy:alpine");
+			expect(result).toBe("docker.io/myuser/httpd:alpine");
 		});
 
 		it("should handle image name with username already present (no duplication)", () => {
@@ -100,7 +100,7 @@ describe("getRegistryTag", () => {
 				imagePrefix: "myorg",
 			});
 			const result = getRegistryTag(registry, "httpd:alpine");
-			expect(result).toBe("docker.io/myorg/caddy:alpine");
+			expect(result).toBe("docker.io/myorg/httpd:alpine");
 		});
 
 		it("should handle imagePrefix with username already in image name", () => {
@@ -235,7 +235,7 @@ describe("getRegistryTag", () => {
 				username: "robot+test-user",
 			});
 			const result = getRegistryTag(registry, "httpd:alpine");
-			expect(result).toBe("docker.io/robot+test-user/caddy:alpine");
+			expect(result).toBe("docker.io/robot+test-user/httpd:alpine");
 		});
 	});
 });
