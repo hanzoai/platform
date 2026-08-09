@@ -102,6 +102,53 @@ function head(line: string): string {
 	return line.trim().split(/\s+/, 1)[0] ?? "";
 }
 
+/** Does this scalar, as written, READ as exactly this string? */
+function readsAs(written: string, value: string): boolean {
+	try {
+		return parseYaml(written) === value;
+	} catch {
+		// A scalar YAML cannot parse is certainly not the string.
+		return false;
+	}
+}
+
+/**
+ * A value written so YAML reads it back as the STRING it is.
+ *
+ * Bare is the default and what nearly every values file uses — it is what a
+ * human diffs. It is wrong only when the bare form reads as something else:
+ * `values.schema.json` declares `image.tag` a string, so `tag: 9` is an integer
+ * and the release fails validation and renders nothing.
+ *
+ * Not hypothetical. Five live declarations carry a tag that is a string only
+ * because it is quoted — `registry: '2'`, `kv: '9'`, `sql`/`insights-sql: '18'`,
+ * `image-prepull: "1.36"` — and a textual rewrite drops the quotes along with
+ * the value. The read-back in {@link commitPin} catches it (an integer is not
+ * the tag it asked for), so the bug was a refusal rather than a bad pin; those
+ * five services simply could never be promoted. Quoting where it is load-bearing
+ * is what makes this writer total over the inventory instead of over most of it.
+ */
+function scalar(value: string): string {
+	if (readsAs(value, value)) return value;
+	return `'${value.replace(/'/g, "''")}'`;
+}
+
+/**
+ * Rewrite one scalar on a line — unless the line already SAYS that value.
+ *
+ * "Already says it" is decided by reading the scalar, never by comparing text:
+ * `"1.36"` and `'1.36'` are one string written two ways, and turning one into
+ * the other is a diff that changes nothing. This module's promise is that a pin
+ * moves the two values it came to move and not one byte besides, so a line that
+ * is already right is left exactly as its author wrote it.
+ */
+function put(line: string, key: string, value: string): string {
+	const re = new RegExp(`${key}:[ \\t]*([^\\s#]*)`);
+	const written = line.match(re)?.[1];
+	if (written && readsAs(written, value)) return line;
+	return line.replace(re, () => `${key}: ${scalar(value)}`);
+}
+
 /** True while the line belongs to the TOP-LEVEL `image:` block. */
 function scanImageBlock(
 	yaml: string,
@@ -149,13 +196,13 @@ export function pin(yaml: string, tag: string, digest: string): string {
 
 	scanImageBlock(yaml, (line, inImage, indent) => {
 		if (inImage && !wroteTag && head(line) === "tag:") {
-			out.push(line.replace(/tag:[ \t]*[^\s#]+/, () => `tag: ${tag}`));
+			out.push(put(line, "tag", tag));
 			wroteTag = true;
-			if (!hasDigest) out.push(`${indent}digest: ${digest}`);
+			if (!hasDigest) out.push(`${indent}digest: ${scalar(digest)}`);
 			return;
 		}
 		if (inImage && !wroteDigest && head(line) === "digest:") {
-			out.push(line.replace(/digest:[ \t]*[^\s#]*/, () => `digest: ${digest}`));
+			out.push(put(line, "digest", digest));
 			wroteDigest = true;
 			return;
 		}

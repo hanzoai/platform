@@ -20,6 +20,7 @@ import {
 	valuesPath,
 } from "@hanzo/platform/services/ci/pin";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 const DIGEST_A =
 	"sha256:299541e211d92426a7fa6e15790d22c49d04c2930ca10de8bb53134d55a307e7";
@@ -150,6 +151,40 @@ image:
 		// the tag would render `repo:v1@sha256:NEW@sha256:OLD` and pull nothing.
 		const out = pin(BLOG, "0.1.2", DIGEST_A);
 		expect(out).not.toMatch(/tag:.*@sha256:/);
+	});
+
+	it("writes tag and digest as SIBLING keys at one indentation", () => {
+		// The whole reason the chart can render `repo:tag@digest`. Asserted on the
+		// parsed document, so a digest appended to the tag's own scalar — which
+		// reads plausibly as text — cannot satisfy it.
+		const doc = parseYaml(pin(BLOG, "0.1.2", DIGEST_A)) as {
+			image: Record<string, unknown>;
+		};
+		expect(doc.image.tag).toBe("0.1.2");
+		expect(doc.image.digest).toBe(DIGEST_A);
+		expect(doc.image.repository).toBe("ghcr.io/hanzoai/blog");
+	});
+
+	it("quotes a tag YAML would otherwise read as a number", () => {
+		// `image-prepull` really declares `tag: "1.36"` and `kv` really declares
+		// `tag: '9'`. The chart's schema says image.tag is a STRING, so dropping
+		// the quotes with the value makes the release fail to render.
+		const numeric = `image:
+  repository: ghcr.io/hanzoai/kv
+  tag: '9'
+  digest: ${DIGEST_A}
+`;
+		const out = pin(numeric, "18", DIGEST_B);
+		const doc = parseYaml(out) as { image: Record<string, unknown> };
+		expect(doc.image.tag).toBe("18");
+		expect(typeof doc.image.tag).toBe("string");
+	});
+
+	it("leaves a tag that needs no quotes bare, like the rest of the fleet", () => {
+		expect(pin(BLOG, "v1.2.3", DIGEST_A)).toContain("  tag: v1.2.3\n");
+		expect(pin(BLOG, "sha-e50ec914", DIGEST_A)).toContain(
+			"  tag: sha-e50ec914\n",
+		);
 	});
 });
 
