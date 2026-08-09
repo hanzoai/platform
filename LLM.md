@@ -518,9 +518,27 @@ Postgres→SQLite merge (#29); their 7 auth commits (Better Auth on `/v1/auth`,
 `signIn.oauth2`) are fully superseded by `main`'s IAM-PKCE flow (see Auth
 section) — `main` is strictly ahead, nothing to back-merge.
 
-Release = bump `app/platform/package.json` version, tag `main` HEAD with the
-same string, let `deploy.yml` build+push the image at that tag. No second
-numbering scheme, ever.
+Release = bump `app/platform/package.json` version and tag `main` HEAD with the
+same string. No second numbering scheme, ever.
+
+**The IMAGE is not named after that tag, and deliberately so.** `.hanzo/workflows/
+deploy.yml` builds `ghcr.io/hanzoai/platform:<full commit sha>` and nothing else:
+a semver tag that gets re-pushed puts two digests behind one name, and under
+`pullPolicy: IfNotPresent` a node keeps whichever it cached first — which is how
+`v4.4.5` and `v4.4.6` each meant two different builds on 2026-07-25. A sha
+cannot move. So the git tag is the human's version line and the sha is the
+artifact's identity; they are different questions.
+
+**Publishing and rolling are separate, and only publishing is automated.**
+`deploy.yml` pushes the image and tells the cluster nothing. The rollout is the
+universe pin — `charts/app/values/hanzo/platform-app.yaml`, `tag:` and `digest:`
+moving together — which is the same edit `services/ci/pin.ts` performs for every
+other service.
+
+**Tags do not reach the build plane on their own.** `sync-from-github.yml` pulls
+`refs/heads/main` and only that, so a `v*` tag pushed to GitHub never arrives at
+git.hanzo.ai and never fires `cicd.yml`'s `tags: ['v*']` trigger. What builds a
+release is the main commit carrying the bump.
 
 The bump is the half that gets forgotten: `v4.4.14`, `v4.4.15` and `v4.4.16`
 were all tagged while `package.json` still read `v4.4.12`, so the running app
