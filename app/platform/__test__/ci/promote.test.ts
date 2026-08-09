@@ -111,8 +111,20 @@ function deploy(over: Partial<DeployConfig["target"]> = {}): DeployConfig {
 const finalState = () =>
 	[...spy.rows].reverse().find((r) => r.rolloutStatus)?.rolloutStatus;
 const committed = () => spy.order.includes("pin");
+/** Every rolloutStatus written, in order — the walk through the machine. */
+const states = () =>
+	spy.rows
+		.map((r) => r.rolloutStatus)
+		.filter((s): s is string => typeof s === "string");
+
+/** What the process SAID, as opposed to what it recorded. */
+let said: string[] = [];
 
 beforeEach(() => {
+	said = [];
+	vi.spyOn(console, "error").mockImplementation((...parts: unknown[]) => {
+		said.push(parts.map(String).join(" "));
+	});
 	spy.order = [];
 	spy.smokeInput = null;
 	spy.pinInput = null;
@@ -129,6 +141,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	process.env.PLATFORM_FLEET_NAMESPACE_OWNERS = "";
+	vi.mocked(console.error).mockRestore();
 });
 
 describe("promoteBuild — the one path that promotes", () => {
@@ -286,5 +299,75 @@ describe("promoteBuild — every other path commits NOTHING", () => {
 		spy.smokeThrows = null;
 		spy.pinThrows = new Error("boom");
 		await expect(promoteBuild(job(), deploy())).resolves.toBeDefined();
+	});
+});
+
+describe("promoteBuild — the position is recorded before the outcome is known", () => {
+	it("walks skipped → pending → smoking → promoted, in that order", async () => {
+		await promoteBuild(job(), deploy());
+		expect(states()).toEqual(["pending", "smoking", "promoted"]);
+	});
+
+	it("stamps `pending` BEFORE the smoke starts, so an interrupted run cannot read as skipped", async () => {
+		await promoteBuild(job(), deploy());
+		// `skipped` is the column default and means "nothing to do". A promotion
+		// whose pod dies mid-flight writes nothing more, so the row must already
+		// carry a state that says it began — otherwise the two are the same row.
+		expect(spy.rows[0]).toMatchObject({
+			rolloutStatus: "pending",
+			rolloutTarget: "hanzo/cloud",
+		});
+		expect(states()[0]).toBe("pending");
+	});
+
+	it("reaches `pending` even on a path that then refuses — the run still began", async () => {
+		await promoteBuild(job({ organizationId: OTHER_ORG }), deploy());
+		expect(states()).toEqual(["pending", "failed"]);
+		expect(committed()).toBe(false);
+	});
+
+	it("stamps nothing but `skipped` when there was nothing to promote", async () => {
+		await promoteBuild(job(), undefined);
+		expect(states()).toEqual(["skipped"]);
+	});
+});
+
+describe("promoteBuild — a refusal is announced, not merely recorded", () => {
+	it("LOGS an unconfigured fleet table, naming the variable that would fix it", async () => {
+		// The load-bearing regression. This refusal was already correct and already
+		// recorded, and it still went unnoticed across 1,439 builds, because the
+		// only place it appeared was a column nobody was reading. Being right in
+		// private is how a deploy path stays dead for months.
+		process.env.PLATFORM_FLEET_NAMESPACE_OWNERS = "";
+		const res = await promoteBuild(job(), deploy());
+
+		expect(res.state).toBe("failed");
+		expect(committed()).toBe(false);
+		const out = said.join("\n");
+		expect(out).toContain("[promote]");
+		expect(out).toContain("hanzo/cloud");
+		expect(out).toContain("PLATFORM_FLEET_NAMESPACE_OWNERS");
+	});
+
+	it("logs a failed smoke with the reason it failed", async () => {
+		spy.smokePassed = false;
+		spy.smokeReason = "container cloud is CrashLoopBackOff";
+		await promoteBuild(job(), deploy());
+		expect(said.join("\n")).toContain("CrashLoopBackOff");
+	});
+
+	it("logs a refused pin, so a forge that will not answer is visible", async () => {
+		spy.pinThrows = new Error("pin refused: HANZO_GIT_TOKEN is unset");
+		await promoteBuild(job(), deploy());
+		expect(said.join("\n")).toContain("HANZO_GIT_TOKEN");
+	});
+
+	it("stays quiet when there was nothing to promote", async () => {
+		// `skipped` is not a problem. A log that cries on every library repo's
+		// build is a log everyone learns to scroll past, which costs the line
+		// above its meaning.
+		await promoteBuild(job(), undefined);
+		await promoteBuild(job({ branch: "feature/x" }), deploy());
+		expect(said).toEqual([]);
 	});
 });
