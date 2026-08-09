@@ -101,9 +101,20 @@ things were wrong at once, and the code said all three out loud:
   and left git saying something else — a deploy with no diff and no history.
 
 **Now:** `BUILT → SMOKE → PIN → (CD reconciles, out of band)`, in
-`services/ci/promote.ts`, with `rolloutStatus` carrying the position
-(`skipped`/`pending`/`smoking`/`smoke-failed`/`promoted`/`failed`). `promoted` is
-the ONLY value meaning an image was declared; `applied` is gone with the patcher.
+`services/ci/promote.ts`, with `rolloutStatus` carrying the position:
+
+```
+skipped → pending → smoking → { promoted | smoke-failed | failed }
+```
+
+`promoted` is the ONLY value meaning an image was declared; `applied` is gone
+with the patcher. `skipped` is the column DEFAULT and the one resting place that
+is not an outcome (no `deploy:` block, or not a deploy branch). `pending` is
+stamped the moment a target resolves, BEFORE authorization or smoke, so the row
+says a promotion began before one does — a pod that dies mid-flight writes
+nothing more, and without that write an interrupted run is byte-identical to a
+run nobody asked for. A row resting on `pending` or `smoking` is an interrupted
+promotion.
 
 - **smoke** (`smoke-runner.ts`) starts the exact digest-pinned image in ONE
   throwaway pod derived from the LIVE Deployment/StatefulSet pod template, and
@@ -119,11 +130,23 @@ the ONLY value meaning an image was declared; `applied` is gone with the patcher
   sha = optimistic concurrency) → one-line edit → PUT. **Both halves, always**:
   `_helpers.tpl:app.image` renders `repo:tag@digest` and RESOLVES BY DIGEST, so
   writing one without the other is the failure that succeeds at doing nothing
-  (v1.801.362 reported .362 and ran .361). Verified byte-for-byte against all
-  **117 pinnable values files**: only the tag/digest lines move, the file still
-  parses, both read back as strings, idempotent. **`digest:` is a SIBLING key —
-  never `tag: v1@sha256:…`, which would render `repo:tag@NEW@OLD` and pull
-  nothing.**
+  (v1.801.362 reported .362 and ran .361). Re-verified byte-for-byte against the
+  live inventory — **115 pinnable files × 6 tag shapes = 690 pins, 0 failures**:
+  only the differing scalars move, the file still parses, both read back as
+  strings, idempotent. **`digest:` is a SIBLING key — never `tag: v1@sha256:…`,
+  which would render `repo:tag@NEW@OLD` and pull nothing.**
+  - A tag is written as a scalar YAML reads back as the STRING it is.
+    `values.schema.json` types `image.tag` as a string, so a bare `tag: 9` is an
+    integer and the release fails validation. Five live declarations are strings
+    only because they are quoted (`registry: '2'`, `kv: '9'`, `sql` +
+    `insights-sql: '18'`, `image-prepull: "1.36"`), and the textual rewrite used
+    to drop the quotes with the value: 345 of those 690 pins came back a number.
+    `commitPin`'s parser read-back caught every one, so it refused rather than
+    mis-pinned — those services simply could never be promoted.
+  - A line already saying the right value is left byte-identical, decided by
+    READING the scalar, not comparing text: `"1.36"` and `'1.36'` are one string
+    written two ways, and rewriting one into the other is a diff that changes
+    nothing.
 - **Refusals, none of which write anything:** repository must match the file's
   (a build cannot repoint a service at another image); the values file must
   already exist (the directory is the inventory — enrolling a service stays
@@ -141,6 +164,15 @@ unset on the pod, so `fleetNamespaceOwners()` is empty and every fleet deploy wa
 refused. The bug was a loaded gun with the safety on by accident. Nothing froze
 when this landed because nothing was flowing; the fleet deploys via `pin.sh` from
 each service's CI.
+
+**So a refusal is now ANNOUNCED, not merely recorded.** `promote.ts` logs every
+`failed`/`smoke-failed` to stderr with the build id, the target and the reason —
+and `authorizeNamespace`'s reason already names the variable that would fix an
+unconfigured table. That refusal was always correct and always written down; it
+went unnoticed across 1,439 builds because the only place it appeared was a
+column nobody queried. Being right in private is how a deploy path stays dead for
+months. `skipped` stays silent on purpose — a line that cries on every library
+repo's build is a line everyone learns to scroll past.
 
 **Two preconditions before promotion can work at all** — both intentionally
 fail-closed until met: the `platform-app-smoke` Role (`pods: create,get,delete`,
@@ -476,7 +508,7 @@ domains, fleet are undeclared), and `design/gen/http/openapi3.json` is 0 bytes.
 ## Versioning — ONE line, `v4.x` (HIP-0111)
 There is exactly one version line: **`v4.x`**. `app/platform/package.json`,
 git tags, and the published `ghcr.io/hanzoai/platform` image tag are the SAME
-string. Current: `v4.4.4`.
+string. Current: `v4.4.17`.
 
 `v0.28.x` is DEAD. It was the upstream Dokploy app-string (author Mauricio Siu)
 that the fork kept bumping out of habit; `v0.28.9` (#31) was the last one and is
@@ -489,6 +521,11 @@ section) — `main` is strictly ahead, nothing to back-merge.
 Release = bump `app/platform/package.json` version, tag `main` HEAD with the
 same string, let `deploy.yml` build+push the image at that tag. No second
 numbering scheme, ever.
+
+The bump is the half that gets forgotten: `v4.4.14`, `v4.4.15` and `v4.4.16`
+were all tagged while `package.json` still read `v4.4.12`, so the running app
+under-reported itself by three releases. "The SAME string" is checkable — if the
+tag and the file disagree, the file is wrong. Repaired at `v4.4.17`.
 
 ## Build resilience — runners cannot reach Docker Hub
 The arcd runners resolve DNS via 8.8.8.8 and intermittently time out on
