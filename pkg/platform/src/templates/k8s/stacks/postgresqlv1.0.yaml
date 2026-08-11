@@ -123,6 +123,6 @@ spec:
   ports:
   - port: 5432
     targetPort: 5432
-    name: minio
+    name: postgresql
   selector:
     app: {{iid}}

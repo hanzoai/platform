@@ -25,7 +25,7 @@ spec:
       partition: {{statefulSetConfig.rollingUpdate.partition}}
   revisionHistoryLimit: {{statefulSetConfig.revisionHistoryLimit}}
   podManagementPolicy: {{statefulSetConfig.podManagementPolicy}}
-  persistentVolumeClaimRetentionPolicy: 
+  persistentVolumeClaimRetentionPolicy:
     whenDeleted: Retain
     whenScaled: Retain
   selector:
@@ -37,26 +37,19 @@ spec:
         app: {{iid}}
     spec:
       containers:
-      - name: minio
+      - name: s3
         image: {{registry.imageUrl}}
-        command:
-        - /bin/sh
-        - -ce
-        - |
-          /usr/bin/docker-entrypoint.sh minio server /data -S /etc/minio/certs/ --address :9000 --console-address :9001 &
-          until (mc alias set myminio http://localhost:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD)
-          do
-            echo "Waiting for MinIO to be ready..."
-            sleep 3
-          done
-          wait
+        args:
+        - server
+        - -dir=/data
+        - -ip.bind=0.0.0.0
+        - -filer
+        - -s3
+        - -s3.port=9000
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9000
-          name: http
-          protocol: TCP
-        - containerPort: 9001
-          name: http-console
+          name: s3
           protocol: TCP
         resources:
           requests:
@@ -66,32 +59,23 @@ spec:
             memory: {{podConfig.memoryLimit}}{{podConfig.memoryLimitType}}
             cpu: {{podConfig.cpuLimit}}{{podConfig.cpuLimitType}}
         env:
-        - name: MINIO_ROOT_USER
+        - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
               key: accessKey
               name: {{iid}}
-        - name: MINIO_ROOT_PASSWORD
+        - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
               key: secretKey
               name: {{iid}}
-        livenessProbe:
-          httpGet:
-            path: /minio/health/live
-            port: 9000
-          failureThreshold: 5
-          initialDelaySeconds: 30
-          periodSeconds: 20
-          timeoutSeconds: 6
         readinessProbe:
-          httpGet:
-            path: /minio/health/ready
+          tcpSocket:
             port: 9000
-          failureThreshold: 5
-          initialDelaySeconds: 30
-          periodSeconds: 20
-          timeoutSeconds: 6
+          failureThreshold: 3
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          timeoutSeconds: 1
         volumeMounts:
         - name: data
           mountPath: /data
@@ -116,7 +100,7 @@ spec:
   ports:
   - port: 9000
     targetPort: 9000
-    name: minio
+    name: s3
   selector:
     app: {{iid}}
 
@@ -131,27 +115,7 @@ spec:
   ports:
   - port: 9000
     targetPort: 9000
-    name: minio
+    name: s3
   clusterIP: None
   selector:
     app: {{iid}}
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{iid}}-console
-  namespace: {{namespace}}
-spec:
-  ports:
-  - port: 9001
-    targetPort: 9001
-    name: minio
-  clusterIP: None
-  selector:
-    app: {{iid}}
-
-
-
-
