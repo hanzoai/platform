@@ -6,15 +6,28 @@
 # GitHub Actions is disabled account-wide, so `.github/workflows/*` cannot
 # build. This is the real pipeline. No GitHub builders.
 #
-# The image is tagged by COMMIT SHA only. A semver tag that gets re-pushed
-# means two digests behind one name, and with imagePullPolicy: IfNotPresent the
-# node keeps whichever it cached first — that is how v4.4.5 and v4.4.6 each came
-# to mean two different builds on 2026-07-25. A SHA cannot move.
+# A push to main is tagged by COMMIT SHA. A semver tag that gets RE-PUSHED means
+# two digests behind one name, and with imagePullPolicy: IfNotPresent the node
+# keeps whichever it cached first — that is how v4.4.5 and v4.4.6 each came to
+# mean two different builds on 2026-07-25. A SHA cannot move.
+#
+# A `v*` TAG also builds, and publishes under that version. That is not a walk-
+# back of the sentence above: what caused the incident was OVERWRITING a version
+# that already existed, so this refuses to. The tag is resolved against the
+# registry BEFORE the build, and an existing one fails the run rather than
+# replacing it — so a version still cannot move, and now it also exists.
+#
+# It has to exist, because a sha is not a release. universe pins `tag:` AND
+# `digest:` together and its pin gate refuses a tag that is not [v]X.Y.Z: with
+# sha-only publishing, platform could be rolled forward only by writing a pin
+# the fleet's own gate rejects. Publishing the version and pinning the digest
+# makes the pin both immutable and legible, which is what the gate is for.
 name: deploy
 
 on:
   push:
     branches: [main]
+    tags: ['v*']
 
 jobs:
   build:
@@ -75,8 +88,34 @@ jobs:
           PUBLISHABLE_KEY: ${{ steps.ingest.outputs.key }}
         run: |
           set -euo pipefail
-          SHA="${GITHUB_SHA}"
-          IMAGE="ghcr.io/hanzoai/platform:${SHA}"
+          # A tag push publishes the VERSION; a branch push publishes the sha.
+          # One build either way — the ref is the only thing that differs.
+          REF="${GITHUB_SHA}"
+          case "${GITHUB_REF:-}" in
+            refs/tags/*)
+              REF="${GITHUB_REF#refs/tags/}"
+              # THE VERSION MUST NOT ALREADY EXIST. Overwriting one is the
+              # v4.4.5/v4.4.6 incident, and it is silent: the registry accepts
+              # the push, and every node that cached the old digest keeps
+              # serving it under the new name. Asked before the build so the
+              # refusal costs seconds, not a full image.
+              TOKEN=$(curl -sS -u "${{ secrets.GHCR_USER }}:${{ secrets.GHCR_TOKEN }}" \
+                "https://ghcr.io/token?scope=repository:hanzoai/platform:pull&service=ghcr.io" \
+                | jq -r '.token // empty')
+              CODE=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TOKEN" \
+                -H 'Accept: application/vnd.oci.image.index.v1+json' \
+                -H 'Accept: application/vnd.oci.image.manifest.v1+json' \
+                -H 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' \
+                -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+                "https://ghcr.io/v2/hanzoai/platform/manifests/${REF}")
+              if [ "$CODE" = "200" ]; then
+                echo "::error::ghcr.io/hanzoai/platform:${REF} already exists — a published version is immutable. Cut the next patch instead."
+                exit 1
+              fi
+              echo "version ${REF} is unpublished (registry answered ${CODE}) — building it"
+              ;;
+          esac
+          IMAGE="ghcr.io/hanzoai/platform:${REF}"
           # Build-time by necessity: Next inlines NEXT_PUBLIC_* into the client
           # bundle, so a key set on the pod arrives too late to reach a browser.
           # The Dockerfile's build-platform stage gates on this and fails closed.
@@ -125,7 +164,10 @@ jobs:
       - name: Print the image ref for the rollout edit
         run: |
           set -euo pipefail
-          echo "ghcr.io/hanzoai/platform:${GITHUB_SHA}"
+          case "${GITHUB_REF:-}" in
+            refs/tags/*) echo "ghcr.io/hanzoai/platform:${GITHUB_REF#refs/tags/}" ;;
+            *)           echo "ghcr.io/hanzoai/platform:${GITHUB_SHA}" ;;
+          esac
           echo "To roll it out, set tag AND digest together in"
           echo "  hanzo/universe charts/app/values/hanzo/platform-app.yaml"
         continue-on-error: true
