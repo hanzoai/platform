@@ -60,6 +60,6 @@ spec:
   ports:
   - port: 11211
     targetPort: 11211
-    name: minio
+    name: memcached
   selector:
     app: {{iid}}

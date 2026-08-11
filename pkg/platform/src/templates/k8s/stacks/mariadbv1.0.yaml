@@ -111,6 +111,6 @@ spec:
   ports:
   - port: 3306
     targetPort: 3306
-    name: minio
+    name: mariadb
   selector:
     app: {{iid}}

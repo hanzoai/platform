@@ -90,7 +90,7 @@ export interface ServicePort {
 
 /** Operator DatastoreSpec — wire-identical with rust crd.rs. */
 export interface DatastoreSpec {
-	type: "postgresql" | "valkey" | "docdb" | "minio" | string;
+	type: "postgresql" | "valkey" | "docdb" | "s3" | "datastore" | string;
 	image?: ImageSpec;
 	replicas?: number;
 	storage: StorageSpec;

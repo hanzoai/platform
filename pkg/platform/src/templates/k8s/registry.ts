@@ -615,7 +615,7 @@ export const stackRegistry: StackCategory[] = [
 				name: "S3 Object Storage",
 				description:
 					"High-performance, S3-compatible distributed object storage for large-scale cloud infrastructure.",
-				manifest: "miniov1.0.yaml",
+				manifest: "s3v1.0.yaml",
 				version: "1.0",
 				isLatest: true,
 				type: "statefulset",
@@ -650,8 +650,7 @@ export const stackRegistry: StackCategory[] = [
 					],
 					defaultValues: {
 						repoOrRegistry: "registry",
-						"registry.imageUrl":
-							"ghcr.io/hanzoai/storage:latest",
+						"registry.imageUrl": "ghcr.io/hanzoai/s3:v1.0.14",
 						"networking.containerPort": 9000,
 						"networking.tcpProxy.enabled": false,
 						"podConfig.restartPolicy": "Always",
@@ -682,8 +681,8 @@ export const stackRegistry: StackCategory[] = [
 						secretKey: "{{random:18}}",
 					},
 					variables: {
-						MINIO_ROOT_USER: "{{secret:accessKey}}",
-						MINIO_ROOT_PASSWORD: "{{secret:secretKey}}",
+						AWS_ACCESS_KEY_ID: "{{secret:accessKey}}",
+						AWS_SECRET_ACCESS_KEY: "{{secret:secretKey}}",
 					},
 				},
 			},
