@@ -291,6 +291,44 @@ describe("images (hanzo.yml multi-image)", () => {
 		// `test`/`kms` keys are ignored by the platform; deploy via cicd/universe
 		expect(cfg.deploy).toBeUndefined();
 	});
+	it("honours tag-pattern, so a release can be a version", () => {
+		// The legacy `build:` block read this key and `images:` did not, so on the
+		// modern form a declared semver was accepted by the schema and silently
+		// discarded — four of universe's image pins name a commit because of it.
+		const cfg = built(`
+images:
+  - { name: base, context: ., repo: ghcr.io/hanzoai/base, tag-pattern: "{{git.tag}}" }
+`);
+		expect(cfg.builds[0]!.tagPattern).toBe("{{git.tag}}");
+		// And it resolves the way the legacy form does: a version on a tag push,
+		// and NOTHING on a branch push, so main never publishes a bare `{{git.tag}}`.
+		expect(
+			resolveTag(cfg.builds[0]!.tagPattern, {
+				sha: "abc1234",
+				branch: "main",
+				ref: "refs/tags/v1.2.3",
+			}),
+		).toBe("v1.2.3");
+		expect(
+			resolveTag(cfg.builds[0]!.tagPattern, {
+				sha: "abc1234",
+				branch: "main",
+				ref: "refs/heads/main",
+			}),
+		).toBeNull();
+	});
+	it("leaves an image that declares no tag-pattern exactly as it was", () => {
+		// The whole fleet is on the default, so widening what CAN be declared must
+		// move nothing that is. Pinned per-suffix, and suffix-defaults-to-name.
+		const cfg = built(MULTI_IMAGE);
+		expect(cfg.builds[0]!.tagPattern).toBe("{{git.sha}}-amd64-api");
+		expect(cfg.builds[1]!.tagPattern).toBe("{{git.sha}}-amd64-web");
+		const bare = built(`
+images:
+  - { name: solo, context: ., repo: ghcr.io/hanzoai/solo }
+`);
+		expect(bare.builds[0]!.tagPattern).toBe("{{git.sha}}-amd64-solo");
+	});
 	it("rejects an empty images list", () => {
 		expect(() => validatePlatformConfig({ images: [] })).toThrow(/non-empty/);
 	});
