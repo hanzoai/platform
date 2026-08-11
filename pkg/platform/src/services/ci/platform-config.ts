@@ -529,6 +529,23 @@ function parseImageEntry(entry: unknown, i: number): BuildConfig {
 	);
 	// Per-image deterministic tag: `<sha>-<arch>-<suffix>` (suffix defaults to name).
 	const suffix = optionalString(entry, "tag-suffix", name);
+	// `tag-pattern` is read HERE as well as in the legacy `build:` block, and it
+	// was not. Both forms parse the same document and only one honoured the key,
+	// so a repo on the modern `images:` list could write
+	// `tag-pattern: "{{git.tag}}"`, have the schema accept it, and still publish
+	// a commit sha. The declaration was not refused, it was ignored — the one
+	// failure mode a config reader must never have.
+	//
+	// It is why four of universe's image pins name a commit rather than a
+	// release: on this path a version was not merely unset, it was unreachable,
+	// and the pin gate could only report the symptom. The default is the exact
+	// string every current caller already gets, so this widens what CAN be
+	// declared and moves nothing that IS.
+	const tagPattern = optionalString(
+		entry,
+		"tag-pattern",
+		`{{git.sha}}-amd64-${suffix}`,
+	);
 	return {
 		name,
 		matrix: parseMatrix(entry.matrix, `${at}.matrix`, [
@@ -537,7 +554,7 @@ function parseImageEntry(entry: unknown, i: number): BuildConfig {
 		dockerfile,
 		context,
 		image: repo,
-		tagPattern: `{{git.sha}}-amd64-${suffix}`,
+		tagPattern,
 		push: entry.push === undefined ? true : entry.push === true,
 		buildArgs: parseBuildArgs(entry.args, `${at}.args`),
 		buildSecrets: parseBuildSecrets(entry.build_secrets, `${at}.build_secrets`),
