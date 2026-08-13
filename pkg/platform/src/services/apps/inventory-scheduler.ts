@@ -35,6 +35,7 @@
 
 import { syncInventory } from "./inventory";
 import { syncReleases } from "./release-reader";
+import { releaseHandle } from "../../lib/timer";
 
 /** How often to reconcile declared/running/health from the cluster (ms). */
 const INTERVAL_MS = Number.parseInt(
@@ -139,7 +140,7 @@ export function startInventoryScheduler(): void {
 	);
 
 	const handle = setInterval(() => void runInventoryOnce(), INTERVAL_MS);
-	if (typeof handle.unref === "function") handle.unref();
+	releaseHandle(handle);
 
 	// The release reader looks up the repos the INVENTORY pass discovers, so its
 	// leading run waits for that pass to FINISH — the dependency expressed as a
@@ -156,6 +157,6 @@ export function startInventoryScheduler(): void {
 			() => void runReleasesOnce(),
 			RELEASE_INTERVAL_MS,
 		);
-		if (typeof rHandle.unref === "function") rHandle.unref();
+		releaseHandle(rHandle);
 	});
 }

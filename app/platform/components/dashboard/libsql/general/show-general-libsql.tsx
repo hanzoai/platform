@@ -1,4 +1,3 @@
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { Ban, CheckCircle2, RefreshCcw, Rocket, Terminal } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -95,11 +94,9 @@ export const ShowGeneralLibsql = ({ libsqlId }: Props) => {
 												Deploy
 											</div>
 										</TooltipTrigger>
-										<TooltipPrimitive.Portal>
 											<TooltipContent sideOffset={5} className="z-[60]">
 												<p>Downloads and sets up the Libsql database</p>
 											</TooltipContent>
-										</TooltipPrimitive.Portal>
 									</Tooltip>
 								</Button>
 							</DialogAction>
@@ -135,11 +132,9 @@ export const ShowGeneralLibsql = ({ libsqlId }: Props) => {
 												Reload
 											</div>
 										</TooltipTrigger>
-										<TooltipPrimitive.Portal>
 											<TooltipContent sideOffset={5} className="z-[60]">
 												<p>Restart the Libsql service without rebuilding</p>
 											</TooltipContent>
-										</TooltipPrimitive.Portal>
 									</Tooltip>
 								</Button>
 							</DialogAction>
@@ -175,14 +170,12 @@ export const ShowGeneralLibsql = ({ libsqlId }: Props) => {
 													Start
 												</div>
 											</TooltipTrigger>
-											<TooltipPrimitive.Portal>
 												<TooltipContent sideOffset={5} className="z-[60]">
 													<p>
 														Start the Libsql database (requires a previous
 														successful setup)
 													</p>
 												</TooltipContent>
-											</TooltipPrimitive.Portal>
 										</Tooltip>
 									</Button>
 								</DialogAction>
@@ -217,11 +210,9 @@ export const ShowGeneralLibsql = ({ libsqlId }: Props) => {
 													Stop
 												</div>
 											</TooltipTrigger>
-											<TooltipPrimitive.Portal>
 												<TooltipContent sideOffset={5} className="z-[60]">
 													<p>Stop the currently running Libsql database</p>
 												</TooltipContent>
-											</TooltipPrimitive.Portal>
 										</Tooltip>
 									</Button>
 								</DialogAction>
@@ -242,11 +233,9 @@ export const ShowGeneralLibsql = ({ libsqlId }: Props) => {
 											Open Terminal
 										</div>
 									</TooltipTrigger>
-									<TooltipPrimitive.Portal>
 										<TooltipContent sideOffset={5} className="z-[60]">
 											<p>Open a terminal to the Libsql container</p>
 										</TooltipContent>
-									</TooltipPrimitive.Portal>
 								</Tooltip>
 							</Button>
 						</DockerTerminalModal>

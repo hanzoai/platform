@@ -1,4 +1,3 @@
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { Ban, CheckCircle2, RefreshCcw, Rocket, Terminal } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -97,11 +96,9 @@ export const ShowGeneralRedis = ({ redisId }: Props) => {
 													Deploy
 												</div>
 											</TooltipTrigger>
-											<TooltipPrimitive.Portal>
 												<TooltipContent sideOffset={5} className="z-[60]">
 													<p>Downloads and sets up the Redis database</p>
 												</TooltipContent>
-											</TooltipPrimitive.Portal>
 										</Tooltip>
 									</Button>
 								</DialogAction>
@@ -137,11 +134,9 @@ export const ShowGeneralRedis = ({ redisId }: Props) => {
 													Reload
 												</div>
 											</TooltipTrigger>
-											<TooltipPrimitive.Portal>
 												<TooltipContent sideOffset={5} className="z-[60]">
 													<p>Restart the Redis service without rebuilding</p>
 												</TooltipContent>
-											</TooltipPrimitive.Portal>
 										</Tooltip>
 									</Button>
 								</DialogAction>
@@ -177,14 +172,12 @@ export const ShowGeneralRedis = ({ redisId }: Props) => {
 														Start
 													</div>
 												</TooltipTrigger>
-												<TooltipPrimitive.Portal>
 													<TooltipContent sideOffset={5} className="z-[60]">
 														<p>
 															Start the Redis database (requires a previous
 															successful setup)
 														</p>
 													</TooltipContent>
-												</TooltipPrimitive.Portal>
 											</Tooltip>
 										</Button>
 									</DialogAction>
@@ -217,11 +210,9 @@ export const ShowGeneralRedis = ({ redisId }: Props) => {
 														Stop
 													</div>
 												</TooltipTrigger>
-												<TooltipPrimitive.Portal>
 													<TooltipContent sideOffset={5} className="z-[60]">
 														<p>Stop the currently running Redis database</p>
 													</TooltipContent>
-												</TooltipPrimitive.Portal>
 											</Tooltip>
 										</Button>
 									</DialogAction>
@@ -242,11 +233,9 @@ export const ShowGeneralRedis = ({ redisId }: Props) => {
 											Open Terminal
 										</div>
 									</TooltipTrigger>
-									<TooltipPrimitive.Portal>
 										<TooltipContent sideOffset={5} className="z-[60]">
 											<p>Open a terminal to the Redis container</p>
 										</TooltipContent>
-									</TooltipPrimitive.Portal>
 								</Tooltip>
 							</Button>
 						</DockerTerminalModal>

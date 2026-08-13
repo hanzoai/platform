@@ -65,3 +65,24 @@ export function consumeReturnTo(): string {
 	}
 	return parked;
 }
+
+/**
+ * End the IAM session — the counterpart of `startSignIn`, and the one place
+ * that knows a platform session has TWO halves.
+ *
+ * `createIam()` owns only the browser-side token; the SSR session is the
+ * httpOnly `hanzo_iam_access_token` cookie that `/v1/iam/session` pins, and a
+ * logout that drops one and leaves the other signs the user out of the UI while
+ * `validateRequest` still lets them through. So: clear the cookie first (a
+ * server round-trip that must land before we navigate away), then RP-initiated
+ * logout, which clears local storage and hands off to `hanzo.id`.
+ *
+ * This is app auth logic, which is why it lives in the app. `@hanzo/ui` 5.x
+ * shipped it as `useHanzoAuth` from `@hanzo/ui/navigation`; 8.x drops that
+ * subpath, and correctly — a presentational component library cannot own a
+ * session model.
+ */
+export async function signOutIam(): Promise<void> {
+	await fetch("/v1/iam/session", { method: "DELETE" }).catch(() => {});
+	await createIam().logout();
+}
