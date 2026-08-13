@@ -57,6 +57,7 @@
     "config",
     "dist",
     "webpack.config.server.js",
+    "postcss/tailwind-source.cjs",
     "migration.ts",
     "setup.ts"
   ]

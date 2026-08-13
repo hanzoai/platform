@@ -18,6 +18,7 @@
 import { type BuildJob, listBuildJobs } from "./build-job";
 import { completeBuild, reconcilePostBuild } from "./build-completion";
 import { buildNamespace, readBuildOutcome } from "./buildkit-job";
+import { releaseHandle } from "../../lib/timer";
 
 /** How often to poll in-flight build / e2e / publish Jobs (ms, default 15s). */
 const INTERVAL_MS = Number.parseInt(
@@ -106,5 +107,5 @@ export function startBuildWatcher(): void {
 	console.log(`[build-watcher] scheduler starting (every ${INTERVAL_MS}ms)`);
 	void runBuildWatcherOnce();
 	const handle = setInterval(() => void runBuildWatcherOnce(), INTERVAL_MS);
-	if (typeof handle.unref === "function") handle.unref();
+	releaseHandle(handle);
 }

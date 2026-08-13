@@ -135,7 +135,7 @@ export const DockerLogsId: React.FC<Props> = ({
 		if (!containerId) return;
 
 		let isCurrentConnection = true;
-		let noDataTimeout: NodeJS.Timeout;
+		let noDataTimeout: ReturnType<typeof setTimeout>;
 		setIsLoading(true);
 		setRawLogs("");
 		setFilteredLogs([]);
