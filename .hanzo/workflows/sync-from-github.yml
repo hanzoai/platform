@@ -15,6 +15,26 @@ name: Sync from GitHub
 # uses — so there is no ingress dependency. Fast-forward ONLY: a real divergence
 # fails loudly here instead of force-pushing either side and losing somebody's
 # commits.
+#
+# WHO WRITES THE FORGE. FORGE_TOKEN, not the runner's own workflow token. main
+# has been protected since 2026-08-09, and a protected branch admits a pusher
+# with WRITE on the code — which the workflow token does not have here: a
+# scheduled run is attributed to the actions user, who is nobody's collaborator.
+# Every push has been declined by the pre-receive hook since 2026-08-11T17:50,
+# the first run after the rule that actually had commits to carry. It read as a
+# sync failure and was a permission one; the fetch from GitHub was fine
+# throughout, and the histories never diverged.
+#
+# The runs in between went GREEN while broken, because this job only pushes when
+# GitHub is ahead — two days of "in sync" said nothing about whether it could
+# write. So the pin is a real credential (the same contents:write secret the
+# fleet's cut lane pushes with), and nothing is persisted from the checkout:
+# one credential on the wire, not two.
+#
+# A push made by a real identity also fires the push event, so cicd builds the
+# synced commits by itself. The explicit dispatch that used to stand in for that
+# is gone — with a workflow-token push it was the only thing that built; with
+# this one it is a second identical build.
 on:
   schedule:
     - cron: '*/10 * * * *'
@@ -30,11 +50,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Persist the token-auth remote so the push below reuses it.
-          persist-credentials: true
+          # The write below carries its own credential; a persisted one would
+          # only be the token the branch rule refuses.
+          persist-credentials: false
       - name: Fast-forward main from github.com/hanzoai/platform
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
+          FORGE_TOKEN: ${{ secrets.FORGE_TOKEN }}
         run: |
           set -euo pipefail
           git fetch --quiet "https://x-access-token:${GH_PAT}@github.com/hanzoai/platform.git" main
@@ -46,17 +68,13 @@ jobs:
           fi
           if git merge-base --is-ancestor "$LOCAL" "$REMOTE"; then
             echo "fast-forwarding $LOCAL -> $REMOTE"
-            git push origin "$REMOTE:refs/heads/main"
-            # A push made with the workflow token does NOT trigger other
-            # workflows (loop prevention), so synced commits would never build.
-            # Dispatch the build explicitly — a real fast-forward means real
-            # commits arrived, which is exactly when a build is wanted.
-            curl -fsS --max-time 20 -X POST \
-              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              "${{ github.server_url }}/v1/repos/${{ github.repository }}/actions/workflows/cicd.yml/dispatches" \
-              -d '{"ref":"main"}' \
-              && echo "cicd dispatched" || echo "cicd dispatch failed (non-fatal — next direct push will build)"
+            [ -n "${FORGE_TOKEN:-}" ] || {
+              echo "::error::the forge write needs FORGE_TOKEN (contents:write) — refusing to sync silently."
+              exit 1
+            }
+            git -c http.extraheader="Authorization: token ${FORGE_TOKEN}" \
+              push "${{ github.server_url }}/${{ github.repository }}.git" \
+              "$REMOTE:refs/heads/main"
           elif git merge-base --is-ancestor "$REMOTE" "$LOCAL"; then
             echo "this git is AHEAD of GitHub ($REMOTE ancestor of $LOCAL) — nothing to pull."
             echo "(GitHub catch-up is a separate concern; never force from here.)"
