@@ -1,24 +1,10 @@
-import * as LabelPrimitive from "@radix-ui/react-label";
-import { cva, type VariantProps } from "class-variance-authority";
-import * as React from "react";
-
-import { cn } from "@/lib/utils";
-
-const labelVariants = cva(
-	"text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-);
-
-const Label = React.forwardRef<
-	React.ElementRef<typeof LabelPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> &
-		VariantProps<typeof labelVariants>
->(({ className, ...props }, ref) => (
-	<LabelPrimitive.Root
-		ref={ref}
-		className={cn(labelVariants(), className)}
-		{...props}
-	/>
-));
-Label.displayName = LabelPrimitive.Root.displayName;
-
-export { Label };
+/**
+ * Label — @hanzo/ui.
+ *
+ * Was a local shadcn copy over @radix-ui. @hanzo/ui publishes the same names
+ * rendered through @hanzo/gui, so the component works on web, native and
+ * desktop instead of only in a DOM. The import path callers use is unchanged.
+ */
+export {
+	Label,
+} from "@hanzo/ui";

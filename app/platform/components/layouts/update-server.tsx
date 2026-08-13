@@ -23,7 +23,7 @@ export const UpdateServerButton = () => {
 		api.settings.getUpdateData.useMutation();
 	const [isOpen, setIsOpen] = useState(false);
 
-	const checkUpdatesIntervalRef = useRef<null | NodeJS.Timeout>(null);
+	const checkUpdatesIntervalRef = useRef<null | ReturnType<typeof setInterval>>(null);
 
 	useEffect(() => {
 		// Handling of automatic check for server updates

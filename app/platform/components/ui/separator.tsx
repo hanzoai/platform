@@ -1,29 +1,10 @@
-import * as SeparatorPrimitive from "@radix-ui/react-separator";
-import * as React from "react";
-
-import { cn } from "@/lib/utils";
-
-const Separator = React.forwardRef<
-	React.ElementRef<typeof SeparatorPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof SeparatorPrimitive.Root>
->(
-	(
-		{ className, orientation = "horizontal", decorative = true, ...props },
-		ref,
-	) => (
-		<SeparatorPrimitive.Root
-			ref={ref}
-			decorative={decorative}
-			orientation={orientation}
-			className={cn(
-				"shrink-0 bg-border",
-				orientation === "horizontal" ? "h-[1px] w-full" : "h-full w-[1px]",
-				className,
-			)}
-			{...props}
-		/>
-	),
-);
-Separator.displayName = SeparatorPrimitive.Root.displayName;
-
-export { Separator };
+/**
+ * Separator — @hanzo/ui.
+ *
+ * Was a local shadcn copy over @radix-ui. @hanzo/ui publishes the same names
+ * rendered through @hanzo/gui, so the component works on web, native and
+ * desktop instead of only in a DOM. The import path callers use is unchanged.
+ */
+export {
+	Separator,
+} from "@hanzo/ui";

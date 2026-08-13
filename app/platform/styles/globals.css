@@ -2,101 +2,114 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-	:root {
-		--terminal-paste: rgba(255, 255, 255, 0.2);
-		--background: 0 0% 0%;
-		--foreground: 0 0% 98%;
 
-		--card: 0 0% 5%;
-		--card-foreground: 0 0% 98%;
+/*
+ * Design tokens — unlayered, deliberately.
+ *
+ * @hanzo/ui ships its own copy of these NAMES in `styles.css`, as finished
+ * colours (`#fafafa`) rather than the bare `H S% L%` triplets this app's
+ * Tailwind config wraps in `hsl()`. Whichever declaration wins decides whether
+ * `bg-primary` is a colour or nothing at all.
+ *
+ * Its `:root`/`.light`/`.dark` blocks are UNLAYERED, and a layered rule loses to
+ * an unlayered one whatever its specificity — so while these lived in
+ * `@layer base` the library won and every filled button on the page rendered as
+ * bare text. Measured. Out of the layer they are peers, and `_app.tsx` imports
+ * the library's sheet first, so the app's values land last and hold.
+ */
+:root {
+	--terminal-paste: rgba(255, 255, 255, 0.2);
+	--background: 0 0% 0%;
+	--foreground: 0 0% 98%;
 
-		--popover: 0 0% 5%;
-		--popover-foreground: 0 0% 98%;
+	--card: 0 0% 5%;
+	--card-foreground: 0 0% 98%;
 
-		--primary: 0 0% 98%;
-		--primary-foreground: 0 0% 0%;
+	--popover: 0 0% 5%;
+	--popover-foreground: 0 0% 98%;
 
-		--secondary: 0 0% 15%;
-		--secondary-foreground: 0 0% 98%;
+	--primary: 0 0% 98%;
+	--primary-foreground: 0 0% 0%;
 
-		--muted: 0 0% 15%;
-		--muted-foreground: 0 0% 65%;
+	--secondary: 0 0% 15%;
+	--secondary-foreground: 0 0% 98%;
 
-		--accent: 0 0% 15%;
-		--accent-foreground: 0 0% 98%;
+	--muted: 0 0% 15%;
+	--muted-foreground: 0 0% 65%;
 
-		--destructive: 0 98% 63%;
-		--destructive-foreground: 0 0% 98%;
+	--accent: 0 0% 15%;
+	--accent-foreground: 0 0% 98%;
 
-		--border: 0 0% 20%;
-		--input: 0 0% 15%;
-		--ring: 0 0% 30%;
+	--destructive: 0 98% 63%;
+	--destructive-foreground: 0 0% 98%;
 
-		--radius: 0.5rem;
-		--overlay: rgba(0, 0, 0, 0.5);
+	--border: 0 0% 20%;
+	--input: 0 0% 15%;
+	--ring: 0 0% 30%;
 
-		--chart-1: 0 98% 63%;
-		--chart-2: 0 0% 60%;
-		--chart-3: 0 0% 40%;
-		--chart-4: 0 0% 80%;
-		--chart-5: 0 0% 20%;
-		--sidebar-background: 0 0% 0%;
-		--sidebar-foreground: 0 0% 98%;
-		--sidebar-primary: 0 0% 10%;
-		--sidebar-primary-foreground: 0 0% 98%;
-		--sidebar-accent: 0 0% 15%;
-		--sidebar-accent-foreground: 0 0% 98%;
-		--sidebar-border: 0 0% 20%;
-		--sidebar-ring: 0 0% 40%;
-	}
+	--radius: 0.5rem;
+	--overlay: rgba(0, 0, 0, 0.5);
 
-	.dark {
-		--terminal-paste: rgba(255, 255, 255, 0.2);
-		--background: 0 0% 0%;
-		--foreground: 0 0% 98%;
+	--chart-1: 0 98% 63%;
+	--chart-2: 0 0% 60%;
+	--chart-3: 0 0% 40%;
+	--chart-4: 0 0% 80%;
+	--chart-5: 0 0% 20%;
+	--sidebar-background: 0 0% 0%;
+	--sidebar-foreground: 0 0% 98%;
+	--sidebar-primary: 0 0% 10%;
+	--sidebar-primary-foreground: 0 0% 98%;
+	--sidebar-accent: 0 0% 15%;
+	--sidebar-accent-foreground: 0 0% 98%;
+	--sidebar-border: 0 0% 20%;
+	--sidebar-ring: 0 0% 40%;
+}
 
-		--card: 0 0% 5%;
-		--card-foreground: 0 0% 98%;
+.dark {
+	--terminal-paste: rgba(255, 255, 255, 0.2);
+	--background: 0 0% 0%;
+	--foreground: 0 0% 98%;
 
-		--popover: 0 0% 5%;
-		--popover-foreground: 0 0% 98%;
+	--card: 0 0% 5%;
+	--card-foreground: 0 0% 98%;
 
-		--primary: 0 0% 98%;
-		--primary-foreground: 0 0% 0%;
+	--popover: 0 0% 5%;
+	--popover-foreground: 0 0% 98%;
 
-		--secondary: 0 0% 15%;
-		--secondary-foreground: 0 0% 98%;
+	--primary: 0 0% 98%;
+	--primary-foreground: 0 0% 0%;
 
-		--muted: 0 0% 10%;
-		--muted-foreground: 0 0% 65%;
+	--secondary: 0 0% 15%;
+	--secondary-foreground: 0 0% 98%;
 
-		--accent: 0 0% 15%;
-		--accent-foreground: 0 0% 98%;
+	--muted: 0 0% 10%;
+	--muted-foreground: 0 0% 65%;
 
-		--destructive: 0 98% 63%;
-		--destructive-foreground: 0 0% 98%;
+	--accent: 0 0% 15%;
+	--accent-foreground: 0 0% 98%;
 
-		--border: 0 0% 15%;
-		--input: 0 0% 10%;
-		--ring: 0 0% 84%;
+	--destructive: 0 98% 63%;
+	--destructive-foreground: 0 0% 98%;
 
-		--overlay: rgba(0, 0, 0, 0.5);
+	--border: 0 0% 15%;
+	--input: 0 0% 10%;
+	--ring: 0 0% 84%;
 
-		--chart-1: 0 98% 63%;
-		--chart-2: 0 0% 60%;
-		--chart-3: 0 0% 40%;
-		--chart-4: 0 0% 80%;
-		--chart-5: 0 0% 20%;
-		--sidebar-background: 0 0% 0%;
-		--sidebar-foreground: 0 0% 98%;
-		--sidebar-primary: 0 98% 63%;
-		--sidebar-primary-foreground: 0 0% 100%;
-		--sidebar-accent: 0 0% 15%;
-		--sidebar-accent-foreground: 0 0% 98%;
-		--sidebar-border: 0 0% 20%;
-		--sidebar-ring: 0 0% 40%;
-	}
+	--overlay: rgba(0, 0, 0, 0.5);
+
+	--chart-1: 0 98% 63%;
+	--chart-2: 0 0% 60%;
+	--chart-3: 0 0% 40%;
+	--chart-4: 0 0% 80%;
+	--chart-5: 0 0% 20%;
+	--sidebar-background: 0 0% 0%;
+	--sidebar-foreground: 0 0% 98%;
+	--sidebar-primary: 0 98% 63%;
+	--sidebar-primary-foreground: 0 0% 100%;
+	--sidebar-accent: 0 0% 15%;
+	--sidebar-accent-foreground: 0 0% 98%;
+	--sidebar-border: 0 0% 20%;
+	--sidebar-ring: 0 0% 40%;
 }
 
 @layer base {

@@ -9,7 +9,54 @@ const nextConfig = {
 	typescript: {
 		ignoreBuildErrors: true,
 	},
-	transpilePackages: ["@hanzo/platform", "@hanzo/ui"],
+	// @hanzo/ui 8 renders every primitive through @hanzo/gui, which ships
+	// untranspiled ESM and resolves modules the React-Native way. Next has to
+	// compile those packages and point `react-native` at the web implementation —
+	// that pair IS the browser story for the gui substrate, and omitting either
+	// one fails at bundle time, not at runtime.
+	//
+	// Listing a package here also stops Next externalising it from the SERVER
+	// bundle, which matters as much as the transpiling: left external, Node
+	// loads the package's own entry at runtime and picks the CJS condition, which
+	// anywhere in the React-Native graph means the NATIVE build. That is how a
+	// page that "compiled successfully" then died collecting page data on
+	// `import typeof` — Flow syntax, from react-native's index.
+	transpilePackages: [
+		"@hanzo/platform",
+		"@hanzo/ui",
+		"@hanzo/gui",
+		"react-native-web",
+		"react-native-svg",
+		// The icon set is the one package that reaches react-native-svg. Left
+		// external it is loaded by Node, which picks the CJS/native condition and
+		// walks straight into the graph above.
+		"@hanzogui/lucide-icons-2",
+		"@hanzogui/helpers-icon",
+	],
+	webpack: (config) => {
+		config.resolve.alias = {
+			...config.resolve.alias,
+			"react-native$": "react-native-web",
+			// Same rule, one level down. react-native-svg reaches the asset
+			// registry through `@react-native/assets-registry`, which is a
+			// two-function re-export of `react-native`'s copy — and the web
+			// implementation of those two functions ships in react-native-web
+			// already. Pointing at it resolves the import to the code that
+			// actually runs in a browser rather than to a native module.
+			"@react-native/assets-registry/registry$":
+				"react-native-web/dist/modules/AssetRegistry",
+		};
+		// gui ships `.web.*` platform variants; without these extensions webpack
+		// picks the native file and pulls in RN internals that have no browser build.
+		config.resolve.extensions = [
+			".web.tsx",
+			".web.ts",
+			".web.jsx",
+			".web.js",
+			...(config.resolve.extensions || []),
+		];
+		return config;
+	},
 	// Native node modules must never enter the webpack bundle — they ship a
 	// prebuilt `.node` binary webpack cannot parse. The App Router /v1 routes are
 	// server-only and reach these transitively through @hanzo/platform (e.g.
