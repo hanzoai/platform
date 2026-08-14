@@ -32,6 +32,7 @@
  */
 
 import { parseImageRef } from "../ci/image-ref";
+import { readDeclared } from "./declared";
 import { getDefaultClients, type K8sClients } from "../k8s/k8s-client";
 import {
 	type AppEnv,
@@ -69,12 +70,14 @@ export const LOCAL_SERVER = "https://kubernetes.default.svc";
 // Wire shapes (only the fields read here; the CD Application is much larger)
 // ---------------------------------------------------------------------------
 
-interface CdSource {
+export interface CdSource {
 	repoURL?: string;
 	path?: string;
 	chart?: string;
 	targetRevision?: string;
-	helm?: { releaseName?: string };
+	/** Names this source for `$values/`-prefixed paths in a sibling source. */
+	ref?: string;
+	helm?: { releaseName?: string; valueFiles?: string[] };
 }
 
 export interface CdApplication {
@@ -342,6 +345,17 @@ export async function discoverDelivered(
 	]);
 	const serverToProject = serverProjects(projects);
 
+	// What each app is DECLARED to run, read from the universe it is reconciled
+	// from. CD reports what is running and whether it matches git; it never
+	// reports what git says now, so this column was null for every app on every
+	// cluster and the board had nothing to compare a running tag against.
+	//
+	// The pointer is on the Application itself, so no per-org registry of repos
+	// is needed and an org is onboarded by being reconciled. A file that cannot
+	// be read leaves the app absent from the map and the column stays unknown —
+	// which is true, and is what it said before.
+	const declared = await readDeclared(applications);
+
 	const observed: ObservedApp[] = [];
 	for (const app of applications) {
 		const row = observeDelivered(
@@ -350,7 +364,9 @@ export async function discoverDelivered(
 			localCluster,
 			fallbackOrg,
 		);
-		if (row) observed.push(row);
+		if (!row) continue;
+		const tag = declared.get(app.metadata?.name ?? "");
+		observed.push(tag ? { ...row, declaredTag: tag } : row);
 	}
 	return observed;
 }
