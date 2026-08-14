@@ -79,7 +79,7 @@ const ServicesPage = () => {
               <HardDrive className="h-5 w-5" />
               S3 Object Storage
             </CardTitle>
-            <CardDescription>S3-compatible object storage</CardDescription>
+            <CardDescription>Distributed object storage</CardDescription>
           </CardHeader>
           <CardContent>
             <Button className="w-full" variant="outline">Deploy Storage</Button>

@@ -95,7 +95,7 @@ export const stackRegistry: StackCategory[] = [
 			{
 				name: "Datastore",
 				description:
-					"Datastore is Hanzo's column-oriented analytics database (ClickHouse-compatible, Apache-2.0) for real-time analytics at scale — leaner and faster than upstream.",
+					"Hanzo's column-oriented analytics database for real-time queries over large datasets.",
 				manifest: "datastorev1.0.yaml",
 				version: "1.0",
 				isLatest: true,
@@ -614,7 +614,7 @@ export const stackRegistry: StackCategory[] = [
 			{
 				name: "S3 Object Storage",
 				description:
-					"High-performance, S3-compatible distributed object storage for large-scale cloud infrastructure.",
+					"High-performance distributed object storage for large-scale cloud infrastructure.",
 				manifest: "s3v1.0.yaml",
 				version: "1.0",
 				isLatest: true,
