@@ -32,6 +32,7 @@
  * that would then have to be kept true.
  */
 
+import { kmsSecret } from "../kms";
 import type { CdApplication } from "./delivery";
 
 /** Where one app's declared state is written down. */
@@ -137,12 +138,15 @@ export type FetchText = (url: string) => Promise<string | null>;
  * and looking identical. So redirects are NOT followed, and a body that is not
  * plainly YAML is refused rather than parsed.
  *
- * FORGE_TOKEN is a read-only forge token, sealed in KMS like every other
- * credential this service holds. Absent, this returns null for every file and
- * the board keeps saying "unknown" — which is true, and is what it said before.
+ * FORGE_TOKEN is a read-only forge token, sealed in KMS and synced to the pod
+ * like every other credential this service holds — read through the one funnel
+ * rather than off process.env, so there is no second way in. It is OPTIONAL:
+ * absent, this returns null for every file and the board keeps saying "unknown",
+ * which is true and is what it said before. A missing token must not throw and
+ * take the whole inventory pass down with it.
  */
 export const fetchText: FetchText = async (url) => {
-	const token = process.env.FORGE_TOKEN;
+	const token = kmsSecret("FORGE_TOKEN");
 	try {
 		const res = await fetch(url, {
 			redirect: "manual",
