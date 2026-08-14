@@ -178,6 +178,23 @@ spec:
                 secretKeyRef:
                   name: platform-app-secrets
                   key: PLATFORM_BUILD_CALLBACK_TOKEN
+            # Read-only forge token, so the apps board can read what each app is
+            # DECLARED to run from the universe it is reconciled from. CD reports
+            # what is RUNNING and whether it matches git, never what git says now
+            # — without this the declared column is null for the whole fleet
+            # (measured: 0 of 336) and drift cannot be computed at all.
+            #
+            # OPTIONAL by construction. Absent, the reader returns nothing and
+            # the board says "unknown", which is true and is what it said before.
+            # `optional: true` so a cluster that has not sealed it yet still
+            # starts: a missing OBSERVABILITY credential must never keep the
+            # control plane down.
+            - name: FORGE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: platform-app-secrets
+                  key: FORGE_TOKEN
+                  optional: true
             # The platform's OWN GitHub App installation. `appEnvOctokit` reads
             # exactly these three and, with all three present, mints short-lived
             # installation tokens (5000 req/hr, scoped to the installation).
