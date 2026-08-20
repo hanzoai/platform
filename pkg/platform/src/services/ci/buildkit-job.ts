@@ -453,6 +453,14 @@ function dockerAuthWiring(
 
 /** Build the BuildKit Job object — pure (no IO), so its shape is unit-testable. */
 export function buildBuildkitJob(input: BuildJobLaunchInput) {
+	// FIRST, because everything below reads the path apart: the Job's name, the
+	// owner the destination is judged against, and the git context BuildKit
+	// clones. `buildkitArgs` asks the same question further down, and asking it
+	// here too is what lets those readers take an `owner/name` for granted
+	// instead of each deciding what a half of one means.
+	const source = repoProblem(input.repo);
+	if (source) throw new TRPCError({ code: "BAD_REQUEST", message: source });
+
 	const namespace = input.namespace ?? buildNamespace();
 	const arch = input.arch ?? "amd64";
 	const name = buildJobName(input.repo, input.buildJobId);
