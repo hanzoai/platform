@@ -17,6 +17,14 @@ const cfg = (over: Partial<PublishConfig> = {}): PublishConfig => ({
 });
 
 describe("publishScript", () => {
+	it("clones from the forge", () => {
+		const s = publishScript(cfg({ npm: true }));
+		expect(s).toContain(
+			'"https://x-access-token:${GIT_AUTH_TOKEN}@git.hanzo.ai/${REPO}.git" src',
+		);
+		expect(s).not.toContain("github.com");
+	});
+
 	it("publishes to npm with the registry token", () => {
 		const s = publishScript(cfg({ npm: true }));
 		expect(s).toContain("set -euo pipefail");
@@ -115,6 +123,6 @@ describe("buildPublishJobObject", () => {
 
 	it("clones via the git token secret", () => {
 		const git = env.find((e) => e.name === "GIT_AUTH_TOKEN");
-		expect(git?.valueFrom?.secretKeyRef.name).toBe("console-git-token");
+		expect(git?.valueFrom?.secretKeyRef.name).toBe("git-hanzo-ai-token");
 	});
 });

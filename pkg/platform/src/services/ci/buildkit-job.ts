@@ -15,11 +15,10 @@
  * commerce/chat/cloud on this cluster (`<repo>-build-<sha>`): a privileged
  * `moby/buildkit` pod running `buildctl-daemonless.sh build` with the
  * `dockerfile.v0` frontend over an HTTPS git context, pushing to
- * `--output=type=image,…,push=true`. Git auth comes from `console-git-token`
- * (the `GIT_AUTH_TOKEN` env BuildKit reads for an authenticated git context),
- * registry auth from the per-org `push-<org>` secret mounted at `/root/.docker`,
- * scheduled onto the `runner-pool-32g` CI pool (tainted `dedicated=ci-runner`).
- * Bridging the
+ * `--output=type=image,…,push=true`. Source comes from the forge over an
+ * authenticated git context (`GIT_AUTH_TOKEN` from `forge-token`), registry auth
+ * from the per-org `push-<org>` secret mounted at `/root/.docker`, scheduled onto
+ * the `runner-pool-32g` CI pool (tainted `dedicated=ci-runner`). Bridging the
  * scheduler to this is what makes platform-native builds REAL — no human
  * applying Job YAML by hand.
  *
@@ -30,6 +29,7 @@
  * pattern. Unset (the default) keeps the exact single-GHCR proven behavior.
  */
 import { TRPCError } from "@trpc/server";
+import { forgeHost, forgeUrl } from "../hanzo-git";
 import { getDefaultClients } from "../k8s/k8s-client";
 import {
 	parseImageRef,
@@ -40,8 +40,28 @@ import type { BuildArch } from "./platform-config";
 
 /** BuildKit executor image — the canonical in-cluster builder (proven contract). */
 const BUILDKIT_IMAGE = "moby/buildkit:v0.16.0";
-/** Secret (key `token`) used to clone private repos via the git context. */
-const GIT_SECRET = "console-git-token";
+/**
+ * Secret (key `token`) the build presents to the forge to read source, named
+ * for the host it authenticates to. Reconciles from KMS `hanzo/deploy`
+ * `FORGE_TOKEN`; the forge serves no repository anonymously, so the mount is
+ * required and a missing credential stops the pod instead of reaching a clone.
+ */
+const FORGE_SECRET = "forge-token";
+/**
+ * Secret (key `token`) handed to a Dockerfile as the `gh_token` build secret,
+ * for resolving Go modules whose PATH is a github.com path.
+ *
+ * A module path is part of a module's identity — `module github.com/hanzoai/o11y`
+ * is what every dependent's `go.mod` names — so with `GOPRIVATE=github.com/hanzoai/*`
+ * the toolchain takes a direct VCS fetch to github.com and needs a credential
+ * valid THERE. Eleven Dockerfiles wire it through `git config url.…insteadOf`.
+ *
+ * Distinct from {@link FORGE_SECRET} in name because it is distinct in kind:
+ * this one resolves DEPENDENCIES at github.com, that one reads the build's own
+ * SOURCE from the forge. Two hosts, two credentials, and a shared name would let
+ * either be swapped for the other without the swap looking wrong.
+ */
+const MODULE_FETCH_SECRET = "console-git-token";
 /**
  * GHCR push credentials are PER ORG (`push-hanzoai` / `push-luxfi` /
  * `push-zooai`), derived from the destination image by `pushSecretForImage` —
@@ -95,9 +115,12 @@ export function buildNamespace(): string {
 	return ns ? ns : "hanzo-build";
 }
 
-/** Materialize ~/.netrc from GIT_AUTH_TOKEN so a Dockerfile can clone private repos. */
-const NETRC_SETUP =
-	'printf "machine github.com login x-access-token password %s\\n" "$GIT_AUTH_TOKEN" > /tmp/netrc';
+/**
+ * Materialize ~/.netrc from GIT_AUTH_TOKEN so a Dockerfile can clone private
+ * repos. The machine line names the same host the git context fetches from, so
+ * a Dockerfile's own clones reach the source the build was resolved against.
+ */
+const NETRC_SETUP = `printf "machine ${forgeHost()} login x-access-token password %s\\n" "$GIT_AUTH_TOKEN" > /tmp/netrc`;
 
 /**
  * The `sh -c` wrapper the build container runs. Without a fleet registry it is
@@ -270,7 +293,7 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	const args = [
 		"build",
 		"--frontend=dockerfile.v0",
-		`--opt=context=https://github.com/${input.repo}.git#${input.gitRef}`,
+		`--opt=context=${forgeUrl()}/${input.repo}.git#${input.gitRef}`,
 		`--opt=filename=${dockerfile}`,
 		`--opt=platform=linux/${arch}`,
 	];
@@ -366,8 +389,8 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 		"--secret=id=gh_token,env=GH_TOKEN",
 		// Materialized ~/.netrc (see buildBuildkitJob's command wrapper) so a
 		// Dockerfile that clones private repos with `--mount=type=secret,id=netrc`
-		// authenticates. Same credential (console-git-token) as the git context —
-		// one credential, one way.
+		// authenticates. Same credential as the git context — one credential,
+		// one way.
 		"--secret=id=netrc,src=/tmp/netrc",
 		push,
 		"--progress=plain",
@@ -486,13 +509,17 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 								{
 									name: "GIT_AUTH_TOKEN",
 									valueFrom: {
-										secretKeyRef: { name: GIT_SECRET, key: "token" },
+										secretKeyRef: { name: FORGE_SECRET, key: "token" },
 									},
 								},
 								{
 									name: "GH_TOKEN",
 									valueFrom: {
-										secretKeyRef: { name: GIT_SECRET, key: "token" },
+										secretKeyRef: {
+											name: MODULE_FETCH_SECRET,
+											key: "token",
+											optional: true,
+										},
 									},
 								},
 								{ name: "DOCKER_CONFIG", value: "/root/.docker" },
