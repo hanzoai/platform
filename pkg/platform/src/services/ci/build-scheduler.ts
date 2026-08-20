@@ -442,9 +442,10 @@ export interface DirectBuildInput {
 export async function enqueueDirectBuild(
 	input: DirectBuildInput,
 ): Promise<BuildJob> {
-	// The repository the build clones — named, and named once, before a row
-	// exists to carry a value the build path would then refuse.
+	// The repository the build clones and the commit it reads — named, and named
+	// once, before a row exists to carry a value the build path would then refuse.
 	const repo = repoOf(input.repo);
+	const sha = shaOf(input.sha);
 	// Where this build publishes, decided against the repository it reads, before
 	// a row exists to carry a destination the muscle would then mount a
 	// credential for.
@@ -480,17 +481,12 @@ export async function enqueueDirectBuild(
 	// Keyed on the image too. Without it a second direct build of the same
 	// commit to a DIFFERENT image returned the first job untouched, so the
 	// caller was handed a success carrying an image it never asked for.
-	const existing = await findBuildJobByTarget(
-		repo,
-		input.sha,
-		target,
-		input.image,
-	);
+	const existing = await findBuildJobByTarget(repo, sha, target, input.image);
 	if (existing) return existing;
 
 	const job = await createBuildJob({
 		repo,
-		sha: input.sha,
+		sha,
 		ref,
 		branch,
 		target,
@@ -517,13 +513,15 @@ export async function enqueueDirectBuild(
 export async function scheduleBuilds(
 	input: ScheduleInput,
 ): Promise<ScheduleResult | null> {
-	// One repository: what the config is read from, what the build clones, and
-	// what keys every row this call writes. Named before any of that happens.
+	// One repository and one commit: what the config is read from, what the build
+	// clones, and what keys every row this call writes. Named before any of that
+	// happens.
 	const repo = repoOf(input.repo);
+	const sha = shaOf(input.sha);
 	const { organizationId, config } = await resolveSource(
 		input.source,
 		repo,
-		input.sha,
+		sha,
 	);
 	// The principal is whatever `source` resolved to. When the caller chose
 	// `source`, it therefore chose the principal — so confirm it is the org the
@@ -558,7 +556,7 @@ export async function scheduleBuilds(
 	if (input.source.forge === "hanzo-git") {
 		const why = await assertBuildableFromCanonicalSource({
 			forgeRepo: repo,
-			sha: input.sha,
+			sha,
 			declared: config.source,
 			facts: await readForgeRepoFacts(forgeReader(), repo),
 			probe: githubReachability,
@@ -594,13 +592,13 @@ export async function scheduleBuilds(
 			if (!isBuildableArch(entry.arch)) continue;
 			const arch = `${entry.os}/${entry.arch}`;
 			const target = build.name ? `${build.name}:${arch}` : arch;
-			const existing = await findBuildJobByTarget(repo, input.sha, target);
+			const existing = await findBuildJobByTarget(repo, sha, target);
 			if (existing) {
 				jobs.push(existing);
 				continue;
 			}
 			const tag = resolveTag(build.tagPattern, {
-				sha: input.sha,
+				sha,
 				branch: input.branch,
 				ref: input.ref,
 			});
@@ -610,7 +608,7 @@ export async function scheduleBuilds(
 			if (tag === null) continue;
 			const job = await createBuildJob({
 				repo,
-				sha: input.sha,
+				sha,
 				ref: input.ref,
 				branch: input.branch,
 				target,
@@ -654,6 +652,31 @@ function repoOf(repo: string): string {
 	const problem = repoProblem(repo);
 	if (problem) throw new TRPCError({ code: "BAD_REQUEST", message: problem });
 	return repoName(repo);
+}
+
+/** A commit is named by its object id, and an object id is hex. */
+const OBJECT_ID = /^[0-9a-f]{7,64}$/i;
+
+/**
+ * The commit a build reads, named once for the whole call.
+ *
+ * Both front doors converge here, and only one of them gets its commit off a
+ * signed delivery — the console's trigger takes a typed one. So the value is
+ * read as a commit HERE, alongside the repository, rather than at each door:
+ * it keys the row, names the target, addresses the config on the forge and
+ * spells the image tag, and it reaches all four through this one call.
+ *
+ * Folded, like `repoName` folds a repository: hex is case-insensitive, so both
+ * spellings name one commit and key one row instead of building it twice.
+ */
+function shaOf(sha: string): string {
+	if (!OBJECT_ID.test(sha)) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `"${sha}" does not name a commit: expected a hex object id`,
+		});
+	}
+	return sha.toLowerCase();
 }
 
 /**

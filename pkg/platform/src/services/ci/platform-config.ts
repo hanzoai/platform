@@ -807,6 +807,11 @@ export function tagFromRef(ref: string | undefined): string | null {
 /**
  * Resolve a tag-pattern template against the triggering git context.
  *
+ * What comes out is a docker tag, so every token goes in as one — this is where
+ * the resolver's own output is made a tag, whatever the context said. The tag
+ * names an image, and the image name is one field of the exporter the build
+ * muscle writes, so a character a tag cannot hold is not one this can emit.
+ *
  * Returns null when the pattern uses `{{git.tag}}` but the push was not a tag.
  * That is deliberate: a tag-patterned build has no meaningful image name on a
  * branch push, and inventing one (falling back to the branch) would give a
@@ -814,16 +819,14 @@ export function tagFromRef(ref: string | undefined): string | null {
  * is published when, and only when, a `v*` tag is pushed.
  */
 export function resolveTag(
-	tagPattern: string,
+	pattern: string,
 	ctx: { sha: string; branch: string; ref?: string },
 ): string | null {
-	if (tagPattern.includes("{{git.tag}}")) {
-		const tag = tagFromRef(ctx.ref);
-		if (tag === null) return null;
-		tagPattern = tagPattern.replaceAll("{{git.tag}}", sanitizeTagSegment(tag));
-	}
-	return tagPattern
-		.replaceAll("{{git.sha}}", ctx.sha)
+	const tag = pattern.includes("{{git.tag}}") ? tagFromRef(ctx.ref) : "";
+	if (tag === null) return null;
+	return pattern
+		.replaceAll("{{git.tag}}", sanitizeTagSegment(tag))
+		.replaceAll("{{git.sha}}", sanitizeTagSegment(ctx.sha))
 		.replaceAll("{{git.branch}}", sanitizeTagSegment(ctx.branch));
 }
 

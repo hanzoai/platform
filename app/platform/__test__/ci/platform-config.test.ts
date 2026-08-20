@@ -412,6 +412,30 @@ describe("resolveTag", () => {
 		).toBe("br-feat-foo-bar");
 	});
 
+	it("sanitizes sha in tag", () => {
+		expect(
+			resolveTag("{{git.sha}}", {
+				sha: "abc1234,name=ghcr.io/luxfi/node:v1",
+				branch: "main",
+			}),
+		).toBe("abc1234-name-ghcr.io-luxfi-node-v1");
+	});
+
+	// What comes out is a docker tag, and a docker tag is [A-Za-z0-9._-]. Every
+	// token is spelled in that alphabet, so the resolver's output is a tag
+	// whatever the triggering context said. The tag names an image and the image
+	// name is one field of the exporter the build muscle writes, so a comma or an
+	// `=` is part of no name this can produce.
+	it("spells every token with the same alphabet", () => {
+		for (const [pattern, ctx] of [
+			["{{git.sha}}", { sha: "a,b=c d/e", branch: "main" }],
+			["{{git.branch}}", { sha: "x", branch: "a,b=c d/e" }],
+			["{{git.tag}}", { sha: "x", branch: "main", ref: "refs/tags/a,b=c d/e" }],
+		] as const) {
+			expect(resolveTag(pattern, ctx), pattern).toBe("a-b-c-d-e");
+		}
+	});
+
 	// {{git.tag}} exists so a repo can publish a semver image on a `v*` push —
 	// the capability GitHub Actions provided before repos moved to platform.
 	it("substitutes git.tag on a tag push", () => {
