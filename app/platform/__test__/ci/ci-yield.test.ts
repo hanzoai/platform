@@ -53,6 +53,7 @@ const { scheduleBuilds } = await import(
 const { buildJobRouter } = await import("@/server/api/routers/build-job");
 
 const SHA = "3f2b1c9d4e5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c";
+const REF = "refs/heads/main";
 const REPO = "hanzo/cloud";
 const ORG = "org_1";
 
@@ -66,6 +67,8 @@ const HANZO_YML = [
 
 /** Whether the forge serves the repo a ci caller. Set per test. */
 let hasCaller = false;
+/** Whether the forge serves the repo a `hanzo.yml`. Set per test. */
+let hasConfig = true;
 
 function forge(): typeof fetch {
 	return (async (input: string | URL | Request) => {
@@ -75,11 +78,17 @@ function forge(): typeof fetch {
 				status: 200,
 				headers: { "content-type": "application/json" },
 			});
+		// `main` points at SHA. Both doors name the ref and the forge answers for
+		// the commit, so this is the read every build here starts with.
+		if (/\/branches\/main(\?|$)/.test(url))
+			return json({ commit: { id: SHA } });
 		if (url.includes("/contents/hanzo.yml")) {
-			return json({
-				content: Buffer.from(HANZO_YML).toString("base64"),
-				encoding: "base64",
-			});
+			return hasConfig
+				? json({
+						content: Buffer.from(HANZO_YML).toString("base64"),
+						encoding: "base64",
+					})
+				: new Response("", { status: 404 });
 		}
 		if (url.includes("/contents/.hanzo/workflows/cicd.yml")) {
 			return hasCaller
@@ -99,17 +108,20 @@ function console_() {
 	} as never);
 }
 
+/** What the forge's delivery states: which forge vouched for it, and for what. */
 const delivery = {
 	source: { forge: "hanzo-git" as const },
 	repo: REPO,
-	sha: SHA,
-	ref: "refs/heads/main",
-	branch: "main",
+	ref: REF,
 };
+
+/** What the console states: a repository and a ref, and no forge to choose. */
+const request = { repo: REPO, ref: REF };
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	hasCaller = false;
+	hasConfig = true;
 	process.env.HANZO_GIT_URL = "https://git.hanzo.ai";
 	process.env.HANZO_GIT_WEBHOOK_SECRET = "forge-s3cr3t";
 	vi.stubGlobal("fetch", forge());
@@ -146,7 +158,7 @@ describe("hanzoai/ci owns the build", () => {
 
 	it("the console's trigger yields too — the rule is not a webhook's", async () => {
 		hasCaller = true;
-		const res = await console_().trigger(delivery);
+		const res = await console_().trigger(request);
 
 		expect(res.scheduled).toBe(0);
 		expect(createBuildJob).not.toHaveBeenCalled();
@@ -156,7 +168,7 @@ describe("hanzoai/ci owns the build", () => {
 	it("says WHY in one sentence, the same at both doors", async () => {
 		hasCaller = true;
 		const scheduled = await scheduleBuilds(delivery);
-		const triggered = await console_().trigger(delivery);
+		const triggered = await console_().trigger(request);
 
 		expect(scheduled).toMatchObject({
 			why: expect.stringContaining("hanzoai/ci"),
@@ -167,11 +179,9 @@ describe("hanzoai/ci owns the build", () => {
 
 	it("a repo with no image says so, and says it differently", async () => {
 		// The other reason for scheduling nothing. Naming the missing file when the
-		// file is right there sends a reader looking in the wrong place.
-		vi.stubGlobal(
-			"fetch",
-			(async () => new Response("", { status: 404 })) as typeof fetch,
-		);
+		// file is right there sends a reader looking in the wrong place. The ref
+		// resolves; what is absent is the config, and that is a healthy repo.
+		hasConfig = false;
 		const result = await scheduleBuilds(delivery);
 
 		expect(result).toMatchObject({ declined: "no-image" });
@@ -188,7 +198,7 @@ describe("POSITIVE CONTROL: with no ci caller, both doors still build", () => {
 	});
 
 	it("the console's trigger builds", async () => {
-		const res = await console_().trigger(delivery);
+		const res = await console_().trigger(request);
 
 		expect(res.scheduled).toBe(1);
 		expect(launchBuildJob).toHaveBeenCalledTimes(1);

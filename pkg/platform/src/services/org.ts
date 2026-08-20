@@ -277,36 +277,64 @@ export function firstParty(image: string): boolean {
 	return ns !== undefined && org(ns) !== undefined;
 }
 
-/** A version: the semver core, wherever in the tag it sits. */
-const VERSION = /\d+\.\d+\.\d+/;
-/** A commit: enough hex to name one, in the lowercase git writes it in. */
-const COMMIT = /[0-9a-f]{7}/;
+/**
+ * A version: a whole line, from the leading `v` a git tag carries to whatever
+ * semver allows after the core — a fourth part for the calendar-versioned
+ * upstreams, a pre-release, an arch.
+ *
+ * WHOLE, because a tag is judged by what it IS and not by what it happens to
+ * contain. Read as a substring, `release-1.2.3`, `latest-1.0.0` and `main-0.0.0`
+ * are all versions, and each is a name something else can move: the version
+ * inside is decoration on a mutable name, not the name.
+ *
+ * `1.2.3-latest` is a version and passes, and that is the right answer. The only
+ * thing that spells one on a push is `{{git.tag}}`, which resolves on the push
+ * that MAKES the tag and on no other; a git tag holds still whatever it says.
+ */
+const VERSION = /^v?\d+\.\d+\.\d+(?:\.\d+)?(?:[-+][0-9A-Za-z][0-9A-Za-z.-]*)?$/;
+/** Hex, lowercase as git writes it, long enough to name a commit and no longer. */
+const HEX = /^[0-9a-f]{7,64}$/;
+/**
+ * Where one name ends and the next begins inside a tag.
+ *
+ * A commit tag is the object id plus decoration the repo declares around it —
+ * `sha-<id>`, `<id>-amd64-api`, `lux-<id>` are all live in the fleet — so the
+ * id is one PART of the tag rather than the whole of it.
+ */
+const PARTS = /[-_.]/;
 
 /**
- * The name a first-party image publishes under names ONE build.
+ * The name a first-party image publishes under names ONE build — THIS one.
  *
  * A tag is how a running binary is traced back to the source that made it, so it
- * has to hold on to something: a version a git tag also names, or the commit the
- * build read. Each names one set of bytes for good. `latest`, a branch name and
- * a bare major are names that move, and a deploy under a name that moves is one
- * nobody can find their way back from — the image in production and the image
- * that was released stop being the same question.
+ * has to hold on to something: a version, or the commit the build read. Each
+ * names one set of bytes for good. `latest`, a branch name and a bare major are
+ * names that move, and a deploy under a name that moves is one nobody can find
+ * their way back from — the image in production and the image that was released
+ * stop being the same question.
+ *
+ * Takes the commit, so a commit-shaped tag has to be THAT commit's. Hex that
+ * merely looks like an object id names some other build or none at all, and
+ * `deadbeef` reads as a word a person chose. Given the sha, the same rule that
+ * admits `sha-7c50638eb180` on the build of `7c50638eb180…` refuses it on every
+ * other, so a tag cannot claim a provenance the row does not carry.
  *
  * ONE rule for every door. What a caller may state at the direct enqueue and
  * what a repository's `tag-pattern` may produce on a push are the same question,
  * so a service that answered them differently was refusing at one door exactly
  * what it published at another.
  *
- * A digest reference is taken as it is: it names bytes, which is stronger than
- * any tag. Images in namespaces we do not publish under are not judged — their
- * tags are their publishers' business.
+ * A destination is a TAG. A digest is what a registry answers with after a push,
+ * not something a push can ask for, so a digest on a destination decides nothing
+ * and hides the tag that does — `:latest@sha256:…` publishes `latest`. Images in
+ * namespaces we do not publish under are not judged; their tags are their
+ * publishers' business.
  *
- * Returns what is wrong with the name, or null when it names a build.
+ * Returns what is wrong with the name, or null when it names this build.
  */
-export function tagProblem(image: string): string | null {
+export function tagProblem(image: string, sha: string): string | null {
 	if (!firstParty(image)) return null;
-	const [, tag, digest] = parseImageRef(image);
-	if (digest) return null;
+	const [, tag] = parseImageRef(image);
 	const refusing = `Refusing to build ${image}`;
 	if (!tag) {
 		return (
@@ -314,11 +342,17 @@ export function tagProblem(image: string): string | null {
 			"give it a version (vX.Y.Z) or the commit it was built from."
 		);
 	}
-	if (VERSION.test(tag) || COMMIT.test(tag)) return null;
+	if (VERSION.test(tag)) return null;
+	const commit = sha.toLowerCase();
+	const names = tag
+		.toLowerCase()
+		.split(PARTS)
+		.some((part) => HEX.test(part) && commit.startsWith(part));
+	if (names) return null;
 	return (
-		`${refusing}: "${tag}" does not name a build. A first-party tag carries a ` +
-		"version (vX.Y.Z) or the commit it was built from, because those name one " +
-		"set of bytes for good. A name that moves leaves what production runs and " +
-		"what was released as two different questions."
+		`${refusing}: "${tag}" does not name this build. A first-party tag carries a ` +
+		`version (vX.Y.Z) or the commit it was built from (${sha.slice(0, 12)}), because ` +
+		"those name one set of bytes for good. A name that moves leaves what production " +
+		"runs and what was released as two different questions."
 	);
 }

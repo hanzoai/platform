@@ -77,9 +77,8 @@ describe("POST /v1/git-webhook — Hanzo Git", () => {
 		expect(scheduleBuilds.mock.calls[0]?.[0]).toEqual({
 			// The repository the forge named, and the only one this build reads.
 			repo: "hanzo/kms",
-			sha: SHA,
+			// The ref, and no commit beside it: the forge answers for that.
 			ref: "refs/heads/main",
-			branch: "main",
 			source: { forge: "hanzo-git" },
 		});
 	});

@@ -28,6 +28,7 @@
  * every outcome is a value the caller stamps on the row and moves past.
  */
 
+import { branchOf } from "../hanzo-git";
 import {
 	authorizeNamespace,
 	fleetNamespaceOwners,
@@ -77,9 +78,15 @@ export interface Promotion {
  *
  * `deploy.target.namespace` and `.name` arrive verbatim from the built repo's
  * own `hanzo.yml` and are UNTRUSTED; `job.organizationId` comes from the
- * webhook→repo→org binding and is trusted. `authorizeNamespace` is the one place
+ * repository→org binding and is trusted. `authorizeNamespace` is the one place
  * that decides whether this org may speak for that namespace, and it is asked
  * BEFORE anything is started or written.
+ *
+ * WHAT may deploy is `job.ref`, and the forge is what put it there — either it
+ * signed a delivery saying this ref points at this commit, or it answered for
+ * the ref by name. Both are the forge's word. A deploy therefore follows a push
+ * to a branch that carries the commit, and nothing else does, whatever else a
+ * row says about itself.
  */
 export async function promoteBuild(
 	job: BuildJob,
@@ -99,11 +106,18 @@ export async function promoteBuild(
 			reason: "no deploy block in hanzo.yml",
 		});
 	}
-	if (!deploy.on.includes(job.branch)) {
+	// WHICH BRANCH, read off the ref rather than beside it. `deploy.on` lists
+	// branches, so a build that is not a branch push has no answer here — a tag
+	// build publishes, and what production runs still follows from a push to a
+	// branch someone named. The ref is the row's one git name and the forge is
+	// what put it there, so this predicate cannot be handed a branch the commit
+	// is not on.
+	const branch = branchOf(job.ref);
+	if (!branch || !deploy.on.includes(branch)) {
 		return await stamp(job, {
 			promoted: false,
 			state: "skipped",
-			reason: `branch ${job.branch} is not a deploy branch (${deploy.on.join(", ")})`,
+			reason: `${job.ref} is not a deploy branch (${deploy.on.join(", ")})`,
 		});
 	}
 

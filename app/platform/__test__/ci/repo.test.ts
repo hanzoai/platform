@@ -63,7 +63,8 @@ vi.mock("@hanzo/platform/services/ci/buildkit-job", async (orig) => {
 });
 
 const SHA = "0".repeat(40);
-const COMMIT = { sha: SHA, ref: "refs/heads/main", branch: "main" };
+/** The one git name a caller states. The forge answers for the commit. */
+const REF = "refs/heads/main";
 
 /** Forge-primary so the build reads the forge and compares against nothing else. */
 const CONFIG = `
@@ -83,6 +84,11 @@ function serveForge(): string[] {
 		"fetch",
 		vi.fn(async (url: string, _init?: RequestInit) => {
 			seen.push(String(url));
+			if (/\/branches\/[^/]+$/.test(String(url))) {
+				return new Response(JSON.stringify({ commit: { id: SHA } }), {
+					status: 200,
+				});
+			}
 			if (String(url).includes("/contents/hanzo.yml")) {
 				return new Response(
 					JSON.stringify({
@@ -222,7 +228,7 @@ describe("scheduleBuilds", () => {
 				scheduleBuilds({
 					source: { forge: "github", installationId: "1" },
 					repo,
-					...COMMIT,
+					ref: REF,
 				}),
 				repo,
 			).rejects.toThrow(/does not name a repository/i);
@@ -239,7 +245,7 @@ describe("scheduleBuilds", () => {
 		await scheduleBuilds({
 			source: { forge: "hanzo-git" },
 			repo: "hanzo/kms",
-			...COMMIT,
+			ref: REF,
 		});
 		const read = seen.find((u) => u.includes("/contents/hanzo.yml"));
 		expect(addressed(read ?? "")).toBe("hanzo/kms");
@@ -252,7 +258,7 @@ describe("scheduleBuilds", () => {
 		await scheduleBuilds({
 			source: { forge: "hanzo-git" },
 			repo: "HanzoAI/KMS",
-			...COMMIT,
+			ref: REF,
 		});
 		const read = seen.find((u) => u.includes("/contents/hanzo.yml"));
 		expect(addressed(read ?? "")).toBe("hanzoai/kms");
@@ -262,7 +268,7 @@ describe("scheduleBuilds", () => {
 
 describe("enqueueDirectBuild", () => {
 	const direct = {
-		sha: SHA,
+		ref: REF,
 		image: "ghcr.io/hanzoai/kms:v9.9.9",
 		requireOrganizationId: ORG,
 	};
@@ -300,6 +306,7 @@ describe("enqueueDirectBuild", () => {
 	it("owns the build by the repository, not by what the caller named", async () => {
 		// `organizationId` on the row is what later gates reading this build's
 		// logs, so it comes from the repository — a caller only confirms it.
+		serveForge();
 		await enqueueDirectBuild({
 			...direct,
 			repo: "hanzo/kms",

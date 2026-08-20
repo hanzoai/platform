@@ -19,15 +19,17 @@ import { authGithub } from "@hanzo/platform/utils/providers/github";
 import { TRPCError } from "@trpc/server";
 import { findGithubByInstallationId } from "../github";
 import {
+	commitAt,
 	commitName,
 	commitProblem,
 	forgeReader,
 	type HanzoGitConfig,
 	hanzoGitConfig,
+	refProblem,
 	repoName,
 	repoProblem,
 } from "../hanzo-git";
-import { destinationProblem, orgId, ownerOf, tagProblem } from "../org";
+import { destinationProblem, org, orgId, ownerOf, tagProblem } from "../org";
 import type { BuildJob } from "./build-job";
 import {
 	createBuildJob,
@@ -38,6 +40,7 @@ import { fetchBuildSecrets } from "./build-secrets";
 import { launchBuildJob } from "./buildkit-job";
 import { assertBuildableFromCanonicalSource } from "./forge-source";
 import { githubReachability, readForgeRepoFacts } from "./forge-source-probe";
+import { imageName, imageOrg } from "./image-ref";
 import {
 	type BuildArch,
 	type BuildOS,
@@ -72,17 +75,21 @@ export interface ScheduleInput {
 	 * config described.
 	 */
 	repo: string;
-	sha: string;
-	ref: string;
-	branch: string;
 	/**
-	 * The org the CALLER is allowed to act as. Set it on any path where the
-	 * caller chooses `source` — the source selects the principal, so without
-	 * this a caller picks which org it builds and deploys as.
+	 * The branch or tag this build is about, whole — `refs/heads/main`.
+	 *
+	 * The ONE git name a caller states, and every decision downstream that is
+	 * not about the code itself reads it: whether an image may carry a version
+	 * ({@link resolveTag}), and whether a deploy may follow (`promoteBuild`). A
+	 * name, not a commit — a name is a thing the forge can be asked about.
+	 */
+	ref: string;
+	/**
+	 * The org the CALLER is allowed to act as. Set it on any path where a caller
+	 * states one, so a claim the repository does not bear out is refused.
 	 *
 	 * Webhook paths leave it undefined: there the forge authenticates the
-	 * delivery (HMAC) and the principal comes from the installation binding,
-	 * not from anything the sender picked.
+	 * delivery (HMAC) and there is nobody to ask.
 	 */
 	requireOrganizationId?: string;
 }
@@ -274,6 +281,24 @@ export async function fetchPlatformConfigFromHanzoGit(
 const CI_CALLER_PATH = ".hanzo/workflows/cicd.yml";
 
 /**
+ * The forge path an image spells for itself: `ghcr.io/hanzoai/kms` → `hanzoai/kms`.
+ *
+ * An organization has several forge spellings and ONE registry namespace, so an
+ * image name is the one path every repository publishing it agrees on.
+ * `hanzo/platform` and `hanzoai/platform` are two repositories that publish
+ * `ghcr.io/hanzoai/platform`, and a rule about the image has to be asked about
+ * the image rather than about whichever of the two a push arrived under.
+ *
+ * Undefined for a namespace no organization here owns — those images are
+ * somebody else's, and their repositories are not ours to look up.
+ */
+function repoNaming(image: string): string | undefined {
+	const ns = imageOrg(image);
+	const name = imageName(image);
+	return ns && name && org(ns) ? repoName(`${ns}/${name}`) : undefined;
+}
+
+/**
  * Does hanzoai/ci own this repo's build at `ref`?
  *
  * A push to the forge fans out to BOTH lanes. The forge-wide system webhook
@@ -313,11 +338,33 @@ const CI_CALLER_PATH = ".hanzo/workflows/cicd.yml";
  * Fail OPEN on a transport error, and on anything unproven. A forge blip must
  * not silently stop builds fleet-wide; the redundant-build state it falls back
  * to is the status quo and is survivable, a stuck fleet is not.
+ *
+ * Asked of the repository being pushed AND of the repository each declared image
+ * names ({@link repoNaming}), because the thing being protected is the image.
+ * One image name has several forge paths — `hanzo/platform`, `hanzoai/platform` —
+ * and a check keyed on the path let a caller pick the twin that carries no
+ * caller file and publish the gated image from the ungated lane. Keyed on the
+ * image, both paths ask the same question and get the same answer.
+ *
+ * Read at each repository's DEFAULT branch, which is the only place all of them
+ * have one. It is also the honest tense: what runs a repo's pipeline is a fact
+ * about the repo now, not about the commit in hand — read at the commit, a push
+ * that merely deletes the caller file on a side branch hands itself this lane.
  */
 export async function ciOwnsBuild(
 	cfg: Pick<HanzoGitConfig, "url" | "token">,
+	repos: readonly string[],
+): Promise<boolean> {
+	const owned = await Promise.all(
+		[...new Set(repos)].map((repo) => owns(cfg, repo)),
+	);
+	return owned.some(Boolean);
+}
+
+/** {@link ciOwnsBuild} for one repository path. */
+async function owns(
+	cfg: Pick<HanzoGitConfig, "url" | "token">,
 	repo: string,
-	ref: string,
 ): Promise<boolean> {
 	const [owner, name] = repo.split("/");
 	if (!owner || !name) return false;
@@ -329,10 +376,9 @@ export async function ciOwnsBuild(
 		if (!repoRes.ok) return false;
 		const { has_actions } = (await repoRes.json()) as { has_actions?: boolean };
 		if (has_actions === false) return false;
-		const caller = await fetch(
-			`${base}/contents/${CI_CALLER_PATH}?ref=${encodeURIComponent(ref)}`,
-			{ headers },
-		);
+		const caller = await fetch(`${base}/contents/${CI_CALLER_PATH}`, {
+			headers,
+		});
 		return caller.ok;
 	} catch {
 		return false;
@@ -340,29 +386,29 @@ export async function ciOwnsBuild(
 }
 
 /**
- * Resolve a {@link ConfigSource} to the owning organization plus the repo's
- * config at `sha`. The ONLY place the build path knows which forge it is
- * talking to; everything after this point is forge-agnostic.
+ * Read the repo's config at `sha` through whichever forge vouched for the
+ * delivery. The ONLY place the build path knows which forge it is talking to;
+ * everything after this point is forge-agnostic.
+ *
+ * A source is a way to READ, and that is all it is. Who the build acts as comes
+ * from {@link principal}, off the repository, on every lane — an installation
+ * says which credential opens a file, and a credential is not an identity. Read
+ * the other way round, a GitHub installation bound to one organization would
+ * hand that organization's principal to a build of any repository the
+ * installation can see, which is a repository path and therefore caller input:
+ * a Hanzo caller published into `ghcr.io/luxfi`, and the pod mounted `push-luxfi`
+ * to do it, because the row said Hanzo and the image said lux.
  */
-async function resolveSource(
+async function readConfig(
 	source: ConfigSource,
 	repo: string,
 	sha: string,
-): Promise<{ organizationId: string; config: PlatformConfig | null }> {
+): Promise<PlatformConfig | null> {
 	if (source.forge === "hanzo-git") {
-		const cfg = hanzoGitConfig();
-		return {
-			organizationId: await principal(repo),
-			config: await fetchPlatformConfigFromHanzoGit(cfg, repo, sha),
-		};
+		return fetchPlatformConfigFromHanzoGit(hanzoGitConfig(), repo, sha);
 	}
-	const { provider, organizationId } = await resolveProvider(
-		source.installationId,
-	);
-	return {
-		organizationId,
-		config: await fetchPlatformConfig(provider, repo, sha),
-	};
+	const { provider } = await resolveProvider(source.installationId);
+	return fetchPlatformConfig(provider, repo, sha);
 }
 
 /** Build-target arch from a target key (`linux/amd64`, `web:linux/amd64`). */
@@ -422,9 +468,15 @@ export interface DirectBuildInput {
 	 * names the runner pool and whose org owns the result.
 	 */
 	repo: string;
-	sha: string;
-	ref?: string;
-	branch?: string;
+	/**
+	 * The branch or tag to build, whole — `refs/heads/main`, `refs/tags/v1.2.3`.
+	 *
+	 * The commit follows from it, on the forge. A direct caller is a machine
+	 * stating what it wants built, and what it wants built is a name; the object
+	 * id that name currently resolves to is the forge's to say, and only the
+	 * forge's, so there is no field here to say it in.
+	 */
+	ref: string;
 	/** Fully-resolved image ref to build + push, e.g. ghcr.io/hanzoai/x:tag. */
 	image: string;
 	dockerfile?: string;
@@ -464,19 +516,22 @@ export interface DirectBuildInput {
 export async function enqueueDirectBuild(
 	input: DirectBuildInput,
 ): Promise<BuildJob> {
-	// The repository the build clones and the commit it reads — named, and named
-	// once, before a row exists to carry a value the build path would then refuse.
+	// The repository the build clones and the ref it is about — settled, and
+	// settled once, before a row exists to carry a value the build path would
+	// then refuse.
 	const repo = repoOf(input.repo);
-	const sha = shaOf(input.sha);
-	// Where this build publishes and under what name, decided against the
-	// repository it reads, before a row exists to carry a destination the muscle
-	// would then mount a credential for.
+	const ref = refOf(input.ref);
+	// Where this build publishes, decided against the repository it reads, before
+	// a row exists to carry a destination the muscle would mount a credential for.
 	assertDestination(repo, input.image);
-	assertName(input.image);
 	// The org that owns the result is the org that owns the repository, which is
-	// the same answer `resolveSource` gives a forge delivery. `organizationId`
-	// on the row is what later gates reading this build's logs, so it is
-	// resolved from the repository and only confirmed against the caller.
+	// the same answer a forge delivery gets. `organizationId` on the row is what
+	// later gates reading this build's logs, so it is resolved from the
+	// repository and only confirmed against the caller.
+	//
+	// Asked before the forge is, because both answers are already here: a request
+	// that cannot be built should not cost a round-trip to find out, and a repo
+	// nobody owns should hear that rather than hear about a ref.
 	const organizationId = await principal(repo);
 	if (input.requireOrganizationId !== organizationId) {
 		throw new TRPCError({
@@ -485,6 +540,10 @@ export async function enqueueDirectBuild(
 				"Refusing to schedule a build for another organization — the build source resolves to an org you are not acting as",
 		});
 	}
+	// The commit the ref names, and then the name this build publishes under —
+	// which is a claim ABOUT that commit, so it cannot be judged before it.
+	const sha = await commitOf(repo, ref);
+	assertName(input.image, sha);
 	const os: BuildOS = input.os ?? "linux";
 	const arch: BuildArch = input.arch ?? "amd64";
 	// arm64 is paused (no DOKS arm64 pool). Reject an explicit arm64 request
@@ -498,8 +557,13 @@ export async function enqueueDirectBuild(
 		});
 	}
 	const target = `${os}/${arch}`;
-	const branch = input.branch ?? "main";
-	const ref = input.ref ?? `refs/heads/${branch}`;
+
+	// Is this commit on the canonical source? The same question the delivery lane
+	// asks, asked here for the same reason and with the same answer: a forge repo
+	// whose mirror row is gone serves its last state forever, and a build off it
+	// is indistinguishable from a healthy one. The declaration lives in the repo,
+	// so it is read from the repo, at the commit being built.
+	await assertCanonical(repo, sha);
 
 	// Keyed on the image too. Without it a second direct build of the same
 	// commit to a DIFFERENT image returned the first job untouched, so the
@@ -511,7 +575,6 @@ export async function enqueueDirectBuild(
 		repo,
 		sha,
 		ref,
-		branch,
 		target,
 		runnerPool: runnerPoolFor(ownerOf(repo), { os, arch }),
 		image: input.image,
@@ -544,20 +607,21 @@ export async function enqueueDirectBuild(
 export async function scheduleBuilds(
 	input: ScheduleInput,
 ): Promise<ScheduleResult | Declined> {
-	// One repository and one commit: what the config is read from, what the build
-	// clones, and what keys every row this call writes. Named before any of that
-	// happens.
+	// One repository, one ref, one commit: what the config is read from, what the
+	// build clones, and what keys every row this call writes. Named before any of
+	// that happens, and the commit is BOUND to the ref rather than stated beside
+	// it — a caller that could name both could name a commit its ref never
+	// carried, and every decision downstream reads the ref.
 	const repo = repoOf(input.repo);
-	const sha = shaOf(input.sha);
-	const { organizationId, config } = await resolveSource(
-		input.source,
-		repo,
-		sha,
-	);
-	// The principal is whatever `source` resolved to. When the caller chose
-	// `source`, it therefore chose the principal — so confirm it is the org the
-	// caller is actually entitled to act as, BEFORE any build or deploy is
-	// scheduled against that org's namespaces. Exact match, fail closed.
+	const ref = refOf(input.ref);
+	// The org that owns the result is the org that owns the repository — the same
+	// answer on every lane and at every door, because it is what the row records,
+	// what gates reading this build's logs, and what `promoteBuild` asks
+	// `authorizeNamespace` about.
+	const organizationId = await principal(repo);
+	// A caller that STATED an org has to have the repository bear it out. Asked
+	// BEFORE any build or deploy is scheduled against that org's namespaces.
+	// Exact match, fail closed.
 	if (
 		input.requireOrganizationId !== undefined &&
 		input.requireOrganizationId !== organizationId
@@ -568,6 +632,8 @@ export async function scheduleBuilds(
 				"Refusing to schedule a build for another organization — the build source resolves to an org you are not acting as",
 		});
 	}
+	const sha = await commitOf(repo, ref);
+	const config = await readConfig(input.source, repo, sha);
 
 	// ONE LANE. A push to the forge starts this scheduler AND the repo's
 	// `.hanzo/workflows/cicd.yml`, which runs hanzoai/ci — the `test:` gate, the
@@ -580,7 +646,10 @@ export async function scheduleBuilds(
 	// fact about the repository the build clones, and the build clones from the
 	// forge whichever door asked. So it takes `forgeReader` — address and read
 	// token — and no webhook secret.
-	if (await ciOwnsBuild(forgeReader(), repo, sha)) {
+	const named = (config?.builds ?? []).flatMap(
+		(b) => repoNaming(b.image) ?? [],
+	);
+	if (await ciOwnsBuild(forgeReader(), [repo, ...named])) {
 		return {
 			declined: "ci-owns",
 			why:
@@ -607,18 +676,12 @@ export async function scheduleBuilds(
 	// healthy one. So before enqueuing anything, confirm this commit is on the
 	// canonical source. Refuse loudly if it is not; never repair it here.
 	//
-	// Only for forge-triggered builds: a GitHub delivery IS the canonical side,
-	// so there is nothing to compare it against.
-	if (input.source.forge === "hanzo-git") {
-		const why = await assertBuildableFromCanonicalSource({
-			forgeRepo: repo,
-			sha,
-			declared: config.source,
-			facts: await readForgeRepoFacts(forgeReader(), repo),
-			probe: githubReachability,
-		});
-		console.info(`[build] source check passed: ${why}`);
-	}
+	// Asked whichever forge vouched for the delivery. `source` is how the config
+	// was READ, and a rule that ran only for some ways of reading was a rule a
+	// caller could choose not to be judged by. The declaration answers for the
+	// GitHub lane too: a repo whose truth IS github.com passes on its own
+	// reachability, in one call, rather than by not being asked.
+	await assertCanonical(repo, sha, config.source);
 
 	// Publishable `build_secrets:` → --build-args, fetched from KMS ONCE for the
 	// whole config (the same value serves every image). The webhook lane never did
@@ -653,11 +716,7 @@ export async function scheduleBuilds(
 				jobs.push(existing);
 				continue;
 			}
-			const tag = resolveTag(build.tagPattern, {
-				sha,
-				branch: input.branch,
-				ref: input.ref,
-			});
+			const tag = resolveTag(build.tagPattern, { sha, ref });
 			// A `{{git.tag}}` pattern has no image name on a branch push. Skip the
 			// target rather than inventing one — the push still succeeds, and the
 			// versioned image appears when the tag itself is pushed.
@@ -669,7 +728,7 @@ export async function scheduleBuilds(
 			// succeeds, and the image appears when the push names a version or the
 			// commit. Said out loud, because a declaration that resolves to nothing
 			// publishable is something its author wants to hear about.
-			const naming = tagProblem(image);
+			const naming = tagProblem(image, sha);
 			if (naming) {
 				console.info(`[build] ${naming}`);
 				continue;
@@ -677,8 +736,7 @@ export async function scheduleBuilds(
 			const job = await createBuildJob({
 				repo,
 				sha,
-				ref: input.ref,
-				branch: input.branch,
+				ref,
 				target,
 				runnerPool: runnerPoolFor(ownerOf(repo), entry),
 				image,
@@ -741,6 +799,70 @@ function shaOf(sha: string): string {
 }
 
 /**
+ * The branch or tag a build is about, named once for the whole call.
+ *
+ * Same shape as {@link repoOf} and {@link shaOf}: one rule, answered where the
+ * value is first read, so both front doors refuse the same spellings.
+ */
+function refOf(ref: string): string {
+	const problem = refProblem(ref);
+	if (problem) throw new TRPCError({ code: "BAD_REQUEST", message: problem });
+	return ref;
+}
+
+/**
+ * The commit a build reads: the one `ref` names on the forge.
+ *
+ * ONE way, at every door including the signed one. A delivery does carry the
+ * commit its ref pointed at, and taking that instead would save a round-trip —
+ * but a field a caller CAN fill is a field to be wrong about, and the whole
+ * point here is that the two halves cannot be made to disagree. So there is no
+ * such field, and the answer always comes from the same place.
+ *
+ * Nothing is lost to the push that lands while this one is being read: the row
+ * is keyed by the commit it resolved, so the second delivery finds that row
+ * rather than building it twice, and what the row says is what was built.
+ *
+ * A ref the forge does not resolve is not a build. That is the same refusal as
+ * a repository nobody owns: there is nothing here to check out.
+ */
+async function commitOf(repo: string, ref: string): Promise<string> {
+	const sha = await commitAt(forgeReader(), repo, ref);
+	if (!sha) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: `Refusing to build ${repo}: "${ref}" names no commit there.`,
+		});
+	}
+	return sha;
+}
+
+/**
+ * This commit is on the source of truth, or this build does not happen.
+ *
+ * One call, both front doors. `declared` is the repo's own `source:` when the
+ * caller has already read the config; the direct door has not, so it reads it
+ * here — at the commit being built, from the repository being built, which is
+ * the only place that declaration is meaningful.
+ */
+async function assertCanonical(
+	repo: string,
+	sha: string,
+	declared?: unknown,
+): Promise<void> {
+	const why = await assertBuildableFromCanonicalSource({
+		forgeRepo: repo,
+		sha,
+		declared:
+			declared ??
+			(await fetchPlatformConfigFromHanzoGit(forgeReader(), repo, sha))?.source,
+		facts: await readForgeRepoFacts(forgeReader(), repo),
+		probe: githubReachability,
+	});
+	console.info(`[build] source check passed: ${why}`);
+}
+
+/**
  * The organization a build acts as: the one that owns the repository it reads.
  *
  * It is what the row records, what gates reading the build's logs, and what
@@ -784,7 +906,7 @@ function assertDestination(repo: string, image: string): void {
  * situation — nothing to build on this push — and the delivery lane skips that
  * target instead.
  */
-function assertName(image: string): void {
-	const problem = tagProblem(image);
+function assertName(image: string, sha: string): void {
+	const problem = tagProblem(image, sha);
 	if (problem) throw new TRPCError({ code: "BAD_REQUEST", message: problem });
 }
