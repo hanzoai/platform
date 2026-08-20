@@ -19,6 +19,8 @@ vi.mock("@hanzo/platform/db", async () => {
 	chain.returning = () => Promise.resolve([{}]);
 	chain.from = () => chain;
 	chain.innerJoin = () => chain;
+	chain.limit = () => chain;
+	chain.onConflictDoNothing = () => chain;
 	// better-sqlite3 drizzle terminates a write with `.run()` (the Postgres
 	// driver awaited the builder directly). Without it, any code path that
 	// actually writes throws `.run is not a function` inside the mock.
@@ -39,7 +41,12 @@ vi.mock("@hanzo/platform/db", async () => {
 		db: {
 			select: vi.fn(() => chain),
 			insert: vi.fn(() => ({
-				values: () => ({ returning: () => Promise.resolve([{}]) }),
+				values: () => ({
+					returning: () => Promise.resolve([{}]),
+					onConflictDoNothing: () => ({
+						returning: () => Promise.resolve([{}]),
+					}),
+				}),
 			})),
 			update: vi.fn(() => chain),
 			delete: vi.fn(() => chain),

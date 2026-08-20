@@ -31,11 +31,8 @@
 import { TRPCError } from "@trpc/server";
 import { forgeHost, forgeUrl, repoProblem } from "../hanzo-git";
 import { getDefaultClients } from "../k8s/k8s-client";
-import {
-	parseImageRef,
-	pushSecretForImage,
-	withRegistryHost,
-} from "./image-ref";
+import { destinationProblem, pushSecret } from "../org";
+import { parseImageRef, withRegistryHost } from "./image-ref";
 import type { BuildArch } from "./platform-config";
 
 /** BuildKit executor image — the canonical in-cluster builder (proven contract). */
@@ -63,9 +60,10 @@ const FORGE_SECRET = "forge-token";
  */
 const MODULE_FETCH_SECRET = "console-git-token";
 /**
- * GHCR push credentials are PER ORG (`push-hanzoai` / `push-luxfi` /
- * `push-zooai`), derived from the destination image by `pushSecretForImage` —
- * never a single shared secret. A build mounts exactly one, so a token stolen
+ * GHCR push credentials are PER NAMESPACE (`push-hanzoai` / `push-luxfi` /
+ * `push-zooai`), named by `pushSecret` from the repository being built and the
+ * image it publishes — never a single shared secret. A build mounts exactly one,
+ * and only the one its own organization publishes under, so a token reachable
  * from a hanzo build cannot push to ghcr.io/luxfi.
  *
  * This replaced a hardcoded `kaniko-ghcr`, which existed only in the `hanzo`
@@ -459,18 +457,27 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 	const arch = input.arch ?? "amd64";
 	const name = buildJobName(input.repo, input.buildJobId);
 	const resources = input.resources ?? DEFAULT_RESOURCES;
-	// Refuse rather than fall back: with no derivable org there is no correct
-	// credential to mount, and guessing one is how a build ends up pushing with
-	// another org's token. A caller sees this immediately; a silent default
-	// would surface much later as a cross-org push.
-	const pushSecret = pushSecretForImage(input.image);
-	if (!pushSecret) {
+	// The last place before a token reaches a build. Both front doors decide the
+	// same thing before writing a row; deciding it again here is what makes the
+	// row's image, rather than the row's existence, what the credential follows
+	// from. Say WHY separately: a destination in another org's namespace is a
+	// refusal, and one in no namespace at all is a malformed request.
+	const destination = destinationProblem(input.repo, input.image);
+	if (destination) {
+		throw new TRPCError({ code: "FORBIDDEN", message: destination });
+	}
+	// Refuse rather than fall back: with no derivable namespace there is no
+	// correct credential to mount, and guessing one is how a build ends up
+	// pushing with another org's token. A caller sees this immediately; a silent
+	// default would surface much later as a cross-org push.
+	const secret = pushSecret(input.repo, input.image);
+	if (!secret) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
-			message: `Cannot derive a push credential from image "${input.image}": expected <registry>/<org>/<name>:<tag>`,
+			message: `Cannot derive a push credential from image "${input.image}": expected <registry>/<namespace>/<name>:<tag>`,
 		});
 	}
-	const auth = dockerAuthWiring(pushSecret, input.fleetRegistryHost);
+	const auth = dockerAuthWiring(secret, input.fleetRegistryHost);
 	const labels = {
 		"app.kubernetes.io/name": "build",
 		"app.kubernetes.io/managed-by": "platform",
