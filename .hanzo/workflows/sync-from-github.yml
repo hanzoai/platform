@@ -69,7 +69,7 @@ jobs:
           if git merge-base --is-ancestor "$LOCAL" "$REMOTE"; then
             echo "fast-forwarding $LOCAL -> $REMOTE"
             [ -n "${GIT_TOKEN:-}" ] || {
-              echo "::error::the forge write needs GIT_TOKEN (contents:write) — refusing to sync silently."
+              echo "::error::Hanzo Git write needs GIT_TOKEN (contents:write) — refusing to sync silently."
               exit 1
             }
             git -c http.extraheader="Authorization: token ${GIT_TOKEN}" \
