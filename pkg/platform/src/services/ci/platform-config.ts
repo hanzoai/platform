@@ -19,6 +19,7 @@ import { parse as parseYaml } from "yaml";
 // Deployable kinds come from the operator contract — one source of truth.
 // `cr-builder` is a pure module (types + builders, no K8s client), so importing
 // it here does not drag a cluster connection into config parsing.
+import { tagOf } from "../hanzo-git";
 import {
 	DEFAULT_WORKLOAD_KIND,
 	WORKLOAD_KINDS,
@@ -40,8 +41,8 @@ export interface BuildConfig {
 	context: string;
 	image: string;
 	/**
-	 * Tag template. Supported tokens: `{{git.sha}}`, `{{git.branch}}`, and
-	 * `{{git.tag}}` (tag pushes only — see resolveTag).
+	 * Tag template. Two tokens: `{{git.sha}}` and `{{git.tag}}` (tag pushes only
+	 * — see {@link resolveTag}).
 	 */
 	tagPattern: string;
 	push: boolean;
@@ -153,7 +154,9 @@ function parseBuildSecrets(value: unknown, at: string): string[] {
 	for (let i = 0; i < value.length; i++) {
 		const name = value[i];
 		if (typeof name !== "string" || !ARG_NAME.test(name)) {
-			throw new PlatformConfigError(`${at}[${i}] must be a Dockerfile ARG name`);
+			throw new PlatformConfigError(
+				`${at}[${i}] must be a Dockerfile ARG name`,
+			);
 		}
 		if (!PUBLISHABLE_NAME.test(name)) {
 			throw new PlatformConfigError(
@@ -480,6 +483,40 @@ function parseMatrix(
 	return matrix;
 }
 
+/**
+ * The tokens a tag-pattern may spell, and what each one is.
+ *
+ * `{{git.sha}}` is the commit; `{{git.tag}}` is the git tag, on the push that
+ * made it. Both hold still. A branch head does not, so there is no token for
+ * one — see {@link resolveTag}.
+ */
+const TOKENS = ["{{git.sha}}", "{{git.tag}}"] as const;
+
+/**
+ * A repo's declared `tag-pattern`, or the lane's default.
+ *
+ * A token this does not know is REFUSED, not passed through. A pattern is a
+ * template, so an unknown token survives substitution and becomes part of an
+ * image name — `{{git.branch}}` published an image literally called
+ * `-git.branch-` the moment nothing answered for it. Refusing names the
+ * available tokens, which is the sentence the author of that line needs.
+ */
+function parseTagPattern(
+	entry: Record<string, unknown>,
+	at: string,
+	fallback: string,
+): string {
+	const pattern = optionalString(entry, "tag-pattern", fallback);
+	for (const token of pattern.match(/\{\{[^}]*\}\}/g) ?? []) {
+		if (!TOKENS.includes(token as (typeof TOKENS)[number])) {
+			throw new PlatformConfigError(
+				`${at}.tag-pattern: ${token} is not a tag token. A tag names one build for good, so it is spelled from ${TOKENS.join(" or ")} — a branch head moves and cannot name one.`,
+			);
+		}
+	}
+	return pattern;
+}
+
 /** Legacy single `build:` block → one BuildConfig. */
 function parseBuildBlock(build: Record<string, unknown>): BuildConfig {
 	const image = requireString(build, "image", "build");
@@ -497,7 +534,7 @@ function parseBuildBlock(build: Record<string, unknown>): BuildConfig {
 		dockerfile: optionalString(build, "dockerfile", "./Dockerfile"),
 		context: optionalString(build, "context", "."),
 		image,
-		tagPattern: optionalString(build, "tag-pattern", "{{git.sha}}"),
+		tagPattern: parseTagPattern(build, "build", "{{git.sha}}"),
 		push: build.push === undefined ? true : build.push === true,
 		buildArgs: parseBuildArgs(build.args, "build.args"),
 		buildSecrets: parseBuildSecrets(build.build_secrets, "build.build_secrets"),
@@ -541,11 +578,7 @@ function parseImageEntry(entry: unknown, i: number): BuildConfig {
 	// and the pin gate could only report the symptom. The default is the exact
 	// string every current caller already gets, so this widens what CAN be
 	// declared and moves nothing that IS.
-	const tagPattern = optionalString(
-		entry,
-		"tag-pattern",
-		`{{git.sha}}-amd64-${suffix}`,
-	);
+	const tagPattern = parseTagPattern(entry, at, `{{git.sha}}-amd64-${suffix}`);
 	return {
 		name,
 		matrix: parseMatrix(entry.matrix, `${at}.matrix`, [
@@ -794,17 +827,6 @@ export function runnerPoolFor(
 }
 
 /**
- * The git tag a ref names, or null when the ref is not a tag.
- *
- * `refs/tags/v1.2.3` → `v1.2.3`; `refs/heads/main` and a bare SHA → null.
- */
-export function tagFromRef(ref: string | undefined): string | null {
-	if (!ref?.startsWith("refs/tags/")) return null;
-	const name = ref.slice("refs/tags/".length);
-	return name.length > 0 ? name : null;
-}
-
-/**
  * Resolve a tag-pattern template against the triggering git context.
  *
  * What comes out is a docker tag, so every token goes in as one — this is where
@@ -812,22 +834,28 @@ export function tagFromRef(ref: string | undefined): string | null {
  * names an image, and the image name is one field of the exporter the build
  * muscle writes, so a character a tag cannot hold is not one this can emit.
  *
- * Returns null when the pattern uses `{{git.tag}}` but the push was not a tag.
- * That is deliberate: a tag-patterned build has no meaningful image name on a
- * branch push, and inventing one (falling back to the branch) would give a
- * single token two meanings. The caller skips the build instead — a `v*` image
- * is published when, and only when, a `v*` tag is pushed.
+ * TWO tokens, and they are the two names that hold still: the commit, and the
+ * git tag. Returns null when the pattern uses `{{git.tag}}` but the push was to
+ * a branch — a tag-patterned build has no image name on a branch push, and
+ * inventing one would give a single token two meanings. The caller skips the
+ * build instead, so a `v*` image is published when, and only when, a `v*` tag
+ * is pushed.
+ *
+ * There is no branch token. A branch head is the one git name that moves, so
+ * every name it could spell is one an image must not carry: an ordinary branch
+ * name moves under whatever it published, and a branch NAMED like a version
+ * publishes a release from something that is not one. `{{git.tag}}` is how a
+ * push spells a version, and it can only do so on the push that made the tag.
  */
 export function resolveTag(
 	pattern: string,
-	ctx: { sha: string; branch: string; ref?: string },
+	ctx: { sha: string; ref: string },
 ): string | null {
-	const tag = pattern.includes("{{git.tag}}") ? tagFromRef(ctx.ref) : "";
+	const tag = pattern.includes("{{git.tag}}") ? tagOf(ctx.ref) : "";
 	if (tag === null) return null;
 	return pattern
 		.replaceAll("{{git.tag}}", sanitizeTagSegment(tag))
-		.replaceAll("{{git.sha}}", sanitizeTagSegment(ctx.sha))
-		.replaceAll("{{git.branch}}", sanitizeTagSegment(ctx.branch));
+		.replaceAll("{{git.sha}}", sanitizeTagSegment(ctx.sha));
 }
 
 /** Docker tags allow only [A-Za-z0-9._-]; everything else collapses to `-`. */

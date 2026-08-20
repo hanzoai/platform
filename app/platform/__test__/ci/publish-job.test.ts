@@ -1,9 +1,9 @@
+import type { PublishConfig } from "@hanzo/platform/services/ci/platform-config";
 import {
 	buildPublishJobObject,
 	publishJobName,
 	publishScript,
 } from "@hanzo/platform/services/ci/publish-job";
-import type { PublishConfig } from "@hanzo/platform/services/ci/platform-config";
 import { describe, expect, it } from "vitest";
 
 const cfg = (over: Partial<PublishConfig> = {}): PublishConfig => ({
@@ -28,7 +28,7 @@ describe("publishScript", () => {
 	it("publishes to npm with the registry token", () => {
 		const s = publishScript(cfg({ npm: true }));
 		expect(s).toContain("set -euo pipefail");
-		expect(s).toContain('_authToken=${NPM_TOKEN:-}');
+		expect(s).toContain("_authToken=${NPM_TOKEN:-}");
 		expect(s).toContain("npm publish --access public");
 		expect(s).not.toContain("--dry-run");
 		expect(s).not.toContain("uv build");
@@ -61,14 +61,19 @@ describe("publishScript", () => {
 	it("publishes a single crate to crates.io with the registry token", () => {
 		const s = publishScript(cfg({ cargo: true }));
 		expect(s).toContain("sh.rustup.rs");
-		expect(s).toContain('cargo publish --no-verify --token "${CARGO_REGISTRY_TOKEN:-}"');
+		expect(s).toContain(
+			'cargo publish --no-verify --token "${CARGO_REGISTRY_TOKEN:-}"',
+		);
 		expect(s).toContain("for c in .; do");
 		expect(s).not.toContain("--dry-run");
 	});
 
 	it("publishes a cargo workspace bottom-up in the declared crate order", () => {
 		const s = publishScript(
-			cfg({ cargo: true, cargoCrates: ["hanzo-kernels", "hanzo-ml", "hanzo-nn"] }),
+			cfg({
+				cargo: true,
+				cargoCrates: ["hanzo-kernels", "hanzo-ml", "hanzo-nn"],
+			}),
 		);
 		expect(s).toContain("for c in hanzo-kernels hanzo-ml hanzo-nn; do");
 	});
@@ -96,13 +101,15 @@ describe("publishJobName", () => {
 type EnvRef = {
 	name: string;
 	value?: string;
-	valueFrom?: { secretKeyRef: { name: string; key: string; optional?: boolean } };
+	valueFrom?: {
+		secretKeyRef: { name: string; key: string; optional?: boolean };
+	};
 };
 
 describe("buildPublishJobObject", () => {
 	const job = buildPublishJobObject({
 		repo: "hanzoai/iam-js-sdk",
-		branch: "main",
+		ref: "refs/heads/main",
 		publish: cfg({ npm: true }),
 		buildJobId: "abc12345",
 	});

@@ -190,9 +190,7 @@ export async function POST(req: Request) {
 		const result = await scheduleBuilds({
 			source: delivery.source,
 			repo: decoded.repo,
-			sha: decoded.sha,
 			ref: decoded.ref,
-			branch: decoded.branch,
 		});
 		// `scheduled` is the ONE machine-readable answer to the only question a
 		// caller actually has: did this push cause a build? It is on EVERY 202,

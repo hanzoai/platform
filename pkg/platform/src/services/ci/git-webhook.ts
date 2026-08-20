@@ -22,6 +22,7 @@
  * on the socket, not a name for the product.
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { refProblem } from "../hanzo-git";
 
 export type WebhookEvent = "push" | "pull_request" | "ping";
 
@@ -39,10 +40,14 @@ export interface DecodedWebhook {
 	repo: string;
 	/** Full commit SHA the event points at. */
 	sha: string;
-	/** Git ref, e.g. `refs/heads/main`. */
+	/**
+	 * The branch or tag the delivery names, e.g. `refs/heads/main`.
+	 *
+	 * Whole, and only ever the forge's own word for it. The signature over this
+	 * body is what makes the pair (ref, sha) a fact rather than a claim, so the
+	 * two travel together from here and are never restated apart.
+	 */
 	ref: string;
-	/** Short branch name, e.g. `main`. */
-	branch: string;
 	/** Default branch of the repo, when the payload carries it. */
 	defaultBranch?: string;
 	/** Who pushed, as a login/username. Absent when the payload omits it. */
@@ -179,10 +184,6 @@ export function verifyDelivery(
 	);
 }
 
-function branchFromRef(ref: string): string {
-	return ref.replace(/^refs\/heads\//, "").replace(/^refs\/tags\//, "");
-}
-
 /** Header a forge names its event with — used only for error text. */
 function eventHeaderName(forge: GitForge): string {
 	return forge === "hanzo-git"
@@ -218,7 +219,6 @@ export function decodeWebhook(
 			...identityOf(repoFullName(body), forge, body, {}),
 			sha: "",
 			ref: "",
-			branch: "",
 			commits: [],
 		};
 	}
@@ -241,12 +241,15 @@ export function decodeWebhook(
 		if (/^0+$/.test(after)) {
 			throw new WebhookError("push deletes a ref; nothing to build", 422);
 		}
+		// A push is to a branch or to a tag. The forge sends nothing else, and a
+		// delivery naming something else is not a push we know how to be about.
+		const bad = refProblem(ref);
+		if (bad) throw new WebhookError(bad, 422);
 		return {
 			event: "push",
 			...identity,
 			sha: after,
 			ref,
-			branch: branchFromRef(ref),
 			commits: commitShas(p.commits),
 		};
 	}
@@ -269,12 +272,12 @@ export function decodeWebhook(
 	if (!sha || !branch) {
 		throw new WebhookError("pull_request head missing `sha` or `ref`", 422);
 	}
+	// A pull request's head is a branch, and both forges name it short.
 	return {
 		event: "pull_request",
 		...identity,
 		sha,
 		ref: `refs/heads/${branch}`,
-		branch,
 		commits: [],
 	};
 }

@@ -87,6 +87,23 @@ export function imageOrg(ref: string): string | undefined {
 }
 
 /**
+ * The name an image carries inside its namespace.
+ *
+ * `ghcr.io/hanzoai/pricing:v1` -> `"pricing"`. With {@link imageOrg} this is the
+ * `owner/name` the image itself spells — the path a repository publishing it
+ * would be found at, whichever of an organization's several forge spellings the
+ * push happened to arrive under. Verbatim, like the other two: this reads a name
+ * out of a string and decides nothing about it.
+ */
+export function imageName(ref: string): string | undefined {
+	const [repo] = parseImageRef(ref);
+	const parts = repo.split("/");
+	if (parts.length < 3) return undefined;
+	if (!isHost(parts[0] ?? "")) return undefined;
+	return parts[parts.length - 1] || undefined;
+}
+
+/**
  * Re-home an image reference onto a different registry host, preserving the
  * org/repo path and tag. This is how a GHCR ref is mirrored onto the fleet
  * registry for the dual-push:

@@ -14,7 +14,6 @@
     "server:script": "pnpm --filter=@hanzo/platform run switch:dev",
     "server:dev": "pnpm --filter=@hanzo/platform run dev",
     "server:build": "pnpm --filter=@hanzo/platform run build",
-    "docker:build:canary": "./app/platform/docker/build.sh canary",
     "typecheck": "pnpm -r run typecheck",
     "build": "pnpm -r run build",
     "format-and-lint": "biome check .",

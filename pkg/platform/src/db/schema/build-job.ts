@@ -36,10 +36,17 @@ export const buildJob = sqliteTable(
 		repo: text("repo").notNull(),
 		/** Full commit SHA that triggered the build. */
 		sha: text("sha").notNull(),
-		/** Git ref (e.g. `refs/heads/main`) the SHA belongs to. */
+		/**
+		 * The branch or tag this build is about, whole — `refs/heads/main`.
+		 *
+		 * The row's ONE git name, and the forge is what put it there. Every
+		 * decision that is not about the code itself reads it: whether the image
+		 * may carry a version, and whether a deploy follows. It used to sit beside
+		 * a short `branch` copy of itself, which is one value in two columns and
+		 * therefore two answers waiting to disagree — a name that said `main` over
+		 * a commit no branch carried was enough to reach production.
+		 */
 		ref: text("ref").notNull(),
-		/** Short branch name extracted from ref (e.g. `main`). */
-		branch: text("branch").notNull(),
 		/**
 		 * Build matrix target key, e.g. `linux/amd64`. One buildJob row per
 		 * matrix entry — keyed uniquely by (repo, sha, target) at enqueue time.
@@ -170,7 +177,6 @@ const createSchema = createInsertSchema(buildJob, {
 	repo: z.string().min(1),
 	sha: z.string().min(7),
 	ref: z.string().min(1),
-	branch: z.string().min(1),
 	target: z.string().min(1),
 	runnerPool: z.string().min(1),
 	image: z.string().min(1),
@@ -181,7 +187,6 @@ export const apiCreateBuildJob = createSchema.pick({
 	repo: true,
 	sha: true,
 	ref: true,
-	branch: true,
 	target: true,
 	runnerPool: true,
 	image: true,

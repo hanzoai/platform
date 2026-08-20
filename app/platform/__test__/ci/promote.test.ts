@@ -84,7 +84,7 @@ function job(over: Partial<BuildJob> = {}): BuildJob {
 	return {
 		buildJobId: "bj_1",
 		repo: "hanzoai/cloud",
-		branch: "main",
+		ref: "refs/heads/main",
 		image: "ghcr.io/hanzoai/cloud:sha-new1234",
 		imageDigest: DIGEST,
 		status: "succeeded",
@@ -268,9 +268,50 @@ describe("promoteBuild — every other path commits NOTHING", () => {
 	});
 
 	it("skips a branch that is not a deploy branch", async () => {
-		const res = await promoteBuild(job({ branch: "feature/x" }), deploy());
+		const res = await promoteBuild(
+			job({ ref: "refs/heads/feature/x" }),
+			deploy(),
+		);
 		expect(res).toMatchObject({ promoted: false, state: "skipped" });
 		expect(spy.order).toEqual([]);
+	});
+
+	it("reads the deploy branch off the ref, and has nowhere else to read it", async () => {
+		// `deploy.on` lists branches, and the row's ONE git name is its ref. A
+		// second, short copy of that name would be a second answer to the same
+		// question, and the two only have to disagree once: `main` written beside a
+		// ref that is not main's is a deploy of a commit main does not carry.
+		const res = await promoteBuild(
+			job({ ref: "refs/heads/feature/x", branch: "main" } as never),
+			deploy(),
+		);
+		expect(res).toMatchObject({ promoted: false, state: "skipped" });
+		expect(res.reason).toContain("refs/heads/feature/x");
+		expect(committed()).toBe(false);
+	});
+
+	it("skips a tag push, whatever the tag is called", async () => {
+		// A tag build PUBLISHES. What production runs still follows a push to a
+		// branch someone named, so a ref that is not a branch has no answer here —
+		// including a tag spelled exactly like one.
+		for (const ref of ["refs/tags/v1.2.3", "refs/tags/main"]) {
+			spy.order = [];
+			const res = await promoteBuild(job({ ref }), deploy());
+			expect(res, ref).toMatchObject({ promoted: false, state: "skipped" });
+			expect(committed(), ref).toBe(false);
+		}
+	});
+
+	it("skips a row carrying no ref at all", async () => {
+		// Fail closed on a row that cannot say what it is about. There is no
+		// default branch to fall back on: falling back is how a row that named
+		// nothing deployed as if it had named main.
+		for (const ref of ["", "main", "heads/main", "refs/remotes/origin/main"]) {
+			spy.order = [];
+			const res = await promoteBuild(job({ ref }), deploy());
+			expect(res, ref).toMatchObject({ promoted: false, state: "skipped" });
+			expect(committed(), ref).toBe(false);
+		}
 	});
 
 	it("skips a repo with no deploy block", async () => {
@@ -367,7 +408,7 @@ describe("promoteBuild — a refusal is announced, not merely recorded", () => {
 		// build is a log everyone learns to scroll past, which costs the line
 		// above its meaning.
 		await promoteBuild(job(), undefined);
-		await promoteBuild(job({ branch: "feature/x" }), deploy());
+		await promoteBuild(job({ ref: "refs/heads/feature/x" }), deploy());
 		expect(said).toEqual([]);
 	});
 });

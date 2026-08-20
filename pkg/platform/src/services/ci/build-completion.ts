@@ -145,7 +145,10 @@ async function launchPublish(
 ): Promise<void> {
 	const pub = await launchPublishJob({
 		repo: job.repo,
-		branch: job.branch,
+		// What the publish Job checks out. `git clone --branch` takes either kind
+		// of name, and a release publish is a tag push, so the row's ref answers
+		// for both without a second field to keep in step with it.
+		ref: job.ref,
 		publish,
 		buildJobId: job.buildJobId,
 	});

@@ -54,32 +54,26 @@ export const buildJobRouter = createTRPCRouter({
 	trigger: protectedProcedure
 		.input(
 			z.object({
-				// Same ConfigSource the webhook path passes — one scheduler input,
-				// whichever forge (or operator) is asking.
-				source: z.discriminatedUnion("forge", [
-					z.object({
-						forge: z.literal("github"),
-						installationId: z.string().min(1),
-					}),
-					z.object({ forge: z.literal("hanzo-git") }),
-				]),
-				// What a repository and a commit ARE is settled in `scheduleBuilds`,
-				// through `repoProblem`/`commitProblem`. Restating a shape here would
-				// be a second answer to a question that already has one.
+				// TWO values, and they are the two a person means: which repository,
+				// and which branch or tag of it. What each one IS is settled in
+				// `scheduleBuilds`, through `repoProblem`/`refProblem` — restating a
+				// shape here would be a second answer to a question that has one.
+				//
+				// No commit and no forge. The forge holds this repository and says
+				// what the ref points at; both follow from what is here, so neither
+				// is a field a caller could fill with something that does not.
 				repo: z.string(),
-				sha: z.string(),
-				ref: z.string().min(1),
-				branch: z.string().min(1),
+				ref: z.string(),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
-			// `source` names the principal (a `hanzo-git` source resolves to the
-			// platform's own org), and `source` is caller input — so pin the
-			// resolved org to the caller's active org, exactly as `one`/`logs` do
-			// with assertOrg. Without this any authenticated user could build and
-			// deploy as the fleet-owning org.
+			// The org a build acts as follows the repository, and a repository is
+			// caller input — so state the org the caller may act as, exactly as
+			// `one`/`logs` do with assertOrg. Without it any authenticated user
+			// could build and deploy as another organization.
 			const result = await scheduleBuilds({
 				...input,
+				source: { forge: "hanzo-git" },
 				requireOrganizationId: ctx.session.activeOrganizationId,
 			});
 			// The scheduler decided WHY nothing was built and says it in one
