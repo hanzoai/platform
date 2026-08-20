@@ -16,7 +16,7 @@ name: Sync from GitHub
 # fails loudly here instead of force-pushing either side and losing somebody's
 # commits.
 #
-# WHO WRITES GIT.HANZO.AI. FORGE_TOKEN, not the runner's own workflow token. main
+# WHO WRITES GIT.HANZO.AI. GIT_TOKEN, not the runner's own workflow token. main
 # has been protected since 2026-08-09, and a protected branch admits a pusher
 # with WRITE on the code — which the workflow token does not have here: a
 # scheduled run is attributed to the actions user, who is nobody's collaborator.
@@ -56,7 +56,7 @@ jobs:
       - name: Fast-forward main from github.com/hanzoai/platform
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
-          FORGE_TOKEN: ${{ secrets.FORGE_TOKEN }}
+          GIT_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git fetch --quiet "https://x-access-token:${GH_PAT}@github.com/hanzoai/platform.git" main
@@ -68,11 +68,11 @@ jobs:
           fi
           if git merge-base --is-ancestor "$LOCAL" "$REMOTE"; then
             echo "fast-forwarding $LOCAL -> $REMOTE"
-            [ -n "${FORGE_TOKEN:-}" ] || {
-              echo "::error::the forge write needs FORGE_TOKEN (contents:write) — refusing to sync silently."
+            [ -n "${GIT_TOKEN:-}" ] || {
+              echo "::error::the forge write needs GIT_TOKEN (contents:write) — refusing to sync silently."
               exit 1
             }
-            git -c http.extraheader="Authorization: token ${FORGE_TOKEN}" \
+            git -c http.extraheader="Authorization: token ${GIT_TOKEN}" \
               push "${{ github.server_url }}/${{ github.repository }}.git" \
               "$REMOTE:refs/heads/main"
           elif git merge-base --is-ancestor "$REMOTE" "$LOCAL"; then
