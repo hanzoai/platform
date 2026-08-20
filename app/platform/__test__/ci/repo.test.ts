@@ -22,6 +22,23 @@ const { launched, rows } = vi.hoisted(() => ({
 	rows: [] as { repo: string; organizationId: string; runnerPool: string }[],
 }));
 
+/**
+ * Which organization row a name resolves to is a database read, and this file
+ * is about repository paths. `destination.test.ts` covers the ownership rules
+ * and `org.realdb.test.ts` covers the read; here Hanzo simply has a row.
+ */
+const ORG = "Yb5GFGDBEwcLsv2O8qWjS";
+
+vi.mock("@hanzo/platform/services/org", async (orig) => {
+	const real = await orig<typeof import("@hanzo/platform/services/org")>();
+	return {
+		...real,
+		orgId: vi.fn(async (name: string) =>
+			real.org(name) === "hanzo" ? ORG : null,
+		),
+	};
+});
+
 vi.mock("@hanzo/platform/services/ci/build-job", () => ({
 	findBuildJobByTarget: vi.fn(async () => undefined),
 	createBuildJob: vi.fn(async (row: Record<string, unknown>) => {
@@ -47,7 +64,6 @@ vi.mock("@hanzo/platform/services/ci/buildkit-job", async (orig) => {
 
 const SHA = "0".repeat(40);
 const COMMIT = { sha: SHA, ref: "refs/heads/main", branch: "main" };
-const ORG = "Yb5GFGDBEwcLsv2O8qWjS";
 
 /** Forge-primary so the build reads the forge and compares against nothing else. */
 const CONFIG = `
@@ -93,7 +109,6 @@ beforeEach(() => {
 	launched.length = 0;
 	rows.length = 0;
 	process.env.HANZO_GIT_WEBHOOK_SECRET = "s3cret";
-	process.env.HANZO_GIT_ORGANIZATION_ID = ORG;
 });
 
 describe("repoProblem", () => {
@@ -249,6 +264,7 @@ describe("enqueueDirectBuild", () => {
 	const direct = {
 		sha: SHA,
 		image: "ghcr.io/hanzoai/kms:v9.9.9",
+		requireOrganizationId: ORG,
 	};
 
 	it("writes no row for a value that names no repository", async () => {

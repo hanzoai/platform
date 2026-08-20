@@ -286,14 +286,15 @@ describe("buildkitArgs", () => {
 });
 
 describe("per-org push credential", () => {
-	// Registries never mix. The credential is DERIVED from the destination image
-	// rather than configured, so there is no way to point a build at the wrong
-	// org's token by hand. It also replaced a hardcoded `kaniko-ghcr`, which only
-	// ever existed in the `hanzo` namespace and would not have mounted at all
-	// once builds moved into `hanzo-build`.
-	const secretOf = (image: string) => {
+	// Registries never mix. The credential follows from the repository AND the
+	// image together: which token this image needs is not the same question as
+	// which token this repository may be handed, and the build path answers the
+	// second. It also replaced a hardcoded `kaniko-ghcr`, which only ever existed
+	// in the `hanzo` namespace and would not have mounted at all once builds
+	// moved into `hanzo-build`.
+	const secretOf = (repo: string, image: string) => {
 		const j = buildBuildkitJob({
-			repo: "o/r",
+			repo,
 			gitRef: "main",
 			image,
 			buildJobId: "j",
@@ -303,16 +304,32 @@ describe("per-org push credential", () => {
 	};
 
 	it("mounts push-<org> for each org, keyed to project .dockerconfigjson", () => {
-		expect(secretOf("ghcr.io/hanzoai/pricing:v1")?.secretName).toBe(
-			"push-hanzoai",
+		expect(
+			secretOf("hanzoai/pricing", "ghcr.io/hanzoai/pricing:v1")?.secretName,
+		).toBe("push-hanzoai");
+		expect(
+			secretOf("luxfi/node", "ghcr.io/luxfi/node:v1.36.35")?.secretName,
+		).toBe("push-luxfi");
+		expect(secretOf("zooai/app", "ghcr.io/zooai/app:v1")?.secretName).toBe(
+			"push-zooai",
 		);
-		expect(secretOf("ghcr.io/luxfi/node:v1.36.35")?.secretName).toBe(
-			"push-luxfi",
-		);
-		expect(secretOf("ghcr.io/zooai/app:v1")?.secretName).toBe("push-zooai");
-		expect(secretOf("ghcr.io/hanzoai/pricing:v1")?.items).toEqual([
-			{ key: ".dockerconfigjson", path: "config.json" },
-		]);
+		expect(
+			secretOf("hanzoai/pricing", "ghcr.io/hanzoai/pricing:v1")?.items,
+		).toEqual([{ key: ".dockerconfigjson", path: "config.json" }]);
+	});
+
+	it("mounts no credential for a repository that does not publish there", () => {
+		// Naming another organization's image is what a build would have to do to
+		// be handed its token, so naming it is where this stops.
+		for (const [repo, image] of [
+			["luxfi/node", "ghcr.io/hanzoai/pricing:v1"],
+			["hanzoai/pricing", "ghcr.io/luxfi/node:v1.36.35"],
+			["hanzoai/pricing", "ghcr.io/zooai/app:v1"],
+		] as const) {
+			expect(() => secretOf(repo, image), `${repo} -> ${image}`).toThrow(
+				/refusing/i,
+			);
+		}
 	});
 
 	it("mounts exactly ONE registry credential (no cross-org token in the pod)", () => {
@@ -450,7 +467,9 @@ describe("buildBuildkitJob", () => {
 		// Source and dependencies come from different hosts, so they carry
 		// different credentials: the forge reads this build's own code, and
 		// github.com resolves Go modules whose path is a github.com path.
-		const ghEnv = (container.env as EnvRef[]).find((e) => e.name === "GH_TOKEN");
+		const ghEnv = (container.env as EnvRef[]).find(
+			(e) => e.name === "GH_TOKEN",
+		);
 		expect(ghEnv?.valueFrom?.secretKeyRef.name).toBe("console-git-token");
 		expect(ghEnv?.valueFrom?.secretKeyRef.name).not.toBe(
 			gitEnv?.valueFrom?.secretKeyRef.name,

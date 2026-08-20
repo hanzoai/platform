@@ -26,9 +26,10 @@
  *                              webhook config. Required to accept deliveries.
  *   HANZO_GIT_TOKEN            API token for reading `hanzo.yml` from private
  *                              repos. Optional — public repos need none.
- *   HANZO_GIT_ORGANIZATION_ID  platform organization that owns builds from
- *                              this forge, the deployment-level fact that
- *                              GITHUB_APP_INSTALLATION_ID is for GitHub.
+ *
+ * Whose build it is is not among them. The forge serves every organization's
+ * repositories, so the answer is per-repository and `services/org` resolves it
+ * from the owner.
  */
 
 /** Resolved Hanzo Git configuration. Never logged, never returned to a client. */
@@ -39,7 +40,6 @@ export interface HanzoGitConfig {
 	origin: string;
 	webhookSecret: string;
 	token?: string;
-	organizationId: string;
 }
 
 export const HANZO_GIT_DEFAULT_URL = "https://git.hanzo.ai";
@@ -49,10 +49,10 @@ export const HANZO_GIT_DEFAULT_URL = "https://git.hanzo.ai";
  *
  * The in-cluster CI Jobs — build, publish, e2e — clone source from here. They
  * need the address and nothing else, so they read it here rather than through
- * {@link hanzoGitConfig}, which additionally requires the webhook secret and
- * organization id that only an inbound delivery is about. One expression
- * resolves the address; {@link hanzoGitConfig} calls it too, so the default and
- * the override are stated once.
+ * {@link hanzoGitConfig}, which additionally requires the webhook secret that
+ * only an inbound delivery is about. One expression resolves the address;
+ * {@link hanzoGitConfig} calls it too, so the default and the override are
+ * stated once.
  */
 export function forgeUrl(): string {
 	return (process.env.HANZO_GIT_URL || HANZO_GIT_DEFAULT_URL).replace(
@@ -72,25 +72,10 @@ export function forgeHost(): string {
  * A build reads its `hanzo.yml` from the repository it clones, both before it
  * runs and after it finishes, and neither read is an inbound delivery. So they
  * take this rather than {@link hanzoGitConfig}, which additionally requires the
- * webhook secret and organization id that only a delivery is about.
+ * webhook secret that only a delivery is about.
  */
 export function forgeReader(): Pick<HanzoGitConfig, "url" | "token"> {
 	return { url: forgeUrl(), token: process.env.HANZO_GIT_TOKEN || undefined };
-}
-
-/**
- * The organization that owns builds of repositories on this forge — the
- * deployment-level fact `GITHUB_APP_INSTALLATION_ID`'s provider row is for
- * GitHub.
- *
- * A build takes it directly because a build is not a delivery: it needs to know
- * whose build it is, not how to verify a signature. {@link hanzoGitConfig}
- * reports this key alongside the webhook secret, since a delivery needs both.
- */
-export function forgeOrganizationId(): string {
-	const id = process.env.HANZO_GIT_ORGANIZATION_ID ?? "";
-	if (!id) throw new HanzoGitNotConfigured(["HANZO_GIT_ORGANIZATION_ID"]);
-	return id;
 }
 
 /** One path segment of a repository path: a name, starting with a letter or digit. */
@@ -175,19 +160,14 @@ export class HanzoGitNotConfigured extends Error {
 export function hanzoGitConfig(): HanzoGitConfig {
 	const url = forgeUrl();
 	const webhookSecret = process.env.HANZO_GIT_WEBHOOK_SECRET ?? "";
-	const organizationId = process.env.HANZO_GIT_ORGANIZATION_ID ?? "";
-
-	const missing = [
-		["HANZO_GIT_WEBHOOK_SECRET", webhookSecret],
-		["HANZO_GIT_ORGANIZATION_ID", organizationId],
-	].flatMap(([name, value]) => (value ? [] : [name as string]));
-	if (missing.length > 0) throw new HanzoGitNotConfigured(missing);
+	if (!webhookSecret) {
+		throw new HanzoGitNotConfigured(["HANZO_GIT_WEBHOOK_SECRET"]);
+	}
 
 	return {
 		...forgeReader(),
 		origin: new URL(url).origin,
 		webhookSecret,
-		organizationId,
 	};
 }
 

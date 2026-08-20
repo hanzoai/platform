@@ -40,23 +40,13 @@ export function parseImageRef(ref: string): [string, string, string] {
 }
 
 /**
- * Re-home an image reference onto a different registry host, preserving the
- * org/repo path and tag. This is how a GHCR ref is mirrored onto the fleet
- * registry for the dual-push:
- *
- * `withRegistryHost("ghcr.io/hanzoai/pricing:v1.2.3", "registry.hanzo.ai")`
- *   -> `"registry.hanzo.ai/hanzoai/pricing:v1.2.3"`
- *
- * The first path segment is replaced as a registry host only when it looks like
- * one (contains `.` or `:`, or is `localhost`); otherwise the ref is host-less
- * (Docker Hub short form) and the host is prepended. Same
- * one-canonical-place rule as `parseImageRef` — do not re-derive this elsewhere.
- */
-/**
- * The GHCR namespace (org) an image pushes into.
+ * The registry namespace an image pushes into.
  *
  * `ghcr.io/hanzoai/pricing:v1` -> `"hanzoai"`;  a host-less or single-segment
- * ref -> `undefined`. Same one-canonical-place rule as `parseImageRef`.
+ * ref -> `undefined`. Verbatim, as the caller spelled it: this reads a name out
+ * of a string and does not decide anything about it. `services/org` is where a
+ * name is resolved, and it folds case there so that every reader folds it the
+ * same way. Same one-canonical-place rule as `parseImageRef`.
  */
 export function imageOrg(ref: string): string | undefined {
 	const [repo] = parseImageRef(ref);
@@ -71,22 +61,18 @@ export function imageOrg(ref: string): string | undefined {
 }
 
 /**
- * The Kubernetes Secret holding the push credential for an image's org.
+ * Re-home an image reference onto a different registry host, preserving the
+ * org/repo path and tag. This is how a GHCR ref is mirrored onto the fleet
+ * registry for the dual-push:
  *
- * Registries NEVER mix: a build mounts `push-<org>` and only that, so a token
- * stolen from a hanzo build cannot push to ghcr.io/luxfi. One secret per org is
- * the whole isolation mechanism (hanzoai/universe infra/k8s/hanzo-build), so the
- * secret is DERIVED from the destination rather than configured per call —
- * there is no way to point a build at the wrong org's credential by hand.
+ * `withRegistryHost("ghcr.io/hanzoai/pricing:v1.2.3", "registry.hanzo.ai")`
+ *   -> `"registry.hanzo.ai/hanzoai/pricing:v1.2.3"`
  *
- * Returns undefined for a ref with no org, so the caller can refuse rather than
- * silently mount someone else's token.
+ * The first path segment is replaced as a registry host only when it looks like
+ * one (contains `.` or `:`, or is `localhost`); otherwise the ref is host-less
+ * (Docker Hub short form) and the host is prepended. Same
+ * one-canonical-place rule as `parseImageRef` — do not re-derive this elsewhere.
  */
-export function pushSecretForImage(ref: string): string | undefined {
-	const org = imageOrg(ref);
-	return org ? `push-${org}` : undefined;
-}
-
 export function withRegistryHost(ref: string, host: string): string {
 	const slash = ref.indexOf("/");
 	const first = slash === -1 ? "" : ref.slice(0, slash);

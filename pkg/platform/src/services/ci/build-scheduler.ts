@@ -19,13 +19,13 @@ import { authGithub } from "@hanzo/platform/utils/providers/github";
 import { TRPCError } from "@trpc/server";
 import { findGithubByInstallationId } from "../github";
 import {
-	forgeOrganizationId,
 	forgeReader,
 	type HanzoGitConfig,
 	hanzoGitConfig,
 	repoName,
 	repoProblem,
 } from "../hanzo-git";
+import { destinationProblem, orgId, ownerOf } from "../org";
 import type { BuildJob } from "./build-job";
 import {
 	createBuildJob,
@@ -335,7 +335,7 @@ async function resolveSource(
 	if (source.forge === "hanzo-git") {
 		const cfg = hanzoGitConfig();
 		return {
-			organizationId: cfg.organizationId,
+			organizationId: await principal(repo),
 			config: await fetchPlatformConfigFromHanzoGit(cfg, repo, sha),
 		};
 	}
@@ -419,11 +419,18 @@ export interface DirectBuildInput {
 	os?: BuildOS;
 	arch?: BuildArch;
 	/**
-	 * The org the CALLER is allowed to act as, checked against the org that owns
-	 * the repository. Same rule and same word as {@link ScheduleInput}: a caller
-	 * states which org it is, and stating one it is not is refused.
+	 * The org the CALLER acts as, checked against the org that owns the
+	 * repository: a caller states which org it is, and stating one it is not is
+	 * refused.
+	 *
+	 * Required, unlike {@link ScheduleInput}'s. There the forge authenticates the
+	 * delivery and the principal follows from the installation binding, so there
+	 * is nobody to ask. Here the credential authenticates a MACHINE and says
+	 * nothing about which organization it is acting for, so the caller says it and
+	 * the repository has to bear it out. A caller that need not state one is a
+	 * caller that is never wrong.
 	 */
-	requireOrganizationId?: string;
+	requireOrganizationId: string;
 }
 
 /**
@@ -438,15 +445,16 @@ export async function enqueueDirectBuild(
 	// The repository the build clones — named, and named once, before a row
 	// exists to carry a value the build path would then refuse.
 	const repo = repoOf(input.repo);
+	// Where this build publishes, decided against the repository it reads, before
+	// a row exists to carry a destination the muscle would then mount a
+	// credential for.
+	assertDestination(repo, input.image);
 	// The org that owns the result is the org that owns the repository, which is
 	// the same answer `resolveSource` gives a forge delivery. `organizationId`
 	// on the row is what later gates reading this build's logs, so it is
 	// resolved from the repository and only confirmed against the caller.
-	const organizationId = forgeOrganizationId();
-	if (
-		input.requireOrganizationId !== undefined &&
-		input.requireOrganizationId !== organizationId
-	) {
+	const organizationId = await principal(repo);
+	if (input.requireOrganizationId !== organizationId) {
 		throw new TRPCError({
 			code: "FORBIDDEN",
 			message:
@@ -532,6 +540,12 @@ export async function scheduleBuilds(
 		});
 	}
 	if (!config) return null;
+
+	// Every image this config declares publishes into a namespace the repository's
+	// own organization owns. Decided for the whole config before any of it is
+	// enqueued: a delivery that names one destination it may not have is refused
+	// entire, rather than half-built.
+	for (const build of config.builds) assertDestination(repo, build.image);
 
 	// The forge is what this path reads; GitHub is where the code was reviewed.
 	// Nothing keeps those equal on its own — a repo whose mirror row is gone
@@ -642,7 +656,37 @@ function repoOf(repo: string): string {
 	return repoName(repo);
 }
 
-/** Owner segment of a repository path — what names the runner pool. */
-function ownerOf(repo: string): string {
-	return repo.slice(0, repo.indexOf("/"));
+/**
+ * The organization a build acts as: the one that owns the repository it reads.
+ *
+ * It is what the row records, what gates reading the build's logs, and what
+ * `promoteBuild` asks `authorizeNamespace` about — so it is resolved from the
+ * repository, never from the caller and never from the config the repository
+ * itself ships. `authorizeNamespace` is keyed by namespace and VALUED by org, so
+ * what it grants depends entirely on this being a different answer for different
+ * organizations.
+ *
+ * An owner no organization here claims has no principal, and a build with no
+ * principal does not start.
+ */
+async function principal(repo: string): Promise<string> {
+	const owner = ownerOf(repo);
+	const organizationId = await orgId(owner);
+	if (!organizationId) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: `Refusing to build ${repo}: "${owner}" resolves to no organization here.`,
+		});
+	}
+	return organizationId;
+}
+
+/**
+ * The image this build publishes belongs to the organization that owns the
+ * repository. Asked before a row exists, on both front doors, because the row
+ * carries the image the build muscle then mounts a credential for.
+ */
+function assertDestination(repo: string, image: string): void {
+	const problem = destinationProblem(repo, image);
+	if (problem) throw new TRPCError({ code: "FORBIDDEN", message: problem });
 }
