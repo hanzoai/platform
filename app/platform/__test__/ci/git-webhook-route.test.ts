@@ -176,10 +176,10 @@ describe("POST /v1/git-webhook — Hanzo Git", () => {
 	});
 
 	it("202s a repo with nothing to build instead of failing the push", async () => {
-		// `scheduleBuilds` returns null for BOTH "no hanzo.yml" and "hanzo.yml
-		// declares no image", so the message names the observable outcome rather
-		// than guessing which of the two it was.
-		scheduleBuilds.mockResolvedValue(null);
+		scheduleBuilds.mockResolvedValue({
+			declined: "no-image",
+			why: "hanzo/kms declares no image to build",
+		});
 		const res = await post({
 			"x-hanzo-event": "push",
 			"x-hanzo-signature": goodSig,
@@ -189,6 +189,24 @@ describe("POST /v1/git-webhook — Hanzo Git", () => {
 			message: expect.stringContaining("declares no image to build"),
 			scheduled: 0,
 		});
+	});
+
+	it("repeats the scheduler's sentence rather than composing a second", async () => {
+		// The forge persists this body and renders it in delivery history — it is
+		// the entire artifact of a push that built nothing. Whichever of the two
+		// reasons it was, the words are the scheduler's, so the console and the
+		// delivery history read alike.
+		scheduleBuilds.mockResolvedValue({
+			declined: "ci-owns",
+			why: "hanzoai/ci builds hanzo/kms (.hanzo/workflows/cicd.yml) — not scheduling a second, ungated build",
+		});
+		const { message } = (await (
+			await post({ "x-hanzo-event": "push", "x-hanzo-signature": goodSig })
+		).json()) as { message: string };
+
+		expect(message).toContain("hanzoai/ci");
+		expect(message).toContain(".hanzo/workflows/cicd.yml");
+		expect(message).not.toContain("declares no image");
 	});
 
 	// The three outcomes below share ONE status code, so `scheduled` is what

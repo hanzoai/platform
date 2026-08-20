@@ -53,8 +53,15 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
   the tRPC `buildJob.trigger` both call `scheduleBuilds`;
   `app/platform/app/v1/runner/route.ts` (service-token, GitHub-free direct
   build) calls `enqueueDirectBuild`. Both settle the repository and the commit
-  first, so a rule added there holds at every door. `build-callback.ts` is an
-  optional external-builder completion hook (bearer token).
+  first, and every rule about whether a commit may be built lives INSIDE those
+  two — the principal, the destination, the canonical-source check, and whether
+  hanzoai/ci already owns the repo's pipeline. A door adds transport and an
+  answer to render; a rule a door could skip is not a rule. `build-callback.ts`
+  is an optional external-builder completion hook (bearer token).
+- A call that builds nothing returns `Declined` — `declined` for a caller that
+  branches, `why` for one that reports. Two ordinary reasons (`no-image`,
+  `ci-owns`) that are different sentences, written where they are known, so the
+  forge's delivery history and the console read alike.
 - Service layer: `pkg/platform/src/services/ci/` — `platform-config` (`hanzo.yml`
   parser + validator, now incl. `e2e:` + `publish:`), `github-webhook`,
   `build-job` (DB CRUD), `build-scheduler` (dispatch via `launchBuildJob`),
@@ -71,7 +78,7 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
 - Build muscle: BuildKit (`moby/buildkit:v0.16.0`, `buildctl-daemonless.sh`,
   `--frontend=dockerfile.v0`) — the PROVEN contract that already builds
   commerce/chat/cloud on this cluster — over an HTTPS git context
-  `https://github.com/<repo>.git#<ref>` → `--output=type=image,…,push=true` to
+  `https://git.hanzo.ai/<repo>.git#<commit>` → `--output=type=image,…,push=true` to
   GHCR, privileged, on `runner-pool-32g` + `dedicated=ci-runner` (git auth from
   `console-git-token` via `GIT_AUTH_TOKEN`, GHCR push cred from `kaniko-ghcr` at
   `/root/.docker`). The RETIRED long-poll/`workflow_dispatch` external-runner
@@ -175,20 +182,34 @@ Reading it:
   different answers; one answer for every repository makes every fleet grant a
   grant to everybody.
 - `destinationProblem(repo, image)` — three facts about one destination: it is
-  ONE image reference (letters, digits and `._-/:@`, so it cannot open a second
-  field of the exporter `buildkit-job` writes), it addresses a registry we run
-  (`HOSTS` = ghcr.io / oci.hanzo.ai / registry.hanzo.ai, the same three the
-  cloud fabric operates), and the namespace it publishes into belongs to the
-  same organization as the repository's owner. Asked at both front doors and
-  again in `buildkit-job` before a credential is mounted. A namespace no
-  organization here owns is not judged — it is somebody else's registry.
+  ONE image reference (letters, digits and `._-/:@`), it addresses a registry we
+  run (`registryProblem`, `HOSTS` = ghcr.io / oci.hanzo.ai — `registry.hanzo.ai`
+  came off when the name stopped serving a registry, and its auth entry came out
+  of the six dockerconfigs that still carried it), and the namespace it
+  publishes into belongs to the same organization as the repository's owner.
+  Asked at both front doors and again in `buildkit-job` for EVERY reference a
+  build will publish — the row's and, with a fleet registry set, the second one —
+  before a credential is mounted. A namespace no organization here owns is not
+  judged: it is somebody else's registry.
+  - The reference alphabet is what keeps a credentialed destination one field of
+    the image exporter — a comma would open a second `name=`, an `=` an attribute
+    of the exporter itself. It bounds the destinations we hand a token for, which
+    is the set that matters: an unowned namespace is unjudged here, and
+    `pushSecret` shares the predicate, so `buildBuildkitJob` refuses it for want
+    of a credential before any of it reaches `buildctl`.
 - `pushSecret(repo, image)` — names `push-<namespace>` only for a namespace this
   repository publishes into. Takes both names on purpose: "which token does this
   image need" is not the question a build path answers, and the other one cannot
   be spelled here.
-- `firstParty(image)` — which images the semver tag rule is about. Same table,
-  same `parseImageRef` the credential uses, so a rule cannot accept a spelling
-  the credential rejects.
+- `tagProblem(image)` — the name a first-party image publishes under names ONE
+  build: a version (`vX.Y.Z`) or the commit it was built from, or a digest. ONE
+  rule at every door, because what a caller may state at the direct enqueue and
+  what a repository's `tag-pattern` may produce on a push are the same question.
+  The direct door is TOLD (it stated the name); the delivery lane SKIPS that
+  target and the push still succeeds, the same shape as `{{git.tag}}` on a branch
+  push. `firstParty(image)` decides which images it is about — same table, same
+  `parseImageRef` the credential uses, so a rule cannot accept a spelling the
+  credential rejects.
 
 Case is folded in exactly one place, `org()`, because the forge and the registry
 both resolve a name without regard to case. Slugs are compared exactly: `Hanzo`
@@ -203,16 +224,29 @@ are refused rather than defaulted. Adding a brand is one line in `OWNS`, its
 
 **What a build is named by.** `build-scheduler` settles the repository AND the
 commit for the whole call before either reaches a row — `repoOf` and `shaOf`,
-side by side, so both front doors and every future one get the same rule. A
-commit is named by its object id and an object id is hex, folded lowercase so
-two spellings key one row; the value keys the row, names the target, addresses
-`hanzo.yml` on the forge, and spells the image tag, and it reaches all four
-through that one call. The tag itself is settled in `resolveTag`: `{{git.sha}}`,
-`{{git.branch}}` and `{{git.tag}}` are all spelled in the docker tag alphabet
-(`[A-Za-z0-9._-]`), so what comes out is a tag whatever the triggering context
-said. `buildkit-job` writes the destination as ONE quoted `name=` CSV field —
-one ref or two, one spelling — which is what makes a ref list a value of the
-exporter rather than a way to add fields to it.
+side by side over `hanzo-git`'s `repoProblem`/`commitProblem`, so both front
+doors and every future one get the same rule. A commit is named by a WHOLE
+object id — 40 hex digits or 64 — folded lowercase so two spellings key one row.
+That one value does all five jobs: it keys the row, names the target, addresses
+`hanzo.yml` on the forge, spells the image tag, and IS the git context the pod
+checks out. `dispatchBuild` takes it off the row (`launchBuildJob({commit:
+job.sha})`) rather than from a second argument, so the commit a build was read
+and checked at is the commit it compiles; `ref` keeps its one job, naming the
+trigger on the row. A prefix is refused because it addresses one commit locally
+and no commit over a fetch. Measured on a real Job against git.hanzo.ai: a
+`#<sha>` fragment checks out that commit (non-shallow `fetch --tags`, `.git/HEAD`
+== the sha), a `#refs/heads/main` fragment checks out the tip, and the two differ.
+
+The tag is settled in `resolveTag`: `{{git.sha}}`, `{{git.branch}}` and
+`{{git.tag}}` are all spelled in the docker tag alphabet (`[A-Za-z0-9._-]`), so
+what comes out is a tag whatever the triggering context said — and `tagProblem`
+then decides whether that tag names a build. `buildkit-job` writes the
+destination as ONE quoted `name=` CSV field — one ref or two, one spelling —
+which is what makes a ref list a value of the exporter rather than a way to add
+fields to it. `destinations()` derives that list once, and `buildBuildkitJob`
+judges every entry of it, so the second ref is judged by the same rule as the
+first. `fleetRegistryHost()` reads `FLEET_REGISTRY_HOST` through the same
+`registryProblem`, so the two ways to name a publish host cannot disagree.
 
 **Load-bearing fact: the old patcher never fired.** All 1,439 `build_job` rows in
 the live DB read `rolloutStatus: skipped` — `PLATFORM_FLEET_NAMESPACE_OWNERS` is

@@ -19,13 +19,15 @@ import { authGithub } from "@hanzo/platform/utils/providers/github";
 import { TRPCError } from "@trpc/server";
 import { findGithubByInstallationId } from "../github";
 import {
+	commitName,
+	commitProblem,
 	forgeReader,
 	type HanzoGitConfig,
 	hanzoGitConfig,
 	repoName,
 	repoProblem,
 } from "../hanzo-git";
-import { destinationProblem, orgId, ownerOf } from "../org";
+import { destinationProblem, orgId, ownerOf, tagProblem } from "../org";
 import type { BuildJob } from "./build-job";
 import {
 	createBuildJob,
@@ -89,6 +91,21 @@ export interface ScheduleResult {
 	organizationId: string;
 	config: PlatformConfig;
 	jobs: BuildJob[];
+}
+
+/**
+ * A call that built nothing, and which of the two ordinary reasons it was.
+ *
+ * Both are healthy answers to a healthy push, and they are different sentences:
+ * a repo that declares no image is not a repo whose images hanzoai/ci builds,
+ * and a caller reporting the first when it was the second sends a reader looking
+ * for a file that is right there. So the reason travels WITH the answer —
+ * `declined` for a caller that branches, `why` for one that reports — written
+ * once, where it is known, rather than guessed at each door.
+ */
+export interface Declined {
+	declined: "no-image" | "ci-owns";
+	why: string;
 }
 
 interface ResolvedProvider {
@@ -357,10 +374,15 @@ function archOf(target: string): BuildArch {
  * Dispatch one queued build to the build muscle: launch its BuildKit Job and
  * transition the row to `running`, recording the Job name (the build-watcher
  * polls it) and a `buildkit:<jobName>` correlation id.
+ *
+ * What it builds it reads off the row: the repository and the commit already
+ * settled for the whole call. A commit is what `hanzo.yml` was read at, what the
+ * canonical-source check asked GitHub about, and what the tag spells — so it is
+ * also what the pod checks out, and there is no second value for a caller to
+ * hand down beside it.
  */
 async function dispatchBuild(
 	job: BuildJob,
-	gitRef: string,
 	opts: {
 		dockerfile?: string;
 		context?: string;
@@ -370,7 +392,7 @@ async function dispatchBuild(
 ): Promise<BuildJob> {
 	const launch = await launchBuildJob({
 		repo: job.repo,
-		gitRef,
+		commit: job.sha,
 		image: job.image,
 		dockerfile: opts.dockerfile,
 		context: opts.context,
@@ -446,10 +468,11 @@ export async function enqueueDirectBuild(
 	// once, before a row exists to carry a value the build path would then refuse.
 	const repo = repoOf(input.repo);
 	const sha = shaOf(input.sha);
-	// Where this build publishes, decided against the repository it reads, before
-	// a row exists to carry a destination the muscle would then mount a
-	// credential for.
+	// Where this build publishes and under what name, decided against the
+	// repository it reads, before a row exists to carry a destination the muscle
+	// would then mount a credential for.
 	assertDestination(repo, input.image);
+	assertName(input.image);
 	// The org that owns the result is the org that owns the repository, which is
 	// the same answer `resolveSource` gives a forge delivery. `organizationId`
 	// on the row is what later gates reading this build's logs, so it is
@@ -497,7 +520,7 @@ export async function enqueueDirectBuild(
 		rolloutStatus: "skipped",
 	});
 
-	return dispatchBuild(job, ref, {
+	return dispatchBuild(job, {
 		dockerfile: input.dockerfile,
 		context: input.context,
 		dockerTarget: input.dockerTarget,
@@ -508,11 +531,19 @@ export async function enqueueDirectBuild(
 /**
  * Schedule all builds for a triggering commit. Idempotent on (repo, sha,
  * target): a re-delivery of the same webhook does not enqueue duplicates.
- * Returns null when the repo has no `hanzo.yml` (it opted out).
+ *
+ * The ONE call every front door makes, so every rule about whether a commit may
+ * be built is settled here and holds at all of them: which organization the
+ * build acts as, where it may publish, whether the commit is on the canonical
+ * source, and whether hanzoai/ci already owns this repo's pipeline. A door adds
+ * transport and an answer to render — never a rule of its own, and never a rule
+ * it can skip.
+ *
+ * Returns {@link Declined} when the call schedules nothing.
  */
 export async function scheduleBuilds(
 	input: ScheduleInput,
-): Promise<ScheduleResult | null> {
+): Promise<ScheduleResult | Declined> {
 	// One repository and one commit: what the config is read from, what the build
 	// clones, and what keys every row this call writes. Named before any of that
 	// happens.
@@ -537,7 +568,32 @@ export async function scheduleBuilds(
 				"Refusing to schedule a build for another organization — the build source resolves to an org you are not acting as",
 		});
 	}
-	if (!config) return null;
+
+	// ONE LANE. A push to the forge starts this scheduler AND the repo's
+	// `.hanzo/workflows/cicd.yml`, which runs hanzoai/ci — the `test:` gate, the
+	// structural refusals, `gover`, `publishable`. Both push the same image, so
+	// where the caller exists ci owns the build and this yields. Asked here, in
+	// the one call every door makes, and asked before a row, a Job or an image
+	// can exist for a commit ci has not finished gating.
+	//
+	// A read of the forge, not of a delivery: what runs a repo's pipeline is a
+	// fact about the repository the build clones, and the build clones from the
+	// forge whichever door asked. So it takes `forgeReader` — address and read
+	// token — and no webhook secret.
+	if (await ciOwnsBuild(forgeReader(), repo, sha)) {
+		return {
+			declined: "ci-owns",
+			why:
+				`hanzoai/ci builds ${repo} (${CI_CALLER_PATH}) — ` +
+				"not scheduling a second, ungated build",
+		};
+	}
+
+	// Two ways to declare no image: no `hanzo.yml` at all, or one that declares
+	// none — a `test:`-only gate for hanzoai/ci, which is most of the estate.
+	if (!config) {
+		return { declined: "no-image", why: `${repo} declares no image to build` };
+	}
 
 	// Every image this config declares publishes into a namespace the repository's
 	// own organization owns. Decided for the whole config before any of it is
@@ -606,6 +662,18 @@ export async function scheduleBuilds(
 			// target rather than inventing one — the push still succeeds, and the
 			// versioned image appears when the tag itself is pushed.
 			if (tag === null) continue;
+			const image = `${build.image}:${tag}`;
+			// A pattern can also resolve to a name that names no one build — a
+			// branch, on a lane whose pattern yields a version only on a tag push.
+			// Skip that target for the same reason and in the same shape: the push
+			// succeeds, and the image appears when the push names a version or the
+			// commit. Said out loud, because a declaration that resolves to nothing
+			// publishable is something its author wants to hear about.
+			const naming = tagProblem(image);
+			if (naming) {
+				console.info(`[build] ${naming}`);
+				continue;
+			}
 			const job = await createBuildJob({
 				repo,
 				sha,
@@ -613,7 +681,7 @@ export async function scheduleBuilds(
 				branch: input.branch,
 				target,
 				runnerPool: runnerPoolFor(ownerOf(repo), entry),
-				image: `${build.image}:${tag}`,
+				image,
 				organizationId,
 				status: "queued",
 				rolloutStatus: "skipped",
@@ -627,7 +695,7 @@ export async function scheduleBuilds(
 				if (value !== undefined) buildArgs[name] = value;
 			}
 			jobs.push(
-				await dispatchBuild(job, input.ref, {
+				await dispatchBuild(job, {
 					dockerfile: build.dockerfile,
 					context: build.context,
 					buildArgs,
@@ -654,29 +722,22 @@ function repoOf(repo: string): string {
 	return repoName(repo);
 }
 
-/** A commit is named by its object id, and an object id is hex. */
-const OBJECT_ID = /^[0-9a-f]{7,64}$/i;
-
 /**
  * The commit a build reads, named once for the whole call.
  *
  * Both front doors converge here, and only one of them gets its commit off a
  * signed delivery — the console's trigger takes a typed one. So the value is
  * read as a commit HERE, alongside the repository, rather than at each door:
- * it keys the row, names the target, addresses the config on the forge and
- * spells the image tag, and it reaches all four through this one call.
- *
- * Folded, like `repoName` folds a repository: hex is case-insensitive, so both
- * spellings name one commit and key one row instead of building it twice.
+ * it keys the row, names the target, addresses the config on the forge, spells
+ * the image tag, and is the git context the build checks out, and it reaches
+ * all five through this one call. `commitProblem` is the same rule the direct
+ * front door answers 400 with; `commitName` is the one spelling, so one commit
+ * is one key on both front doors.
  */
 function shaOf(sha: string): string {
-	if (!OBJECT_ID.test(sha)) {
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message: `"${sha}" does not name a commit: expected a hex object id`,
-		});
-	}
-	return sha.toLowerCase();
+	const problem = commitProblem(sha);
+	if (problem) throw new TRPCError({ code: "BAD_REQUEST", message: problem });
+	return commitName(sha);
 }
 
 /**
@@ -712,4 +773,18 @@ async function principal(repo: string): Promise<string> {
 function assertDestination(repo: string, image: string): void {
 	const problem = destinationProblem(repo, image);
 	if (problem) throw new TRPCError({ code: "FORBIDDEN", message: problem });
+}
+
+/**
+ * The name this build publishes under names one build.
+ *
+ * Refused here rather than skipped, because the direct door is a caller STATING
+ * a destination: a caller that asked for a name we do not publish is told so. A
+ * repository whose `tag-pattern` names none on a given push is a different
+ * situation — nothing to build on this push — and the delivery lane skips that
+ * target instead.
+ */
+function assertName(image: string): void {
+	const problem = tagProblem(image);
+	if (problem) throw new TRPCError({ code: "BAD_REQUEST", message: problem });
 }

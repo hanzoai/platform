@@ -22,16 +22,16 @@
  * scheduler to this is what makes platform-native builds REAL — no human
  * applying Job YAML by hand.
  *
- * Dual-push (opt-in, gated by `FLEET_REGISTRY_HOST`): when a fleet registry is
- * configured the ONE build pushes the SAME image to both GHCR (public consumers
- * pull it) and the fleet registry `registry.hanzo.ai` (the S3-backed store the
- * estate DEPLOYS from) — additive, matching the `hanzoai/ci` reusable's dual-host
- * pattern. Unset (the default) keeps the exact single-GHCR proven behavior.
+ * Dual-push (opt-in, `FLEET_REGISTRY_HOST`): with a fleet registry set, the ONE
+ * build pushes the SAME image to both GHCR (public consumers pull it) and
+ * `oci.hanzo.ai` (the S3-backed store the estate DEPLOYS from) — additive,
+ * matching the `hanzoai/ci` reusable's dual-host pattern. Unset (the default)
+ * keeps the exact single-GHCR proven behavior.
  */
 import { TRPCError } from "@trpc/server";
-import { forgeHost, forgeUrl, repoProblem } from "../hanzo-git";
+import { commitProblem, forgeHost, forgeUrl, repoProblem } from "../hanzo-git";
 import { getDefaultClients } from "../k8s/k8s-client";
-import { destinationProblem, pushSecret } from "../org";
+import { destinationProblem, pushSecret, registryProblem } from "../org";
 import { parseImageRef, withRegistryHost } from "./image-ref";
 import type { BuildArch } from "./platform-config";
 
@@ -76,7 +76,7 @@ const MODULE_FETCH_SECRET = "console-git-token";
 const PUSH_CRED_KEY = ".dockerconfigjson";
 /**
  * KMS-synced docker cred (key `.dockerconfigjson`) for the fleet registry
- * (`registry.hanzo.ai`) — the SAME secret the `hanzoai/ci` reusable reads. Only
+ * (`oci.hanzo.ai`) — the SAME secret the `hanzoai/ci` reusable reads. Only
  * mounted (alongside the per-org push cred) when a fleet registry is configured;
  * the fleet cred is NEVER duplicated into a push secret, so `registry-credentials`
  * stays its one canonical home.
@@ -86,12 +86,25 @@ const FLEET_CRED_SECRET = "registry-credentials";
 /**
  * The fleet registry host every image is ALSO pushed to (on top of GHCR), or
  * undefined when unset. ONE config value — `FLEET_REGISTRY_HOST` (e.g.
- * `registry.hanzo.ai`) — gates the whole dual-push; there are no scattered
+ * `oci.hanzo.ai`) — carries the whole dual-push; there are no scattered
  * literals. Unset (the default) = GHCR-only, byte-identical to the proven build.
+ *
+ * A set value names a registry this fabric publishes to, judged by the same
+ * `registryProblem` a destination on the row is judged by. Naming any other host
+ * stops the build here, saying which host and which are real — rather than
+ * aiming every build in the fleet at a name that answers nothing.
  */
 export function fleetRegistryHost(): string | undefined {
-	const h = process.env.FLEET_REGISTRY_HOST?.trim();
-	return h ? h : undefined;
+	const host = process.env.FLEET_REGISTRY_HOST?.trim();
+	if (!host) return undefined;
+	const problem = registryProblem(host);
+	if (problem) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: `FLEET_REGISTRY_HOST ${problem}`,
+		});
+	}
+	return host;
 }
 
 /**
@@ -193,12 +206,15 @@ export interface BuildJobLaunchInput {
 	/** `owner/name` — the source repository, as {@link repoProblem} defines one. */
 	repo: string;
 	/**
-	 * Git context fragment BuildKit clones + checks out: a full ref
-	 * (`refs/heads/main`, `refs/tags/v1.2.3`) or a SHA — the ref the triggering
-	 * commit is the tip of. Builds track the ref tip; (repo, sha, target)
-	 * idempotency dedupes re-triggers.
+	 * The commit BuildKit checks out, as {@link commitProblem} defines one — the
+	 * object id on the buildJob row, which is also what the build's `hanzo.yml`
+	 * was read at and what its tag spells.
+	 *
+	 * An object id and not a branch, because a branch is a name for whatever it
+	 * points at when the pod fetches, and the pod fetches after everything about
+	 * the build was decided. One commit, decided once, compiled.
 	 */
-	gitRef: string;
+	commit: string;
 	/** Fully-resolved destination image, e.g. `ghcr.io/hanzoai/pricing:<tag>`. */
 	image: string;
 	/** Dockerfile path relative to the context. Default `Dockerfile`. */
@@ -219,7 +235,7 @@ export interface BuildJobLaunchInput {
 	resources?: BuildResources;
 	/**
 	 * Fleet registry host to ALSO push the built image to, e.g.
-	 * `registry.hanzo.ai`. When set, the one BuildKit output carries both refs
+	 * `oci.hanzo.ai`. When set, the one BuildKit output carries both refs
 	 * (GHCR + the fleet host, host-swapped from `image`) and the pod mounts the
 	 * fleet cred. Defaulted from `fleetRegistryHost()` at the launch boundary;
 	 * leave unset in callers. Empty/undefined = GHCR-only (the proven path).
@@ -279,6 +295,21 @@ export function imageVersion(ref: string): string {
 }
 
 /**
+ * Every image reference this build publishes: the destination on the row, and —
+ * when a fleet registry is configured — the same reference on that host, so one
+ * build reaches both with no rebuild.
+ *
+ * ONE list, written by `buildkitArgs` into the exporter and judged by
+ * `buildBuildkitJob` before a credential is mounted. Deriving it twice is how a
+ * build ends up pushing somewhere nothing judged.
+ */
+function destinations(input: BuildJobLaunchInput): string[] {
+	return input.fleetRegistryHost
+		? [input.image, withRegistryHost(input.image, input.fleetRegistryHost)]
+		: [input.image];
+}
+
+/**
  * `buildctl-daemonless.sh` args for a build — pure, so the unit test can assert
  * the contract. Mirrors the proven hand-applied BuildKit Jobs: dockerfile.v0
  * frontend, HTTPS git context, image output pushed to GHCR. When a fleet
@@ -286,18 +317,21 @@ export function imageVersion(ref: string): string {
  * fleet-host), so one build pushes to both destinations with no rebuild.
  */
 export function buildkitArgs(input: BuildJobLaunchInput): string[] {
-	// The context is a repository path under the forge, so it is built from one
-	// or it is not built. Every build passes here, whichever front door asked.
-	const problem = repoProblem(input.repo);
-	if (problem) {
-		throw new TRPCError({ code: "BAD_REQUEST", message: problem });
+	// The context addresses one commit of one repository under the forge, so both
+	// halves are read as what they are before either is spliced into it. Every
+	// build passes here, whichever front door asked. A fragment is where BuildKit
+	// cuts a subdirectory off a ref (`#ref:subdir`), so a value that is an object
+	// id is a value that names the commit and nothing beside it.
+	const source = repoProblem(input.repo) ?? commitProblem(input.commit);
+	if (source) {
+		throw new TRPCError({ code: "BAD_REQUEST", message: source });
 	}
 	const dockerfile = (input.dockerfile ?? "Dockerfile").replace(/^\.\//, "");
 	const arch = input.arch ?? "amd64";
 	const args = [
 		"build",
 		"--frontend=dockerfile.v0",
-		`--opt=context=${forgeUrl()}/${input.repo}.git#${input.gitRef}`,
+		`--opt=context=${forgeUrl()}/${input.repo}.git#${input.commit}`,
 		`--opt=filename=${dockerfile}`,
 		`--opt=platform=linux/${arch}`,
 	];
@@ -351,13 +385,8 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	// `name` is itself a comma-separated list of refs — so the field is quoted
 	// and the CSV parser reads the whole ref list as one value. ONE spelling for
 	// one ref or two: what varies is how many destinations there are, not how a
-	// destination is written. Setting a fleet registry adds the second — GHCR for
-	// public consumers, the fleet registry the estate deploys from — off the same
-	// build.
-	const refs = input.fleetRegistryHost
-		? `${input.image},${withRegistryHost(input.image, input.fleetRegistryHost)}`
-		: input.image;
-	const push = `--output=type=image,"name=${refs}",push=true`;
+	// destination is written.
+	const push = `--output=type=image,"name=${destinations(input).join(",")}",push=true`;
 	// Layer cache, and the reason a build takes minutes instead of seconds.
 	//
 	// Every build runs `buildctl-daemonless.sh` in a FRESH one-shot Job pod: the
@@ -471,11 +500,12 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 	// The last place before a token reaches a build. Both front doors decide the
 	// same thing before writing a row; deciding it again here is what makes the
 	// row's image, rather than the row's existence, what the credential follows
-	// from. Say WHY separately: a destination in another org's namespace is a
-	// refusal, and one in no namespace at all is a malformed request.
-	const destination = destinationProblem(input.repo, input.image);
-	if (destination) {
-		throw new TRPCError({ code: "FORBIDDEN", message: destination });
+	// from. EVERY reference this build will publish, not just the row's — a
+	// second destination the exporter writes is a destination, and one nothing
+	// judged is one anything could be.
+	for (const destination of destinations(input)) {
+		const problem = destinationProblem(input.repo, destination);
+		if (problem) throw new TRPCError({ code: "FORBIDDEN", message: problem });
 	}
 	// Refuse rather than fall back: with no derivable namespace there is no
 	// correct credential to mount, and guessing one is how a build ends up

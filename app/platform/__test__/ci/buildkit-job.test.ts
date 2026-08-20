@@ -4,9 +4,13 @@ import {
 	buildkitArgs,
 	buildkitWrapperScript,
 	buildNamespace,
+	fleetRegistryHost,
 	parseImageDigest,
 } from "@hanzo/platform/services/ci/buildkit-job";
 import { afterEach, describe, expect, it } from "vitest";
+
+/** The commit a build checks out: the object id its row carries. */
+const COMMIT = "c0ffee0dbeadfaceb0bcafe1234567890abcdef1";
 
 type Vol = {
 	name: string;
@@ -41,14 +45,14 @@ describe("buildkitArgs", () => {
 	it("emits the proven dockerfile.v0 git-context build contract", () => {
 		const args = buildkitArgs({
 			repo: "hanzoai/pricing",
-			gitRef: "refs/heads/main",
+			commit: COMMIT,
 			image: "ghcr.io/hanzoai/pricing:v1.2.3",
 			buildJobId: "j1",
 		});
 		expect(args[0]).toBe("build");
 		expect(args).toContain("--frontend=dockerfile.v0");
 		expect(args).toContain(
-			"--opt=context=https://git.hanzo.ai/hanzoai/pricing.git#refs/heads/main",
+			`--opt=context=https://git.hanzo.ai/hanzoai/pricing.git#${COMMIT}`,
 		);
 		expect(args).toContain("--opt=filename=Dockerfile");
 		expect(args).toContain("--opt=platform=linux/amd64");
@@ -73,7 +77,7 @@ describe("buildkitArgs", () => {
 	it("requests and limits ephemeral-storage at the same value", () => {
 		const job = buildBuildkitJob({
 			repo: "hanzoai/docs",
-			gitRef: "refs/heads/main",
+			commit: COMMIT,
 			image: "ghcr.io/hanzoai/docs:v1.2.3",
 			buildJobId: "j1",
 		});
@@ -96,7 +100,7 @@ describe("buildkitArgs", () => {
 	it("imports and exports a per-arch registry layer cache", () => {
 		const args = buildkitArgs({
 			repo: "hanzoai/docs",
-			gitRef: "refs/heads/main",
+			commit: COMMIT,
 			image: "ghcr.io/hanzoai/docs:v1.2.3",
 			buildJobId: "j1",
 		});
@@ -115,7 +119,7 @@ describe("buildkitArgs", () => {
 	it("keys the cache per arch", () => {
 		const args = buildkitArgs({
 			repo: "hanzoai/docs",
-			gitRef: "refs/heads/main",
+			commit: COMMIT,
 			image: "ghcr.io/hanzoai/docs:v1.2.3",
 			buildJobId: "j1",
 			arch: "arm64",
@@ -134,7 +138,7 @@ describe("buildkitArgs", () => {
 	it("keeps the .git dir in the context by default", () => {
 		const args = buildkitArgs({
 			repo: "luxfi/node",
-			gitRef: "refs/tags/v1.36.35",
+			commit: COMMIT,
 			image: "ghcr.io/luxfi/node:v1.36.35",
 			buildJobId: "j1",
 		});
@@ -144,7 +148,7 @@ describe("buildkitArgs", () => {
 	it("lets an explicit buildArg override the KEEP_GIT_DIR default exactly once", () => {
 		const args = buildkitArgs({
 			repo: "o/r",
-			gitRef: "main",
+			commit: COMMIT,
 			image: "i:t",
 			buildJobId: "j",
 			buildArgs: { BUILDKIT_CONTEXT_KEEP_GIT_DIR: "0" },
@@ -167,7 +171,7 @@ describe("buildkitArgs", () => {
 	it("passes the destination tag as VERSION so the binary can name its release", () => {
 		const args = buildkitArgs({
 			repo: "hanzoai/iam",
-			gitRef: "refs/tags/v1.34.1",
+			commit: COMMIT,
 			image: "ghcr.io/hanzoai/iam:v1.34.1",
 			buildJobId: "j1",
 		});
@@ -177,7 +181,7 @@ describe("buildkitArgs", () => {
 	it("lets an explicit VERSION win, emitted exactly once", () => {
 		const args = buildkitArgs({
 			repo: "o/r",
-			gitRef: "main",
+			commit: COMMIT,
 			image: "ghcr.io/hanzoai/x:v9.9.9",
 			buildJobId: "j",
 			buildArgs: { VERSION: "1.2.3" },
@@ -192,7 +196,7 @@ describe("buildkitArgs", () => {
 	it("invents no VERSION for a digest-only destination", () => {
 		const args = buildkitArgs({
 			repo: "o/r",
-			gitRef: "main",
+			commit: COMMIT,
 			image: "ghcr.io/hanzoai/x@sha256:0123456789abcdef",
 			buildJobId: "j",
 		});
@@ -204,7 +208,7 @@ describe("buildkitArgs", () => {
 	it("reads the tag, not the digest, when a ref pins both", () => {
 		const args = buildkitArgs({
 			repo: "o/r",
-			gitRef: "main",
+			commit: COMMIT,
 			image: "ghcr.io/hanzoai/x:v1.2.3@sha256:0123456789abcdef",
 			buildJobId: "j",
 		});
@@ -214,7 +218,7 @@ describe("buildkitArgs", () => {
 	it("strips a leading ./ from the dockerfile", () => {
 		const args = buildkitArgs({
 			repo: "o/r",
-			gitRef: "main",
+			commit: COMMIT,
 			image: "i:t",
 			dockerfile: "./Dockerfile.production",
 			buildJobId: "j",
@@ -225,7 +229,7 @@ describe("buildkitArgs", () => {
 	it("adds context-subdir, target, and build-args when set", () => {
 		const args = buildkitArgs({
 			repo: "o/r",
-			gitRef: "main",
+			commit: COMMIT,
 			image: "i:t",
 			context: "services/api",
 			dockerTarget: "runtime",
@@ -240,7 +244,7 @@ describe("buildkitArgs", () => {
 	it("targets the arm64 platform when arch=arm64", () => {
 		const args = buildkitArgs({
 			repo: "o/r",
-			gitRef: "main",
+			commit: COMMIT,
 			image: "i:t",
 			arch: "arm64",
 			buildJobId: "j",
@@ -251,14 +255,14 @@ describe("buildkitArgs", () => {
 	it("stays single-GHCR when no fleet registry is set", () => {
 		const args = buildkitArgs({
 			repo: "hanzoai/pricing",
-			gitRef: "refs/heads/main",
+			commit: COMMIT,
 			image: "ghcr.io/hanzoai/pricing:v1.2.3",
 			buildJobId: "j1",
 		});
 		expect(args).toContain(
 			'--output=type=image,"name=ghcr.io/hanzoai/pricing:v1.2.3",push=true',
 		);
-		expect(args.some((a) => a.includes("registry.hanzo.ai"))).toBe(false);
+		expect(args.some((a) => a.includes("oci.hanzo.ai"))).toBe(false);
 	});
 
 	it("names the refs in one quoted field however many there are", () => {
@@ -266,10 +270,10 @@ describe("buildkitArgs", () => {
 		// comma-separated value inside ONE of them, so the field is quoted — the
 		// CSV parser then reads the whole list as the exporter's `name`, and
 		// nothing in a ref can open a second field. One spelling, one ref or two.
-		for (const fleetRegistryHost of [undefined, "registry.hanzo.ai"]) {
+		for (const fleetRegistryHost of [undefined, "oci.hanzo.ai"]) {
 			const args = buildkitArgs({
 				repo: "hanzoai/pricing",
-				gitRef: "refs/heads/main",
+				commit: COMMIT,
 				image: "ghcr.io/hanzoai/pricing:v1.2.3",
 				fleetRegistryHost,
 				buildJobId: "j1",
@@ -285,16 +289,16 @@ describe("buildkitArgs", () => {
 	it("emits ONE output with BOTH refs (quoted) when a fleet registry is set", () => {
 		const args = buildkitArgs({
 			repo: "hanzoai/pricing",
-			gitRef: "refs/heads/main",
+			commit: COMMIT,
 			image: "ghcr.io/hanzoai/pricing:v1.2.3",
-			fleetRegistryHost: "registry.hanzo.ai",
+			fleetRegistryHost: "oci.hanzo.ai",
 			buildJobId: "j1",
 		});
 		// GHCR (public consumers) + the fleet registry (the estate deploys from
 		// it), host-swapped from the GHCR ref, in ONE quoted name= field so the
 		// CSV parser keeps the comma-joined refs as a single value. One build.
 		expect(args).toContain(
-			'--output=type=image,"name=ghcr.io/hanzoai/pricing:v1.2.3,registry.hanzo.ai/hanzoai/pricing:v1.2.3",push=true',
+			'--output=type=image,"name=ghcr.io/hanzoai/pricing:v1.2.3,oci.hanzo.ai/hanzoai/pricing:v1.2.3",push=true',
 		);
 	});
 });
@@ -309,7 +313,7 @@ describe("per-org push credential", () => {
 	const secretOf = (repo: string, image: string) => {
 		const j = buildBuildkitJob({
 			repo,
-			gitRef: "main",
+			commit: COMMIT,
 			image,
 			buildJobId: "j",
 		});
@@ -349,7 +353,7 @@ describe("per-org push credential", () => {
 	it("mounts exactly ONE registry credential (no cross-org token in the pod)", () => {
 		const j = buildBuildkitJob({
 			repo: "luxfi/node",
-			gitRef: "refs/tags/v1.36.35",
+			commit: COMMIT,
 			image: "ghcr.io/luxfi/node:v1.36.35",
 			buildJobId: "j",
 		});
@@ -365,7 +369,7 @@ describe("per-org push credential", () => {
 		expect(() =>
 			buildBuildkitJob({
 				repo: "o/r",
-				gitRef: "main",
+				commit: COMMIT,
 				image: "pricing:v1",
 				buildJobId: "j",
 			}),
@@ -383,7 +387,7 @@ describe("buildkitWrapperScript", () => {
 	});
 
 	it("composes the two docker creds (jq-free) before exec when a fleet host is set", () => {
-		const s = buildkitWrapperScript("registry.hanzo.ai");
+		const s = buildkitWrapperScript("oci.hanzo.ai");
 		expect(s).toContain("/tmp/ghcr-cred/config.json");
 		expect(s).toContain("/tmp/fleet-cred/config.json");
 		// Peel each compact {"auths":{…}} and recombine into DOCKER_CONFIG.
@@ -441,7 +445,7 @@ describe("buildNamespace", () => {
 		delete process.env.PLATFORM_BUILD_NS;
 		const j = buildBuildkitJob({
 			repo: "luxfi/node",
-			gitRef: "refs/tags/v1.36.35",
+			commit: COMMIT,
 			image: "ghcr.io/luxfi/node:v1.36.35",
 			buildJobId: "nsdefault1",
 		});
@@ -452,7 +456,7 @@ describe("buildNamespace", () => {
 describe("buildBuildkitJob", () => {
 	const job = buildBuildkitJob({
 		repo: "hanzoai/pricing",
-		gitRef: "refs/heads/main",
+		commit: COMMIT,
 		image: "ghcr.io/hanzoai/pricing:t",
 		buildJobId: "abc12345",
 	});
@@ -509,9 +513,9 @@ describe("buildBuildkitJob", () => {
 describe("buildBuildkitJob — fleet dual-push wiring", () => {
 	const job = buildBuildkitJob({
 		repo: "hanzoai/pricing",
-		gitRef: "refs/heads/main",
+		commit: COMMIT,
 		image: "ghcr.io/hanzoai/pricing:t",
-		fleetRegistryHost: "registry.hanzo.ai",
+		fleetRegistryHost: "oci.hanzo.ai",
 		buildJobId: "abc12345",
 	});
 	const pod = job.spec.template.spec;
@@ -579,10 +583,10 @@ describe("parseImageDigest", () => {
 
 	it("returns ONE digest for a dual-push, where two refs carry one manifest", () => {
 		// FLEET_REGISTRY_HOST makes the single build push the same manifest to
-		// GHCR and registry.hanzo.ai — two lines, one truth.
+		// GHCR and oci.hanzo.ai — two lines, one truth.
 		const log = [
 			`#15 pushing manifest for ghcr.io/hanzoai/app:v1.2.3@${MANIFEST}`,
-			`#15 pushing manifest for registry.hanzo.ai/hanzoai/app:v1.2.3@${MANIFEST}`,
+			`#15 pushing manifest for oci.hanzo.ai/hanzoai/app:v1.2.3@${MANIFEST}`,
 		].join("\n");
 		expect(parseImageDigest(log)).toBe(MANIFEST);
 	});
@@ -616,5 +620,46 @@ describe("parseImageDigest", () => {
 		expect(
 			parseImageDigest(`#15 exporting config ${CONFIG} done`),
 		).toBeUndefined();
+	});
+});
+
+/**
+ * There are two ways to name a host a build publishes to — the destination on
+ * the row, and this fabric-wide one — and one set of registries we run. Both
+ * read that set, so a host allowed here is a host allowed there, and a value
+ * naming a registry we do not operate stops the build rather than aiming it at
+ * nothing.
+ */
+describe("fleetRegistryHost", () => {
+	const saved = process.env.FLEET_REGISTRY_HOST;
+	afterEach(() => {
+		if (saved === undefined) delete process.env.FLEET_REGISTRY_HOST;
+		else process.env.FLEET_REGISTRY_HOST = saved;
+	});
+
+	it("is unset by default — one destination, GHCR", () => {
+		delete process.env.FLEET_REGISTRY_HOST;
+		expect(fleetRegistryHost()).toBeUndefined();
+		process.env.FLEET_REGISTRY_HOST = "   ";
+		expect(fleetRegistryHost()).toBeUndefined();
+	});
+
+	it("takes a registry this fabric publishes to", () => {
+		process.env.FLEET_REGISTRY_HOST = "oci.hanzo.ai";
+		expect(fleetRegistryHost()).toBe("oci.hanzo.ai");
+	});
+
+	it("refuses a host that is not one of them, naming the ones that are", () => {
+		for (const host of [
+			// A name our OCI registry no longer answers to — a value that would
+			// aim every build at nothing.
+			"registry.hanzo.ai",
+			"evil.example.com",
+			"docker.io",
+			"ghcr.io:443",
+		]) {
+			process.env.FLEET_REGISTRY_HOST = host;
+			expect(() => fleetRegistryHost(), host).toThrow(/oci\.hanzo\.ai/);
+		}
 	});
 });
