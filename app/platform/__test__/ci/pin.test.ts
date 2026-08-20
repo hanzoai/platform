@@ -235,7 +235,6 @@ beforeEach(() => {
 	process.env.HANZO_GIT_URL = "https://git.hanzo.ai";
 	process.env.HANZO_GIT_TOKEN = "forge-token";
 	process.env.HANZO_GIT_WEBHOOK_SECRET = "hook";
-	process.env.HANZO_GIT_ORGANIZATION_ID = "Yb5GFGDBEwcLsv2O8qWjS";
 	stubFetch();
 });
 

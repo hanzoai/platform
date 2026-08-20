@@ -56,7 +56,6 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	process.env.HANZO_GIT_URL = "https://git.hanzo.ai";
 	process.env.HANZO_GIT_WEBHOOK_SECRET = SECRET;
-	process.env.HANZO_GIT_ORGANIZATION_ID = "org_1";
 	scheduleBuilds.mockResolvedValue({
 		organizationId: "org_1",
 		config: { builds: [] },
