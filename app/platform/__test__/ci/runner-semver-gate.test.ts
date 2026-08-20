@@ -70,6 +70,30 @@ describe("firstPartyTagProblem", () => {
 			firstPartyTagProblem("registry.example.com:5000/foo/bar:v1.0.0"),
 		).toBeNull();
 	});
+
+	it("reads the namespace the way the push credential reads it", () => {
+		// The rule and the credential must agree about which image this is: the
+		// credential is derived through `imageOrg`, so the rule is read through
+		// `imageOrg` too. A spelling one accepts and the other does not is a
+		// destination that publishes with a real token under an unreleasable name.
+		for (const img of [
+			"GHCR.IO/hanzoai/platform:latest",
+			"ghcr.io/HanzoAI/platform:latest",
+			"Ghcr.Io/HANZOAI/platform:main",
+			"ghcr.io:443/hanzoai/platform:latest",
+		]) {
+			expect(firstPartyTagProblem(img), img).toContain("not semver");
+		}
+	});
+
+	it("accepts semver on a first-party image however it is spelled", () => {
+		for (const img of [
+			"GHCR.IO/hanzoai/platform:v4.4.25",
+			"ghcr.io/LUXFI/node:v1.36.49",
+		]) {
+			expect(firstPartyTagProblem(img), img).toBeNull();
+		}
+	});
 });
 
 /**

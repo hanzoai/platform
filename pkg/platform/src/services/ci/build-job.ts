@@ -16,19 +16,37 @@ import { desc } from "drizzle-orm";
 
 export type { BuildJob };
 
+/**
+ * Record a build, or hand back the one already recording it.
+ *
+ * `build_job_identity` makes (repo, sha, target, image) one row, so a caller
+ * that loses the race gets no row back from the insert and reads the winner
+ * instead. Every caller ends up holding the same build — which is what a caller
+ * asking for a build it already asked for means, and the reason a duplicate
+ * delivery costs nothing rather than a second cluster build.
+ */
 export const createBuildJob = async (input: NewBuildJob): Promise<BuildJob> => {
 	const row = await db
 		.insert(buildJob)
 		.values(input)
+		.onConflictDoNothing()
 		.returning()
 		.then((r) => r[0]);
-	if (!row) {
+	if (row) return row;
+
+	const winner = await findBuildJobByTarget(
+		input.repo,
+		input.sha,
+		input.target,
+		input.image,
+	);
+	if (!winner) {
 		throw new TRPCError({
 			code: "INTERNAL_SERVER_ERROR",
 			message: "Failed to create build job",
 		});
 	}
-	return row;
+	return winner;
 };
 
 export const findBuildJobById = async (

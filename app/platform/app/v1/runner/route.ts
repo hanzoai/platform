@@ -45,6 +45,7 @@ interface EnqueueBody {
 	buildArgs?: Record<string, string>;
 	os?: "linux" | "darwin" | "windows";
 	arch?: "amd64" | "arm64";
+	/** The organization this caller acts as. The repository must be one of its. */
 	organizationId?: string;
 }
 
@@ -69,9 +70,15 @@ export async function POST(req: Request) {
 	}
 
 	const body = (await req.json().catch(() => ({}))) as EnqueueBody;
-	if (!body?.repo || !body?.sha || !body?.image) {
+	// `organizationId` is named here with the rest. The bearer above authenticates
+	// a machine and says nothing about which organization that machine is acting
+	// for, so the caller states it and the repository has to bear it out — a claim
+	// nobody has to make is one nobody can get wrong.
+	if (!body?.repo || !body?.sha || !body?.image || !body?.organizationId) {
 		return Response.json(
-			{ message: "Missing required field(s): repo, sha, image" },
+			{
+				message: "Missing required field(s): repo, sha, image, organizationId",
+			},
 			{ status: 400 },
 		);
 	}
