@@ -681,7 +681,7 @@ export async function scheduleBuilds(
 	// caller could choose not to be judged by. The declaration answers for the
 	// GitHub lane too: a repo whose truth IS github.com passes on its own
 	// reachability, in one call, rather than by not being asked.
-	await assertCanonical(repo, sha, config.source);
+	await assertCanonical(repo, sha, config);
 
 	// Publishable `build_secrets:` → --build-args, fetched from KMS ONCE for the
 	// whole config (the same value serves every image). The webhook lane never did
@@ -848,14 +848,19 @@ async function commitOf(repo: string, ref: string): Promise<string> {
 async function assertCanonical(
 	repo: string,
 	sha: string,
-	declared?: unknown,
+	config?: PlatformConfig | null,
 ): Promise<void> {
+	// The CONFIG, not the declaration inside it — `source:` is legitimately
+	// absent from most of them, and a caller passing that absence through as
+	// "nothing given" would buy a second read of a file already in hand.
+	const read =
+		config === undefined
+			? await fetchPlatformConfigFromHanzoGit(forgeReader(), repo, sha)
+			: config;
 	const why = await assertBuildableFromCanonicalSource({
 		forgeRepo: repo,
 		sha,
-		declared:
-			declared ??
-			(await fetchPlatformConfigFromHanzoGit(forgeReader(), repo, sha))?.source,
+		declared: read?.source,
 		facts: await readForgeRepoFacts(forgeReader(), repo),
 		probe: githubReachability,
 	});
