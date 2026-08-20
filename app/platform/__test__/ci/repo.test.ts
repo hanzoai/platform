@@ -184,14 +184,14 @@ describe("repoProblem", () => {
 
 describe("buildkitArgs", () => {
 	const base = {
-		gitRef: "refs/heads/main",
+		commit: SHA,
 		image: "ghcr.io/hanzoai/pricing:v1.0.0",
 		buildJobId: "bj_1",
 	};
 
 	it("clones the repository it was given", () => {
 		expect(buildkitArgs({ ...base, repo: "hanzoai/pricing" })).toContain(
-			"--opt=context=https://git.hanzo.ai/hanzoai/pricing.git#refs/heads/main",
+			`--opt=context=https://git.hanzo.ai/hanzoai/pricing.git#${SHA}`,
 		);
 	});
 

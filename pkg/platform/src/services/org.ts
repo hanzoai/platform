@@ -24,7 +24,7 @@
 import { db } from "@hanzo/platform/db";
 import { organization } from "@hanzo/platform/db/schema";
 import { eq } from "drizzle-orm";
-import { imageHost, imageOrg } from "./ci/image-ref";
+import { imageHost, imageOrg, parseImageRef } from "./ci/image-ref";
 
 /**
  * The names each organization publishes under.
@@ -157,18 +157,31 @@ export function ownerOf(repo: string): string {
  * Owning a namespace says where an image belongs; it does not say where it may
  * be written. Both halves name one destination, so both are decided here rather
  * than leaving a build free to ask for its own credential and a registry we do
- * not run. `oci.hanzo.ai` and `registry.hanzo.ai` are one store behind one
- * router, and ghcr.io is the public mirror — the same three the cloud fabric
- * operates, kept the same so one estate has one answer.
+ * not run. `oci.hanzo.ai` is the one name our own OCI registry answers to — the
+ * S3-backed store behind Hanzo IAM token auth — and ghcr.io is the public
+ * mirror. Two names, two stores, and a host is on this list only while it
+ * serves one: an allowance that outlives the service it named is an allowance
+ * nothing reviews.
  *
  * Spelled exactly. A port is part of a host string, so `ghcr.io:443` is a
  * different spelling than anything here writes and is not one of these.
  */
-const HOSTS: ReadonlySet<string> = new Set([
-	"ghcr.io",
-	"oci.hanzo.ai",
-	"registry.hanzo.ai",
-]);
+const HOSTS: ReadonlySet<string> = new Set(["ghcr.io", "oci.hanzo.ai"]);
+
+/**
+ * Returns what is wrong with a registry host, or null when it is one this
+ * fabric publishes to.
+ *
+ * There are two ways to name a host a build writes to — the destination on the
+ * row, and a fabric-wide one every build also pushes to — and one set of
+ * registries we run. Both read it through here, so a host allowed as one is
+ * allowed as the other and there is no second list to drift.
+ */
+export function registryProblem(host: string): string | null {
+	return HOSTS.has(host.toLowerCase())
+		? null
+		: `"${host}" is not a registry this fabric publishes to (${[...HOSTS].join(", ")})`;
+}
 
 /**
  * The alphabet an image reference is drawn from: letters, digits and `._-/:@`.
@@ -211,12 +224,9 @@ export function destinationProblem(repo: string, image: string): string | null {
 			"digits and ._-/:@ — and this is not one."
 		);
 	}
-	const host = imageHost(image) ?? "";
-	if (!HOSTS.has(host.toLowerCase())) {
-		return (
-			`${refusing}: "${host}" is not a registry this fabric publishes to ` +
-			`(${[...HOSTS].join(", ")}), and ${owner}'s images are published on ours.`
-		);
+	const registry = registryProblem(imageHost(image) ?? "");
+	if (registry) {
+		return `${refusing}: ${registry}, and ${owner}'s images are published on ours.`;
 	}
 	if (org(ownerOf(repo)) === owner) return null;
 	return (
@@ -257,7 +267,7 @@ export function pushSecret(repo: string, image: string): string | undefined {
 /**
  * An image in a namespace we publish under.
  *
- * The tag rules apply to these and to nothing else, and they are exactly the
+ * The tag rule applies to these and to nothing else, and they are exactly the
  * images `pushSecret` hands out a credential for — read through the same
  * `imageOrg` and the same table, so a rule cannot accept a spelling the
  * credential rejects, or the other way round.
@@ -265,4 +275,50 @@ export function pushSecret(repo: string, image: string): string | undefined {
 export function firstParty(image: string): boolean {
 	const ns = imageOrg(image);
 	return ns !== undefined && org(ns) !== undefined;
+}
+
+/** A version: the semver core, wherever in the tag it sits. */
+const VERSION = /\d+\.\d+\.\d+/;
+/** A commit: enough hex to name one, in the lowercase git writes it in. */
+const COMMIT = /[0-9a-f]{7}/;
+
+/**
+ * The name a first-party image publishes under names ONE build.
+ *
+ * A tag is how a running binary is traced back to the source that made it, so it
+ * has to hold on to something: a version a git tag also names, or the commit the
+ * build read. Each names one set of bytes for good. `latest`, a branch name and
+ * a bare major are names that move, and a deploy under a name that moves is one
+ * nobody can find their way back from — the image in production and the image
+ * that was released stop being the same question.
+ *
+ * ONE rule for every door. What a caller may state at the direct enqueue and
+ * what a repository's `tag-pattern` may produce on a push are the same question,
+ * so a service that answered them differently was refusing at one door exactly
+ * what it published at another.
+ *
+ * A digest reference is taken as it is: it names bytes, which is stronger than
+ * any tag. Images in namespaces we do not publish under are not judged — their
+ * tags are their publishers' business.
+ *
+ * Returns what is wrong with the name, or null when it names a build.
+ */
+export function tagProblem(image: string): string | null {
+	if (!firstParty(image)) return null;
+	const [, tag, digest] = parseImageRef(image);
+	if (digest) return null;
+	const refusing = `Refusing to build ${image}`;
+	if (!tag) {
+		return (
+			`${refusing}: no tag. An untagged push publishes as ":latest" — ` +
+			"give it a version (vX.Y.Z) or the commit it was built from."
+		);
+	}
+	if (VERSION.test(tag) || COMMIT.test(tag)) return null;
+	return (
+		`${refusing}: "${tag}" does not name a build. A first-party tag carries a ` +
+		"version (vX.Y.Z) or the commit it was built from, because those name one " +
+		"set of bytes for good. A name that moves leaves what production runs and " +
+		"what was released as two different questions."
+	);
 }

@@ -18,11 +18,7 @@
  */
 import { enqueueDirectBuild } from "@hanzo/platform/services/ci";
 import { TRPCError } from "@trpc/server";
-import {
-	buildArgsProblem,
-	firstPartyTagProblem,
-	repoProblem,
-} from "@/server/v1/build-request";
+import { buildArgsProblem, repoProblem } from "@/server/v1/build-request";
 import { safeEqual } from "@/server/v1/http";
 
 export const runtime = "nodejs";
@@ -86,11 +82,6 @@ export async function POST(req: Request) {
 	const sourceProblem = repoProblem(body.repo);
 	if (sourceProblem) {
 		return Response.json({ message: sourceProblem }, { status: 400 });
-	}
-
-	const tagProblem = firstPartyTagProblem(body.image);
-	if (tagProblem) {
-		return Response.json({ message: tagProblem }, { status: 400 });
 	}
 
 	const argsProblem = buildArgsProblem(body.buildArgs);

@@ -63,8 +63,11 @@ export const buildJobRouter = createTRPCRouter({
 					}),
 					z.object({ forge: z.literal("hanzo-git") }),
 				]),
-				repo: z.string().min(3),
-				sha: z.string().min(7),
+				// What a repository and a commit ARE is settled in `scheduleBuilds`,
+				// through `repoProblem`/`commitProblem`. Restating a shape here would
+				// be a second answer to a question that already has one.
+				repo: z.string(),
+				sha: z.string(),
 				ref: z.string().min(1),
 				branch: z.string().min(1),
 			}),
@@ -79,11 +82,10 @@ export const buildJobRouter = createTRPCRouter({
 				...input,
 				requireOrganizationId: ctx.session.activeOrganizationId,
 			});
-			if (!result) {
-				return {
-					scheduled: 0,
-					message: `${input.repo} has no hanzo.yml`,
-				};
+			// The scheduler decided WHY nothing was built and says it in one
+			// sentence — the same one the forge's delivery history shows.
+			if ("declined" in result) {
+				return { scheduled: 0, message: result.why };
 			}
 			return {
 				scheduled: result.jobs.length,

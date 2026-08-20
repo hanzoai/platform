@@ -138,6 +138,39 @@ export function repoName(repo: string): string {
 	return repo.toLowerCase();
 }
 
+/**
+ * A commit is named by its object id, and an object id is hex: 40 digits of
+ * SHA-1 or 64 of SHA-256.
+ *
+ * Whole, not a prefix. The value addresses one commit twice over — it keys the
+ * buildJob row and it is the git context BuildKit resolves — and a prefix is
+ * neither of those: git resolves an abbreviation against a local object store,
+ * which a fetch does not have, and two abbreviations of one commit key two rows.
+ * The two lengths are the two hashes git names objects with; nothing else is an
+ * object id.
+ */
+const OBJECT_ID = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i;
+
+/**
+ * Returns what is wrong with `sha`, or null when it names a commit. Same shape
+ * as {@link repoProblem}: a repository path and a commit are the two halves of
+ * a source address, and both front doors answer with the message.
+ */
+export function commitProblem(sha: string): string | null {
+	return OBJECT_ID.test(sha)
+		? null
+		: `"${sha}" does not name a commit: expected a whole object id — 40 hex digits, or 64.`;
+}
+
+/**
+ * The one spelling of a commit id, folded like {@link repoName} folds a
+ * repository: hex is case-insensitive, so both spellings name one commit, key
+ * one row, and address one git context.
+ */
+export function commitName(sha: string): string {
+	return sha.toLowerCase();
+}
+
 /** Why Hanzo Git is not usable, in words an operator can act on. */
 export class HanzoGitNotConfigured extends Error {
 	constructor(missing: string[]) {
