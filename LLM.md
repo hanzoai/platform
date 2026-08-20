@@ -158,6 +158,43 @@ promotion.
 a service whose own CI has a checkout; this does it from a pod that has none.
 Both stamp `Pinned-by:`, and `pin.sh --verify` checks both in CI.
 
+**Whose build it is — `services/org`, one table, four readers.** A forge owner
+and a registry namespace are the same kind of name, and `OWNS` says which
+organization each belongs to (`hanzo` owns `hanzo`/`hanzoai`/`hanzo-apps`/
+`hanzo-docs`/`hanzo-inc`/`hanzoteam`; `lux` owns `lux`/`luxfi`; and so on). A
+namespace earns a line when a `push-<namespace>` credential exists for it in
+`hanzo-build` — that credential is what the table decides who may ask for.
+Reading it:
+
+- `principal(repo)` — the org a build ACTS as, resolved from the repository's
+  owner through `organization.slug`. `authorizeNamespace` is keyed by namespace
+  and VALUED by org, so it only tells organizations apart when they are
+  different answers; one answer for every repository makes every fleet grant a
+  grant to everybody.
+- `destinationProblem(repo, image)` — the namespace an image publishes into and
+  the owner of the repository that declared it must be one organization. Asked
+  at both front doors and again in `buildkit-job` before a credential is
+  mounted. A namespace no organization here owns is not judged — it is somebody
+  else's registry.
+- `pushSecret(repo, image)` — names `push-<namespace>` only for a namespace this
+  repository publishes into. Takes both names on purpose: "which token does this
+  image need" is not the question a build path answers, and the other one cannot
+  be spelled here.
+- `firstParty(image)` — which images the semver tag rule is about. Same table,
+  same `parseImageRef` the credential uses, so a rule cannot accept a spelling
+  the credential rejects.
+
+Case is folded in exactly one place, `org()`, because the forge and the registry
+both resolve a name without regard to case. Slugs are compared exactly: `Hanzo`
+and `hanzo` are two tenants, and folding a comparison between principals is a
+collision, not a normalization. `runnerPoolFor` is deliberately NOT this table —
+it maps an owner to the ARC scale set builds run ON, which is capacity and can be
+borrowed (`bootnode` builds on Hanzo's pool without being Hanzo).
+
+A name absent from the table has no principal and no credential, so its builds
+are refused rather than defaulted. Adding a brand is one line in `OWNS`, its
+`push-<namespace>` KMS path, and an `organization` row carrying its slug.
+
 **Load-bearing fact: the old patcher never fired.** All 1,439 `build_job` rows in
 the live DB read `rolloutStatus: skipped` — `PLATFORM_FLEET_NAMESPACE_OWNERS` is
 unset on the pod, so `fleetNamespaceOwners()` is empty and every fleet deploy was
@@ -353,11 +390,13 @@ already shows: `floating-declared` (commerce `1.42.33-billing`, cloud-api
 the rest were silently red before. Do NOT weaken `computeDrift`; it now has real
 inputs to work with.
 
-**organizationId today:** the platform DB has ONE org (`slug=admin`), so the
-populator's "lone org owns everything" fallback assigns all 55 rows to it (the
-`hanzoai→hanzo` alias only fires once a matching org is seeded). Per-org scoping
-(`?org=`/`X-Org-Id`, the `org` column, alias resolution) is fully wired for when
-more orgs exist.
+**organizationId today:** the platform DB carries `hanzo`, `lux` and `zoo`
+(`organization.slug`), and `services/org` resolves a forge owner or registry
+namespace to one of them. Only `hanzo` has members and only `hanzo` holds a
+fleet namespace, so a `lux` or `zoo` build publishes into its own registry
+namespace and promotes nowhere. Per-org scoping (`?org=`/`X-Org-Id`, the `org`
+column) is wired throughout; the apps populator still assigns its rows to the
+lone org that owns them.
 
 Lifecycle WRITE (deploy/redeploy = patch the `Service` CR's `spec.image`) is the
 CI `deploy-executor` path; the board is the observe surface only. Cross-cluster
