@@ -14,6 +14,7 @@
  * that drives builds and deploys — so there is one k8s seam, not three.
  */
 import { TRPCError } from "@trpc/server";
+import { forgeHost } from "../hanzo-git";
 import { getDefaultClients } from "../k8s/k8s-client";
 
 /** Where the e2e suite lives and the Job's runtime knobs. */
@@ -36,31 +37,52 @@ export interface E2eRunResult {
 }
 
 const PLAYWRIGHT_IMAGE = "mcr.microsoft.com/playwright:v1.50.0-noble";
-const GIT_SECRET = "console-git-token"; // key: token — clones private universe
+/**
+ * Secret (key `token`) the Job presents to the forge, named for the host it
+ * authenticates to. Reconciles from KMS `hanzo/deploy` `FORGE_TOKEN`; the forge
+ * serves no repository anonymously, so the mount is required and a missing
+ * credential stops the pod instead of reaching a clone.
+ */
+const FORGE_SECRET = "git-hanzo-ai-token";
+/**
+ * The e2e suite's home. `hanzo/universe` is the canonical universe — the repo
+ * the estate's declared state is committed to and the one carrying `e2e/`.
+ */
+const UNIVERSE_REPO = "hanzo/universe";
 
 /**
- * Launch the e2e Job. Returns its name; poll Job status (or its pod logs) for
- * the result. The Job clones universe@ref, `npm ci`s the e2e workspace, and
- * runs `playwright test <spec>` against https://<baseDomain>.
+ * The e2e script — pure, so the contract is unit-testable. Clones the universe
+ * at the requested ref, installs the e2e workspace, and runs the chosen spec.
+ * Fails loud (`set -euo pipefail`) so a broken run marks the Job failed.
  */
-export async function runE2e(input: E2eRunInput): Promise<E2eRunResult> {
-	const spec = input.spec ?? "tests/00-health.spec.ts";
-	const baseDomain = input.baseDomain ?? "hanzo.ai";
-	const ref = input.ref ?? "main";
-	const namespace = input.namespace ?? "hanzo";
-	const jobName = `e2e-${Date.now()}`;
-
-	const script = [
+export function e2eScript(): string {
+	return [
 		"set -euo pipefail",
 		"cd /tmp",
 		'git clone --depth 1 --branch "$E2E_REF" ' +
-			'"https://x-access-token:${GIT_AUTH_TOKEN}@github.com/hanzoai/universe.git" universe',
+			`"https://x-access-token:\${GIT_AUTH_TOKEN}@${forgeHost()}/${UNIVERSE_REPO}.git" universe`,
 		"cd universe/e2e",
 		"npm ci --no-audit --no-fund",
 		'npx playwright test "$E2E_SPEC" --reporter=line',
 	].join("\n");
+}
 
-	const job = {
+/** Resolve the defaults once, so the Job and its result agree on every value. */
+function settle(input: E2eRunInput) {
+	return {
+		spec: input.spec ?? "tests/00-health.spec.ts",
+		baseDomain: input.baseDomain ?? "hanzo.ai",
+		ref: input.ref ?? "main",
+		namespace: input.namespace ?? "hanzo",
+	};
+}
+
+/** Build the e2e Job object — pure (no IO), like `buildPublishJobObject`. */
+export function buildE2eJobObject(input: E2eRunInput, jobName: string) {
+	const { spec, baseDomain, ref, namespace } = settle(input);
+	const script = e2eScript();
+
+	return {
 		apiVersion: "batch/v1",
 		kind: "Job",
 		metadata: {
@@ -102,7 +124,7 @@ export async function runE2e(input: E2eRunInput): Promise<E2eRunResult> {
 								{
 									name: "GIT_AUTH_TOKEN",
 									valueFrom: {
-										secretKeyRef: { name: GIT_SECRET, key: "token" },
+										secretKeyRef: { name: FORGE_SECRET, key: "token" },
 									},
 								},
 							],
@@ -116,6 +138,17 @@ export async function runE2e(input: E2eRunInput): Promise<E2eRunResult> {
 			},
 		},
 	};
+}
+
+/**
+ * Launch the e2e Job. Returns its name; poll Job status (or its pod logs) for
+ * the result. The Job clones universe@ref, `npm ci`s the e2e workspace, and
+ * runs `playwright test <spec>` against https://<baseDomain>.
+ */
+export async function runE2e(input: E2eRunInput): Promise<E2eRunResult> {
+	const { spec, baseDomain, namespace } = settle(input);
+	const jobName = `e2e-${Date.now()}`;
+	const job = buildE2eJobObject(input, jobName);
 
 	const clients = getDefaultClients();
 	try {
