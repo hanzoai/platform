@@ -48,10 +48,13 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
 `workflow_dispatch`, no external runner registration. Contract + schema:
 `docs/PLATFORM_CI.md`.
 
-- Triggers: `app/platform/pages/api/v1/github-webhook.ts` (HMAC per
-  installation) and `app/platform/app/v1/runner/route.ts` (service-token,
-  GitHub-free direct build). `build-callback.ts` is an optional external-builder
-  completion hook (bearer token).
+- Triggers — three doors, two functions: `app/platform/app/v1/git-webhook/route.ts`
+  (HMAC per installation; `/v1/github-webhook` is a zero-logic alias of it) and
+  the tRPC `buildJob.trigger` both call `scheduleBuilds`;
+  `app/platform/app/v1/runner/route.ts` (service-token, GitHub-free direct
+  build) calls `enqueueDirectBuild`. Both settle the repository and the commit
+  first, so a rule added there holds at every door. `build-callback.ts` is an
+  optional external-builder completion hook (bearer token).
 - Service layer: `pkg/platform/src/services/ci/` — `platform-config` (`hanzo.yml`
   parser + validator, now incl. `e2e:` + `publish:`), `github-webhook`,
   `build-job` (DB CRUD), `build-scheduler` (dispatch via `launchBuildJob`),
