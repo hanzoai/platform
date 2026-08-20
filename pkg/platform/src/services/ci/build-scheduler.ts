@@ -21,7 +21,7 @@ import {
 } from "@hanzo/platform/utils/providers/github";
 import { TRPCError } from "@trpc/server";
 import { findGithubByInstallationId } from "../github";
-import { type HanzoGitConfig, hanzoGitConfig } from "../hanzo-git";
+import { type HanzoGitConfig, hanzoGitConfig, repoProblem } from "../hanzo-git";
 import type { BuildJob } from "./build-job";
 import {
 	createBuildJob,
@@ -32,6 +32,7 @@ import { fetchBuildSecrets } from "./build-secrets";
 import { launchBuildJob } from "./buildkit-job";
 import { assertBuildableFromCanonicalSource } from "./forge-source";
 import { githubReachability, readForgeRepoFacts } from "./forge-source-probe";
+import { canonicalRepo } from "./git-webhook";
 import {
 	type BuildArch,
 	type BuildOS,
@@ -514,6 +515,29 @@ export async function enqueueDirectBuild(
 export async function scheduleBuilds(
 	input: ScheduleInput,
 ): Promise<ScheduleResult | null> {
+	// `repo` is what the build clones and what keys every row this call writes,
+	// so it names a repository before any of that happens — the same rule the
+	// direct front door answers 400 with, stated once for both lanes.
+	const problem = repoProblem(input.repo);
+	if (problem) {
+		throw new TRPCError({ code: "BAD_REQUEST", message: problem });
+	}
+	// A forge source states the path twice: `sourceRepo` is where the config is
+	// read, `repo` is what the build clones. They are the same repository under
+	// two spellings of one org, which is exactly what `canonicalRepo` maps — so
+	// the build that runs is the build the config described, and the check above
+	// covers both paths. Exact, before anything is read, fail closed.
+	if (
+		input.source.forge === "hanzo-git" &&
+		input.repo !== canonicalRepo(input.source.sourceRepo)
+	) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message:
+				`Refusing to build ${input.repo} from ${input.source.sourceRepo}: a build reads one repository — ` +
+				`${input.source.sourceRepo} is ${canonicalRepo(input.source.sourceRepo)} downstream.`,
+		});
+	}
 	const { organizationId, config } = await resolveSource(
 		input.source,
 		input.repo,

@@ -21,6 +21,7 @@ import { TRPCError } from "@trpc/server";
 import {
 	buildArgsProblem,
 	firstPartyTagProblem,
+	repoProblem,
 } from "@/server/v1/build-request";
 import { safeEqual } from "@/server/v1/http";
 
@@ -73,6 +74,11 @@ export async function POST(req: Request) {
 			{ message: "Missing required field(s): repo, sha, image" },
 			{ status: 400 },
 		);
+	}
+
+	const sourceProblem = repoProblem(body.repo);
+	if (sourceProblem) {
+		return Response.json({ message: sourceProblem }, { status: 400 });
 	}
 
 	const tagProblem = firstPartyTagProblem(body.image);
