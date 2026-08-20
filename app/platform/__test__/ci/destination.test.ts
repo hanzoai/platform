@@ -108,7 +108,7 @@ const SHA = "0".repeat(40);
 const COMMIT = { sha: SHA, ref: "refs/heads/main", branch: "main" };
 
 /** Serve a `hanzo.yml` declaring `image`, from whatever repository is asked for. */
-function serveForge(image: string) {
+function serveForge(image: string, tagPattern = "v9.9.9") {
 	vi.stubGlobal(
 		"fetch",
 		vi.fn(async (url: string) => {
@@ -121,7 +121,7 @@ build:
   matrix:
     - { os: linux, arch: amd64 }
   image: ${image}
-  tag-pattern: "v9.9.9"
+  tag-pattern: "${tagPattern}"
   push: true
 `;
 			return new Response(
@@ -306,6 +306,11 @@ describe("destinationProblem — an image belongs to the repository's org", () =
 			"docker.io/hanzoai/x:v1.0.0",
 			"ghcr.io.evil.example.com/hanzoai/x:v1.0.0",
 			"ghcr.io:443/hanzoai/x:v1.0.0",
+			// A name our OCI registry no longer answers to. `oci.hanzo.ai` is the
+			// one it does; a host that serves no registry is not one to publish on,
+			// and an allowance outliving the service it named is an allowance
+			// nothing reviews.
+			"registry.hanzo.ai/hanzoai/kms:v1.0.0",
 		]) {
 			expect(destinationProblem("hanzoai/kms", image), image).toMatch(
 				/refusing/i,
@@ -317,7 +322,6 @@ describe("destinationProblem — an image belongs to the repository's org", () =
 	it("accepts the registries we operate", () => {
 		for (const image of [
 			"ghcr.io/hanzoai/kms:v1.0.0",
-			"registry.hanzo.ai/hanzoai/kms:v1.0.0",
 			"oci.hanzo.ai/hanzoai/kms:v1.0.0",
 			"GHCR.IO/HanzoAI/kms:v1.0.0",
 		]) {
@@ -552,7 +556,9 @@ describe("the trigger front door", () => {
 	it("schedules a build for a commit", async () => {
 		serveForge("ghcr.io/hanzoai/kms");
 		const result = await scheduleBuilds({ ...trigger, sha: SHA });
-		expect(result?.jobs).toHaveLength(1);
+		// A schedule or a reason, never a shape a caller has to guess at.
+		expect(result).not.toHaveProperty("declined");
+		expect("declined" in result ? [] : result.jobs).toHaveLength(1);
 		expect(rows[0]?.sha).toBe(SHA);
 	});
 
@@ -584,6 +590,75 @@ describe("the trigger front door", () => {
 		serveForge("ghcr.io/hanzoai/kms");
 		await scheduleBuilds({ ...trigger, sha: "A".repeat(40) });
 		expect(rows[0]?.sha).toBe("a".repeat(40));
+	});
+});
+
+/**
+ * The name a build publishes under, decided by ONE rule at every door.
+ *
+ * A `tag-pattern` is a declaration, and on a given push it resolves to a name.
+ * A name that carries a version or the commit names one build; a branch name
+ * does not. The delivery lane skips a target it cannot name — the push still
+ * succeeds — and the direct door, where a caller STATES the name, is told.
+ */
+describe("the name a build publishes under", () => {
+	const trigger = {
+		source: { forge: "hanzo-git" },
+		repo: "hanzoai/kms",
+		sha: SHA,
+		ref: "refs/heads/main",
+		branch: "main",
+		requireOrganizationId: HANZO,
+	} as const;
+
+	it("publishes a name carrying the commit, which is every lane's default", async () => {
+		serveForge("ghcr.io/hanzoai/kms", "sha-{{git.sha}}");
+		await scheduleBuilds(trigger);
+		expect(rows[0]?.image).toBe(`ghcr.io/hanzoai/kms:sha-${SHA}`);
+		expect(launched).toHaveLength(1);
+	});
+
+	it("publishes a version", async () => {
+		serveForge("ghcr.io/hanzoai/kms", "{{git.tag}}");
+		await scheduleBuilds({ ...trigger, ref: "refs/tags/v1.2.3" });
+		expect(rows[0]?.image).toBe("ghcr.io/hanzoai/kms:v1.2.3");
+	});
+
+	it("skips a target whose name would move, and the push still succeeds", async () => {
+		// `{{git.branch}}` yields the version on a tag push and the branch on a
+		// branch push. The version is published; the branch is not, and neither
+		// costs the push.
+		serveForge("ghcr.io/hanzoai/kms", "{{git.branch}}");
+		const result = await scheduleBuilds(trigger);
+
+		expect(result).not.toHaveProperty("declined");
+		expect(rows).toHaveLength(0);
+		expect(launched).toHaveLength(0);
+	});
+
+	it("publishes the same pattern when the push names a version", async () => {
+		// The positive control for the skip above: the pattern is not refused, the
+		// push that names nothing publishable is.
+		serveForge("ghcr.io/hanzoai/kms", "{{git.branch}}");
+		await scheduleBuilds({
+			...trigger,
+			ref: "refs/tags/v1.36.35",
+			branch: "v1.36.35",
+		});
+		expect(rows[0]?.image).toBe("ghcr.io/hanzoai/kms:v1.36.35");
+	});
+
+	it("tells the direct door, which stated the name itself", async () => {
+		await expect(
+			enqueueDirectBuild({
+				repo: "hanzoai/kms",
+				sha: SHA,
+				image: "ghcr.io/hanzoai/kms:latest",
+				requireOrganizationId: HANZO,
+			}),
+		).rejects.toThrow(/does not name a build/i);
+		expect(rows).toHaveLength(0);
+		expect(launched).toHaveLength(0);
 	});
 });
 
@@ -667,7 +742,7 @@ describe("the build muscle", () => {
 		expect(() =>
 			buildBuildkitJob({
 				repo: "hanzoaix",
-				gitRef: "refs/heads/main",
+				commit: SHA,
 				image: "ghcr.io/hanzoai/cloud:v1.0.0",
 				buildJobId: "bj_1",
 			}),
@@ -678,7 +753,7 @@ describe("the build muscle", () => {
 		expect(() =>
 			buildBuildkitJob({
 				repo: "luxfi/node",
-				gitRef: "refs/heads/main",
+				commit: SHA,
 				image: "ghcr.io/hanzoai/cloud:v1.0.0",
 				buildJobId: "bj_1",
 			}),
@@ -688,7 +763,7 @@ describe("the build muscle", () => {
 	it("mounts the namespace's credential for a build that publishes there", () => {
 		const job = buildBuildkitJob({
 			repo: "luxfi/node",
-			gitRef: "refs/heads/main",
+			commit: SHA,
 			image: "ghcr.io/luxfi/node:v1.0.0",
 			buildJobId: "bj_1",
 		});

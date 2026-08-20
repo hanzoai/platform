@@ -52,9 +52,21 @@ describe("parseImageRef", () => {
 
 	it("reads the version, not the hex, for every live digest-pinned app", () => {
 		const live: Array<[string, string, string]> = [
-			["ghcr.io/hanzoai/iam:v1.34.4@sha256:9681afd5", "ghcr.io/hanzoai/iam", "v1.34.4"],
-			["ghcr.io/hanzoai/chat:1.0.52@sha256:9c1e124a", "ghcr.io/hanzoai/chat", "1.0.52"],
-			["ghcr.io/hanzoai/base:1.3.0@sha256:03dbf15b", "ghcr.io/hanzoai/base", "1.3.0"],
+			[
+				"ghcr.io/hanzoai/iam:v1.34.4@sha256:9681afd5",
+				"ghcr.io/hanzoai/iam",
+				"v1.34.4",
+			],
+			[
+				"ghcr.io/hanzoai/chat:1.0.52@sha256:9c1e124a",
+				"ghcr.io/hanzoai/chat",
+				"1.0.52",
+			],
+			[
+				"ghcr.io/hanzoai/base:1.3.0@sha256:03dbf15b",
+				"ghcr.io/hanzoai/base",
+				"1.3.0",
+			],
 		];
 		for (const [ref, repo, tag] of live) {
 			expect(parseImageRef(ref).slice(0, 2)).toEqual([repo, tag]);
@@ -74,34 +86,36 @@ describe("parseImageRef", () => {
 		// into the tag the repository still parsed, but any consumer comparing
 		// repositories (sidecar matching in the inventory reader) compared a
 		// digest-suffixed string against a clean one and never matched.
-		expect(imageOrg("ghcr.io/luxfi/aml-ui:v0.3.8@sha256:80588b9b")).toBe("luxfi");
+		expect(imageOrg("ghcr.io/luxfi/aml-ui:v0.3.8@sha256:80588b9b")).toBe(
+			"luxfi",
+		);
 	});
 });
 
 describe("withRegistryHost", () => {
 	it("swaps the registry host, preserving org/repo:tag", () => {
 		expect(
-			withRegistryHost("ghcr.io/hanzoai/pricing:v1.2.3", "registry.hanzo.ai"),
-		).toBe("registry.hanzo.ai/hanzoai/pricing:v1.2.3");
+			withRegistryHost("ghcr.io/hanzoai/pricing:v1.2.3", "oci.hanzo.ai"),
+		).toBe("oci.hanzo.ai/hanzoai/pricing:v1.2.3");
 	});
 	it("prepends a host to a host-less (Docker Hub short) ref", () => {
-		expect(withRegistryHost("pricing:v1.2.3", "registry.hanzo.ai")).toBe(
-			"registry.hanzo.ai/pricing:v1.2.3",
+		expect(withRegistryHost("pricing:v1.2.3", "oci.hanzo.ai")).toBe(
+			"oci.hanzo.ai/pricing:v1.2.3",
 		);
 	});
 	it("treats an org first segment as a path, not a host", () => {
-		expect(withRegistryHost("hanzoai/pricing:v1", "registry.hanzo.ai")).toBe(
-			"registry.hanzo.ai/hanzoai/pricing:v1",
+		expect(withRegistryHost("hanzoai/pricing:v1", "oci.hanzo.ai")).toBe(
+			"oci.hanzo.ai/hanzoai/pricing:v1",
 		);
 	});
 	it("treats a host:port first segment as the host and replaces it", () => {
-		expect(withRegistryHost("ghcr.io:5000/x/y:t", "registry.hanzo.ai")).toBe(
-			"registry.hanzo.ai/x/y:t",
+		expect(withRegistryHost("ghcr.io:5000/x/y:t", "oci.hanzo.ai")).toBe(
+			"oci.hanzo.ai/x/y:t",
 		);
 	});
 	it("is idempotent when the host already matches", () => {
-		expect(
-			withRegistryHost("registry.hanzo.ai/hanzoai/x:t", "registry.hanzo.ai"),
-		).toBe("registry.hanzo.ai/hanzoai/x:t");
+		expect(withRegistryHost("oci.hanzo.ai/hanzoai/x:t", "oci.hanzo.ai")).toBe(
+			"oci.hanzo.ai/hanzoai/x:t",
+		);
 	});
 });

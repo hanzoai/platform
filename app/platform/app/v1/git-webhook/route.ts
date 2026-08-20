@@ -34,7 +34,6 @@
 import { db } from "@hanzo/platform/db";
 import { github } from "@hanzo/platform/db/schema";
 import {
-	ciOwnsBuild,
 	type ConfigSource,
 	decodeWebhook,
 	detectForge,
@@ -184,25 +183,6 @@ export async function POST(req: Request) {
 		return Response.json({ message: "pong" });
 	}
 
-	// ONE LANE. A forge push fans out to both this webhook and the repo's
-	// `.hanzo/workflows/cicd.yml`, and only the second one is gated — so where
-	// a ci caller exists, it owns the build and this lane yields. Checked
-	// BEFORE scheduleBuilds so no row, no Job and no image can exist for a
-	// commit ci has not finished gating. See `ciOwnsBuild` for the measurement
-	// that made this necessary.
-	if (delivery.source.forge === "hanzo-git") {
-		const cfg = hanzoGitConfig();
-		if (await ciOwnsBuild(cfg, decoded.repo, decoded.sha)) {
-			return Response.json(
-				{
-					message: `Accepted; hanzoai/ci builds ${decoded.repo} (.hanzo/workflows/cicd.yml) — not scheduling a second, ungated build`,
-					scheduled: 0,
-				},
-				{ status: 202 },
-			);
-		}
-	}
-
 	// ACK fast: enqueue + dispatch happen synchronously here but the heavy
 	// build runs on arcd. scheduleBuilds is idempotent on (repo, sha, target),
 	// so a re-delivery does not double-build.
@@ -231,17 +211,12 @@ export async function POST(req: Request) {
 		// Response tab, and it is the ONLY artifact this path produces — no log
 		// line, no metric, no row. Whatever it says here is the entire record
 		// that the push was accepted and did nothing.
-		if (!result) {
-			// Two ways to mean the same thing, and the message must not claim the
-			// first when it was the second: the repo has no hanzo.yml, OR it has one
-			// that declares no image (a `test:`-only gate for hanzoai/ci, which is
-			// most of the estate). Naming only the missing file sent a reader looking
-			// for a file that was right there.
+		if ("declined" in result) {
+			// The scheduler decided WHY nothing was built and says it in one
+			// sentence. This repeats that sentence rather than composing a second
+			// one here, so the delivery history and the console read alike.
 			return Response.json(
-				{
-					message: `Accepted; ${decoded.repo} declares no image to build`,
-					scheduled: 0,
-				},
+				{ message: `Accepted; ${result.why}`, scheduled: 0 },
 				{ status: 202 },
 			);
 		}
