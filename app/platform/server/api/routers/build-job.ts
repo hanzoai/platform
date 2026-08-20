@@ -61,10 +61,7 @@ export const buildJobRouter = createTRPCRouter({
 						forge: z.literal("github"),
 						installationId: z.string().min(1),
 					}),
-					z.object({
-						forge: z.literal("hanzo-git"),
-						sourceRepo: z.string().min(3),
-					}),
+					z.object({ forge: z.literal("hanzo-git") }),
 				]),
 				repo: z.string().min(3),
 				sha: z.string().min(7),

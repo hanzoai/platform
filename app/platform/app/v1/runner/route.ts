@@ -91,18 +91,6 @@ export async function POST(req: Request) {
 		return Response.json({ message: argsProblem }, { status: 400 });
 	}
 
-	const organizationId =
-		body.organizationId ?? process.env.DEFAULT_BUILD_ORG_ID;
-	if (!organizationId) {
-		return Response.json(
-			{
-				message:
-					"organizationId is required (no DEFAULT_BUILD_ORG_ID configured on the server)",
-			},
-			{ status: 400 },
-		);
-	}
-
 	try {
 		const job = await enqueueDirectBuild({
 			repo: body.repo,
@@ -116,7 +104,10 @@ export async function POST(req: Request) {
 			buildArgs: body.buildArgs,
 			os: body.os,
 			arch: body.arch,
-			organizationId,
+			// The org that owns the build is the org that owns the repository, so
+			// the caller does not choose it. Stating one is a claim to be acting
+			// as it, and a claim the repository does not bear out is refused.
+			requireOrganizationId: body.organizationId,
 		});
 		return Response.json(
 			{
@@ -130,8 +121,10 @@ export async function POST(req: Request) {
 		);
 	} catch (err) {
 		if (err instanceof TRPCError) {
-			// CONFLICT (no live runner for the pool) → 409; everything else → 400.
-			const code = err.code === "CONFLICT" ? 409 : 400;
+			// CONFLICT (no live runner for the pool) → 409, FORBIDDEN (acting as an
+			// org that does not own the repository) → 403; everything else → 400.
+			const code =
+				err.code === "CONFLICT" ? 409 : err.code === "FORBIDDEN" ? 403 : 400;
 			return Response.json({ message: err.message }, { status: code });
 		}
 		return Response.json(
