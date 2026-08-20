@@ -168,7 +168,10 @@ importers:
         version: link:../../pkg/platform
       '@hanzo/ui':
         specifier: 8.0.72
-        version: 8.0.72(2e1274fcaf41adb55103d2db41c165d2)
+        version: 8.0.72(37a088f61eb39375d92a8b8a1fd522e5)
+      '@hanzogui/next-theme':
+        specifier: 8.1.1
+        version: 8.1.1(next@16.1.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)
       '@hookform/resolvers':
         specifier: ^5.4.0
         version: 5.4.0(react-hook-form@7.71.2(react@18.2.0))
@@ -1560,11 +1563,11 @@ packages:
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
-    deprecated: 'Merged into tsx: https://tsx.hirok.io'
+    deprecated: 'Merged into tsx: https://tsx.is'
 
   '@esbuild-kit/esm-loader@2.6.5':
     resolution: {integrity: sha512-FxEMIkJKnodyA1OaCUoEvbYRkoZlLZ4d/eXFu9Fh8CbBBgP5EmZxrfTRyN0qpXZ4vOvqnE5YdRdcrmUUXuU+dA==}
-    deprecated: 'Merged into tsx: https://tsx.hirok.io'
+    deprecated: 'Merged into tsx: https://tsx.is'
 
   '@esbuild/aix-ppc64@0.20.2':
     resolution: {integrity: sha512-D+EBOJHXdNZcLJRBkhENNG8Wji2kgc9AZ9KiPr1JuZjsNtyHzrsfLRrY0tk2H2aoFu6RANO1y1iPPUCDYWkb5g==}
@@ -2190,6 +2193,12 @@ packages:
     resolution: {integrity: sha512-7CssYoQwdml/Ondp94mqsezBzxVh0SMcYkCN3b1WbzUW2boBEQ5Y8CBsjM1np+jCzAOJTrf4b56vBqKHgGMSwg==}
     peerDependencies:
       react: '*'
+
+  '@hanzogui/next-theme@8.1.1':
+    resolution: {integrity: sha512-iASMtvx+xTzP5q00dDYqkURNZkvT+nXTCQJz5ptIJRvatsWJwPaQyACykUJsc4WEQ4ceQ9bNHdYHsRqU0DOVhQ==}
+    peerDependencies:
+      next: 16.1.6
+      react: '>=19'
 
   '@hanzogui/normalize-css-color@8.1.1':
     resolution: {integrity: sha512-O3NBnMTVZbPgEnH0AA3Zxr61obWy/81xHDTBWBOBkiRQuTDxmkYLjXPO+RxtYLBiT8OKv9mcfOLu8mjhgJegQg==}
@@ -5413,6 +5422,7 @@ packages:
   '@xmldom/xmldom@0.8.13':
     resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   '@xterm/addon-attach@0.10.0':
     resolution: {integrity: sha512-ES/XO8pC1tPHSkh4j7qzM8ajFt++u8KMvfRc9vKIbjHTDOxjl9IUVo+vcQgLn3FTCM3w2czTvBss8nMWlD83Cg==}
@@ -11920,7 +11930,7 @@ snapshots:
       '@hanzogui/lucide-icons-2': 8.1.1(react-dom@18.2.0(react@18.2.0))(react-native-svg@15.15.5(react-native@0.87.0(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@18.3.5)(react@18.2.0))(react@18.2.0))(react@18.2.0)
       react: 18.2.0
 
-  '@hanzo/ui@8.0.72(2e1274fcaf41adb55103d2db41c165d2)':
+  '@hanzo/ui@8.0.72(37a088f61eb39375d92a8b8a1fd522e5)':
     dependencies:
       '@hanzo/appearance': 0.1.4(react@18.2.0)
       '@hanzo/data': 1.2.3(@hanzo/gui@8.1.1(react-dom@18.2.0(react@18.2.0))(react-native@0.87.0(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@18.3.5)(react@18.2.0))(react@18.2.0))(react@18.2.0)
@@ -11936,6 +11946,7 @@ snapshots:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
     optionalDependencies:
+      '@hanzogui/next-theme': 8.1.1(next@16.1.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)
       next: 16.1.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       next-themes: 0.2.1(next@16.1.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react-native-web: 0.21.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -12547,6 +12558,13 @@ snapshots:
 
   '@hanzogui/native@8.1.1(react@18.2.0)':
     dependencies:
+      react: 18.2.0
+
+  '@hanzogui/next-theme@8.1.1(next@16.1.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)':
+    dependencies:
+      '@hanzogui/constants': 8.1.1(react@18.2.0)
+      '@hanzogui/use-event': 8.1.1(react@18.2.0)
+      next: 16.1.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react: 18.2.0
 
   '@hanzogui/normalize-css-color@8.1.1':
