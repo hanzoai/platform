@@ -24,7 +24,7 @@
 import { db } from "@hanzo/platform/db";
 import { organization } from "@hanzo/platform/db/schema";
 import { eq } from "drizzle-orm";
-import { imageOrg } from "./ci/image-ref";
+import { imageHost, imageOrg } from "./ci/image-ref";
 
 /**
  * The names each organization publishes under.
@@ -152,13 +152,43 @@ export function ownerOf(repo: string): string {
 }
 
 /**
- * A build publishes into its own organization's namespace.
+ * The registries this fabric publishes to.
+ *
+ * Owning a namespace says where an image belongs; it does not say where it may
+ * be written. Both halves name one destination, so both are decided here rather
+ * than leaving a build free to ask for its own credential and a registry we do
+ * not run. `oci.hanzo.ai` and `registry.hanzo.ai` are one store behind one
+ * router, and ghcr.io is the public mirror — the same three the cloud fabric
+ * operates, kept the same so one estate has one answer.
+ *
+ * Spelled exactly. A port is part of a host string, so `ghcr.io:443` is a
+ * different spelling than anything here writes and is not one of these.
+ */
+const HOSTS: ReadonlySet<string> = new Set([
+	"ghcr.io",
+	"oci.hanzo.ai",
+	"registry.hanzo.ai",
+]);
+
+/**
+ * The alphabet an image reference is drawn from: letters, digits and `._-/:@`.
+ *
+ * A destination is written into ONE comma-separated field of the image exporter
+ * the build muscle runs, so this is what keeps a reference one field: a comma
+ * would open a second, and an `=` would make it an attribute of the exporter
+ * rather than part of a name.
+ */
+const REF = /^[A-Za-z0-9][A-Za-z0-9._/:@-]*$/;
+
+/**
+ * A build publishes into its own organization's namespace, on a registry we run.
  *
  * The destination is DECLARED — by the repository's own `hanzo.yml`, or by
  * whoever called the direct door — and it is what {@link pushSecret} derives a
- * credential from. So the two are bound: the namespace an image publishes into
- * and the owner of the repository that declared it belong to the same
- * organization.
+ * credential from. So the three are bound: the destination is one image
+ * reference, it addresses one of {@link HOSTS}, and the namespace it publishes
+ * into belongs to the same organization as the owner of the repository that
+ * declared it.
  *
  * A namespace no organization here owns is not judged. No credential of ours
  * reaches it and nothing of ours publishes there, so it is somebody else's
@@ -173,9 +203,24 @@ export function destinationProblem(repo: string, image: string): string | null {
 	if (!ns) return null;
 	const owner = org(ns);
 	if (!owner) return null;
+	const refusing = `Refusing to build ${image} from ${repo}`;
+	if (!REF.test(image)) {
+		return (
+			`${refusing}: a destination is ONE image reference — ` +
+			"<registry>/<namespace>/<name>[:tag][@digest], spelled with letters, " +
+			"digits and ._-/:@ — and this is not one."
+		);
+	}
+	const host = imageHost(image) ?? "";
+	if (!HOSTS.has(host.toLowerCase())) {
+		return (
+			`${refusing}: "${host}" is not a registry this fabric publishes to ` +
+			`(${[...HOSTS].join(", ")}), and ${owner}'s images are published on ours.`
+		);
+	}
 	if (org(ownerOf(repo)) === owner) return null;
 	return (
-		`Refusing to build ${image} from ${repo}: the "${ns}" namespace carries ` +
+		`${refusing}: the "${ns}" namespace carries ` +
 		`${owner}'s images, and ${repo} is not one of ${owner}'s repositories.`
 	);
 }

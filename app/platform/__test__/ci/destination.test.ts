@@ -50,7 +50,12 @@ vi.mock("@hanzo/platform/services/org", async (orig) => {
 
 const { launched, rows } = vi.hoisted(() => ({
 	launched: [] as { repo: string; image: string }[],
-	rows: [] as { repo: string; image: string; organizationId: string }[],
+	rows: [] as {
+		repo: string;
+		sha: string;
+		image: string;
+		organizationId: string;
+	}[],
 }));
 
 vi.mock("@hanzo/platform/services/ci/build-job", () => ({
@@ -291,6 +296,55 @@ describe("destinationProblem — an image belongs to the repository's org", () =
 		).toMatch(/refusing/i);
 	});
 
+	it("publishes a first-party namespace only on a registry we operate", () => {
+		// Owning the namespace says where the image belongs, not where it may be
+		// written. A build that names its own namespace on somebody else's host is
+		// asking for its own credential and a destination we do not run, so the
+		// two halves of one destination are decided together.
+		for (const image of [
+			"evil.example.com/hanzoai/x:v1.0.0",
+			"docker.io/hanzoai/x:v1.0.0",
+			"ghcr.io.evil.example.com/hanzoai/x:v1.0.0",
+			"ghcr.io:443/hanzoai/x:v1.0.0",
+		]) {
+			expect(destinationProblem("hanzoai/kms", image), image).toMatch(
+				/refusing/i,
+			);
+			expect(pushSecret("hanzoai/kms", image), image).toBeUndefined();
+		}
+	});
+
+	it("accepts the registries we operate", () => {
+		for (const image of [
+			"ghcr.io/hanzoai/kms:v1.0.0",
+			"registry.hanzo.ai/hanzoai/kms:v1.0.0",
+			"oci.hanzo.ai/hanzoai/kms:v1.0.0",
+			"GHCR.IO/HanzoAI/kms:v1.0.0",
+		]) {
+			expect(destinationProblem("hanzoai/kms", image), image).toBeNull();
+			expect(pushSecret("hanzoai/kms", image), image).toBe("push-hanzoai");
+		}
+	});
+
+	it("takes a destination that is one image reference, or none", () => {
+		// An image reference is drawn from letters, digits and `._-/:@`. The build
+		// muscle writes the destination into one comma-separated field of the
+		// image exporter, so a reference bearing a comma or an `=` would be read
+		// there as further fields — a second `name=`, or an attribute of the
+		// exporter itself. One reference in, one destination out.
+		for (const image of [
+			"ghcr.io/hanzoai/x,name=ghcr.io/luxfi/node:v1.0.0",
+			"ghcr.io/hanzoai/x:v1.0.0,ghcr.io/luxfi/node:v1.0.0",
+			'ghcr.io/hanzoai/x:v1.0.0",push=false,"',
+			"ghcr.io/hanzoai/x:v1.0.0 ghcr.io/luxfi/node:v1.0.0",
+		]) {
+			expect(destinationProblem("hanzoai/kms", image), image).toMatch(
+				/refusing/i,
+			);
+			expect(pushSecret("hanzoai/kms", image), image).toBeUndefined();
+		}
+	});
+
 	it("does not judge a namespace no organization here owns", () => {
 		// No credential of ours reaches it and nothing of ours publishes there.
 		expect(
@@ -478,6 +532,58 @@ describe("the webhook front door", () => {
 			...COMMIT,
 		});
 		expect(rows[0]?.organizationId).toBe(LUX);
+	});
+});
+
+/**
+ * `buildJob.trigger` — the console's manual re-run, the one front door whose
+ * commit is typed rather than read off a signed delivery. Same call as the
+ * router makes: the input it takes, plus the caller's active organization.
+ */
+describe("the trigger front door", () => {
+	const trigger = {
+		source: { forge: "hanzo-git" },
+		repo: "hanzoai/kms",
+		ref: "refs/heads/main",
+		branch: "main",
+		requireOrganizationId: HANZO,
+	} as const;
+
+	it("schedules a build for a commit", async () => {
+		serveForge("ghcr.io/hanzoai/kms");
+		const result = await scheduleBuilds({ ...trigger, sha: SHA });
+		expect(result?.jobs).toHaveLength(1);
+		expect(rows[0]?.sha).toBe(SHA);
+	});
+
+	it("writes no row for a value that does not name a commit", async () => {
+		// A commit is named by its object id and an object id is hex. The value
+		// keys the row, names the target, addresses the config on the forge and
+		// spells the image tag, so it is read as a commit before it reaches any
+		// of them.
+		serveForge("ghcr.io/hanzoai/kms");
+		for (const sha of [
+			"abc1234,name=ghcr.io/luxfi/node",
+			`${SHA} --output=type=image`,
+			"main",
+			"refs/heads/main",
+			"../../../etc/passwd",
+			"abc1234?ref=main",
+		]) {
+			await expect(scheduleBuilds({ ...trigger, sha }), sha).rejects.toThrow(
+				/does not name a commit/i,
+			);
+		}
+		expect(rows).toHaveLength(0);
+		expect(launched).toHaveLength(0);
+	});
+
+	it("names one commit however it was spelled", async () => {
+		// An object id is hex, and hex is case-insensitive, so both spellings key
+		// one row rather than building the same commit twice.
+		serveForge("ghcr.io/hanzoai/kms");
+		await scheduleBuilds({ ...trigger, sha: "A".repeat(40) });
+		expect(rows[0]?.sha).toBe("a".repeat(40));
 	});
 });
 
