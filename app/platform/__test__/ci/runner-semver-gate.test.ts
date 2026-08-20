@@ -6,13 +6,12 @@ import {
 } from "../../server/v1/build-request";
 
 /**
- * Owner directive: everything we publish carries real semver, no ad-hoc tags.
+ * Everything we publish carries real semver, no ad-hoc tags.
  *
- * This route is how `ghcr.io/luxfi/node:v1.36.2-blsfix` came to exist and end up
- * running hanzo-mainnet's five validators. No git tag of that name exists and the
- * image has no OCI revision label, so that binary cannot be traced to source,
- * rebuilt, or patched — and it got there because the enqueue API accepted any
- * `image` string it was handed.
+ * A tag is how a running binary is traced back to its source, so it has to name
+ * a release a git tag also names — one that can be rebuilt and patched. The
+ * shapes below are the ones that answer to nothing: a bespoke suffix, a floating
+ * name, a branch, a bare commit, an arch variant.
  */
 describe("firstPartyTagProblem", () => {
 	it("accepts real semver on first-party images", () => {
@@ -34,7 +33,7 @@ describe("firstPartyTagProblem", () => {
 
 	it("rejects every ad-hoc tag shape we actually found deployed", () => {
 		const found = [
-			"ghcr.io/luxfi/node:v1.36.2-blsfix", // bespoke suffix, no git tag exists
+			"ghcr.io/luxfi/node:v1.36.2-hotfix", // bespoke suffix, no git tag exists
 			"ghcr.io/hanzoai/kms-operator:latest", // floating
 			"ghcr.io/luxfi/bridge:main", // branch name
 			"ghcr.io/hanzoai/iam:sha-ba43c54", // commit tag

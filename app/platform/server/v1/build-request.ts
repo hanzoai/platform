@@ -22,12 +22,10 @@ const SEMVER_TAG = /^v?\d+\.\d+\.\d+$/;
 /**
  * Everything we publish carries real semver — no ad-hoc tags.
  *
- * This route is how `ghcr.io/luxfi/node:v1.36.2-blsfix` came to exist and end up
- * running hanzo-mainnet's five validators. There is no git tag of that name and
- * the image carries no OCI revision label, so the binary running production
- * cannot be traced to source, rebuilt, or patched. The enqueue API accepted an
- * arbitrary `image` string, so a one-off suffix was a single POST away and left
- * no record that it was ever a release.
+ * A tag is the name a running binary is traced back by, so it has to name a
+ * release: one that a git tag also names, and that can therefore be rebuilt and
+ * patched from source. A suffixed one-off answers to nothing, and what runs in
+ * production cannot be told apart from what was released.
  *
  * Returns a message when the requested tag is not publishable, else null.
  * A digest reference is accepted: it is stronger than any tag. Non-first-party
