@@ -579,6 +579,16 @@ section) — `main` is strictly ahead, nothing to back-merge.
 Release = bump `app/platform/package.json` version and tag `main` HEAD with the
 same string. No second numbering scheme, ever.
 
+The workspace root `package.json` has no `version`, deliberately — a version
+there would be the second numbering scheme. So anything reading a version reads
+`app/platform/package.json` by path, never `./package.json` by working
+directory: `node -p` prints the string `undefined` and exits 0 for a missing
+field, which reads as success and names things `undefined`. That is where the
+`vundefined` tag came from, via a `.github/workflows/deploy.yml` release step
+whose `|| echo 0.0.0` fallback guarded the exit status instead of the value.
+`docker/build.sh` and `docker/push.sh` resolve the version and the build context
+from their own location and refuse anything that is not a `vX.Y.Z` line.
+
 **The IMAGE is not named after that tag, and deliberately so.** `.hanzo/workflows/
 deploy.yml` builds `ghcr.io/hanzoai/platform:<full commit sha>` and nothing else:
 a semver tag that gets re-pushed puts two digests behind one name, and under
