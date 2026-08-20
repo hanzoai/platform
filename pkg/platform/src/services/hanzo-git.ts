@@ -66,6 +66,39 @@ export function forgeHost(): string {
 	return new URL(forgeUrl()).host;
 }
 
+/** One path segment of a repository path: a name, starting with a letter or digit. */
+const REPO_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+/**
+ * A repository on the forge is named `owner/name`.
+ *
+ * Everything a build reads it reads from this path under {@link forgeUrl} — the
+ * `hanzo.yml` describing the build, and the git context BuildKit clones — so the
+ * path names a repository and carries nothing else: two name segments, no
+ * scheme, no host, no ref fragment, no traversal, and no `.git`, which the
+ * context appends itself.
+ *
+ * Returns what is wrong with `repo`, or null when it names a repository. Same
+ * shape as the other build-request rules, so a front door answers 400 with the
+ * message and the build path refuses on the same call.
+ */
+export function repoProblem(repo: string): string | null {
+	const [owner, name, ...rest] = repo.split("/");
+	if (
+		!owner ||
+		!name ||
+		rest.length > 0 ||
+		!REPO_SEGMENT.test(owner) ||
+		!REPO_SEGMENT.test(name)
+	) {
+		return `"${repo}" does not name a repository: ${forgeHost()} repositories are owner/name.`;
+	}
+	if (name.endsWith(".git")) {
+		return `"${repo}" does not name a repository: drop the .git, the git context appends it.`;
+	}
+	return null;
+}
+
 /** Why Hanzo Git is not usable, in words an operator can act on. */
 export class HanzoGitNotConfigured extends Error {
 	constructor(missing: string[]) {

@@ -29,7 +29,7 @@
  * pattern. Unset (the default) keeps the exact single-GHCR proven behavior.
  */
 import { TRPCError } from "@trpc/server";
-import { forgeHost, forgeUrl } from "../hanzo-git";
+import { forgeHost, forgeUrl, repoProblem } from "../hanzo-git";
 import { getDefaultClients } from "../k8s/k8s-client";
 import {
 	parseImageRef,
@@ -192,7 +192,7 @@ const DEFAULT_RESOURCES: BuildResources = {
 };
 
 export interface BuildJobLaunchInput {
-	/** `owner/name` — the source repository. */
+	/** `owner/name` — the source repository, as {@link repoProblem} defines one. */
 	repo: string;
 	/**
 	 * Git context fragment BuildKit clones + checks out: a full ref
@@ -288,6 +288,12 @@ export function imageVersion(ref: string): string {
  * fleet-host), so one build pushes to both destinations with no rebuild.
  */
 export function buildkitArgs(input: BuildJobLaunchInput): string[] {
+	// The context is a repository path under the forge, so it is built from one
+	// or it is not built. Every build passes here, whichever front door asked.
+	const problem = repoProblem(input.repo);
+	if (problem) {
+		throw new TRPCError({ code: "BAD_REQUEST", message: problem });
+	}
 	const dockerfile = (input.dockerfile ?? "Dockerfile").replace(/^\.\//, "");
 	const arch = input.arch ?? "amd64";
 	const args = [
@@ -749,7 +755,9 @@ export function parseBuildFailure(log: string): string | undefined {
 		// Last resort: the final line that reads like a failure. Matching only
 		// /error/i misses the ones that matter most in practice — "permission
 		// denied", "no space left on device", "cannot find module".
-		lines.filter((l) => /error|failed|denied|cannot|not found|no space/i.test(l)).pop();
+		lines
+			.filter((l) => /error|failed|denied|cannot|not found|no space/i.test(l))
+			.pop();
 
 	return signal?.slice(0, 400);
 }
