@@ -1,4 +1,4 @@
-# platform — the ONE build, on Hanzo's own forge.
+# platform — the ONE build, on Hanzo's own Hanzo Git.
 #
 #   git.hanzo.ai push → act_runner (in-cluster git-runner, privileged dind)
 #   → docker build → ghcr.io/hanzoai/platform:<sha> → operator/StatefulSet
