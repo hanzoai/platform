@@ -201,6 +201,8 @@ describe("scheduleBuilds", () => {
 				}),
 				repo,
 			).rejects.toThrow(/does not name a repository/i);
+			expect(rows, repo).toHaveLength(0);
+			expect(launched, repo).toHaveLength(0);
 		}
 	});
 
