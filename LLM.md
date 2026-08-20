@@ -52,12 +52,32 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
   (HMAC per installation; `/v1/github-webhook` is a zero-logic alias of it) and
   the tRPC `buildJob.trigger` both call `scheduleBuilds`;
   `app/platform/app/v1/runner/route.ts` (service-token, GitHub-free direct
-  build) calls `enqueueDirectBuild`. Both settle the repository and the commit
+  build) calls `enqueueDirectBuild`. Both settle the repository and the ref
   first, and every rule about whether a commit may be built lives INSIDE those
-  two — the principal, the destination, the canonical-source check, and whether
-  hanzoai/ci already owns the repo's pipeline. A door adds transport and an
-  answer to render; a rule a door could skip is not a rule. `build-callback.ts`
-  is an optional external-builder completion hook (bearer token).
+  two — the principal, the destination, the name it publishes under, the
+  canonical-source check, and whether hanzoai/ci already owns the repo's
+  pipeline. A door adds transport and an answer to render; a rule a door could
+  skip is not a rule. `build-callback.ts` is an optional external-builder
+  completion hook (bearer token).
+- **A build is about one git name, and the forge says which commit that is.** A
+  door states `repo` + `ref` (`refs/heads/main`, `refs/tags/v1.2.3`); `commitAt`
+  asks the forge, by exact name, at `/branches/<name>` or `/tags/<name>`. There
+  is no field for a commit — not even on the signed webhook lane, where the
+  delivery does carry the pair. That single value is what `resolveTag` spells
+  the image from and what `promoteBuild` reads to decide whether a deploy
+  follows, so the two cannot be made to disagree. `deploy.on` lists BRANCHES:
+  a tag build publishes and never deploys.
+- **Two tag tokens, and both hold still**: `{{git.sha}}` and `{{git.tag}}` (the
+  latter resolves on the push that MAKES the tag, and skips the target on a
+  branch push). There is no branch token — a branch head is the one git name
+  that moves. `tagProblem(image, sha)` takes the commit, so a commit-shaped tag
+  has to be that commit's, and a version is a WHOLE semver line rather than one
+  found inside a name that moves.
+- **The ci-yield is keyed on the image, not the forge path.** An organization
+  has several forge spellings and one registry namespace, so `hanzo/platform`
+  and `hanzoai/platform` publish one `ghcr.io/hanzoai/platform`. `ciOwnsBuild`
+  is asked about the pushed path AND the path each declared image names, at each
+  repo's default branch.
 - A call that builds nothing returns `Declined` — `declined` for a caller that
   branches, `why` for one that reports. Two ordinary reasons (`no-image`,
   `ci-owns`) that are different sentences, written where they are known, so the
@@ -74,7 +94,13 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
 - DB: `build_job` table (`pkg/platform/src/db/schema/build-job.ts`); migration
   `drizzle/0005_build_pipeline_columns.sql` adds `buildJobName`/`imageDigest`/
   `e2e*`/`publish*` and drops the dead `arcd_runner` table.
-- tRPC: `buildJob` router (org-scoped list/one/logs/trigger).
+  `drizzle/0010_build_job_one_ref.sql` drops `branch`: it was a short copy of
+  `ref`, which is one value in two columns and therefore two answers waiting to
+  disagree. `git clone --branch` takes either kind of name, so the publish Job
+  shortens the ref where it becomes an argument.
+- tRPC: `buildJob` router (org-scoped list/one/logs/trigger). `trigger` takes
+  `repo` + `ref` and nothing else — no commit, and no forge: the forge holds the
+  repository and says what the ref points at, so both follow from what is there.
 - Build muscle: BuildKit (`moby/buildkit:v0.16.0`, `buildctl-daemonless.sh`,
   `--frontend=dockerfile.v0`) — the PROVEN contract that already builds
   commerce/chat/cloud on this cluster — over an HTTPS git context
@@ -620,8 +646,13 @@ directory: `node -p` prints the string `undefined` and exits 0 for a missing
 field, which reads as success and names things `undefined`. That is where the
 `vundefined` tag came from, via a `.github/workflows/deploy.yml` release step
 whose `|| echo 0.0.0` fallback guarded the exit status instead of the value.
-`docker/build.sh` and `docker/push.sh` resolve the version and the build context
-from their own location and refuse anything that is not a `vX.Y.Z` line.
+
+**One producer, and it is CI.** There are no local build/push scripts. Two of
+them used to sit under `app/platform/docker/`, and one published
+`hanzoai/platform:latest` — a name that moves, on a registry no rule here reaches,
+from a laptop whose architecture is whatever it happens to be. Everything this
+repo publishes is built by `.hanzo/workflows/deploy.yml` on the cluster's own
+runners, for every architecture, under a name `services/org` judged.
 
 **The IMAGE is not named after that tag, and deliberately so.** `.hanzo/workflows/
 deploy.yml` builds `ghcr.io/hanzoai/platform:<full commit sha>` and nothing else:

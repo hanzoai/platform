@@ -171,6 +171,84 @@ export function commitName(sha: string): string {
 	return sha.toLowerCase();
 }
 
+/**
+ * A push names a BRANCH or a TAG. Those are the two things git moves and the
+ * two things a build can be about, so they are the two shapes a ref takes here.
+ *
+ * The distinction is the whole point rather than a formality. A branch head
+ * moves and a tag does not, so which of the two a commit arrived on decides
+ * whether an image may carry a version and whether a deploy may follow. Every
+ * reader asks {@link branchOf} or {@link tagOf} and gets one answer or none —
+ * there is no third spelling to read a branch out of a tag with.
+ */
+const BRANCH = "refs/heads/";
+const TAG = "refs/tags/";
+
+/**
+ * Returns what is wrong with `ref`, or null when it names a branch or a tag.
+ * Same shape as {@link repoProblem} and {@link commitProblem}, so a front door
+ * answers 400 with the message and the build path refuses on the same call.
+ */
+export function refProblem(ref: string): string | null {
+	if (branchOf(ref) || tagOf(ref)) return null;
+	return `"${ref}" does not name a branch or a tag: expected ${BRANCH}<name> or ${TAG}<name>.`;
+}
+
+/** The branch a ref names, or null when it names a tag or nothing. */
+export function branchOf(ref: string): string | null {
+	return ref.startsWith(BRANCH) ? ref.slice(BRANCH.length) || null : null;
+}
+
+/** The tag a ref names, or null when it names a branch or nothing. */
+export function tagOf(ref: string): string | null {
+	return ref.startsWith(TAG) ? ref.slice(TAG.length) || null : null;
+}
+
+/**
+ * The commit a ref resolves to on the forge, or null when the forge does not
+ * resolve it.
+ *
+ * A ref and a commit are one fact stated two ways, and only the forge holds it.
+ * So a door that is not a signed delivery states the REF — a name a person
+ * means and the forge can answer for — and the commit follows from it here.
+ * There is no door at which both halves are stated, which is what keeps the two
+ * from disagreeing.
+ *
+ * Addressed by kind, at the endpoint that answers for exactly one name:
+ * `/branches/<name>` and `/tags/<name>` each resolve a single ref and hand back
+ * the commit it points at. The ref-listing endpoint answers by PREFIX, so
+ * `heads/mai` would come back holding `main`'s commit — a name that resolves to
+ * a neighbour's commit is the failure this whole binding exists to prevent.
+ * The tag endpoint also dereferences: an annotated tag is an object of its own,
+ * and its commit is what a build checks out.
+ */
+export async function commitAt(
+	cfg: Pick<HanzoGitConfig, "url" | "token">,
+	repo: string,
+	ref: string,
+): Promise<string | null> {
+	const [owner, name] = repo.split("/");
+	if (!owner || !name) return null;
+	const branch = branchOf(ref);
+	const tag = tagOf(ref);
+	const which = branch ? `branches/${branch}` : tag ? `tags/${tag}` : null;
+	if (!which) return null;
+	const headers: Record<string, string> = { Accept: "application/json" };
+	if (cfg.token) headers.Authorization = `token ${cfg.token}`;
+	const url = `${cfg.url}/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/${which
+		.split("/")
+		.map(encodeURIComponent)
+		.join("/")}`;
+	const res = await fetch(url, { headers });
+	if (!res.ok) return null;
+	// One shape per endpoint: a branch carries `commit.id`, a tag `commit.sha`.
+	const body = (await res.json()) as {
+		commit?: { id?: string; sha?: string };
+	};
+	const sha = body.commit?.id ?? body.commit?.sha;
+	return sha && !commitProblem(sha) ? commitName(sha) : null;
+}
+
 /** Why Hanzo Git is not usable, in words an operator can act on. */
 export class HanzoGitNotConfigured extends Error {
 	constructor(missing: string[]) {

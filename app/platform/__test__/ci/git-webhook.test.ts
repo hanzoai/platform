@@ -47,9 +47,22 @@ describe("decodeWebhook", () => {
 		});
 		expect(d.event).toBe("push");
 		expect(d.repo).toBe("hanzoai/zip");
-		expect(d.branch).toBe("main");
+		expect(d.ref).toBe("refs/heads/main");
 		expect(d.sha).toBe("a".repeat(40));
 		expect(d.defaultBranch).toBe("main");
+	});
+
+	it("decodes a tag push as the whole tag ref", () => {
+		// A branch and a tag can carry the same name, and only the whole ref tells
+		// them apart. What decides whether an image may carry a version reads this
+		// value, so it leaves here as the forge wrote it.
+		const d = decodeWebhook("push", {
+			ref: "refs/tags/v1.2.3",
+			after: "a".repeat(40),
+			repository: { full_name: "hanzoai/zip", default_branch: "main" },
+		});
+		expect(d.ref).toBe("refs/tags/v1.2.3");
+		expect(d.sha).toBe("a".repeat(40));
 	});
 
 	it("decodes a pull_request event from head", () => {
@@ -58,7 +71,6 @@ describe("decodeWebhook", () => {
 			repository: { full_name: "hanzoai/base" },
 		});
 		expect(d.event).toBe("pull_request");
-		expect(d.branch).toBe("feature-x");
 		expect(d.ref).toBe("refs/heads/feature-x");
 		expect(d.sha).toBe("deadbeef");
 	});
@@ -79,6 +91,19 @@ describe("decodeWebhook", () => {
 				repository: { full_name: "hanzoai/zip" },
 			}),
 		).toThrow(WebhookError);
+	});
+
+	it("rejects a push that names neither a branch nor a tag", () => {
+		// Those are the two things git moves and the two things a build can be
+		// about. The ref decoded here is the one the scheduler goes on to ask the
+		// forge about, so a name nothing resolves stops at the door.
+		expect(() =>
+			decodeWebhook("push", {
+				ref: "refs/pull/7/head",
+				after: "a".repeat(40),
+				repository: { full_name: "hanzoai/zip" },
+			}),
+		).toThrow(/does not name a branch or a tag/);
 	});
 
 	it("rejects an unsupported event", () => {
@@ -390,7 +415,6 @@ describe("decodeWebhook — Hanzo Git", () => {
 		expect(decodeWebhook("push", githubPush, "github").repo).toBe(
 			"hanzoai/kms",
 		);
-		expect(d.branch).toBe("main");
 		expect(d.ref).toBe("refs/heads/main");
 		expect(d.sha).toBe(SHA);
 		expect(d.defaultBranch).toBe("main");
@@ -421,7 +445,6 @@ describe("decodeWebhook — Hanzo Git", () => {
 		);
 		expect(d.event).toBe("pull_request");
 		expect(d.repo).toBe("hanzo/kms");
-		expect(d.branch).toBe("feat-x");
 		expect(d.ref).toBe("refs/heads/feat-x");
 		expect(d.sha).toBe(SHA);
 		expect(d.pusher).toBe("z"); // no `pusher` on a PR — sender stands in

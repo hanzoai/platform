@@ -20,7 +20,7 @@
  * the row. It reuses the platform batch client — one k8s seam.
  */
 import { TRPCError } from "@trpc/server";
-import { forgeHost } from "../hanzo-git";
+import { branchOf, forgeHost, tagOf } from "../hanzo-git";
 import { getDefaultClients } from "../k8s/k8s-client";
 import type { PublishConfig } from "./platform-config";
 
@@ -47,8 +47,8 @@ const CI_TOLERATION = {
 export interface PublishJobInput {
 	/** `owner/name` — the source repository. */
 	repo: string;
-	/** Branch to clone + publish from. */
-	branch: string;
+	/** The build's ref, whole — `refs/heads/main`, `refs/tags/v1.2.3`. */
+	ref: string;
 	/** Resolved publish config from `hanzo.yml`. */
 	publish: PublishConfig;
 	/** Stable correlation id (the buildJob id) for the Job name + labels. */
@@ -172,7 +172,13 @@ export function buildPublishJobObject(input: PublishJobInput) {
 							args: [publishScript(input.publish)],
 							env: [
 								{ name: "REPO", value: input.repo },
-								{ name: "GIT_BRANCH", value: input.branch },
+								// `git clone --branch` wants the short name and takes either
+								// kind, so the ref is shortened here — at the one place it
+								// becomes an argument — rather than carried short.
+								{
+									name: "GIT_BRANCH",
+									value: branchOf(input.ref) ?? tagOf(input.ref) ?? "",
+								},
 								{ name: "PACKAGE_DIR", value: input.publish.packageDir },
 								{
 									name: "GIT_AUTH_TOKEN",

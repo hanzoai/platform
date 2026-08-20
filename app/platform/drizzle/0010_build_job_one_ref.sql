@@ -1,0 +1,1 @@
+ALTER TABLE `build_job` DROP COLUMN `branch`;

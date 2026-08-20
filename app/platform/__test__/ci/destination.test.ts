@@ -105,17 +105,18 @@ vi.mock("@hanzo/platform/services/ci/buildkit-job", async (orig) => {
 });
 
 const SHA = "0".repeat(40);
-const COMMIT = { sha: SHA, ref: "refs/heads/main", branch: "main" };
+/** The one git name a caller states. The forge answers for the commit. */
+const REF = "refs/heads/main";
 
-/** Serve a `hanzo.yml` declaring `image`, from whatever repository is asked for. */
-function serveForge(image: string, tagPattern = "v9.9.9") {
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async (url: string) => {
-			if (!String(url).includes("/contents/hanzo.yml")) {
-				return new Response("", { status: 404 });
-			}
-			const yaml = `
+/**
+ * A forge that resolves every branch and tag to one commit and, optionally,
+ * serves a `hanzo.yml` declaring `image`. Everything else 404s — which is how
+ * `ciOwnsBuild` reads "no ci here" and `readForgeRepoFacts` reads "nothing
+ * recorded". The config always declares `source: forge`, so the canonical-source
+ * check is answered by the repo rather than by a GitHub probe.
+ */
+function serveForge(image?: string, tagPattern = "v9.9.9", commit = SHA) {
+	const yaml = `
 source: forge
 build:
   matrix:
@@ -124,19 +125,33 @@ build:
   tag-pattern: "${tagPattern}"
   push: true
 `;
-			return new Response(
-				JSON.stringify({
-					content: Buffer.from(yaml).toString("base64"),
-					encoding: "base64",
-				}),
-				{ status: 200 },
-			);
+	const source = "source: forge\n";
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(async (url: string) => {
+			const at = String(url);
+			if (/\/(?:branches|tags)\/[^/]+$/.test(at)) {
+				return new Response(JSON.stringify({ commit: { id: commit } }), {
+					status: 200,
+				});
+			}
+			if (at.includes("/contents/hanzo.yml")) {
+				return new Response(
+					JSON.stringify({
+						content: Buffer.from(image ? yaml : source).toString("base64"),
+						encoding: "base64",
+					}),
+					{ status: 200 },
+				);
+			}
+			return new Response("", { status: 404 });
 		}),
 	);
 }
 
 beforeEach(() => {
 	vi.unstubAllGlobals();
+	serveForge();
 	launched.length = 0;
 	rows.length = 0;
 	ids.clear();
@@ -420,7 +435,7 @@ describe("firstParty — which images the tag rules are about", () => {
 });
 
 describe("the direct front door", () => {
-	const direct = { sha: SHA, requireOrganizationId: HANZO };
+	const direct = { ref: REF, requireOrganizationId: HANZO };
 
 	it("writes no row for an image in another organization's namespace", async () => {
 		await expect(
@@ -469,7 +484,7 @@ describe("the direct front door", () => {
 		await expect(
 			enqueueDirectBuild({
 				repo: "luxfi/node",
-				sha: SHA,
+				ref: REF,
 				image: "ghcr.io/luxfi/node:v1.0.0",
 			} as never),
 		).rejects.toThrow(/another organization/i);
@@ -521,7 +536,7 @@ describe("the webhook front door", () => {
 			scheduleBuilds({
 				source: { forge: "hanzo-git" },
 				repo: "luxfi/node",
-				...COMMIT,
+				ref: REF,
 			}),
 		).rejects.toThrow(/refusing/i);
 		expect(rows).toHaveLength(0);
@@ -533,7 +548,7 @@ describe("the webhook front door", () => {
 		await scheduleBuilds({
 			source: { forge: "hanzo-git" },
 			repo: "luxfi/node",
-			...COMMIT,
+			ref: REF,
 		});
 		expect(rows[0]?.organizationId).toBe(LUX);
 	});
@@ -548,48 +563,56 @@ describe("the trigger front door", () => {
 	const trigger = {
 		source: { forge: "hanzo-git" },
 		repo: "hanzoai/kms",
-		ref: "refs/heads/main",
-		branch: "main",
+		ref: REF,
 		requireOrganizationId: HANZO,
 	} as const;
 
-	it("schedules a build for a commit", async () => {
+	it("schedules a build for the commit the ref names", async () => {
 		serveForge("ghcr.io/hanzoai/kms");
-		const result = await scheduleBuilds({ ...trigger, sha: SHA });
+		const result = await scheduleBuilds(trigger);
 		// A schedule or a reason, never a shape a caller has to guess at.
 		expect(result).not.toHaveProperty("declined");
 		expect("declined" in result ? [] : result.jobs).toHaveLength(1);
 		expect(rows[0]?.sha).toBe(SHA);
 	});
 
-	it("writes no row for a value that does not name a commit", async () => {
-		// A commit is named by its object id and an object id is hex. The value
-		// keys the row, names the target, addresses the config on the forge and
-		// spells the image tag, so it is read as a commit before it reaches any
-		// of them.
+	it("writes no row for a value that does not name a ref", async () => {
+		// A ref names a branch or a tag, and that is the whole of what a build can
+		// be about. The value keys the row, decides whether the image may carry a
+		// version and whether a deploy follows, so it is read as a ref before it
+		// reaches any of them.
 		serveForge("ghcr.io/hanzoai/kms");
-		for (const sha of [
-			"abc1234,name=ghcr.io/luxfi/node",
-			`${SHA} --output=type=image`,
+		for (const ref of [
+			SHA,
 			"main",
-			"refs/heads/main",
+			"heads/main",
+			"refs/heads/",
+			"refs/pull/1/head",
 			"../../../etc/passwd",
-			"abc1234?ref=main",
 		]) {
-			await expect(scheduleBuilds({ ...trigger, sha }), sha).rejects.toThrow(
-				/does not name a commit/i,
+			await expect(scheduleBuilds({ ...trigger, ref }), ref).rejects.toThrow(
+				/does not name a branch or a tag/i,
 			);
 		}
 		expect(rows).toHaveLength(0);
 		expect(launched).toHaveLength(0);
 	});
 
-	it("names one commit however it was spelled", async () => {
+	it("names one commit however the forge spelled it", async () => {
 		// An object id is hex, and hex is case-insensitive, so both spellings key
 		// one row rather than building the same commit twice.
-		serveForge("ghcr.io/hanzoai/kms");
-		await scheduleBuilds({ ...trigger, sha: "A".repeat(40) });
+		serveForge("ghcr.io/hanzoai/kms", "v9.9.9", "A".repeat(40));
+		await scheduleBuilds(trigger);
 		expect(rows[0]?.sha).toBe("a".repeat(40));
+	});
+
+	it("writes no row for a commit the forge will not vouch for", async () => {
+		// A ref that resolves to something that is not an object id is a forge
+		// answering with something other than a commit, and there is nothing here
+		// to check out.
+		serveForge("ghcr.io/hanzoai/kms", "v9.9.9", "abc1234?ref=main");
+		await expect(scheduleBuilds(trigger)).rejects.toThrow(/names no commit/i);
+		expect(rows).toHaveLength(0);
 	});
 });
 
@@ -597,17 +620,15 @@ describe("the trigger front door", () => {
  * The name a build publishes under, decided by ONE rule at every door.
  *
  * A `tag-pattern` is a declaration, and on a given push it resolves to a name.
- * A name that carries a version or the commit names one build; a branch name
- * does not. The delivery lane skips a target it cannot name — the push still
- * succeeds — and the direct door, where a caller STATES the name, is told.
+ * A name that carries a version or the commit names one build; a name that
+ * moves does not. The delivery lane skips a target it cannot name — the push
+ * still succeeds — and the direct door, where a caller STATES the name, is told.
  */
 describe("the name a build publishes under", () => {
 	const trigger = {
 		source: { forge: "hanzo-git" },
 		repo: "hanzoai/kms",
-		sha: SHA,
-		ref: "refs/heads/main",
-		branch: "main",
+		ref: REF,
 		requireOrganizationId: HANZO,
 	} as const;
 
@@ -618,17 +639,17 @@ describe("the name a build publishes under", () => {
 		expect(launched).toHaveLength(1);
 	});
 
-	it("publishes a version", async () => {
+	it("publishes a version on the push that made the tag", async () => {
 		serveForge("ghcr.io/hanzoai/kms", "{{git.tag}}");
 		await scheduleBuilds({ ...trigger, ref: "refs/tags/v1.2.3" });
 		expect(rows[0]?.image).toBe("ghcr.io/hanzoai/kms:v1.2.3");
 	});
 
-	it("skips a target whose name would move, and the push still succeeds", async () => {
-		// `{{git.branch}}` yields the version on a tag push and the branch on a
-		// branch push. The version is published; the branch is not, and neither
-		// costs the push.
-		serveForge("ghcr.io/hanzoai/kms", "{{git.branch}}");
+	it("skips that pattern on a branch push, and the push still succeeds", async () => {
+		// A tag-patterned build has no image name on a branch push. Skipping the
+		// target costs the push nothing, and the versioned image appears when the
+		// tag itself is pushed.
+		serveForge("ghcr.io/hanzoai/kms", "{{git.tag}}");
 		const result = await scheduleBuilds(trigger);
 
 		expect(result).not.toHaveProperty("declined");
@@ -636,27 +657,16 @@ describe("the name a build publishes under", () => {
 		expect(launched).toHaveLength(0);
 	});
 
-	it("publishes the same pattern when the push names a version", async () => {
-		// The positive control for the skip above: the pattern is not refused, the
-		// push that names nothing publishable is.
-		serveForge("ghcr.io/hanzoai/kms", "{{git.branch}}");
-		await scheduleBuilds({
-			...trigger,
-			ref: "refs/tags/v1.36.35",
-			branch: "v1.36.35",
-		});
-		expect(rows[0]?.image).toBe("ghcr.io/hanzoai/kms:v1.36.35");
-	});
-
 	it("tells the direct door, which stated the name itself", async () => {
+		serveForge();
 		await expect(
 			enqueueDirectBuild({
 				repo: "hanzoai/kms",
-				sha: SHA,
+				ref: REF,
 				image: "ghcr.io/hanzoai/kms:latest",
 				requireOrganizationId: HANZO,
 			}),
-		).rejects.toThrow(/does not name a build/i);
+		).rejects.toThrow(/does not name this build/i);
 		expect(rows).toHaveLength(0);
 		expect(launched).toHaveLength(0);
 	});
@@ -671,12 +681,11 @@ describe("the deploy target", () => {
 	 */
 	async function promote(repo: string, image: string, namespace: string) {
 		serveForge(image);
-		await scheduleBuilds({ source: { forge: "hanzo-git" }, repo, ...COMMIT });
+		await scheduleBuilds({ source: { forge: "hanzo-git" }, repo, ref: REF });
 		// The ROW the build wrote — the principal it recorded is what decides
 		// this, so the promotion is asked about exactly what was stored.
 		const job = {
 			...rows[0],
-			branch: "main",
 			status: "succeeded",
 			imageDigest: `sha256:${"a".repeat(64)}`,
 		};

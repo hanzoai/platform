@@ -50,8 +50,9 @@ const { scheduleBuilds, enqueueDirectBuild } = await import(
 
 /** The commit on the row: read, checked, tagged, and cloned. */
 const SHA = "3f2b1c9d4e5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c";
-/** A ref that names something else entirely — published, and not merged. */
-const OTHER_REF = "refs/pull/7/head";
+/** Where it landed, as a trigger names it. Both point at {@link SHA}. */
+const TAG = "refs/tags/v1.2.3";
+const BRANCH = "refs/heads/main";
 
 const HANZO_YML = [
 	"images:",
@@ -62,12 +63,28 @@ const HANZO_YML = [
 ].join("\n");
 
 /**
- * The forge, as far as this test is concerned: it serves one `hanzo.yml`, it
- * has Actions on, and it has no ci caller — so this lane is the one that builds.
+ * The forge, as far as this test is concerned: `main` and `v1.2.3` both name
+ * {@link SHA}, it serves one `hanzo.yml`, it has Actions on, and it has no ci
+ * caller — so this lane is the one that builds.
+ *
+ * A branch carries its commit as `commit.id` and a tag as `commit.sha`, which
+ * is one endpoint per kind and one shape per endpoint.
  */
 function forge(): typeof fetch {
 	return (async (input: string | URL | Request) => {
 		const url = String(input);
+		if (/\/branches\/main(\?|$)/.test(url)) {
+			return new Response(JSON.stringify({ commit: { id: SHA } }), {
+				status: 200,
+				headers: { "content-type": "application/json" },
+			});
+		}
+		if (/\/tags\/v1\.2\.3(\?|$)/.test(url)) {
+			return new Response(JSON.stringify({ commit: { sha: SHA } }), {
+				status: 200,
+				headers: { "content-type": "application/json" },
+			});
+		}
 		if (url.includes("/contents/hanzo.yml")) {
 			return new Response(
 				JSON.stringify({
@@ -112,7 +129,7 @@ beforeEach(() => {
 });
 
 /** The git context the build muscle was handed. */
-function clonedRef(): string {
+function cloned(): string {
 	return launchBuildJob.mock.calls[0]?.[0]?.commit;
 }
 
@@ -121,16 +138,14 @@ describe("a build clones the commit its row names", () => {
 		const result = await scheduleBuilds({
 			source: { forge: "hanzo-git" },
 			repo: "hanzo/kms",
-			sha: SHA,
-			ref: OTHER_REF,
-			branch: "main",
+			ref: TAG,
 		});
 
 		// The three that must agree: what GitHub was asked about, what the row
 		// records, and what BuildKit checks out.
 		expect(githubReachability.mock.calls[0]?.[1]).toBe(SHA);
 		expect(createBuildJob.mock.calls[0]?.[0]?.sha).toBe(SHA);
-		expect(clonedRef()).toBe(SHA);
+		expect(cloned()).toBe(SHA);
 		expect(result).not.toBeNull();
 	});
 
@@ -138,51 +153,62 @@ describe("a build clones the commit its row names", () => {
 		await scheduleBuilds({
 			source: { forge: "hanzo-git" },
 			repo: "hanzo/kms",
-			sha: SHA,
-			ref: OTHER_REF,
-			branch: "main",
+			ref: TAG,
 		});
 		// A row whose image says one commit and whose pod compiled another is a
 		// row nothing can be traced by.
 		expect(createBuildJob.mock.calls[0]?.[0]?.image).toBe(
 			`ghcr.io/hanzoai/kms:sha-${SHA}`,
 		);
-		expect(clonedRef()).toBe(SHA);
+		expect(cloned()).toBe(SHA);
 	});
 
-	it("a branch push clones the commit delivered, not the branch", async () => {
-		// `refs/heads/main` resolves at fetch time; the delivered commit does not
-		// move between the check and the checkout.
+	it("a branch push clones the commit, not the branch", async () => {
+		// A branch head moves, so it is asked about once and the answer is what
+		// travels. A pod handed the name would resolve it again at fetch time and
+		// could compile a commit nothing here checked.
 		await scheduleBuilds({
 			source: { forge: "hanzo-git" },
 			repo: "hanzo/kms",
-			sha: SHA,
-			ref: "refs/heads/main",
-			branch: "main",
+			ref: BRANCH,
 		});
-		expect(clonedRef()).toBe(SHA);
+		expect(cloned()).toBe(SHA);
 	});
 
 	it("the row still records the ref that triggered it", async () => {
 		await scheduleBuilds({
 			source: { forge: "hanzo-git" },
 			repo: "hanzo/kms",
-			sha: SHA,
-			ref: OTHER_REF,
-			branch: "main",
+			ref: TAG,
 		});
-		expect(createBuildJob.mock.calls[0]?.[0]?.ref).toBe(OTHER_REF);
+		expect(createBuildJob.mock.calls[0]?.[0]?.ref).toBe(TAG);
 	});
 
 	it("the direct door clones its commit too", async () => {
+		// Nothing here states a commit. The door names a tag, the forge says what
+		// it points at, and that answer is the row and the checkout alike.
 		await enqueueDirectBuild({
 			repo: "hanzo/kms",
-			sha: SHA,
-			ref: OTHER_REF,
+			ref: TAG,
 			image: "ghcr.io/hanzoai/kms:v1.2.3",
 			requireOrganizationId: "org_1",
 		});
 		expect(createBuildJob.mock.calls[0]?.[0]?.sha).toBe(SHA);
-		expect(clonedRef()).toBe(SHA);
+		expect(cloned()).toBe(SHA);
+	});
+
+	it("a ref naming neither a branch nor a tag builds nothing", async () => {
+		// `refs/pull/7/head` is published and not merged. A build is about a
+		// branch or a tag, and a name is the whole of what a caller states — so
+		// there is no commit to build in place of one the forge never resolved.
+		await expect(
+			scheduleBuilds({
+				source: { forge: "hanzo-git" },
+				repo: "hanzo/kms",
+				ref: "refs/pull/7/head",
+			}),
+		).rejects.toThrow(/does not name a branch or a tag/);
+		expect(createBuildJob).not.toHaveBeenCalled();
+		expect(launchBuildJob).not.toHaveBeenCalled();
 	});
 });

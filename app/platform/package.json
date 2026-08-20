@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/platform-app",
-  "version": "v4.4.29",
+  "version": "v4.4.30",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -30,10 +30,6 @@
     "typecheck": "tsc --noEmit",
     "db:seed": "tsx -r dotenv/config ./server/db/seed.ts",
     "db:clean": "tsx -r dotenv/config ./server/db/reset.ts",
-    "docker:build": "./docker/build.sh",
-    "docker:push": "./docker/push.sh",
-    "docker:build:canary": "./docker/build.sh canary",
-    "docker:push:canary": "./docker/push.sh canary",
     "version": "echo $(node -p \"require('./package.json').version\")",
     "test": "vitest --config __test__/vitest.config.ts",
     "generate:openapi": "tsx -r dotenv/config scripts/generate-openapi.ts",

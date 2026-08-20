@@ -26,10 +26,14 @@ export const dynamic = "force-dynamic";
 
 interface EnqueueBody {
 	repo?: string;
-	sha?: string;
-	image?: string;
-	branch?: string;
+	/**
+	 * The branch or tag to build, whole — `refs/heads/main`, `refs/tags/v1.2.3`.
+	 *
+	 * The commit follows from it on the forge, so there is no `sha` field: a
+	 * caller states the name it wants built and the forge says what that is.
+	 */
 	ref?: string;
+	image?: string;
 	dockerfile?: string;
 	context?: string;
 	/** Docker build stage (`--target`) for multi-stage Dockerfiles. */
@@ -70,10 +74,10 @@ export async function POST(req: Request) {
 	// a machine and says nothing about which organization that machine is acting
 	// for, so the caller states it and the repository has to bear it out — a claim
 	// nobody has to make is one nobody can get wrong.
-	if (!body?.repo || !body?.sha || !body?.image || !body?.organizationId) {
+	if (!body?.repo || !body?.ref || !body?.image || !body?.organizationId) {
 		return Response.json(
 			{
-				message: "Missing required field(s): repo, sha, image, organizationId",
+				message: "Missing required field(s): repo, ref, image, organizationId",
 			},
 			{ status: 400 },
 		);
@@ -92,10 +96,8 @@ export async function POST(req: Request) {
 	try {
 		const job = await enqueueDirectBuild({
 			repo: body.repo,
-			sha: body.sha,
-			image: body.image,
-			branch: body.branch,
 			ref: body.ref,
+			image: body.image,
 			dockerfile: body.dockerfile,
 			context: body.context,
 			dockerTarget: body.dockerTarget,

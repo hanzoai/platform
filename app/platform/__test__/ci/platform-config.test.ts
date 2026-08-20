@@ -5,7 +5,6 @@ import {
 	parsePlatformConfig,
 	resolveTag,
 	runnerPoolFor,
-	tagFromRef,
 	validatePlatformConfig,
 } from "@hanzo/platform/services/ci/platform-config";
 import { describe, expect, it } from "vitest";
@@ -305,14 +304,12 @@ images:
 		expect(
 			resolveTag(cfg.builds[0]!.tagPattern, {
 				sha: "abc1234",
-				branch: "main",
 				ref: "refs/tags/v1.2.3",
 			}),
 		).toBe("v1.2.3");
 		expect(
 			resolveTag(cfg.builds[0]!.tagPattern, {
 				sha: "abc1234",
-				branch: "main",
 				ref: "refs/heads/main",
 			}),
 		).toBeNull();
@@ -401,36 +398,32 @@ describe("runnerPoolFor", () => {
 });
 
 describe("resolveTag", () => {
+	const MAIN = "refs/heads/main";
+
 	it("substitutes git.sha", () => {
-		expect(resolveTag("{{git.sha}}", { sha: "abc123", branch: "main" })).toBe(
+		expect(resolveTag("{{git.sha}}", { sha: "abc123", ref: MAIN })).toBe(
 			"abc123",
 		);
-	});
-	it("sanitizes branch in tag", () => {
-		expect(
-			resolveTag("br-{{git.branch}}", { sha: "x", branch: "feat/foo bar" }),
-		).toBe("br-feat-foo-bar");
 	});
 
 	it("sanitizes sha in tag", () => {
 		expect(
 			resolveTag("{{git.sha}}", {
 				sha: "abc1234,name=ghcr.io/luxfi/node:v1",
-				branch: "main",
+				ref: MAIN,
 			}),
 		).toBe("abc1234-name-ghcr.io-luxfi-node-v1");
 	});
 
-	// What comes out is a docker tag, and a docker tag is [A-Za-z0-9._-]. Every
-	// token is spelled in that alphabet, so the resolver's output is a tag
+	// What comes out is a docker tag, and a docker tag is [A-Za-z0-9._-]. Both
+	// tokens are spelled in that alphabet, so the resolver's output is a tag
 	// whatever the triggering context said. The tag names an image and the image
 	// name is one field of the exporter the build muscle writes, so a comma or an
 	// `=` is part of no name this can produce.
 	it("spells every token with the same alphabet", () => {
 		for (const [pattern, ctx] of [
-			["{{git.sha}}", { sha: "a,b=c d/e", branch: "main" }],
-			["{{git.branch}}", { sha: "x", branch: "a,b=c d/e" }],
-			["{{git.tag}}", { sha: "x", branch: "main", ref: "refs/tags/a,b=c d/e" }],
+			["{{git.sha}}", { sha: "a,b=c d/e", ref: MAIN }],
+			["{{git.tag}}", { sha: "x", ref: "refs/tags/a,b=c d/e" }],
 		] as const) {
 			expect(resolveTag(pattern, ctx), pattern).toBe("a-b-c-d-e");
 		}
@@ -440,52 +433,62 @@ describe("resolveTag", () => {
 	// the capability GitHub Actions provided before repos moved to platform.
 	it("substitutes git.tag on a tag push", () => {
 		expect(
-			resolveTag("{{git.tag}}", {
-				sha: "x",
-				branch: "main",
-				ref: "refs/tags/v0.9.4",
-			}),
+			resolveTag("{{git.tag}}", { sha: "x", ref: "refs/tags/v0.9.4" }),
 		).toBe("v0.9.4");
 	});
+
 	it("sanitizes the tag", () => {
 		expect(
-			resolveTag("{{git.tag}}", {
-				sha: "x",
-				branch: "main",
-				ref: "refs/tags/release/1.0 rc1",
-			}),
+			resolveTag("{{git.tag}}", { sha: "x", ref: "refs/tags/release/1.0 rc1" }),
 		).toBe("release-1.0-rc1");
 	});
+
 	// Skip, don't invent: falling back to the branch would give one token two
 	// meanings and publish a branch image under a version-shaped name.
 	it("returns null for {{git.tag}} on a branch push", () => {
-		expect(
-			resolveTag("{{git.tag}}", {
-				sha: "x",
-				branch: "main",
-				ref: "refs/heads/main",
-			}),
-		).toBeNull();
+		expect(resolveTag("{{git.tag}}", { sha: "x", ref: MAIN })).toBeNull();
 	});
-	it("returns null for {{git.tag}} when ref is absent", () => {
-		expect(resolveTag("{{git.tag}}", { sha: "x", branch: "main" })).toBeNull();
-	});
-	it("leaves sha/branch patterns unaffected by a missing ref", () => {
-		expect(resolveTag("{{git.sha}}", { sha: "abc", branch: "main" })).toBe(
-			"abc",
-		);
-	});
-});
 
-describe("tagFromRef", () => {
-	it("reads the tag name", () => {
-		expect(tagFromRef("refs/tags/v1.2.3")).toBe("v1.2.3");
+	it("leaves a sha pattern unaffected by which ref it was", () => {
+		for (const ref of [MAIN, "refs/tags/v1.0.0"]) {
+			expect(resolveTag("{{git.sha}}", { sha: "abc", ref }), ref).toBe("abc");
+		}
 	});
-	it("rejects a branch ref, a bare sha, undefined, and an empty tag", () => {
-		expect(tagFromRef("refs/heads/main")).toBeNull();
-		expect(tagFromRef("deadbeef")).toBeNull();
-		expect(tagFromRef(undefined)).toBeNull();
-		expect(tagFromRef("refs/tags/")).toBeNull();
+
+	// A branch head is the one git name that moves. Every name it could spell is
+	// one an image must not carry: an ordinary branch name moves under whatever
+	// it published, and a branch NAMED like a version publishes a release from
+	// something that is not one. So there is no token for it, and a config asking
+	// for one is refused where it is read rather than resolved to a literal.
+	it("has no branch token, and refuses a config that asks for one", () => {
+		expect(resolveTag("{{git.branch}}", { sha: "x", ref: MAIN })).toBe(
+			"{{git.branch}}",
+		);
+		expect(() =>
+			parsePlatformConfig(`
+build:
+  matrix:
+    - { os: linux, arch: amd64 }
+  image: ghcr.io/luxfi/node
+  tag-pattern: "{{git.branch}}"
+`),
+		).toThrow(/not a tag token/i);
+	});
+
+	it("refuses any token it cannot answer for", () => {
+		// A pattern is a template, so an unknown token survives substitution and
+		// becomes part of an image name. Refusing names the tokens that exist,
+		// which is the sentence the author of that line needs.
+		for (const token of ["{{git.ref}}", "{{env.HOME}}", "{{}}"]) {
+			expect(
+				() =>
+					parsePlatformConfig(`
+images:
+  - { name: api, context: ., repo: ghcr.io/hanzoai/api, tag-pattern: "${token}" }
+`),
+				token,
+			).toThrow(/not a tag token/i);
+		}
 	});
 });
 
@@ -636,22 +639,31 @@ describe("build_secrets", () => {
 		`images:\n  - name: app\n    repo: ghcr.io/hanzoai/app\n    build_secrets: [${secrets}]\n`;
 
 	it("parses a publishable build_secret name", () => {
-		expect(built(withSecrets("PUBLISHABLE_KEY")).builds[0]!.buildSecrets).toEqual([
-			"PUBLISHABLE_KEY",
-		]);
+		expect(
+			built(withSecrets("PUBLISHABLE_KEY")).builds[0]!.buildSecrets,
+		).toEqual(["PUBLISHABLE_KEY"]);
 	});
 
 	it("accepts every documented publishable prefix and suffix", () => {
 		expect(
-			built(withSecrets("NEXT_PUBLIC_X, VITE_Y, REACT_APP_Z, A_PUBLIC, B_PUBLISHABLE"))
-				.builds[0]!.buildSecrets,
-		).toEqual(["NEXT_PUBLIC_X", "VITE_Y", "REACT_APP_Z", "A_PUBLIC", "B_PUBLISHABLE"]);
+			built(
+				withSecrets(
+					"NEXT_PUBLIC_X, VITE_Y, REACT_APP_Z, A_PUBLIC, B_PUBLISHABLE",
+				),
+			).builds[0]!.buildSecrets,
+		).toEqual([
+			"NEXT_PUBLIC_X",
+			"VITE_Y",
+			"REACT_APP_Z",
+			"A_PUBLIC",
+			"B_PUBLISHABLE",
+		]);
 	});
 
 	it("defaults to an empty list when unset", () => {
 		expect(
-			built("images:\n  - name: app\n    repo: ghcr.io/hanzoai/app\n").builds[0]!
-				.buildSecrets,
+			built("images:\n  - name: app\n    repo: ghcr.io/hanzoai/app\n")
+				.builds[0]!.buildSecrets,
 		).toEqual([]);
 	});
 
@@ -687,9 +699,9 @@ describe("kms location", () => {
 	});
 
 	it("parses path and environment, trimming slashes", () => {
-		expect(built(`${base}kms:\n  path: /custom/\n  environment: staging\n`).kms).toEqual(
-			{ path: "custom", environment: "staging" },
-		);
+		expect(
+			built(`${base}kms:\n  path: /custom/\n  environment: staging\n`).kms,
+		).toEqual({ path: "custom", environment: "staging" });
 	});
 
 	it("defaults path=deploy env=prod when kms declares only org", () => {
