@@ -363,6 +363,13 @@ describe("runnerPoolFor", () => {
 			"hanzo-build-linux-amd64",
 		);
 	});
+	it("lands both spellings of the Hanzo org on the one pool", () => {
+		// The forge owner is `hanzo` and the org login is `hanzoai`. The pool is
+		// the one place either spelling means anything, and it is one pool.
+		expect(runnerPoolFor("hanzo", { os: "linux", arch: "amd64" })).toBe(
+			runnerPoolFor("hanzoai", { os: "linux", arch: "amd64" }),
+		);
+	});
 	it("maps org login to brand prefix (luxfi→lux, zooai→zoo)", () => {
 		expect(runnerPoolFor("luxfi", { os: "linux", arch: "amd64" })).toBe(
 			"lux-build-linux-amd64",

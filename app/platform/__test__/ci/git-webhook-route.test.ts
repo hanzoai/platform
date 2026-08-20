@@ -76,15 +76,12 @@ describe("POST /v1/git-webhook — Hanzo Git", () => {
 		});
 		expect(scheduleBuilds).toHaveBeenCalledTimes(1);
 		expect(scheduleBuilds.mock.calls[0]?.[0]).toEqual({
-			// canonical org downstream, forge-native org back at the forge
-			repo: "hanzoai/kms",
+			// The repository the forge named, and the only one this build reads.
+			repo: "hanzo/kms",
 			sha: SHA,
 			ref: "refs/heads/main",
 			branch: "main",
-			source: {
-				forge: "hanzo-git",
-				sourceRepo: "hanzo/kms",
-			},
+			source: { forge: "hanzo-git" },
 		});
 	});
 

@@ -1,7 +1,5 @@
 import { createHmac } from "node:crypto";
 import {
-	canonicalOrg,
-	canonicalRepo,
 	decodeWebhook,
 	detectForge,
 	eventHeaderOf,
@@ -360,21 +358,6 @@ describe("verifyDelivery", () => {
 	});
 });
 
-describe("org mapping", () => {
-	it("maps the forge's `hanzo` org to the canonical `hanzoai`", () => {
-		expect(canonicalOrg("hanzo")).toBe("hanzoai");
-		expect(canonicalRepo("hanzo/kms")).toBe("hanzoai/kms");
-	});
-	it("passes through orgs spelled the same on both sides", () => {
-		expect(canonicalRepo("luxfi/node")).toBe("luxfi/node");
-		expect(canonicalRepo("zooai/zoo")).toBe("zooai/zoo");
-		expect(canonicalOrg("hanzoai")).toBe("hanzoai");
-	});
-	it("does not rewrite a repo name that merely looks like the org", () => {
-		expect(canonicalRepo("luxfi/hanzo")).toBe("luxfi/hanzo");
-	});
-});
-
 describe("forgeOrigin", () => {
 	it("derives the forge origin from repository.html_url", () => {
 		expect(forgeOrigin(hanzoGitPush)).toBe("https://git.hanzo.ai");
@@ -390,23 +373,23 @@ describe("decodeWebhook — Hanzo Git", () => {
 		const fromForge = decodeWebhook("push", hanzoGitPush, "hanzo-git");
 		const fromGithub = decodeWebhook("push", githubPush, "github");
 
-		// Everything the build path consumes is identical. Only provenance
-		// (`forge`, `sourceRepo`) records where it came from.
-		const meaning = ({ forge, sourceRepo, ...rest }: typeof fromForge) => rest;
+		// The commit is identical; `forge` and `repo` say where it lives.
+		const meaning = ({ forge, repo, ...rest }: typeof fromForge) => rest;
 		expect(meaning(fromForge)).toEqual(meaning(fromGithub));
 
 		expect(fromForge.forge).toBe("hanzo-git");
-		expect(fromForge.sourceRepo).toBe("hanzo/kms");
 		expect(fromGithub.forge).toBe("github");
-		expect(fromGithub.sourceRepo).toBe("hanzoai/kms");
 	});
 
-	it("decodes a Hanzo Git push into the canonical fields", () => {
+	it("names the repository the forge delivered, and only that one", () => {
 		const d = decodeWebhook("push", hanzoGitPush, "hanzo-git");
 		expect(d.event).toBe("push");
-		expect(d.repo).toBe("hanzoai/kms"); // org mapped, name untouched
-		expect(d.org).toBe("hanzoai");
-		expect(d.sourceRepo).toBe("hanzo/kms"); // forge-native, for API calls back
+		// `hanzo/kms` and `hanzoai/kms` are two repositories on the forge. A
+		// delivery is about one of them, and this is the one it named.
+		expect(d.repo).toBe("hanzo/kms");
+		expect(decodeWebhook("push", githubPush, "github").repo).toBe(
+			"hanzoai/kms",
+		);
 		expect(d.branch).toBe("main");
 		expect(d.ref).toBe("refs/heads/main");
 		expect(d.sha).toBe(SHA);
@@ -437,7 +420,7 @@ describe("decodeWebhook — Hanzo Git", () => {
 			"hanzo-git",
 		);
 		expect(d.event).toBe("pull_request");
-		expect(d.repo).toBe("hanzoai/kms");
+		expect(d.repo).toBe("hanzo/kms");
 		expect(d.branch).toBe("feat-x");
 		expect(d.ref).toBe("refs/heads/feat-x");
 		expect(d.sha).toBe(SHA);
@@ -448,7 +431,7 @@ describe("decodeWebhook — Hanzo Git", () => {
 	it("decodes a Hanzo Git ping", () => {
 		const d = decodeWebhook("ping", hanzoGitPush, "hanzo-git");
 		expect(d.event).toBe("ping");
-		expect(d.repo).toBe("hanzoai/kms");
+		expect(d.repo).toBe("hanzo/kms");
 		expect(d.forge).toBe("hanzo-git");
 	});
 

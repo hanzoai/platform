@@ -103,17 +103,10 @@ async function resolveDelivery(
 				{ status: 404 },
 			);
 		}
-		const repository = payload.repository as { full_name?: string } | undefined;
-		if (!repository?.full_name) {
-			return Response.json(
-				{ message: "Missing repository.full_name" },
-				{ status: 400 },
-			);
-		}
-		return {
-			secret: cfg.webhookSecret,
-			source: { forge: "hanzo-git", sourceRepo: repository.full_name },
-		};
+		// Which repository the delivery is about is read once, by the decoder,
+		// after the signature is verified — this only answers whose secret to
+		// verify it with, and our own forge has one.
+		return { secret: cfg.webhookSecret, source: { forge: "hanzo-git" } };
 	}
 
 	const installation = payload.installation as { id?: number } | undefined;
@@ -199,7 +192,7 @@ export async function POST(req: Request) {
 	// that made this necessary.
 	if (delivery.source.forge === "hanzo-git") {
 		const cfg = hanzoGitConfig();
-		if (await ciOwnsBuild(cfg, delivery.source.sourceRepo, decoded.sha)) {
+		if (await ciOwnsBuild(cfg, decoded.repo, decoded.sha)) {
 			return Response.json(
 				{
 					message: `Accepted; hanzoai/ci builds ${decoded.repo} (.hanzo/workflows/cicd.yml) — not scheduling a second, ungated build`,
