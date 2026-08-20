@@ -152,8 +152,18 @@ describe("repoProblem", () => {
 		// `.git` the git context appends; `.wiki` is the repository's wiki, which
 		// is a repository of its own with its own contents. Neither is the
 		// repository at `owner/name`, which is the only thing a build reads.
-		expect(repoProblem("hanzoai/platform.git")).toBeTruthy();
-		expect(repoProblem("hanzoai/platform.wiki")).toBeTruthy();
+		// The forge reads a name without regard to case, so this rule does too —
+		// it decides about the same name `repoName` resolves to.
+		for (const repo of [
+			"hanzoai/platform.git",
+			"hanzoai/platform.wiki",
+			"hanzoai/platform.GIT",
+			"hanzoai/platform.WIKI",
+			"hanzoai/platform.Wiki",
+		]) {
+			expect(repoProblem(repo), repo).toBeTruthy();
+			expect(repoProblem(repoName(repo)), repo).toBeTruthy();
+		}
 	});
 });
 
@@ -247,6 +257,7 @@ describe("enqueueDirectBuild", () => {
 			"hanzoai/platform#refs/heads/other",
 			"hanzoai/../../secrets",
 			"hanzoai/platform.wiki",
+			"hanzoai/platform.WIKI",
 			"spa",
 		]) {
 			await expect(

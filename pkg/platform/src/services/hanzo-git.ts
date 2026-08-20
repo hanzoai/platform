@@ -103,8 +103,12 @@ const REPO_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
  * names the repository's wiki, which the forge keeps as a repository of its own
  * with its own contents and its own writers — `owner/name` and `owner/name.wiki`
  * are two repositories, and a build reads the first.
+ *
+ * Case-insensitive, for the same reason {@link repoName} lowercases: the forge
+ * reads a name without regard to case, so this decides about the same name the
+ * forge would resolve rather than about the caller's spelling of it.
  */
-const BESIDE_THE_REPO = /\.(git|wiki)$/;
+const BESIDE_THE_REPO = /\.(git|wiki)$/i;
 
 /**
  * A repository on the forge is named `owner/name`.
