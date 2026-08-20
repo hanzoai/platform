@@ -171,11 +171,14 @@ Reading it:
   and VALUED by org, so it only tells organizations apart when they are
   different answers; one answer for every repository makes every fleet grant a
   grant to everybody.
-- `destinationProblem(repo, image)` — the namespace an image publishes into and
-  the owner of the repository that declared it must be one organization. Asked
-  at both front doors and again in `buildkit-job` before a credential is
-  mounted. A namespace no organization here owns is not judged — it is somebody
-  else's registry.
+- `destinationProblem(repo, image)` — three facts about one destination: it is
+  ONE image reference (letters, digits and `._-/:@`, so it cannot open a second
+  field of the exporter `buildkit-job` writes), it addresses a registry we run
+  (`HOSTS` = ghcr.io / oci.hanzo.ai / registry.hanzo.ai, the same three the
+  cloud fabric operates), and the namespace it publishes into belongs to the
+  same organization as the repository's owner. Asked at both front doors and
+  again in `buildkit-job` before a credential is mounted. A namespace no
+  organization here owns is not judged — it is somebody else's registry.
 - `pushSecret(repo, image)` — names `push-<namespace>` only for a namespace this
   repository publishes into. Takes both names on purpose: "which token does this
   image need" is not the question a build path answers, and the other one cannot
@@ -194,6 +197,19 @@ borrowed (`bootnode` builds on Hanzo's pool without being Hanzo).
 A name absent from the table has no principal and no credential, so its builds
 are refused rather than defaulted. Adding a brand is one line in `OWNS`, its
 `push-<namespace>` KMS path, and an `organization` row carrying its slug.
+
+**What a build is named by.** `build-scheduler` settles the repository AND the
+commit for the whole call before either reaches a row — `repoOf` and `shaOf`,
+side by side, so both front doors and every future one get the same rule. A
+commit is named by its object id and an object id is hex, folded lowercase so
+two spellings key one row; the value keys the row, names the target, addresses
+`hanzo.yml` on the forge, and spells the image tag, and it reaches all four
+through that one call. The tag itself is settled in `resolveTag`: `{{git.sha}}`,
+`{{git.branch}}` and `{{git.tag}}` are all spelled in the docker tag alphabet
+(`[A-Za-z0-9._-]`), so what comes out is a tag whatever the triggering context
+said. `buildkit-job` writes the destination as ONE quoted `name=` CSV field —
+one ref or two, one spelling — which is what makes a ref list a value of the
+exporter rather than a way to add fields to it.
 
 **Load-bearing fact: the old patcher never fired.** All 1,439 `build_job` rows in
 the live DB read `rolloutStatus: skipped` — `PLATFORM_FLEET_NAMESPACE_OWNERS` is

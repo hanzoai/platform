@@ -40,6 +40,35 @@ export function parseImageRef(ref: string): [string, string, string] {
 }
 
 /**
+ * A leading segment that names a registry rather than a path component.
+ *
+ * Docker's own rule, and the one thing every reader of a ref has to agree
+ * about: `ghcr.io/hanzoai/x` is three parts of which the first is a host, and
+ * `hanzoai/x` is two parts of which none is. Read once here so the host, the
+ * namespace and a host swap are all cut at the same place.
+ */
+function isHost(segment: string): boolean {
+	return (
+		segment.includes(".") || segment.includes(":") || segment === "localhost"
+	);
+}
+
+/**
+ * The registry an image addresses, or undefined for a host-less ref.
+ *
+ * `ghcr.io/hanzoai/pricing:v1` -> `"ghcr.io"`; `postgres:16` -> `undefined`.
+ * Verbatim, like {@link imageOrg}: the host is read here, and whether it is one
+ * we publish to is decided in `services/org`.
+ */
+export function imageHost(ref: string): string | undefined {
+	const [repo] = parseImageRef(ref);
+	const slash = repo.indexOf("/");
+	if (slash <= 0) return undefined;
+	const first = repo.slice(0, slash);
+	return isHost(first) ? first : undefined;
+}
+
+/**
  * The registry namespace an image pushes into.
  *
  * `ghcr.io/hanzoai/pricing:v1` -> `"hanzoai"`;  a host-less or single-segment
@@ -53,10 +82,7 @@ export function imageOrg(ref: string): string | undefined {
 	const parts = repo.split("/");
 	// [host, org, name…] — an org only exists when a host is present.
 	if (parts.length < 3) return undefined;
-	const host = parts[0] ?? "";
-	if (!(host.includes(".") || host.includes(":") || host === "localhost")) {
-		return undefined;
-	}
+	if (!isHost(parts[0] ?? "")) return undefined;
 	return parts[1] || undefined;
 }
 
@@ -75,10 +101,7 @@ export function imageOrg(ref: string): string | undefined {
  */
 export function withRegistryHost(ref: string, host: string): string {
 	const slash = ref.indexOf("/");
-	const first = slash === -1 ? "" : ref.slice(0, slash);
-	const hasHost =
-		slash > 0 &&
-		(first.includes(".") || first.includes(":") || first === "localhost");
+	const hasHost = slash > 0 && isHost(ref.slice(0, slash));
 	const path = hasHost ? ref.slice(slash + 1) : ref;
 	return `${host}/${path}`;
 }

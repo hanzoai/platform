@@ -347,14 +347,17 @@ export function buildkitArgs(input: BuildJobLaunchInput): string[] {
 	for (const [k, v] of Object.entries(buildArgs)) {
 		args.push(`--opt=build-arg:${k}=${v}`);
 	}
-	// Dual-push when a fleet registry is set: BuildKit's image exporter takes a
-	// comma-separated ref list in one `name=…` field (quoted so the CSV parser
-	// keeps it one field). One build, two destinations — GHCR for public
-	// consumers, the fleet registry the estate deploys from. Unset → single GHCR
-	// ref, byte-identical to the proven build.
-	const push = input.fleetRegistryHost
-		? `--output=type=image,"name=${input.image},${withRegistryHost(input.image, input.fleetRegistryHost)}",push=true`
-		: `--output=type=image,name=${input.image},push=true`;
+	// BuildKit's image exporter is a comma-separated list of fields, and its
+	// `name` is itself a comma-separated list of refs — so the field is quoted
+	// and the CSV parser reads the whole ref list as one value. ONE spelling for
+	// one ref or two: what varies is how many destinations there are, not how a
+	// destination is written. Setting a fleet registry adds the second — GHCR for
+	// public consumers, the fleet registry the estate deploys from — off the same
+	// build.
+	const refs = input.fleetRegistryHost
+		? `${input.image},${withRegistryHost(input.image, input.fleetRegistryHost)}`
+		: input.image;
+	const push = `--output=type=image,"name=${refs}",push=true`;
 	// Layer cache, and the reason a build takes minutes instead of seconds.
 	//
 	// Every build runs `buildctl-daemonless.sh` in a FRESH one-shot Job pod: the
