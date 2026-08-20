@@ -112,10 +112,37 @@ vi.mock("@hanzo/platform/utils/providers/github", () => ({
 			},
 		},
 	})),
-	appEnvOctokit: vi.fn(() => {
-		throw new Error("github must not be probed in these tests");
-	}),
+	appEnvOctokit: vi.fn(),
 }));
+
+/**
+ * Is the commit on the canonical GitHub branch? Recorded and answerable, so a
+ * test can show the question was ASKED and what each answer costs — "the check
+ * ran and said yes" and "no check ran" must not look alike.
+ */
+const { probe } = vi.hoisted(() => ({
+	probe: { asked: [] as string[], reachable: true },
+}));
+
+vi.mock("@hanzo/platform/services/ci/forge-source-probe", async (orig) => {
+	const real =
+		await orig<
+			typeof import("@hanzo/platform/services/ci/forge-source-probe")
+		>();
+	return {
+		...real,
+		githubReachability: vi.fn(async (repo: string, sha: string) => {
+			probe.asked.push(`${repo}@${sha}`);
+			return probe.reachable
+				? { kind: "reachable" as const }
+				: {
+						kind: "unreachable" as const,
+						head: "f".repeat(40),
+						relation: "the two have diverged",
+					};
+		}),
+	};
+});
 
 /**
  * The GitHub provider row an installation id resolves to. Bound to Hanzo, which
@@ -223,6 +250,8 @@ beforeEach(() => {
 	ids.set("hanzo", HANZO);
 	ids.set("lux", LUX);
 	githubYaml.value = "";
+	probe.asked.length = 0;
+	probe.reachable = true;
 	process.env.HANZO_GIT_WEBHOOK_SECRET = "s3cret";
 	process.env.PLATFORM_FLEET_NAMESPACE_OWNERS = `hanzo=${HANZO}`;
 });
@@ -558,21 +587,33 @@ describe("the direct door", () => {
 
 	it("asks the canonical-source question, the same one the delivery lane asks", async () => {
 		// A repo whose mirror row is gone serves its last state forever, and the
-		// build off it looks exactly like a healthy one. `appEnvOctokit` throws in
-		// this file, so reaching the probe is visible: here the repo declares
-		// `source: forge` and answers for itself.
-		forge();
+		// build off it looks exactly like a healthy one. This door reads no config
+		// of its own, so it used to skip the question entirely — a rule that runs
+		// at one door is not a rule.
+		const undeclared =
+			'build:\n  matrix:\n    - { os: linux, arch: amd64 }\n  image: ghcr.io/hanzoai/kms\n  tag-pattern: "sha-{{git.sha}}"\n';
+		forge({ yaml: undeclared });
 		await enqueueDirectBuild({ ...direct, ref: "refs/heads/main" });
+		expect(probe.asked).toEqual([`hanzoai/kms@${MAIN}`]);
 		expect(rows).toHaveLength(1);
 
 		rows.length = 0;
-		forge({
-			yaml: 'build:\n  matrix:\n    - { os: linux, arch: amd64 }\n  image: ghcr.io/hanzoai/kms\n  tag-pattern: "sha-{{git.sha}}"\n',
-		});
+		probe.reachable = false;
+		forge({ yaml: undeclared });
 		await expect(
 			enqueueDirectBuild({ ...direct, ref: "refs/heads/main" }),
-		).rejects.toThrow(/github must not be probed/);
+		).rejects.toThrow(/not on github\.com/i);
 		expect(rows).toHaveLength(0);
+	});
+
+	it("takes the repo's own word when it declares the forge canonical", async () => {
+		// `source: forge` is a declaration that there is nothing to compare
+		// against, and it beats whatever mirror rows happen to exist. Asked and
+		// answered without a probe is a different thing from never asked.
+		forge();
+		await enqueueDirectBuild({ ...direct, ref: "refs/heads/main" });
+		expect(probe.asked).toEqual([]);
+		expect(rows).toHaveLength(1);
 	});
 });
 
