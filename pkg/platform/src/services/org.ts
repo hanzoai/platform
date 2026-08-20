@@ -130,9 +130,25 @@ export async function orgId(name: string): Promise<string | null> {
 	return row?.id ?? null;
 }
 
-/** Owner segment of a repository path — the organization's name on the forge. */
+/**
+ * Owner segment of a repository path — the organization's name on the forge.
+ *
+ * A repository is `owner/name`, and `repoProblem` has said so before anything
+ * reaches here. A value with no owner segment is a broken caller rather than a
+ * bad request, and it says so out loud, because both quiet answers are worse
+ * than an exception: the whole string is a NAME, and `hanzoaix` would resolve to
+ * Hanzo and be allowed to publish Hanzo's images; the empty string names a
+ * runner pool no runner answers to, and the build waits forever instead of
+ * failing. Total, so every reader below can treat its answer as a real owner.
+ */
 export function ownerOf(repo: string): string {
-	return repo.slice(0, repo.indexOf("/"));
+	const slash = repo.indexOf("/");
+	if (slash <= 0) {
+		throw new Error(
+			`"${repo}" does not name a repository: expected owner/name`,
+		);
+	}
+	return repo.slice(0, slash);
 }
 
 /**

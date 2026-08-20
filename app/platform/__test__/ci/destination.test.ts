@@ -18,10 +18,12 @@ import {
 	scheduleBuilds,
 } from "@hanzo/platform/services/ci/build-scheduler";
 import { buildBuildkitJob } from "@hanzo/platform/services/ci/buildkit-job";
+import { runnerPoolFor } from "@hanzo/platform/services/ci/platform-config";
 import {
 	destinationProblem,
 	firstParty,
 	org,
+	ownerOf,
 	pushSecret,
 } from "@hanzo/platform/services/org";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -204,6 +206,40 @@ describe("org — the organization a name belongs to", () => {
 		for (const owner of ["hanzo-apps", "hanzo-docs", "hanzo-inc", "hanzo"]) {
 			expect(org(owner), owner).toBe("hanzo");
 		}
+	});
+});
+
+describe("ownerOf — the owner half of a repository path", () => {
+	it("reads the owner of a repository", () => {
+		expect(ownerOf("hanzoai/kms")).toBe("hanzoai");
+		expect(ownerOf("luxfi/node")).toBe("luxfi");
+		expect(ownerOf("hanzoai/a/b")).toBe("hanzoai");
+	});
+
+	it("refuses a value with no owner segment rather than inventing one", () => {
+		// The two quiet answers are both wrong. Taking the whole string reads
+		// `hanzoaix` as an owner, and `hanzoai` is a real one — a repository that
+		// does not exist would publish Hanzo's images. Taking the empty string
+		// names a runner pool no runner answers to, and the build waits forever.
+		for (const repo of ["hanzoai", "hanzoaix", "luxfix", "", "/kms"]) {
+			expect(() => ownerOf(repo), repo).toThrow(/does not name a repository/i);
+		}
+	});
+
+	it("resolves no organization and selects no pool for one", () => {
+		for (const repo of ["hanzoaix", "luxfix"]) {
+			expect(() => org(ownerOf(repo)), repo).toThrow();
+			expect(
+				() => runnerPoolFor(ownerOf(repo), { os: "linux", arch: "amd64" }),
+				repo,
+			).toThrow();
+		}
+	});
+
+	it("refuses a destination for a value that names no repository", () => {
+		expect(() =>
+			destinationProblem("hanzoaix", "ghcr.io/hanzoai/cloud:v1.0.0"),
+		).toThrow(/does not name a repository/i);
 	});
 });
 
@@ -519,6 +555,19 @@ describe("the deploy target", () => {
 });
 
 describe("the build muscle", () => {
+	it("refuses a value that names no repository, before reading it apart", () => {
+		// The muscle takes its repo from a row, and decides the name is a
+		// repository before anything downstream treats it as owner/name.
+		expect(() =>
+			buildBuildkitJob({
+				repo: "hanzoaix",
+				gitRef: "refs/heads/main",
+				image: "ghcr.io/hanzoai/cloud:v1.0.0",
+				buildJobId: "bj_1",
+			}),
+		).toThrow(/does not name a repository/i);
+	});
+
 	it("refuses to launch a build whose image is another organization's", () => {
 		expect(() =>
 			buildBuildkitJob({
