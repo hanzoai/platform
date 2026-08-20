@@ -1,13 +1,13 @@
 name: Sync from GitHub
 # git.hanzo.ai is the build plane; development also lands on
 # github.com/hanzoai/platform. Without this job nothing pulls one to the other,
-# and the forge quietly serves older source than anyone is reading.
+# and Hanzo Git quietly serves older source than anyone is reading.
 #
-# That is not hypothetical. On 2026-08-08 the forge sat three commits behind for
+# That is not hypothetical. On 2026-08-08 Hanzo Git sat three commits behind for
 # hours, so `8ea8386` ("carry an image's args: into the build") was never
 # compiled by anything — it carried four type errors and looked fine, because the
 # only thing that would have caught them never saw it. The gap surfaced the
-# moment the forge was fast-forwarded by hand. Every sibling repo (chat, app, id)
+# moment Hanzo Git was fast-forwarded by hand. Every sibling repo (chat, app, id)
 # already had this workflow; platform was the one without it.
 #
 # ONE deterministic direction: an in-cluster PULL. The runner reaches both ends —
@@ -16,7 +16,7 @@ name: Sync from GitHub
 # fails loudly here instead of force-pushing either side and losing somebody's
 # commits.
 #
-# WHO WRITES THE FORGE. FORGE_TOKEN, not the runner's own workflow token. main
+# WHO WRITES GIT.HANZO.AI. FORGE_TOKEN, not the runner's own workflow token. main
 # has been protected since 2026-08-09, and a protected branch admits a pusher
 # with WRITE on the code — which the workflow token does not have here: a
 # scheduled run is attributed to the actions user, who is nobody's collaborator.
