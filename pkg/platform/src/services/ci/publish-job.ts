@@ -20,13 +20,19 @@
  * the row. It reuses the platform batch client — one k8s seam.
  */
 import { TRPCError } from "@trpc/server";
+import { forgeHost } from "../hanzo-git";
 import { getDefaultClients } from "../k8s/k8s-client";
 import type { PublishConfig } from "./platform-config";
 
 /** Base image: Node (for npm) on Debian (apt installs Python/uv when pypi is set). */
 const PUBLISH_IMAGE = "node:22-bookworm";
-/** Secret (key `token`) used to clone the repo. */
-const GIT_SECRET = "console-git-token";
+/**
+ * Secret (key `token`) the Job presents to the forge to read source, named for
+ * the host it authenticates to. Reconciles from KMS `hanzo/deploy` `FORGE_TOKEN`;
+ * the forge serves no repository anonymously, so the mount is required and a
+ * missing credential stops the pod instead of reaching a clone.
+ */
+const FORGE_SECRET = "git-hanzo-ai-token";
 /** KMS-synced registry token secrets (key `token`); optional so dry-runs work pre-seed. */
 const NPM_TOKEN_SECRET = "npm-token";
 const PYPI_TOKEN_SECRET = "pypi-token";
@@ -81,7 +87,7 @@ export function publishScript(publish: PublishConfig): string {
 		"set -euo pipefail",
 		"cd /tmp",
 		'git clone --depth 1 --branch "$GIT_BRANCH" ' +
-			'"https://x-access-token:${GIT_AUTH_TOKEN}@github.com/${REPO}.git" src',
+			`"https://x-access-token:\${GIT_AUTH_TOKEN}@${forgeHost()}/\${REPO}.git" src`,
 		'cd "src/${PACKAGE_DIR}"',
 	];
 	if (publish.npm) {
@@ -171,7 +177,7 @@ export function buildPublishJobObject(input: PublishJobInput) {
 								{
 									name: "GIT_AUTH_TOKEN",
 									valueFrom: {
-										secretKeyRef: { name: GIT_SECRET, key: "token" },
+										secretKeyRef: { name: FORGE_SECRET, key: "token" },
 									},
 								},
 								{

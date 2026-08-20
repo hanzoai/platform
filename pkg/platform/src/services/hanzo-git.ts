@@ -44,6 +44,28 @@ export interface HanzoGitConfig {
 
 export const HANZO_GIT_DEFAULT_URL = "https://git.hanzo.ai";
 
+/**
+ * Where the forge is, for callers that only need to reach it.
+ *
+ * The in-cluster CI Jobs — build, publish, e2e — clone source from here. They
+ * need the address and nothing else, so they read it here rather than through
+ * {@link hanzoGitConfig}, which additionally requires the webhook secret and
+ * organization id that only an inbound delivery is about. One expression
+ * resolves the address; {@link hanzoGitConfig} calls it too, so the default and
+ * the override are stated once.
+ */
+export function forgeUrl(): string {
+	return (process.env.HANZO_GIT_URL || HANZO_GIT_DEFAULT_URL).replace(
+		/\/+$/,
+		"",
+	);
+}
+
+/** Host of {@link forgeUrl} — the name a `.netrc` `machine` line takes. */
+export function forgeHost(): string {
+	return new URL(forgeUrl()).host;
+}
+
 /** Why Hanzo Git is not usable, in words an operator can act on. */
 export class HanzoGitNotConfigured extends Error {
 	constructor(missing: string[]) {
@@ -64,10 +86,7 @@ export class HanzoGitNotConfigured extends Error {
  * can distinguish "not wired up yet" from "wired up wrong".
  */
 export function hanzoGitConfig(): HanzoGitConfig {
-	const url = (process.env.HANZO_GIT_URL || HANZO_GIT_DEFAULT_URL).replace(
-		/\/+$/,
-		"",
-	);
+	const url = forgeUrl();
 	const webhookSecret = process.env.HANZO_GIT_WEBHOOK_SECRET ?? "";
 	const organizationId = process.env.HANZO_GIT_ORGANIZATION_ID ?? "";
 

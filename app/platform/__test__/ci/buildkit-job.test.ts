@@ -48,7 +48,7 @@ describe("buildkitArgs", () => {
 		expect(args[0]).toBe("build");
 		expect(args).toContain("--frontend=dockerfile.v0");
 		expect(args).toContain(
-			"--opt=context=https://github.com/hanzoai/pricing.git#refs/heads/main",
+			"--opt=context=https://git.hanzo.ai/hanzoai/pricing.git#refs/heads/main",
 		);
 		expect(args).toContain("--opt=filename=Dockerfile");
 		expect(args).toContain("--opt=platform=linux/amd64");
@@ -446,7 +446,15 @@ describe("buildBuildkitJob", () => {
 		const gitEnv = (container.env as EnvRef[]).find(
 			(e) => e.name === "GIT_AUTH_TOKEN",
 		);
-		expect(gitEnv?.valueFrom?.secretKeyRef.name).toBe("console-git-token");
+		expect(gitEnv?.valueFrom?.secretKeyRef.name).toBe("forge-token");
+		// Source and dependencies come from different hosts, so they carry
+		// different credentials: the forge reads this build's own code, and
+		// github.com resolves Go modules whose path is a github.com path.
+		const ghEnv = (container.env as EnvRef[]).find((e) => e.name === "GH_TOKEN");
+		expect(ghEnv?.valueFrom?.secretKeyRef.name).toBe("console-git-token");
+		expect(ghEnv?.valueFrom?.secretKeyRef.name).not.toBe(
+			gitEnv?.valueFrom?.secretKeyRef.name,
+		);
 		// No fleet registry → the proven single-secret mount, unchanged.
 		expect((pod.volumes as Vol[])[0]!.secret?.secretName).toBe("push-hanzoai");
 		expect((container.volumeMounts as Mount[])[0]!.mountPath).toBe(
