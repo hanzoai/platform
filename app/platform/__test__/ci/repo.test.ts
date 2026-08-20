@@ -1,7 +1,10 @@
-import { scheduleBuilds } from "@hanzo/platform/services/ci/build-scheduler";
+import {
+	enqueueDirectBuild,
+	scheduleBuilds,
+} from "@hanzo/platform/services/ci/build-scheduler";
 import { buildkitArgs } from "@hanzo/platform/services/ci/buildkit-job";
-import { repoProblem } from "@hanzo/platform/services/hanzo-git";
-import { describe, expect, it } from "vitest";
+import { repoName, repoProblem } from "@hanzo/platform/services/hanzo-git";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * A build reads one repository: the one that authorized it.
@@ -13,6 +16,85 @@ import { describe, expect, it } from "vitest";
  * The path is the whole of what a build reads, so it is `owner/name` under the
  * forge and nothing else: no scheme, no host, no second fragment, no traversal.
  */
+
+const { launched, rows } = vi.hoisted(() => ({
+	launched: [] as { repo: string; image: string }[],
+	rows: [] as { repo: string; organizationId: string; runnerPool: string }[],
+}));
+
+vi.mock("@hanzo/platform/services/ci/build-job", () => ({
+	findBuildJobByTarget: vi.fn(async () => undefined),
+	createBuildJob: vi.fn(async (row: Record<string, unknown>) => {
+		rows.push(row as (typeof rows)[number]);
+		return { ...row, buildJobId: "bj_1" };
+	}),
+	updateBuildJob: vi.fn(
+		async (_id: string, patch: Record<string, unknown>) => patch,
+	),
+}));
+
+vi.mock("@hanzo/platform/services/ci/buildkit-job", async (orig) => {
+	const real =
+		await orig<typeof import("@hanzo/platform/services/ci/buildkit-job")>();
+	return {
+		...real,
+		launchBuildJob: vi.fn(async (input: { repo: string; image: string }) => {
+			launched.push(input);
+			return { jobName: "build-kms-bj1" };
+		}),
+	};
+});
+
+const SHA = "0".repeat(40);
+const COMMIT = { sha: SHA, ref: "refs/heads/main", branch: "main" };
+const ORG = "Yb5GFGDBEwcLsv2O8qWjS";
+
+/** Forge-primary so the build reads the forge and compares against nothing else. */
+const CONFIG = `
+source: forge
+build:
+  matrix:
+    - { os: linux, arch: amd64 }
+  image: ghcr.io/hanzoai/kms
+  tag-pattern: "v9.9.9"
+  push: true
+`;
+
+/** Serve `hanzo.yml` from any repository asked for, and record every URL. */
+function serveForge(): string[] {
+	const seen: string[] = [];
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(async (url: string, _init?: RequestInit) => {
+			seen.push(String(url));
+			if (String(url).includes("/contents/hanzo.yml")) {
+				return new Response(
+					JSON.stringify({
+						content: Buffer.from(CONFIG).toString("base64"),
+						encoding: "base64",
+					}),
+					{ status: 200 },
+				);
+			}
+			return new Response("", { status: 404 });
+		}),
+	);
+	return seen;
+}
+
+/** The `owner/name` a forge API url addresses. */
+function addressed(url: string): string {
+	const m = /\/v1\/repos\/([^/]+)\/([^/?]+)/.exec(url);
+	return m ? `${m[1]}/${m[2]}` : "";
+}
+
+beforeEach(() => {
+	vi.unstubAllGlobals();
+	launched.length = 0;
+	rows.length = 0;
+	process.env.HANZO_GIT_WEBHOOK_SECRET = "s3cret";
+	process.env.HANZO_GIT_ORGANIZATION_ID = ORG;
+});
 
 describe("repoProblem", () => {
 	it("accepts an owner/name path, on either org spelling the forge serves", () => {
@@ -66,8 +148,12 @@ describe("repoProblem", () => {
 		}
 	});
 
-	it("refuses a `.git` suffix, because the context appends one", () => {
+	it("refuses a suffix that names something beside the repository", () => {
+		// `.git` the git context appends; `.wiki` is the repository's wiki, which
+		// is a repository of its own with its own contents. Neither is the
+		// repository at `owner/name`, which is the only thing a build reads.
 		expect(repoProblem("hanzoai/platform.git")).toBeTruthy();
+		expect(repoProblem("hanzoai/platform.wiki")).toBeTruthy();
 	});
 });
 
@@ -89,6 +175,7 @@ describe("buildkitArgs", () => {
 			"https://github.com/hanzoai/spa.git",
 			"hanzoai/platform#refs/heads/other",
 			"hanzoai/../../secrets",
+			"hanzoai/platform.wiki",
 			"spa",
 			"",
 		]) {
@@ -98,10 +185,58 @@ describe("buildkitArgs", () => {
 });
 
 describe("scheduleBuilds", () => {
-	const commit = {
-		sha: "0".repeat(40),
-		ref: "refs/heads/main",
-		branch: "main",
+	it("writes no row for a value that names no repository", async () => {
+		for (const repo of [
+			"https://github.com/hanzoai/spa.git",
+			"hanzoai/platform#refs/heads/other",
+			"hanzoai/../../secrets",
+			"hanzoai/platform.wiki",
+			"spa",
+		]) {
+			await expect(
+				scheduleBuilds({
+					source: { forge: "github", installationId: "1" },
+					repo,
+					...COMMIT,
+				}),
+				repo,
+			).rejects.toThrow(/does not name a repository/i);
+		}
+	});
+
+	it("clones the repository whose config it read", async () => {
+		// `hanzo/kms` and `hanzoai/kms` are two repositories on the forge, with
+		// their own contents. The config says what to build and the git context
+		// is what gets built, so they come from the same one.
+		const seen = serveForge();
+		await scheduleBuilds({
+			source: { forge: "hanzo-git" },
+			repo: "hanzo/kms",
+			...COMMIT,
+		});
+		const read = seen.find((u) => u.includes("/contents/hanzo.yml"));
+		expect(addressed(read ?? "")).toBe("hanzo/kms");
+		expect(launched).toHaveLength(1);
+		expect(launched[0]?.repo).toBe("hanzo/kms");
+	});
+
+	it("reads and clones one repository however the caller spelled it", async () => {
+		const seen = serveForge();
+		await scheduleBuilds({
+			source: { forge: "hanzo-git" },
+			repo: "HanzoAI/KMS",
+			...COMMIT,
+		});
+		const read = seen.find((u) => u.includes("/contents/hanzo.yml"));
+		expect(addressed(read ?? "")).toBe("hanzoai/kms");
+		expect(launched[0]?.repo).toBe("hanzoai/kms");
+	});
+});
+
+describe("enqueueDirectBuild", () => {
+	const direct = {
+		sha: SHA,
+		image: "ghcr.io/hanzoai/kms:v9.9.9",
 	};
 
 	it("writes no row for a value that names no repository", async () => {
@@ -109,40 +244,49 @@ describe("scheduleBuilds", () => {
 			"https://github.com/hanzoai/spa.git",
 			"hanzoai/platform#refs/heads/other",
 			"hanzoai/../../secrets",
+			"hanzoai/platform.wiki",
 			"spa",
 		]) {
 			await expect(
-				scheduleBuilds({
-					source: { forge: "github", installationId: "1" },
-					repo,
-					...commit,
-				}),
+				enqueueDirectBuild({ ...direct, repo }),
 				repo,
 			).rejects.toThrow(/does not name a repository/i);
+			expect(rows, repo).toHaveLength(0);
+			expect(launched, repo).toHaveLength(0);
 		}
 	});
 
-	it("refuses when the config path and the build name different repositories", async () => {
+	it("refuses a caller acting as an organization that does not own the build", async () => {
 		await expect(
-			scheduleBuilds({
-				source: { forge: "hanzo-git", sourceRepo: "hanzo/universe" },
-				repo: "hanzoai/kms",
-				...commit,
+			enqueueDirectBuild({
+				...direct,
+				repo: "hanzo/kms",
+				requireOrganizationId: "someone-elses-org",
 			}),
-		).rejects.toThrow(/one repository/i);
+		).rejects.toThrow(/another organization/i);
+		expect(rows).toHaveLength(0);
+		expect(launched).toHaveLength(0);
 	});
 
-	it("takes the canonical name of the forge path", async () => {
-		// `hanzo/kms` on the forge is `hanzoai/kms` everywhere downstream: the
-		// pair every delivery carries. It passes the tie and goes on to read the
-		// config, which is a different question and fails for its own reasons here.
-		const err = await scheduleBuilds({
-			source: { forge: "hanzo-git", sourceRepo: "hanzo/kms" },
-			repo: "hanzoai/kms",
-			...commit,
-		}).catch((e: unknown) => e);
-		expect(String((err as Error | undefined)?.message ?? "")).not.toMatch(
-			/one repository/i,
-		);
+	it("owns the build by the repository, not by what the caller named", async () => {
+		// `organizationId` on the row is what later gates reading this build's
+		// logs, so it comes from the repository — a caller only confirms it.
+		await enqueueDirectBuild({
+			...direct,
+			repo: "hanzo/kms",
+			requireOrganizationId: ORG,
+		});
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.organizationId).toBe(ORG);
+		expect(rows[0]?.repo).toBe("hanzo/kms");
+		expect(rows[0]?.runnerPool).toBe("hanzo-build-linux-amd64");
+		expect(launched[0]?.repo).toBe("hanzo/kms");
+	});
+});
+
+describe("repoName", () => {
+	it("gives one name to the spellings the forge resolves alike", () => {
+		expect(repoName("HanzoAI/KMS")).toBe("hanzoai/kms");
+		expect(repoName("hanzoai/kms")).toBe("hanzoai/kms");
 	});
 });

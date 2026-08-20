@@ -15,13 +15,17 @@
  * at offline GitHub runners and silently no-op'd, so it was removed. A build
  * either launches a BuildKit Job in-cluster or fails loud.
  */
-import {
-	appEnvOctokit,
-	authGithub,
-} from "@hanzo/platform/utils/providers/github";
+import { authGithub } from "@hanzo/platform/utils/providers/github";
 import { TRPCError } from "@trpc/server";
 import { findGithubByInstallationId } from "../github";
-import { type HanzoGitConfig, hanzoGitConfig, repoProblem } from "../hanzo-git";
+import {
+	forgeOrganizationId,
+	forgeReader,
+	type HanzoGitConfig,
+	hanzoGitConfig,
+	repoName,
+	repoProblem,
+} from "../hanzo-git";
 import type { BuildJob } from "./build-job";
 import {
 	createBuildJob,
@@ -32,7 +36,6 @@ import { fetchBuildSecrets } from "./build-secrets";
 import { launchBuildJob } from "./buildkit-job";
 import { assertBuildableFromCanonicalSource } from "./forge-source";
 import { githubReachability, readForgeRepoFacts } from "./forge-source-probe";
-import { canonicalRepo } from "./git-webhook";
 import {
 	type BuildArch,
 	type BuildOS,
@@ -44,28 +47,28 @@ import {
 } from "./platform-config";
 
 /**
- * Where to read `hanzo.yml` from, and which organization owns the result.
+ * Which forge vouched for a delivery, and how to read a config from it.
  *
- * Data, not a callback: a delivery states WHICH forge vouched for it, and the
- * scheduler resolves that to an org + a config reader. GitHub identifies
- * itself with the App installation id carried in the payload; Hanzo Git has
- * no such concept — it is our own single forge, so it identifies itself and
- * carries only the repo name it uses. Both land on one `resolveSource`, so
- * the build path below is identical for every forge — one way to build,
- * several front doors.
+ * Data, not a callback: GitHub identifies itself with the App installation id
+ * carried in the payload; Hanzo Git has no such concept — it is our own single
+ * forge and identifies itself. Both land on one `resolveSource`, so the build
+ * path below is identical for every forge — one way to build, several front
+ * doors. WHICH repository is read is {@link ScheduleInput.repo}, the same one
+ * the build clones.
  */
 export type ConfigSource =
 	| { forge: "github"; installationId: string }
-	| {
-			forge: "hanzo-git";
-			/** `owner/repo` as the FORGE names it — see DecodedWebhook.sourceRepo. */
-			sourceRepo: string;
-	  };
+	| { forge: "hanzo-git" };
 
 export interface ScheduleInput {
 	/** Which provider vouched for this delivery, and how to read its config. */
 	source: ConfigSource;
-	/** Canonical `owner/repo` (org already mapped). Keys the buildJob row. */
+	/**
+	 * `owner/name` as the delivering forge names it — the ONE repository this
+	 * build reads. Its `hanzo.yml` says what to build, its git context is what
+	 * BuildKit clones, and it keys the buildJob row, so what runs is what the
+	 * config described.
+	 */
 	repo: string;
 	sha: string;
 	ref: string;
@@ -184,49 +187,18 @@ export async function fetchPlatformConfig(
 }
 
 /**
- * Fetch the repo's platform config WITHOUT a webhook installation context —
- * for the App-free paths (the direct `/v1/arcd/enqueue` trigger and the
- * build-watcher's post-build deploy decision). Authenticates as the platform's
- * own GitHub App installation via `appEnvOctokit` (the `GITHUB_APP_*` env,
- * synced from KMS `hanzo/platform`), replacing the rate-limited `GH_TOKEN` PAT
- * — the same App credential the release-reader uses. Returns null when the repo
- * has no config (build-only). Throws on bad config.
+ * The config a finished build was described by.
+ *
+ * A build's `deploy:`, `e2e:` and `publish:` come from the same document that
+ * said what to build, so this reads the repository the build cloned at the
+ * commit it built — the two identifiers already on the row. Everything a build
+ * clones it clones from the forge, so that is where this reads.
  */
-export async function fetchPlatformConfigByToken(
+export async function fetchBuiltConfig(
 	repo: string,
-	ref: string,
+	sha: string,
 ): Promise<PlatformConfig | null> {
-	const [owner, name] = repo.split("/");
-	if (!owner || !name) {
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message: `Invalid repo "${repo}"; expected owner/name`,
-		});
-	}
-	const octokit = appEnvOctokit();
-	for (const path of CONFIG_NAMES) {
-		try {
-			const res = await octokit.rest.repos.getContent({
-				owner,
-				repo: name,
-				path,
-				ref,
-			});
-			return parseContentResponse(
-				res.data as { content?: string; encoding?: string },
-				`${path} in ${repo}@${ref}`,
-			);
-		} catch (err) {
-			const e = err as { status?: number };
-			if (e.status === 404) continue;
-			if (err instanceof TRPCError) throw err;
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: `Failed to read ${path} from ${repo}@${ref}: ${(err as Error).message}`,
-			});
-		}
-	}
-	return null;
+	return fetchPlatformConfigFromHanzoGit(forgeReader(), repo, sha);
 }
 
 /**
@@ -364,11 +336,7 @@ async function resolveSource(
 		const cfg = hanzoGitConfig();
 		return {
 			organizationId: cfg.organizationId,
-			config: await fetchPlatformConfigFromHanzoGit(
-				cfg,
-				source.sourceRepo,
-				sha,
-			),
+			config: await fetchPlatformConfigFromHanzoGit(cfg, repo, sha),
 		};
 	}
 	const { provider, organizationId } = await resolveProvider(
@@ -427,7 +395,10 @@ async function dispatchBuild(
  * ONE build path, two front doors.
  */
 export interface DirectBuildInput {
-	/** owner/name — used to derive the arcd pool's org segment + git context. */
+	/**
+	 * `owner/name` on the forge — the repository the build clones, whose owner
+	 * names the runner pool and whose org owns the result.
+	 */
 	repo: string;
 	sha: string;
 	ref?: string;
@@ -447,7 +418,12 @@ export interface DirectBuildInput {
 	/** Build target os/arch (default linux/amd64). Drives the pool + platform. */
 	os?: BuildOS;
 	arch?: BuildArch;
-	organizationId: string;
+	/**
+	 * The org the CALLER is allowed to act as, checked against the org that owns
+	 * the repository. Same rule and same word as {@link ScheduleInput}: a caller
+	 * states which org it is, and stating one it is not is refused.
+	 */
+	requireOrganizationId?: string;
 }
 
 /**
@@ -459,6 +435,24 @@ export interface DirectBuildInput {
 export async function enqueueDirectBuild(
 	input: DirectBuildInput,
 ): Promise<BuildJob> {
+	// The repository the build clones — named, and named once, before a row
+	// exists to carry a value the build path would then refuse.
+	const repo = repoOf(input.repo);
+	// The org that owns the result is the org that owns the repository, which is
+	// the same answer `resolveSource` gives a forge delivery. `organizationId`
+	// on the row is what later gates reading this build's logs, so it is
+	// resolved from the repository and only confirmed against the caller.
+	const organizationId = forgeOrganizationId();
+	if (
+		input.requireOrganizationId !== undefined &&
+		input.requireOrganizationId !== organizationId
+	) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message:
+				"Refusing to schedule a build for another organization — the build source resolves to an org you are not acting as",
+		});
+	}
 	const os: BuildOS = input.os ?? "linux";
 	const arch: BuildArch = input.arch ?? "amd64";
 	// arm64 is paused (no DOKS arm64 pool). Reject an explicit arm64 request
@@ -479,7 +473,7 @@ export async function enqueueDirectBuild(
 	// commit to a DIFFERENT image returned the first job untouched, so the
 	// caller was handed a success carrying an image it never asked for.
 	const existing = await findBuildJobByTarget(
-		input.repo,
+		repo,
 		input.sha,
 		target,
 		input.image,
@@ -487,14 +481,14 @@ export async function enqueueDirectBuild(
 	if (existing) return existing;
 
 	const job = await createBuildJob({
-		repo: input.repo,
+		repo,
 		sha: input.sha,
 		ref,
 		branch,
 		target,
-		runnerPool: runnerPoolFor(orgLabel(input.repo), { os, arch }),
+		runnerPool: runnerPoolFor(ownerOf(repo), { os, arch }),
 		image: input.image,
-		organizationId: input.organizationId,
+		organizationId,
 		status: "queued",
 		rolloutStatus: "skipped",
 	});
@@ -515,32 +509,12 @@ export async function enqueueDirectBuild(
 export async function scheduleBuilds(
 	input: ScheduleInput,
 ): Promise<ScheduleResult | null> {
-	// `repo` is what the build clones and what keys every row this call writes,
-	// so it names a repository before any of that happens — the same rule the
-	// direct front door answers 400 with, stated once for both lanes.
-	const problem = repoProblem(input.repo);
-	if (problem) {
-		throw new TRPCError({ code: "BAD_REQUEST", message: problem });
-	}
-	// A forge source states the path twice: `sourceRepo` is where the config is
-	// read, `repo` is what the build clones. They are the same repository under
-	// two spellings of one org, which is exactly what `canonicalRepo` maps — so
-	// the build that runs is the build the config described, and the check above
-	// covers both paths. Exact, before anything is read, fail closed.
-	if (
-		input.source.forge === "hanzo-git" &&
-		input.repo !== canonicalRepo(input.source.sourceRepo)
-	) {
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message:
-				`Refusing to build ${input.repo} from ${input.source.sourceRepo}: a build reads one repository — ` +
-				`${input.source.sourceRepo} is ${canonicalRepo(input.source.sourceRepo)} downstream.`,
-		});
-	}
+	// One repository: what the config is read from, what the build clones, and
+	// what keys every row this call writes. Named before any of that happens.
+	const repo = repoOf(input.repo);
 	const { organizationId, config } = await resolveSource(
 		input.source,
-		input.repo,
+		repo,
 		input.sha,
 	);
 	// The principal is whatever `source` resolved to. When the caller chose
@@ -568,12 +542,11 @@ export async function scheduleBuilds(
 	// Only for forge-triggered builds: a GitHub delivery IS the canonical side,
 	// so there is nothing to compare it against.
 	if (input.source.forge === "hanzo-git") {
-		const cfg = hanzoGitConfig();
 		const why = await assertBuildableFromCanonicalSource({
-			forgeRepo: input.source.sourceRepo,
+			forgeRepo: repo,
 			sha: input.sha,
 			declared: config.source,
-			facts: await readForgeRepoFacts(cfg, input.source.sourceRepo),
+			facts: await readForgeRepoFacts(forgeReader(), repo),
 			probe: githubReachability,
 		});
 		console.info(`[build] source check passed: ${why}`);
@@ -607,11 +580,7 @@ export async function scheduleBuilds(
 			if (!isBuildableArch(entry.arch)) continue;
 			const arch = `${entry.os}/${entry.arch}`;
 			const target = build.name ? `${build.name}:${arch}` : arch;
-			const existing = await findBuildJobByTarget(
-				input.repo,
-				input.sha,
-				target,
-			);
+			const existing = await findBuildJobByTarget(repo, input.sha, target);
 			if (existing) {
 				jobs.push(existing);
 				continue;
@@ -626,12 +595,12 @@ export async function scheduleBuilds(
 			// versioned image appears when the tag itself is pushed.
 			if (tag === null) continue;
 			const job = await createBuildJob({
-				repo: input.repo,
+				repo,
 				sha: input.sha,
 				ref: input.ref,
 				branch: input.branch,
 				target,
-				runnerPool: runnerPoolFor(orgLabel(input.repo), entry),
+				runnerPool: runnerPoolFor(ownerOf(repo), entry),
 				image: `${build.image}:${tag}`,
 				organizationId,
 				status: "queued",
@@ -659,17 +628,21 @@ export async function scheduleBuilds(
 }
 
 /**
- * arcd pool labels are keyed by GitHub org (`hanzoai`, `luxfi`, ...), which
- * is the first path segment of `owner/repo`. The runner-pool label uses the
- * org login verbatim.
+ * The repository a build reads, named once for the whole call.
+ *
+ * A build reads its config from a repository path and clones its code from a
+ * repository path, and those are this one — so it is settled here, before a row
+ * exists, rather than derived twice from a caller's spelling. `repoProblem` is
+ * the same rule the direct front door answers 400 with; `repoName` is the name
+ * the forge resolves, so one repository is one key on both front doors.
  */
-function orgLabel(repo: string): string {
-	const [owner] = repo.split("/");
-	if (!owner) {
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message: `Cannot derive runner pool org from repo "${repo}"`,
-		});
-	}
-	return owner;
+function repoOf(repo: string): string {
+	const problem = repoProblem(repo);
+	if (problem) throw new TRPCError({ code: "BAD_REQUEST", message: problem });
+	return repoName(repo);
+}
+
+/** Owner segment of a repository path — what names the runner pool. */
+function ownerOf(repo: string): string {
+	return repo.slice(0, repo.indexOf("/"));
 }

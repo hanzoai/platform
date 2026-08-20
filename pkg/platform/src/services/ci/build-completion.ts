@@ -29,7 +29,7 @@ import {
 	markBuildSucceeded,
 	updateBuildJob,
 } from "./build-job";
-import { fetchPlatformConfigByToken } from "./build-scheduler";
+import { fetchBuiltConfig } from "./build-scheduler";
 import { readJobStatus } from "./buildkit-job";
 import { runE2e } from "./e2e-runner";
 import type { PublishConfig } from "./platform-config";
@@ -99,7 +99,7 @@ export async function completeBuild(
  * committed to universe.
  */
 async function initPostBuild(job: BuildJob): Promise<Promotion> {
-	const config = await fetchPlatformConfigByToken(job.repo, job.branch);
+	const config = await fetchBuiltConfig(job.repo, job.sha);
 
 	const promotion = await promoteBuild(job, config?.deploy);
 	const deployed = promotion.promoted;

@@ -32,17 +32,11 @@ export interface DecodedWebhook {
 	event: WebhookEvent;
 	/** Which forge delivered this. */
 	forge: GitForge;
-	/** Canonical `owner/repo` — the org mapped through {@link canonicalOrg}. */
-	repo: string;
-	/** Canonical org: first segment of {@link repo}. Keys the arcd runner pool. */
-	org: string;
 	/**
-	 * `owner/repo` exactly as the delivering forge names it. Differs from
-	 * {@link repo} when the forge org is spelled differently (git.hanzo.ai's
-	 * `hanzo` vs GitHub's `hanzoai`). Used ONLY to address the source forge
-	 * back — never to key a buildJob row.
+	 * `owner/repo` as the delivering forge names it — the repository the build
+	 * reads its config from and clones its code from, which are one repository.
 	 */
-	sourceRepo: string;
+	repo: string;
 	/** Full commit SHA the event points at. */
 	sha: string;
 	/** Git ref, e.g. `refs/heads/main`. */
@@ -65,38 +59,6 @@ export class WebhookError extends Error {
 		super(message);
 		this.name = "WebhookError";
 	}
-}
-
-/**
- * Forge org name -> canonical org name.
- *
- * The ONE place this mapping exists. git.hanzo.ai names the Hanzo org `hanzo`;
- * everything downstream — arcd runner-pool labels (`hanzoai-linux-amd64`),
- * buildJob rows, `ghcr.io/hanzoai/*` image refs — is keyed by the canonical
- * `hanzoai`. `luxfi` and `zooai` are spelled identically on both sides and so
- * are absent: an unmapped org passes through verbatim. NEVER add per-repo
- * entries here; if a repo needs special-casing, the mapping is wrong.
- */
-const FORGE_ORG_ALIASES: Readonly<Record<string, string>> = {
-	hanzo: "hanzoai",
-};
-
-/** Map a forge-native org name to its canonical name. */
-export function canonicalOrg(org: string): string {
-	return FORGE_ORG_ALIASES[org] ?? org;
-}
-
-/** Owner segment of an `owner/repo`; the whole string when there is no slash. */
-function orgOf(fullName: string): string {
-	const slash = fullName.indexOf("/");
-	return slash > 0 ? fullName.slice(0, slash) : fullName;
-}
-
-/** Map a forge-native `owner/repo` to its canonical `owner/repo`. */
-export function canonicalRepo(sourceRepo: string): string {
-	const slash = sourceRepo.indexOf("/");
-	if (slash <= 0) return sourceRepo;
-	return `${canonicalOrg(sourceRepo.slice(0, slash))}${sourceRepo.slice(slash)}`;
 }
 
 /**
@@ -251,10 +213,9 @@ export function decodeWebhook(
 		throw new WebhookError(`missing ${eventHeaderName(forge)} header`, 400);
 	}
 	if (eventHeader === "ping") {
-		const sourceRepo = repoFullName(body);
 		return {
 			event: "ping",
-			...identityOf(sourceRepo, forge, body, {}),
+			...identityOf(repoFullName(body), forge, body, {}),
 			sha: "",
 			ref: "",
 			branch: "",
@@ -320,19 +281,14 @@ export function decodeWebhook(
 
 /** Provenance fields shared by every event shape — derived once. */
 function identityOf(
-	sourceRepo: string,
+	repo: string,
 	forge: GitForge,
 	body: unknown,
 	p: Record<string, unknown>,
-): Pick<
-	DecodedWebhook,
-	"forge" | "repo" | "org" | "sourceRepo" | "defaultBranch" | "pusher"
-> {
+): Pick<DecodedWebhook, "forge" | "repo" | "defaultBranch" | "pusher"> {
 	return {
 		forge,
-		repo: canonicalRepo(sourceRepo),
-		org: canonicalOrg(orgOf(sourceRepo)),
-		sourceRepo,
+		repo,
 		defaultBranch: repoDefaultBranch(body),
 		pusher: pusherLogin(p),
 	};

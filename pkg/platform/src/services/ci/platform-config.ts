@@ -732,7 +732,25 @@ export function parsePlatformConfig(yamlText: string): PlatformConfig | null {
 }
 
 /**
- * GitHub org login → ARC pool brand prefix. ARC scale sets are named by
+ * Forge owner → org login.
+ *
+ * The forge names the Hanzo org `hanzo` and GitHub names it `hanzoai`. `luxfi`
+ * and `zooai` are spelled identically on both sides and so are absent: an
+ * unmapped owner passes through verbatim.
+ *
+ * This spells an ORG, and it is used to name the runner pool below and nothing
+ * else. It never spells a REPOSITORY: `hanzo/kms` and `hanzoai/kms` are two
+ * repositories on the forge, with their own contents and their own writers, so
+ * carrying this mapping across a `owner/name` would name a repository nobody
+ * asked to build. NEVER add per-repo entries here; if a repo needs
+ * special-casing, the mapping is wrong.
+ */
+const OWNER_TO_ORG: Readonly<Record<string, string>> = {
+	hanzo: "hanzoai",
+};
+
+/**
+ * Org login → ARC pool brand prefix. ARC scale sets are named by
  * BRAND (`hanzo`, `lux`, `zoo`), not by the org's GitHub login (`hanzoai`,
  * `luxfi`, `zooai`). An org absent from this table is its own brand
  * (`hanzobot` → `hanzobot`), which is the forward-safe default for any new
@@ -754,17 +772,22 @@ const ORG_TO_BRAND: Readonly<Record<string, string>> = {
 export type RunnerRole = "build" | "deploy";
 
 /**
- * arcd pool label for an org + matrix entry, e.g.
+ * arcd pool label for a repository's owner + matrix entry, e.g.
  * `runnerPoolFor("hanzoai", { os: "linux", arch: "amd64" })` →
  * `hanzo-build-linux-amd64`. This MUST match the live ARC scale-set name in
  * `arc-system` exactly, or the dispatched job's `runs-on` matches no runner
  * and hangs. Scale sets follow `<brand>-<role>-<os>-<arch>`.
+ *
+ * `owner` is the owner segment of the repository being built, as its forge
+ * names it, so both spellings of one org land on one pool. This is the only
+ * place either spelling matters, and the pool label is the only thing it names.
  */
 export function runnerPoolFor(
-	org: string,
+	owner: string,
 	entry: MatrixEntry,
 	role: RunnerRole = "build",
 ): string {
+	const org = OWNER_TO_ORG[owner] ?? owner;
 	const brand = ORG_TO_BRAND[org] ?? org;
 	const osLabel = entry.os === "darwin" ? "macos" : entry.os;
 	return `${brand}-${role}-${osLabel}-${entry.arch}`;
