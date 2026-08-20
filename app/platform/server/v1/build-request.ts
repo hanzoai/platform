@@ -1,6 +1,7 @@
 import { buildArgsProblem } from "@hanzo/platform/services/ci";
+import { repoProblem } from "@hanzo/platform/services/hanzo-git";
 
-export { buildArgsProblem };
+export { buildArgsProblem, repoProblem };
 
 /**
  * Build-enqueue request rules — the pure half of POST /v1/runner.
