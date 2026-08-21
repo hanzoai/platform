@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	type HanzoDnsConfig,
 	HanzoDnsProvider,
 } from "@hanzo/platform/services/hanzo-dns-provider";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Test seam: inject config so the provider does not read env (vitest `define`
 // hard-replaces process.env, and the real key is never present in CI).
@@ -78,7 +78,16 @@ describe("HanzoDnsProvider — hits the deployed /v1/dns contract", () => {
 
 	it("createZone POSTs {zone} (not {name})", async () => {
 		fetchMock.mockResolvedValueOnce(
-			stubResponse(201, { id: "u", zone: "new.com.", status: "active", nameservers: [], record_count: 0, dnssec_enabled: false, created_at: "", updated_at: "" }),
+			stubResponse(201, {
+				id: "u",
+				zone: "new.com.",
+				status: "active",
+				nameservers: [],
+				record_count: 0,
+				dnssec_enabled: false,
+				created_at: "",
+				updated_at: "",
+			}),
 		);
 
 		const zone = await provider.createZone("new.com");
@@ -94,7 +103,17 @@ describe("HanzoDnsProvider — hits the deployed /v1/dns contract", () => {
 		fetchMock.mockResolvedValueOnce(
 			stubResponse(200, {
 				records: [
-					{ id: "r1", name: "www", type: "A", content: "1.2.3.4", ttl: 300, proxied: true, priority: 0, created_at: "", updated_at: "" },
+					{
+						id: "r1",
+						name: "www",
+						type: "A",
+						content: "1.2.3.4",
+						ttl: 300,
+						proxied: true,
+						priority: 0,
+						created_at: "",
+						updated_at: "",
+					},
 				],
 				total: 1,
 			}),
@@ -115,7 +134,17 @@ describe("HanzoDnsProvider — hits the deployed /v1/dns contract", () => {
 
 	it("createRecord POSTs the record body to the zone's records path", async () => {
 		fetchMock.mockResolvedValueOnce(
-			stubResponse(201, { id: "r2", name: "mail", type: "MX", content: "mx.example.com", ttl: 300, priority: 10, proxied: false, created_at: "", updated_at: "" }),
+			stubResponse(201, {
+				id: "r2",
+				name: "mail",
+				type: "MX",
+				content: "mx.example.com",
+				ttl: 300,
+				priority: 10,
+				proxied: false,
+				created_at: "",
+				updated_at: "",
+			}),
 		);
 
 		await provider.createRecord("example.com.", {
@@ -140,21 +169,41 @@ describe("HanzoDnsProvider — hits the deployed /v1/dns contract", () => {
 
 	it("updateRecord PATCHes /v1/dns/zones/{name}/records/{id}", async () => {
 		fetchMock.mockResolvedValueOnce(
-			stubResponse(200, { id: "r1", name: "www", type: "A", content: "9.9.9.9", ttl: 60, proxied: false, priority: 0, created_at: "", updated_at: "" }),
+			stubResponse(200, {
+				id: "r1",
+				name: "www",
+				type: "A",
+				content: "9.9.9.9",
+				ttl: 60,
+				proxied: false,
+				priority: 0,
+				created_at: "",
+				updated_at: "",
+			}),
 		);
 
-		await provider.updateRecord("example.com.", "r1", { content: "9.9.9.9", ttl: 60 });
+		await provider.updateRecord("example.com.", "r1", {
+			content: "9.9.9.9",
+			ttl: 60,
+		});
 
 		const [url, init] = call();
 		expect(url).toBe("https://dns.test/v1/dns/zones/example.com./records/r1");
 		expect(init.method).toBe("PATCH"); // partial update, not PUT
-		expect(JSON.parse(init.body as string)).toMatchObject({ content: "9.9.9.9", ttl: 60 });
+		expect(JSON.parse(init.body as string)).toMatchObject({
+			content: "9.9.9.9",
+			ttl: 60,
+		});
 	});
 
 	it("deleteRecord / deleteZone DELETE and resolve void", async () => {
 		fetchMock.mockResolvedValueOnce(stubResponse(200, {}));
-		await expect(provider.deleteRecord("example.com.", "r1")).resolves.toBeUndefined();
-		expect(call()[0]).toBe("https://dns.test/v1/dns/zones/example.com./records/r1");
+		await expect(
+			provider.deleteRecord("example.com.", "r1"),
+		).resolves.toBeUndefined();
+		expect(call()[0]).toBe(
+			"https://dns.test/v1/dns/zones/example.com./records/r1",
+		);
 		expect(call()[1].method).toBe("DELETE");
 
 		fetchMock.mockResolvedValueOnce(stubResponse(204, undefined));
@@ -165,6 +214,8 @@ describe("HanzoDnsProvider — hits the deployed /v1/dns contract", () => {
 		fetchMock.mockResolvedValueOnce(
 			stubResponse(404, { code: "not_found", message: "zone not found" }),
 		);
-		await expect(provider.getZone("nope.com.")).rejects.toThrow(/zone not found/);
+		await expect(provider.getZone("nope.com.")).rejects.toThrow(
+			/zone not found/,
+		);
 	});
 });

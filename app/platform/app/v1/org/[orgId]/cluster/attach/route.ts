@@ -43,7 +43,8 @@ export async function POST(
 		const cluster = await attachExternalCluster(parsed.data);
 		return Response.json({ cluster }, { status: 201 });
 	} catch (err: unknown) {
-		const message = err instanceof Error ? err.message : "Attach cluster failed";
+		const message =
+			err instanceof Error ? err.message : "Attach cluster failed";
 		return Response.json({ message }, { status: 500 });
 	}
 }

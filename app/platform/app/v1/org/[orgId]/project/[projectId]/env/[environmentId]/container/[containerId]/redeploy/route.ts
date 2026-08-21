@@ -10,8 +10,8 @@
  */
 import { findApplicationById } from "@hanzo/platform/services/application";
 import {
-	PAAS_NAMESPACE,
 	appInScope,
+	PAAS_NAMESPACE,
 	requireServiceToken,
 	resolveDeploymentName,
 	restartWorkload,

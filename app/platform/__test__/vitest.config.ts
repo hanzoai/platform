@@ -32,10 +32,7 @@ export default defineConfig({
 	],
 	resolve: {
 		alias: {
-			"@hanzo/platform": path.resolve(
-				__dirname,
-				"../../../pkg/platform/src",
-			),
+			"@hanzo/platform": path.resolve(__dirname, "../../../pkg/platform/src"),
 		},
 	},
 });

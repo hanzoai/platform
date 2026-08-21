@@ -15,10 +15,11 @@
  * from the custom server (`server/server.ts`) in-cluster; gate with
  * `BUILD_WATCHER_DISABLED=true`.
  */
-import { type BuildJob, listBuildJobs } from "./build-job";
-import { completeBuild, reconcilePostBuild } from "./build-completion";
-import { buildNamespace, readBuildOutcome } from "./buildkit-job";
+
 import { releaseHandle } from "../../lib/timer";
+import { completeBuild, reconcilePostBuild } from "./build-completion";
+import { type BuildJob, listBuildJobs } from "./build-job";
+import { buildNamespace, readBuildOutcome } from "./buildkit-job";
 
 /** How often to poll in-flight build / e2e / publish Jobs (ms, default 15s). */
 const INTERVAL_MS = Number.parseInt(

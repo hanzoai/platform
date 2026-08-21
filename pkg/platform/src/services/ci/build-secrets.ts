@@ -20,10 +20,9 @@
  * other's. Same broker, same scoping the ci-reusable's KMS step relies on.
  */
 
-const KMS_ENDPOINT = (process.env.KMS_ENDPOINT ?? "https://api.hanzo.ai").replace(
-	/\/+$/,
-	"",
-);
+const KMS_ENDPOINT = (
+	process.env.KMS_ENDPOINT ?? "https://api.hanzo.ai"
+).replace(/\/+$/, "");
 
 async function kmsLogin(): Promise<string> {
 	// KMS_CLIENT_* is the machine-identity credential (the same names the

@@ -1,6 +1,6 @@
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "@/server/api/root";
 import { createFetchContext } from "@/server/api/trpc";
-import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 
 // tRPC batch endpoint, served NATIVELY at /v1/trpc/* by the App Router (no
 // /api/v1 rewrite). `fetchRequestHandler` is the App Router adapter; the

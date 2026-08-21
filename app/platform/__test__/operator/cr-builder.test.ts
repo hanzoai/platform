@@ -2,7 +2,6 @@
  * CR builder tests pin the wire shape of the operator-bound CRs.
  * Field changes here are breaking changes to the operator contract.
  */
-import { describe, expect, it } from "vitest";
 
 import {
 	buildMongoCR,
@@ -12,6 +11,7 @@ import {
 	OPERATOR_GROUP,
 	OPERATOR_VERSION,
 } from "@hanzo/platform/services/k8s/operator/cr-builder";
+import { describe, expect, it } from "vitest";
 
 const META = {
 	organizationId: "org-acme",
@@ -117,7 +117,9 @@ describe("buildMongoCR", () => {
 	});
 
 	it("wires MONGO_INITDB_ROOT_PASSWORD to the credentials secret", () => {
-		const pwd = cr.spec.env?.find((e) => e.name === "MONGO_INITDB_ROOT_PASSWORD");
+		const pwd = cr.spec.env?.find(
+			(e) => e.name === "MONGO_INITDB_ROOT_PASSWORD",
+		);
 		expect(pwd?.valueFrom?.secretKeyRef?.key).toBe("password");
 	});
 });

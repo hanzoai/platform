@@ -107,9 +107,16 @@ export function buildE2eJobObject(input: E2eRunInput, jobName: string) {
 				},
 				spec: {
 					restartPolicy: "Never",
-					nodeSelector: { "doks.digitalocean.com/node-pool": "runner-pool-32g" },
+					nodeSelector: {
+						"doks.digitalocean.com/node-pool": "runner-pool-32g",
+					},
 					tolerations: [
-						{ effect: "NoSchedule", key: "dedicated", operator: "Equal", value: "ci-runner" },
+						{
+							effect: "NoSchedule",
+							key: "dedicated",
+							operator: "Equal",
+							value: "ci-runner",
+						},
 					],
 					containers: [
 						{

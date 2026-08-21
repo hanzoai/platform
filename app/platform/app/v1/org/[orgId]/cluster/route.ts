@@ -35,7 +35,8 @@ export async function GET(
 			{ headers: { "Cache-Control": "no-cache" } },
 		);
 	} catch (err: unknown) {
-		const message = err instanceof Error ? err.message : "Cluster request failed";
+		const message =
+			err instanceof Error ? err.message : "Cluster request failed";
 		return Response.json({ message }, { status: 500 });
 	}
 }
@@ -65,7 +66,8 @@ export async function POST(
 		const cluster = await provisionDedicatedCluster(parsed.data);
 		return Response.json({ cluster }, { status: 201 });
 	} catch (err: unknown) {
-		const message = err instanceof Error ? err.message : "Cluster request failed";
+		const message =
+			err instanceof Error ? err.message : "Cluster request failed";
 		return Response.json({ message }, { status: 500 });
 	}
 }
