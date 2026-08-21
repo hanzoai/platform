@@ -16,7 +16,8 @@ const CLOUD_FORGE = "e2b1e955a3604b5a7b6dcf100c4ee22f34eea6e4";
 
 const reachable: ReachabilityProbe = async () => ({ kind: "reachable" });
 const noSuchRepo: ReachabilityProbe = async () => ({ kind: "no-such-repo" });
-const unreachable = (head: string, relation = "unrelated histories"): ReachabilityProbe =>
+const unreachable =
+	(head: string, relation = "unrelated histories"): ReachabilityProbe =>
 	async () => ({ kind: "unreachable", head, relation });
 
 /** Fails the test if the probe is consulted at all. */
@@ -58,7 +59,9 @@ describe("parseSourceDeclaration", () => {
 describe("githubRepoFromOriginalUrl", () => {
 	it("extracts owner/name and strips embedded credentials", () => {
 		expect(
-			githubRepoFromOriginalUrl("https://x-access-token:ghs_abc@github.com/hanzoai/cloud.git"),
+			githubRepoFromOriginalUrl(
+				"https://x-access-token:ghs_abc@github.com/hanzoai/cloud.git",
+			),
 		).toBe("hanzoai/cloud");
 	});
 	it("ignores non-GitHub upstreams", () => {
@@ -71,7 +74,7 @@ describe("resolveCanonical", () => {
 	it("prefers the declaration over the forge's mirror row", () => {
 		// The database is the thing that drifted; the repo's own declaration wins.
 		expect(
-			resolveCanonical("hanzoai/cloud", "forge", {
+			resolveCanonical("forge", {
 				mirror: true,
 				originalUrl: "https://github.com/hanzoai/cloud.git",
 			}),
@@ -79,7 +82,7 @@ describe("resolveCanonical", () => {
 	});
 	it("infers GitHub from a live mirror row", () => {
 		expect(
-			resolveCanonical("hanzo-docs/docs", undefined, {
+			resolveCanonical(undefined, {
 				mirror: true,
 				originalUrl: "https://github.com/hanzo-docs/docs.git",
 			}),
@@ -89,7 +92,7 @@ describe("resolveCanonical", () => {
 		// "Convert to regular repo" clears `mirror` and leaves original_url. That
 		// residue is the last evidence the repo was ever downstream of anything.
 		expect(
-			resolveCanonical("hanzoai/ci", undefined, {
+			resolveCanonical(undefined, {
 				mirror: false,
 				originalUrl: "https://github.com/hanzoai/ci.git",
 			}),
@@ -100,7 +103,7 @@ describe("resolveCanonical", () => {
 		// that it is upstream; making each repo repeat it in YAML would break 57
 		// builds to learn nothing.
 		expect(
-			resolveCanonical("hanzoai/cloud", undefined, {
+			resolveCanonical(undefined, {
 				mirror: false,
 				pushMirror: true,
 				originalUrl: "https://github.com/hanzoai/cloud.git",
@@ -111,7 +114,7 @@ describe("resolveCanonical", () => {
 		// 8 repos are configured both ways. Whichever mirror ran last wins, which
 		// is not a direction — it is a coin flip that has to be settled by a person.
 		expect(
-			resolveCanonical("hanzoai/paas", undefined, {
+			resolveCanonical(undefined, {
 				mirror: true,
 				pushMirror: true,
 				originalUrl: "https://github.com/hanzoai/paas.git",
@@ -121,8 +124,8 @@ describe("resolveCanonical", () => {
 	it("returns null when the forge records nothing — never 'forge-native'", () => {
 		// The bug being fixed: an unlinked repo and a forge-only repo are the
 		// same row. Concluding "forge-native" here is what let docs rot.
-		expect(resolveCanonical("hanzo-docs/docs", undefined, { mirror: false })).toBeNull();
-		expect(resolveCanonical("hanzo-docs/docs", undefined, null)).toBeNull();
+		expect(resolveCanonical(undefined, { mirror: false })).toBeNull();
+		expect(resolveCanonical(undefined, null)).toBeNull();
 	});
 });
 
@@ -133,7 +136,10 @@ describe("the gate", () => {
 			forgeRepo: "hanzo-docs/docs",
 			sha: DOCS_FORGE,
 			declared: undefined,
-			facts: { mirror: false, originalUrl: "https://github.com/hanzo-docs/docs.git" },
+			facts: {
+				mirror: false,
+				originalUrl: "https://github.com/hanzo-docs/docs.git",
+			},
 			probe: unreachable(DOCS_GITHUB),
 		}).then(
 			() => null,
@@ -156,7 +162,10 @@ describe("the gate", () => {
 			forgeRepo: "hanzo-docs/docs",
 			sha: DOCS_GITHUB,
 			declared: undefined,
-			facts: { mirror: true, originalUrl: "https://github.com/hanzo-docs/docs.git" },
+			facts: {
+				mirror: true,
+				originalUrl: "https://github.com/hanzo-docs/docs.git",
+			},
 			probe: reachable,
 		});
 		expect(why).toContain("is on github.com/hanzo-docs/docs");
@@ -169,7 +178,11 @@ describe("the gate", () => {
 		// It stays green BOTH ways: declared, and inferred from its push mirror.
 		for (const facts of [
 			{ mirror: false, originalUrl: "https://github.com/hanzoai/cloud.git" },
-			{ mirror: false, pushMirror: true, originalUrl: "https://github.com/hanzoai/cloud.git" },
+			{
+				mirror: false,
+				pushMirror: true,
+				originalUrl: "https://github.com/hanzoai/cloud.git",
+			},
 		]) {
 			const why = await assertBuildableFromCanonicalSource({
 				forgeRepo: "hanzoai/cloud",
@@ -187,9 +200,16 @@ describe("the gate", () => {
 			forgeRepo: "hanzoai/paas",
 			sha: CLOUD_FORGE,
 			declared: undefined,
-			facts: { mirror: true, pushMirror: true, originalUrl: "https://github.com/hanzoai/paas.git" },
+			facts: {
+				mirror: true,
+				pushMirror: true,
+				originalUrl: "https://github.com/hanzoai/paas.git",
+			},
 			probe: neverProbed,
-		}).then(() => null, (e) => e as ForgeSourceRefusal);
+		}).then(
+			() => null,
+			(e) => e as ForgeSourceRefusal,
+		);
 		expect(err).toBeInstanceOf(ForgeSourceRefusal);
 		expect(err?.message).toContain("hanzoai/paas");
 		expect(err?.message).toContain("neither side is canonical");
