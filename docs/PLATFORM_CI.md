@@ -205,7 +205,7 @@ tRPC `buildJob` router (org-scoped): `list`, `one`, `logs`, `trigger`.
 | `console-git-token` | k8s secret (key `token`) | BuildKit + publish Job git clone |
 | `kaniko-ghcr` | k8s secret (key `config.json`) | BuildKit GHCR push credential (secret name is legacy) |
 | `npm-token` / `pypi-token` | KMS-synced k8s secret (key `token`) | Publish Job registry auth — KMS-only, never hardcoded (optional refs; dry-run works without them) |
-| `PLATFORM_BUILD_CALLBACK_TOKEN` | platform env | Bearer for the direct/e2e/callback REST surfaces |
+| `PLATFORM_BUILD_CALLBACK_TOKEN` | platform env | Bearer for the e2e/callback REST surfaces |
 | `BUILD_WATCHER_INTERVAL_MS` | platform env | Watcher poll interval (default 15000) |
 | `BUILD_WATCHER_DISABLED` | platform env | `true` disables the watcher (dev boxes without cluster RBAC) |
 
