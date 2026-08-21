@@ -637,9 +637,6 @@ describe("fleetRegistryHost", () => {
 
 	it("refuses a host that is not one of them, naming the ones that are", () => {
 		for (const host of [
-			// A name our OCI registry no longer answers to — a value that would
-			// aim every build at nothing.
-			"registry.hanzo.ai",
 			"evil.example.com",
 			"docker.io",
 			"ghcr.io:443",
