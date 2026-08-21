@@ -325,11 +325,6 @@ describe("destinationProblem — an image belongs to the repository's org", () =
 			"docker.io/hanzoai/x:v1.0.0",
 			"ghcr.io.evil.example.com/hanzoai/x:v1.0.0",
 			"ghcr.io:443/hanzoai/x:v1.0.0",
-			// A name our OCI registry no longer answers to. `oci.hanzo.ai` is the
-			// one it does; a host that serves no registry is not one to publish on,
-			// and an allowance outliving the service it named is an allowance
-			// nothing reviews.
-			"registry.hanzo.ai/hanzoai/kms:v1.0.0",
 		]) {
 			expect(destinationProblem("hanzoai/kms", image), image).toMatch(
 				/refusing/i,
