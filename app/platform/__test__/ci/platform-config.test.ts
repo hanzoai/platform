@@ -475,6 +475,44 @@ build:
 		).toThrow(/not a tag token/i);
 	});
 
+	it("refuses a pattern that spells no token at all", () => {
+		// A pattern is a template. One with no variable is a constant, and a
+		// constant is the same image name on every push — `v1.2.3` published from
+		// `main` and from a side branch is one tag over two commits. Version-shaped
+		// names pass every rule downstream, because downstream reads the RESOLVED
+		// name and a version is exactly what it wants to see.
+		for (const pattern of ["v1.2.3", "latest", "1.2.3-latest"]) {
+			expect(
+				() =>
+					parsePlatformConfig(`
+images:
+  - { name: api, context: ., repo: ghcr.io/hanzoai/api, tag-pattern: "${pattern}" }
+`),
+				pattern,
+			).toThrow(/names the same image on every push/i);
+		}
+	});
+
+	it("keeps every pattern that spells one, decoration and all", () => {
+		// The rule is about the token, not about the shape of what surrounds it:
+		// a prerelease suffix is a legitimate part of a version a tag push spells.
+		for (const pattern of [
+			"{{git.tag}}",
+			"{{git.sha}}",
+			"sha-{{git.sha}}",
+			"{{git.sha}}-amd64-api",
+			"v{{git.tag}}-rc.1",
+		]) {
+			expect(
+				parsePlatformConfig(`
+images:
+  - { name: api, context: ., repo: ghcr.io/hanzoai/api, tag-pattern: "${pattern}" }
+`)?.builds[0]?.tagPattern,
+				pattern,
+			).toBe(pattern);
+		}
+	});
+
 	it("refuses any token it cannot answer for", () => {
 		// A pattern is a template, so an unknown token survives substitution and
 		// becomes part of an image name. Refusing names the tokens that exist,

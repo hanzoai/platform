@@ -614,6 +614,10 @@ export async function scheduleBuilds(
 	// carried, and every decision downstream reads the ref.
 	const repo = repoOf(input.repo);
 	const ref = refOf(input.ref);
+	// May this delivery be about this repository at all? Asked first, and asked
+	// of the forge that signed it, so nothing else here — not the org lookup, not
+	// the commit — is asked on behalf of a credential that holds nothing.
+	await assertVouched(input.source, repo);
 	// The org that owns the result is the org that owns the repository — the same
 	// answer on every lane and at every door, because it is what the row records,
 	// what gates reading this build's logs, and what `promoteBuild` asks
@@ -865,6 +869,58 @@ async function assertCanonical(
 		probe: githubReachability,
 	});
 	console.info(`[build] source check passed: ${why}`);
+}
+
+/**
+ * The credential that signed a delivery holds the repository it names.
+ *
+ * A source is a credential, and a credential covers a set of repositories. Our
+ * own forge is one deployment-level secret over one forge we run, so a delivery
+ * it signed is about a repository it serves and there is nothing to look up. A
+ * GitHub App INSTALLATION is a tenant's credential covering exactly the
+ * repositories it was installed on — while the repository is written in the
+ * body that tenant's own webhook secret signs. That signature proves who sent
+ * the delivery and says nothing about whose repository they named.
+ *
+ * Asked of GitHub at the endpoint that answers for one repository:
+ * `/repos/{owner}/{repo}/installation` names the installation covering it, and
+ * this delivery is about that repository only when that is the installation
+ * that sent it.
+ *
+ * What the installation TOKEN can READ is a different question. An installation
+ * token reads any PUBLIC repository, so a config read succeeds for every
+ * first-party repository that is public on github.com whether the installation
+ * holds it or not — the read is not the entitlement and never was.
+ *
+ * Nothing is built until GitHub has answered. A 404 IS the answer — no
+ * installation of this App holds that repository — and anything else is this
+ * side failing to ask, which is a different sentence and belongs to whoever has
+ * to fix it. So it travels as itself rather than as a refusal that would send
+ * an operator looking at a permission when the credential is what is wrong.
+ */
+async function assertVouched(
+	source: ConfigSource,
+	repo: string,
+): Promise<void> {
+	if (source.forge === "hanzo-git") return;
+	const [owner = "", name = ""] = repo.split("/");
+	const { provider } = await resolveProvider(source.installationId);
+	let holder: string | null = null;
+	try {
+		const held = await authGithub(provider).rest.apps.getRepoInstallation({
+			owner,
+			repo: name,
+		});
+		holder = String(held.data.id);
+	} catch (err) {
+		if ((err as { status?: number }).status !== 404) throw err;
+	}
+	if (holder !== source.installationId) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: `Refusing to build ${repo}: installation ${source.installationId} is not installed on it.`,
+		});
+	}
 }
 
 /**

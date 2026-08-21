@@ -184,14 +184,77 @@ export function commitName(sha: string): string {
 const BRANCH = "refs/heads/";
 const TAG = "refs/tags/";
 
+/** What a ref names: the kind of thing git moves, and the name it moves. */
+interface Named {
+	/** The forge path that answers for this kind: `branches` or `tags`. */
+	kind: "branches" | "tags";
+	name: string;
+}
+
+/** Read a ref as the two parts it is made of, or null when it is neither. */
+function readRef(ref: string): Named | null {
+	const branch = branchOf(ref);
+	if (branch) return { kind: "branches", name: branch };
+	const tag = tagOf(ref);
+	if (tag) return { kind: "tags", name: tag };
+	return null;
+}
+
+/**
+ * The characters and sequences git refuses inside a ref name.
+ *
+ * A control character or a space, the five its own pattern syntax already
+ * spells something with (`~^:?*[`), a backslash, `..`, `@{`, and a trailing
+ * dot.
+ */
+const REFUSED = /[\p{Cc} ~^:?*[\\]|\.\.|@\{|\.$/u;
+
+/**
+ * Longest name the forge stores. A loose ref is a file whose path is the name,
+ * and a path component tops out here; nothing a person pushes comes near it.
+ */
+const NAME_MAX = 255;
+
+/**
+ * What is wrong with the name part of a ref, or null when git would make it.
+ *
+ * `git check-ref-format` is the rule git applies when a ref is CREATED, so a
+ * name failing it is a name no push produced. It is also what keeps a ref
+ * addressable. The name becomes a path segment on the forge, and `..` is the
+ * one sequence a URL path resolves away: percent-encoding a segment does not
+ * touch a dot, so a name carrying `..` re-addresses the request to a repository
+ * the caller never named. Reading git's rule here makes the name we may ask
+ * about and the name the forge can hold one thing.
+ */
+function nameProblem(name: string): string | null {
+	if (name.length > NAME_MAX) return `it is longer than ${NAME_MAX} characters`;
+	if (name === "@") return "git keeps `@` for itself";
+	const refused = REFUSED.exec(name);
+	if (refused) {
+		return `git allows no ${JSON.stringify(refused[0])} in a ref name`;
+	}
+	for (const part of name.split("/")) {
+		if (!part) return "it has an empty path component";
+		if (part.startsWith(".")) return `"${part}" begins with a dot`;
+		if (part.endsWith(".lock")) return `"${part}" ends with .lock`;
+	}
+	return null;
+}
+
 /**
  * Returns what is wrong with `ref`, or null when it names a branch or a tag.
  * Same shape as {@link repoProblem} and {@link commitProblem}, so a front door
  * answers 400 with the message and the build path refuses on the same call.
  */
 export function refProblem(ref: string): string | null {
-	if (branchOf(ref) || tagOf(ref)) return null;
-	return `"${ref}" does not name a branch or a tag: expected ${BRANCH}<name> or ${TAG}<name>.`;
+	const read = readRef(ref);
+	if (!read) {
+		return `"${ref}" does not name a branch or a tag: expected ${BRANCH}<name> or ${TAG}<name>.`;
+	}
+	const problem = nameProblem(read.name);
+	return problem
+		? `"${ref}" does not name a branch or a tag: ${problem}.`
+		: null;
 }
 
 /** The branch a ref names, or null when it names a tag or nothing. */
@@ -202,6 +265,19 @@ export function branchOf(ref: string): string | null {
 /** The tag a ref names, or null when it names a branch or nothing. */
 export function tagOf(ref: string): string | null {
 	return ref.startsWith(TAG) ? ref.slice(TAG.length) || null : null;
+}
+
+/**
+ * A name as URL path segments: each part encoded, `/` kept as the separator.
+ *
+ * The encoding does a different job from {@link nameProblem} and both are
+ * needed. The name rule refuses what git refuses; git permits `#` and `%`, and
+ * both mean something to a URL — `foo#bar` would ask about `foo` and drop the
+ * rest as a fragment. So the rule decides the name and this decides how it
+ * travels.
+ */
+function segments(name: string): string {
+	return name.split("/").map(encodeURIComponent).join("/");
 }
 
 /**
@@ -221,24 +297,22 @@ export function tagOf(ref: string): string | null {
  * a neighbour's commit is the failure this whole binding exists to prevent.
  * The tag endpoint also dereferences: an annotated tag is an object of its own,
  * and its commit is what a build checks out.
+ *
+ * Both halves of the address are asked the rule that makes them a name — the
+ * same {@link repoProblem} and {@link refProblem} the front doors answer 400
+ * with. Asked HERE too, where the URL is built, so a repository and a ref that
+ * were never a name cannot reach the wire whatever called this.
  */
 export async function commitAt(
 	cfg: Pick<HanzoGitConfig, "url" | "token">,
 	repo: string,
 	ref: string,
 ): Promise<string | null> {
-	const [owner, name] = repo.split("/");
-	if (!owner || !name) return null;
-	const branch = branchOf(ref);
-	const tag = tagOf(ref);
-	const which = branch ? `branches/${branch}` : tag ? `tags/${tag}` : null;
-	if (!which) return null;
+	const read = readRef(ref);
+	if (!read || nameProblem(read.name) || repoProblem(repo)) return null;
 	const headers: Record<string, string> = { Accept: "application/json" };
 	if (cfg.token) headers.Authorization = `token ${cfg.token}`;
-	const url = `${cfg.url}/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/${which
-		.split("/")
-		.map(encodeURIComponent)
-		.join("/")}`;
+	const url = `${cfg.url}/v1/repos/${segments(repo)}/${read.kind}/${segments(read.name)}`;
 	const res = await fetch(url, { headers });
 	if (!res.ok) return null;
 	// One shape per endpoint: a branch carries `commit.id`, a tag `commit.sha`.

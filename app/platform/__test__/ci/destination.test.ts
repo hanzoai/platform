@@ -115,7 +115,11 @@ const REF = "refs/heads/main";
  * recorded". The config always declares `source: forge`, so the canonical-source
  * check is answered by the repo rather than by a GitHub probe.
  */
-function serveForge(image?: string, tagPattern = "v9.9.9", commit = SHA) {
+function serveForge(
+	image?: string,
+	tagPattern = "sha-{{git.sha}}",
+	commit = SHA,
+) {
 	const yaml = `
 source: forge
 build:
@@ -601,7 +605,7 @@ describe("the trigger front door", () => {
 	it("names one commit however the forge spelled it", async () => {
 		// An object id is hex, and hex is case-insensitive, so both spellings key
 		// one row rather than building the same commit twice.
-		serveForge("ghcr.io/hanzoai/kms", "v9.9.9", "A".repeat(40));
+		serveForge("ghcr.io/hanzoai/kms", "sha-{{git.sha}}", "A".repeat(40));
 		await scheduleBuilds(trigger);
 		expect(rows[0]?.sha).toBe("a".repeat(40));
 	});
@@ -610,7 +614,7 @@ describe("the trigger front door", () => {
 		// A ref that resolves to something that is not an object id is a forge
 		// answering with something other than a commit, and there is nothing here
 		// to check out.
-		serveForge("ghcr.io/hanzoai/kms", "v9.9.9", "abc1234?ref=main");
+		serveForge("ghcr.io/hanzoai/kms", "sha-{{git.sha}}", "abc1234?ref=main");
 		await expect(scheduleBuilds(trigger)).rejects.toThrow(/names no commit/i);
 		expect(rows).toHaveLength(0);
 	});
