@@ -24,7 +24,7 @@ describe("verifySignature", () => {
 	});
 	it("rejects a tampered body", () => {
 		const body = JSON.stringify({ a: 1 });
-		expect(verifySignature(body + "x", sign(body), SECRET)).toBe(false);
+		expect(verifySignature(`${body}x`, sign(body), SECRET)).toBe(false);
 	});
 	it("rejects a missing header", () => {
 		expect(verifySignature("x", undefined, SECRET)).toBe(false);

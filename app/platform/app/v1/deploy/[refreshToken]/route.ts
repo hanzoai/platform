@@ -7,8 +7,8 @@
  * `(headers, body)` contract, runs the source-type gating, and enqueues.
  */
 import { IS_CLOUD } from "@hanzo/platform/constants";
-import { shouldDeploy } from "@hanzo/platform/utils/watch-paths/should-deploy";
 import { db } from "@hanzo/platform/db";
+import { shouldDeploy } from "@hanzo/platform/utils/watch-paths/should-deploy";
 import { eq } from "drizzle-orm";
 import { applications } from "@/server/db/schema";
 import {
@@ -55,7 +55,10 @@ export async function POST(
 		});
 
 		if (!application) {
-			return Response.json({ message: "Application Not Found" }, { status: 404 });
+			return Response.json(
+				{ message: "Application Not Found" },
+				{ status: 404 },
+			);
 		}
 		if (!application?.autoDeploy) {
 			return Response.json(
@@ -125,7 +128,10 @@ export async function POST(
 			);
 
 			if (!shouldDeployPaths) {
-				return Response.json({ message: "Watch Paths Not Match" }, { status: 301 });
+				return Response.json(
+					{ message: "Watch Paths Not Match" },
+					{ status: 301 },
+				);
 			}
 
 			const branchName = extractBranchName(headers, body);
@@ -159,7 +165,10 @@ export async function POST(
 			);
 
 			if (!shouldDeployPaths) {
-				return Response.json({ message: "Watch Paths Not Match" }, { status: 301 });
+				return Response.json(
+					{ message: "Watch Paths Not Match" },
+					{ status: 301 },
+				);
 			}
 		} else if (sourceType === "gitlab") {
 			const branchName = extractBranchName(headers, body);
@@ -174,7 +183,10 @@ export async function POST(
 			);
 
 			if (!shouldDeployPaths) {
-				return Response.json({ message: "Watch Paths Not Match" }, { status: 301 });
+				return Response.json(
+					{ message: "Watch Paths Not Match" },
+					{ status: 301 },
+				);
 			}
 
 			if (!branchName || branchName !== application.gitlabBranch) {
@@ -201,7 +213,10 @@ export async function POST(
 			);
 
 			if (!shouldDeployPaths) {
-				return Response.json({ message: "Watch Paths Not Match" }, { status: 301 });
+				return Response.json(
+					{ message: "Watch Paths Not Match" },
+					{ status: 301 },
+				);
 			}
 		} else if (sourceType === "gitea") {
 			const branchName = extractBranchName(headers, body);
@@ -216,7 +231,10 @@ export async function POST(
 			);
 
 			if (!shouldDeployPaths) {
-				return Response.json({ message: "Watch Paths Not Match" }, { status: 301 });
+				return Response.json(
+					{ message: "Watch Paths Not Match" },
+					{ status: 301 },
+				);
 			}
 
 			if (!branchName || branchName !== application.giteaBranch) {

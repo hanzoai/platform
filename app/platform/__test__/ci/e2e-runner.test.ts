@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { e2eScript } from "@hanzo/platform/services/ci/e2e-runner";
+import { describe, expect, it } from "vitest";
 
 describe("e2eScript", () => {
 	it("clones the canonical universe from the forge", () => {

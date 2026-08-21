@@ -22,34 +22,34 @@ error: failed to solve: process "/bin/sh -c cd apps/web && pnpm exec vite build"
 `;
 
 describe("parseBuildFailure", () => {
-  it("prefers the real cause over the trailing solve error", () => {
-    const out = parseBuildFailure(REAL_UNRESOLVED_IMPORT);
-    expect(out).toContain("UNRESOLVED_IMPORT");
-    expect(out).toContain("./LxGeneric");
-    // `error: failed to solve:` is the least useful of the three and must not win.
-    expect(out).not.toMatch(/^error: failed to solve/);
-  });
+	it("prefers the real cause over the trailing solve error", () => {
+		const out = parseBuildFailure(REAL_UNRESOLVED_IMPORT);
+		expect(out).toContain("UNRESOLVED_IMPORT");
+		expect(out).toContain("./LxGeneric");
+		// `error: failed to solve:` is the least useful of the three and must not win.
+		expect(out).not.toMatch(/^error: failed to solve/);
+	});
 
-  it("strips the BuildKit step/timestamp prefix", () => {
-    expect(parseBuildFailure(REAL_UNRESOLVED_IMPORT)).not.toMatch(/^#\d+/);
-  });
+	it("strips the BuildKit step/timestamp prefix", () => {
+		expect(parseBuildFailure(REAL_UNRESOLVED_IMPORT)).not.toMatch(/^#\d+/);
+	});
 
-  it("falls back to ERROR: when there is no bracketed code", () => {
-    const log = `#12 0.5 building\n#12 ERROR: process "/bin/sh -c go build ./..." did not complete successfully: exit code: 2\n`;
-    expect(parseBuildFailure(log)).toContain("did not complete successfully");
-  });
+	it("falls back to ERROR: when there is no bracketed code", () => {
+		const log = `#12 0.5 building\n#12 ERROR: process "/bin/sh -c go build ./..." did not complete successfully: exit code: 2\n`;
+		expect(parseBuildFailure(log)).toContain("did not complete successfully");
+	});
 
-  it("falls back to the last error-ish line when nothing matches", () => {
-    const log = "step one ok\nsomething went wrong: permission denied\nbye\n";
-    expect(parseBuildFailure(log)).toContain("permission denied");
-  });
+	it("falls back to the last error-ish line when nothing matches", () => {
+		const log = "step one ok\nsomething went wrong: permission denied\nbye\n";
+		expect(parseBuildFailure(log)).toContain("permission denied");
+	});
 
-  it("returns undefined for a log with no error at all", () => {
-    expect(parseBuildFailure("#1 done\n#2 done\n")).toBeUndefined();
-  });
+	it("returns undefined for a log with no error at all", () => {
+		expect(parseBuildFailure("#1 done\n#2 done\n")).toBeUndefined();
+	});
 
-  it("bounds the returned detail so one failure cannot flood the column", () => {
-    const long = `#1 0.1 [FATAL_ERROR] Error: ${"x".repeat(5000)}`;
-    expect((parseBuildFailure(long) ?? "").length).toBeLessThanOrEqual(400);
-  });
+	it("bounds the returned detail so one failure cannot flood the column", () => {
+		const long = `#1 0.1 [FATAL_ERROR] Error: ${"x".repeat(5000)}`;
+		expect((parseBuildFailure(long) ?? "").length).toBeLessThanOrEqual(400);
+	});
 });

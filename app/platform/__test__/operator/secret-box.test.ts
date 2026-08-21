@@ -5,8 +5,9 @@
  * The key is sourced from BETTER_AUTH_SECRET / PAAS_SECRET_KEY; set it at runtime
  * (the same pattern the KMS gating test uses for PAAS_DO_API_TOKEN).
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
 import { openSecret, sealSecret } from "@hanzo/platform/services/secret-box";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const KUBECONFIG = "apiVersion: v1\nkind: Config\nclusters:\n- name: byo\n";
 

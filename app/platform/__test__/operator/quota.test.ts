@@ -3,19 +3,24 @@
  * Quota is checked twice (platform pre-flight + operator admission webhook)
  * so the math has to agree byte-for-byte across both sides.
  */
-import { describe, expect, it } from "vitest";
 
 import {
 	checkQuota,
 	defaultQuotaForTier,
+	PLAN_LIMITS,
 	parseCpuToMillicores,
 	parseMemoryToMiB,
 	parseStorageToGiB,
-	PLAN_LIMITS,
 	QuotaError,
 } from "@hanzo/platform/services/k8s/operator/quota";
+import { describe, expect, it } from "vitest";
 
-const ZERO_USAGE = { cpuMillicores: 0, memoryMiB: 0, storageGiB: 0, databaseCount: 0 };
+const ZERO_USAGE = {
+	cpuMillicores: 0,
+	memoryMiB: 0,
+	storageGiB: 0,
+	databaseCount: 0,
+};
 
 describe("quota parsers", () => {
 	it("parses CPU", () => {
@@ -41,19 +46,34 @@ describe("quota parsers", () => {
 
 describe("checkQuota", () => {
 	it("allows free-tier baseline request", () => {
-		const result = checkQuota("free", { cpu: "250m", memory: "512Mi", storage: "5Gi" }, ZERO_USAGE, true);
+		const result = checkQuota(
+			"free",
+			{ cpu: "250m", memory: "512Mi", storage: "5Gi" },
+			ZERO_USAGE,
+			true,
+		);
 		expect(result.allowed).toBe(true);
 	});
 
 	it("rejects per-CR cpu over plan limit", () => {
 		expect(() =>
-			checkQuota("free", { cpu: "1", memory: "256Mi", storage: "1Gi" }, ZERO_USAGE, true),
+			checkQuota(
+				"free",
+				{ cpu: "1", memory: "256Mi", storage: "1Gi" },
+				ZERO_USAGE,
+				true,
+			),
 		).toThrow(QuotaError);
 	});
 
 	it("rejects per-CR storage over plan limit", () => {
 		expect(() =>
-			checkQuota("starter", { cpu: "1", memory: "1Gi", storage: "100Gi" }, ZERO_USAGE, true),
+			checkQuota(
+				"starter",
+				{ cpu: "1", memory: "1Gi", storage: "100Gi" },
+				ZERO_USAGE,
+				true,
+			),
 		).toThrow(/exceeds per-resource limit/);
 	});
 
@@ -66,21 +86,46 @@ describe("checkQuota", () => {
 			databaseCount: 0,
 		};
 		expect(() =>
-			checkQuota("starter", { cpu: "1", memory: "1Gi", storage: "1Gi" }, usage, true),
+			checkQuota(
+				"starter",
+				{ cpu: "1", memory: "1Gi", storage: "1Gi" },
+				usage,
+				true,
+			),
 		).toThrow(/org CPU usage/);
 	});
 
 	it("rejects when adding a new DB pushes count over the cap", () => {
-		const usage = { cpuMillicores: 0, memoryMiB: 0, storageGiB: 0, databaseCount: 1 };
+		const usage = {
+			cpuMillicores: 0,
+			memoryMiB: 0,
+			storageGiB: 0,
+			databaseCount: 1,
+		};
 		expect(() =>
-			checkQuota("free", { cpu: "100m", memory: "256Mi", storage: "1Gi" }, usage, true),
+			checkQuota(
+				"free",
+				{ cpu: "100m", memory: "256Mi", storage: "1Gi" },
+				usage,
+				true,
+			),
 		).toThrow(/database count/);
 	});
 
 	it("allows usage check with addsNewDatabase=false (e.g. resize existing)", () => {
-		const usage = { cpuMillicores: 0, memoryMiB: 0, storageGiB: 0, databaseCount: 1 };
+		const usage = {
+			cpuMillicores: 0,
+			memoryMiB: 0,
+			storageGiB: 0,
+			databaseCount: 1,
+		};
 		expect(
-			checkQuota("free", { cpu: "100m", memory: "256Mi", storage: "1Gi" }, usage, false).allowed,
+			checkQuota(
+				"free",
+				{ cpu: "100m", memory: "256Mi", storage: "1Gi" },
+				usage,
+				false,
+			).allowed,
 		).toBe(true);
 	});
 });

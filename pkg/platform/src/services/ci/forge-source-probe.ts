@@ -41,11 +41,14 @@ export const githubReachability: ReachabilityProbe = async (repo, sha) => {
 
 	// Read the branch head first: every refusal must be able to name it, and a
 	// 404 on the comparison below would otherwise leave us with nothing to say.
-	const head = await octokit.request("GET /repos/{owner}/{repo}/commits/{ref}", {
-		owner,
-		repo: name,
-		ref: branch,
-	});
+	const head = await octokit.request(
+		"GET /repos/{owner}/{repo}/commits/{ref}",
+		{
+			owner,
+			repo: name,
+			ref: branch,
+		},
+	);
 	const headSha = head.data.sha;
 	if (headSha === sha) return { kind: "reachable" };
 
@@ -55,7 +58,8 @@ export const githubReachability: ReachabilityProbe = async (repo, sha) => {
 			{ owner, repo: name, basehead: `${sha}...${branch}` },
 		);
 		const status = cmp.data.status;
-		if (status === "identical" || status === "ahead") return { kind: "reachable" };
+		if (status === "identical" || status === "ahead")
+			return { kind: "reachable" };
 		return {
 			kind: "unreachable",
 			head: headSha,

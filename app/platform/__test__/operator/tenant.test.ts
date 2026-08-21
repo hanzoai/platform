@@ -4,7 +4,6 @@
  * between platform.hanzo.ai and the operator — round-trip tests pin
  * the wire shape and prevent regressions from a one-sided change.
  */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
 	PAAS_TICKET_AUDIENCE,
@@ -13,6 +12,7 @@ import {
 	TicketVerificationError,
 	verifyPaasTicket,
 } from "@hanzo/platform/services/k8s/operator/tenant";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const SECRET = "x".repeat(32);
 
@@ -25,7 +25,8 @@ describe("PaaS ticket", () => {
 	});
 
 	afterEach(() => {
-		if (originalSecret === undefined) delete process.env.OPERATOR_PAAS_SHARED_SECRET;
+		if (originalSecret === undefined)
+			delete process.env.OPERATOR_PAAS_SHARED_SECRET;
 		else process.env.OPERATOR_PAAS_SHARED_SECRET = originalSecret;
 	});
 
@@ -61,7 +62,10 @@ describe("PaaS ticket", () => {
 
 		// Flip a bit in the signature.
 		const parts = ticket.split(".");
-		const sigBytes = Buffer.from(parts[2]!.replace(/-/g, "+").replace(/_/g, "/") + "==", "base64");
+		const sigBytes = Buffer.from(
+			`${parts[2]!.replace(/-/g, "+").replace(/_/g, "/")}==`,
+			"base64",
+		);
 		sigBytes[0] = (sigBytes[0] ?? 0) ^ 0x01;
 		const tamperedSig = sigBytes
 			.toString("base64")
@@ -85,7 +89,10 @@ describe("PaaS ticket", () => {
 		// Edit the payload to set exp in the past.
 		const parts = ticket.split(".");
 		const payload = JSON.parse(
-			Buffer.from(parts[1]!.replace(/-/g, "+").replace(/_/g, "/") + "==", "base64").toString("utf8"),
+			Buffer.from(
+				`${parts[1]!.replace(/-/g, "+").replace(/_/g, "/")}==`,
+				"base64",
+			).toString("utf8"),
 		);
 		payload.exp = Math.floor(Date.now() / 1000) - 60;
 		const newPayload = Buffer.from(JSON.stringify(payload), "utf8")
@@ -115,7 +122,9 @@ describe("PaaS ticket", () => {
 			name: "postgres-prod",
 			quota: { cpu: "2", memory: "4Gi", storage: "100Gi" },
 		});
-		expect(() => verifyPaasTicket(ticket, "y".repeat(32))).toThrow(/bad signature/);
+		expect(() => verifyPaasTicket(ticket, "y".repeat(32))).toThrow(
+			/bad signature/,
+		);
 	});
 
 	it("refuses to mint if the shared secret is too short", () => {

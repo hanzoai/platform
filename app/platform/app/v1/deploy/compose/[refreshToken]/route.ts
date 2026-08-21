@@ -5,8 +5,8 @@
  * parsing is shared from `server/deploy/webhook.ts`.
  */
 import { IS_CLOUD } from "@hanzo/platform/constants";
-import { shouldDeploy } from "@hanzo/platform/utils/watch-paths/should-deploy";
 import { db } from "@hanzo/platform/db";
+import { shouldDeploy } from "@hanzo/platform/utils/watch-paths/should-deploy";
 import { eq } from "drizzle-orm";
 import { compose } from "@/server/db/schema";
 import {
@@ -74,7 +74,10 @@ export async function POST(
 			);
 
 			if (!shouldDeployPaths) {
-				return Response.json({ message: "Watch Paths Not Match" }, { status: 301 });
+				return Response.json(
+					{ message: "Watch Paths Not Match" },
+					{ status: 301 },
+				);
 			}
 
 			if (!branchName || branchName !== composeResult.branch) {
@@ -92,7 +95,10 @@ export async function POST(
 			);
 
 			if (!shouldDeployPaths) {
-				return Response.json({ message: "Watch Paths Not Match" }, { status: 301 });
+				return Response.json(
+					{ message: "Watch Paths Not Match" },
+					{ status: 301 },
+				);
 			}
 			if (!branchName || branchName !== composeResult.gitlabBranch) {
 				return Response.json({ message: "Branch Not Match" }, { status: 301 });
@@ -117,7 +123,10 @@ export async function POST(
 			);
 
 			if (!shouldDeployPaths) {
-				return Response.json({ message: "Watch Paths Not Match" }, { status: 301 });
+				return Response.json(
+					{ message: "Watch Paths Not Match" },
+					{ status: 301 },
+				);
 			}
 		} else if (sourceType === "git") {
 			const branchName = extractBranchName(headers, body);
@@ -143,7 +152,10 @@ export async function POST(
 			);
 
 			if (!shouldDeployPaths) {
-				return Response.json({ message: "Watch Paths Not Match" }, { status: 301 });
+				return Response.json(
+					{ message: "Watch Paths Not Match" },
+					{ status: 301 },
+				);
 			}
 		} else if (sourceType === "gitea") {
 			const branchName = extractBranchName(headers, body);
@@ -158,7 +170,10 @@ export async function POST(
 			);
 
 			if (!shouldDeployPaths) {
-				return Response.json({ message: "Watch Paths Not Match" }, { status: 301 });
+				return Response.json(
+					{ message: "Watch Paths Not Match" },
+					{ status: 301 },
+				);
 			}
 
 			if (!branchName || branchName !== composeResult.giteaBranch) {
@@ -202,6 +217,9 @@ export async function POST(
 		return Response.json({ message: "Compose deployed successfully" });
 	} catch (error) {
 		logWebhookError("Error deploying Compose:", error);
-		return Response.json({ message: "Error deploying Compose" }, { status: 400 });
+		return Response.json(
+			{ message: "Error deploying Compose" },
+			{ status: 400 },
+		);
 	}
 }

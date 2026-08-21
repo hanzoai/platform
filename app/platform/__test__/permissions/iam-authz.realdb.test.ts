@@ -81,7 +81,9 @@ const identity = (over: Partial<ServerSession> = {}): ServerSession => ({
 // a@hanzo.ai): `sub` is a bare UUID, so @hanzo/iam's ServerSession.owner
 // falls back to "unknown" — the real org lives ONLY in the top-level `owner`
 // claim. Stage 2 must still resolve the correct org from that claim.
-const realUserIdentity = (over: Partial<ServerSession> = {}): ServerSession => ({
+const realUserIdentity = (
+	over: Partial<ServerSession> = {},
+): ServerSession => ({
 	userId: "b474eaa5-e000-474d-b317-c37bbd9a6945",
 	owner: "unknown",
 	email: "a@hanzo.ai",
@@ -231,7 +233,10 @@ describe("Stage 2 integration (real SQLite, real migrations)", () => {
 					eq(schema.member.organizationId, org.id),
 				),
 			});
-			expect(m, `global admin must be a member of org ${org.slug}`).toBeTruthy();
+			expect(
+				m,
+				`global admin must be a member of org ${org.slug}`,
+			).toBeTruthy();
 			expect(m?.role).toBe("owner");
 		}
 		// Sanity: there really are >=3 orgs now, so "every org" is non-trivial.
