@@ -231,7 +231,7 @@ describe("buildkitArgs", () => {
 		expect(args).toContain(
 			"--output=type=image,name=ghcr.io/hanzoai/pricing:v1.2.3,push=true",
 		);
-		expect(args.some((a) => a.includes("registry.hanzo.ai"))).toBe(false);
+		expect(args.some((a) => a.includes("oci.hanzo.ai"))).toBe(false);
 	});
 
 	it("emits ONE output with BOTH refs (quoted) when a fleet registry is set", () => {
@@ -239,14 +239,14 @@ describe("buildkitArgs", () => {
 			repo: "hanzoai/pricing",
 			gitRef: "refs/heads/main",
 			image: "ghcr.io/hanzoai/pricing:v1.2.3",
-			fleetRegistryHost: "registry.hanzo.ai",
+			fleetRegistryHost: "oci.hanzo.ai",
 			buildJobId: "j1",
 		});
 		// GHCR (public consumers) + the fleet registry (the estate deploys from
 		// it), host-swapped from the GHCR ref, in ONE quoted name= field so the
 		// CSV parser keeps the comma-joined refs as a single value. One build.
 		expect(args).toContain(
-			'--output=type=image,"name=ghcr.io/hanzoai/pricing:v1.2.3,registry.hanzo.ai/hanzoai/pricing:v1.2.3",push=true',
+			'--output=type=image,"name=ghcr.io/hanzoai/pricing:v1.2.3,oci.hanzo.ai/hanzoai/pricing:v1.2.3",push=true',
 		);
 		// Exactly one image output — never the bare single-ref form alongside it.
 		expect(args.filter((a) => a.startsWith("--output=type=image")).length).toBe(
@@ -325,7 +325,7 @@ describe("buildkitWrapperScript", () => {
 	});
 
 	it("composes the two docker creds (jq-free) before exec when a fleet host is set", () => {
-		const s = buildkitWrapperScript("registry.hanzo.ai");
+		const s = buildkitWrapperScript("oci.hanzo.ai");
 		expect(s).toContain("/tmp/ghcr-cred/config.json");
 		expect(s).toContain("/tmp/fleet-cred/config.json");
 		// Peel each compact {"auths":{…}} and recombine into DOCKER_CONFIG.
@@ -443,7 +443,7 @@ describe("buildBuildkitJob — fleet dual-push wiring", () => {
 		repo: "hanzoai/pricing",
 		gitRef: "refs/heads/main",
 		image: "ghcr.io/hanzoai/pricing:t",
-		fleetRegistryHost: "registry.hanzo.ai",
+		fleetRegistryHost: "oci.hanzo.ai",
 		buildJobId: "abc12345",
 	});
 	const pod = job.spec.template.spec;
@@ -511,10 +511,10 @@ describe("parseImageDigest", () => {
 
 	it("returns ONE digest for a dual-push, where two refs carry one manifest", () => {
 		// FLEET_REGISTRY_HOST makes the single build push the same manifest to
-		// GHCR and registry.hanzo.ai — two lines, one truth.
+		// GHCR and oci.hanzo.ai — two lines, one truth.
 		const log = [
 			`#15 pushing manifest for ghcr.io/hanzoai/app:v1.2.3@${MANIFEST}`,
-			`#15 pushing manifest for registry.hanzo.ai/hanzoai/app:v1.2.3@${MANIFEST}`,
+			`#15 pushing manifest for oci.hanzo.ai/hanzoai/app:v1.2.3@${MANIFEST}`,
 		].join("\n");
 		expect(parseImageDigest(log)).toBe(MANIFEST);
 	});

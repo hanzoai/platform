@@ -44,8 +44,8 @@ export function parseImageRef(ref: string): [string, string, string] {
  * org/repo path and tag. This is how a GHCR ref is mirrored onto the fleet
  * registry for the dual-push:
  *
- * `withRegistryHost("ghcr.io/hanzoai/pricing:v1.2.3", "registry.hanzo.ai")`
- *   -> `"registry.hanzo.ai/hanzoai/pricing:v1.2.3"`
+ * `withRegistryHost("ghcr.io/hanzoai/pricing:v1.2.3", "oci.hanzo.ai")`
+ *   -> `"oci.hanzo.ai/hanzoai/pricing:v1.2.3"`
  *
  * The first path segment is replaced as a registry host only when it looks like
  * one (contains `.` or `:`, or is `localhost`); otherwise the ref is host-less

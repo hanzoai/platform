@@ -25,7 +25,7 @@
  *
  * Dual-push (opt-in, gated by `FLEET_REGISTRY_HOST`): when a fleet registry is
  * configured the ONE build pushes the SAME image to both GHCR (public consumers
- * pull it) and the fleet registry `registry.hanzo.ai` (the S3-backed store the
+ * pull it) and the fleet registry `oci.hanzo.ai` (the S3-backed store the
  * estate DEPLOYS from) — additive, matching the `hanzoai/ci` reusable's dual-host
  * pattern. Unset (the default) keeps the exact single-GHCR proven behavior.
  */
@@ -58,7 +58,7 @@ const GIT_SECRET = "console-git-token";
 const PUSH_CRED_KEY = ".dockerconfigjson";
 /**
  * KMS-synced docker cred (key `.dockerconfigjson`) for the fleet registry
- * (`registry.hanzo.ai`) — the SAME secret the `hanzoai/ci` reusable reads. Only
+ * (`oci.hanzo.ai`) — the SAME secret the `hanzoai/ci` reusable reads. Only
  * mounted (alongside the per-org push cred) when a fleet registry is configured;
  * the fleet cred is NEVER duplicated into a push secret, so `registry-credentials`
  * stays its one canonical home.
@@ -68,7 +68,7 @@ const FLEET_CRED_SECRET = "registry-credentials";
 /**
  * The fleet registry host every image is ALSO pushed to (on top of GHCR), or
  * undefined when unset. ONE config value — `FLEET_REGISTRY_HOST` (e.g.
- * `registry.hanzo.ai`) — gates the whole dual-push; there are no scattered
+ * `oci.hanzo.ai`) — gates the whole dual-push; there are no scattered
  * literals. Unset (the default) = GHCR-only, byte-identical to the proven build.
  */
 export function fleetRegistryHost(): string | undefined {
@@ -107,8 +107,10 @@ const NETRC_SETUP =
  * exec, because k8s cannot merge two secrets into one file and BuildKit reads a
  * single `config.json`. The merge is jq-free (the builder image is busybox): both
  * secrets are compact `{"auths":{…}}` objects, so each is peeled to its lone
- * `.auths` entry and recombined. A missing/empty fleet cred degrades to
- * GHCR-only, so a fleet-registry hiccup never fails the primary push.
+ * `.auths` entry and recombined. An empty fleet cred takes the copy branch so the
+ * config is still well-formed JSON — it does NOT make the build GHCR-only, because
+ * `buildkitArgs` names both refs in the one `--output` whenever a fleet host is
+ * set, and an unauthenticated push to that host fails the build.
  */
 export function buildkitWrapperScript(fleetHost?: string): string {
 	if (!fleetHost) return `${NETRC_SETUP} && exec buildctl-daemonless.sh "$@"`;
@@ -174,7 +176,7 @@ export interface BuildJobLaunchInput {
 	resources?: BuildResources;
 	/**
 	 * Fleet registry host to ALSO push the built image to, e.g.
-	 * `registry.hanzo.ai`. When set, the one BuildKit output carries both refs
+	 * `oci.hanzo.ai`. When set, the one BuildKit output carries both refs
 	 * (GHCR + the fleet host, host-swapped from `image`) and the pod mounts the
 	 * fleet cred. Defaulted from `fleetRegistryHost()` at the launch boundary;
 	 * leave unset in callers. Empty/undefined = GHCR-only (the proven path).

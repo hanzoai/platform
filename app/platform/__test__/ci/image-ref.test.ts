@@ -81,27 +81,27 @@ describe("parseImageRef", () => {
 describe("withRegistryHost", () => {
 	it("swaps the registry host, preserving org/repo:tag", () => {
 		expect(
-			withRegistryHost("ghcr.io/hanzoai/pricing:v1.2.3", "registry.hanzo.ai"),
-		).toBe("registry.hanzo.ai/hanzoai/pricing:v1.2.3");
+			withRegistryHost("ghcr.io/hanzoai/pricing:v1.2.3", "oci.hanzo.ai"),
+		).toBe("oci.hanzo.ai/hanzoai/pricing:v1.2.3");
 	});
 	it("prepends a host to a host-less (Docker Hub short) ref", () => {
-		expect(withRegistryHost("pricing:v1.2.3", "registry.hanzo.ai")).toBe(
-			"registry.hanzo.ai/pricing:v1.2.3",
+		expect(withRegistryHost("pricing:v1.2.3", "oci.hanzo.ai")).toBe(
+			"oci.hanzo.ai/pricing:v1.2.3",
 		);
 	});
 	it("treats an org first segment as a path, not a host", () => {
-		expect(withRegistryHost("hanzoai/pricing:v1", "registry.hanzo.ai")).toBe(
-			"registry.hanzo.ai/hanzoai/pricing:v1",
+		expect(withRegistryHost("hanzoai/pricing:v1", "oci.hanzo.ai")).toBe(
+			"oci.hanzo.ai/hanzoai/pricing:v1",
 		);
 	});
 	it("treats a host:port first segment as the host and replaces it", () => {
-		expect(withRegistryHost("ghcr.io:5000/x/y:t", "registry.hanzo.ai")).toBe(
-			"registry.hanzo.ai/x/y:t",
+		expect(withRegistryHost("ghcr.io:5000/x/y:t", "oci.hanzo.ai")).toBe(
+			"oci.hanzo.ai/x/y:t",
 		);
 	});
 	it("is idempotent when the host already matches", () => {
 		expect(
-			withRegistryHost("registry.hanzo.ai/hanzoai/x:t", "registry.hanzo.ai"),
-		).toBe("registry.hanzo.ai/hanzoai/x:t");
+			withRegistryHost("oci.hanzo.ai/hanzoai/x:t", "oci.hanzo.ai"),
+		).toBe("oci.hanzo.ai/hanzoai/x:t");
 	});
 });
