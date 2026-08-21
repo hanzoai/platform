@@ -210,9 +210,7 @@ Reading it:
   grant to everybody.
 - `destinationProblem(repo, image)` — three facts about one destination: it is
   ONE image reference (letters, digits and `._-/:@`), it addresses a registry we
-  run (`registryProblem`, `HOSTS` = ghcr.io / oci.hanzo.ai — `registry.hanzo.ai`
-  came off when the name stopped serving a registry, and its auth entry came out
-  of the six dockerconfigs that still carried it), and the namespace it
+  run (`registryProblem`, `HOSTS` = ghcr.io / oci.hanzo.ai), and the namespace it
   publishes into belongs to the same organization as the repository's owner.
   Asked at both front doors and again in `buildkit-job` for EVERY reference a
   build will publish — the row's and, with a fleet registry set, the second one —
