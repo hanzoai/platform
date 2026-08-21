@@ -114,8 +114,8 @@ describe("withRegistryHost", () => {
 		);
 	});
 	it("is idempotent when the host already matches", () => {
-		expect(withRegistryHost("oci.hanzo.ai/hanzoai/x:t", "oci.hanzo.ai")).toBe(
-			"oci.hanzo.ai/hanzoai/x:t",
-		);
+		expect(
+			withRegistryHost("oci.hanzo.ai/hanzoai/x:t", "oci.hanzo.ai"),
+		).toBe("oci.hanzo.ai/hanzoai/x:t");
 	});
 });
