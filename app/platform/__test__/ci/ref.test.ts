@@ -388,6 +388,39 @@ describe("the commit a build reads", () => {
 		expect(rows).toHaveLength(0);
 	});
 
+	it("builds the names git makes that a whole-name rule used to refuse", async () => {
+		// `@` is a whole refname git keeps for itself; under refs/heads/ the whole
+		// refname is never `@`, so it is an ordinary branch. And the storage bound
+		// is on a path COMPONENT, so a hierarchical name is as long as its parts
+		// allow — 401 characters here, which generated branches really reach.
+		// Both were refused by a rule written against the whole name, and a
+		// refused push is an outage wearing a control's clothes.
+		const DEEP = `${"a".repeat(200)}/${"b".repeat(200)}`;
+		for (const [name, sha] of [
+			["@", MAIN],
+			[DEEP, SIDE],
+		] as const) {
+			rows.length = 0;
+			launched.length = 0;
+			const asked = forge({ refs: { [`branches/${name}`]: sha } });
+			const result = await scheduleBuilds({
+				source: { forge: "hanzo-git" },
+				repo: "hanzoai/kms",
+				ref: `refs/heads/${name}`,
+				requireOrganizationId: HANZO,
+			});
+			expect("declined" in result, name).toBe(false);
+			expect(rows[0]?.ref, name).toBe(`refs/heads/${name}`);
+			expect(rows[0]?.sha, name).toBe(sha);
+			expect(launched[0]?.commit, name).toBe(sha);
+			// Asked of the forge by that exact name, encoded per segment.
+			expect(
+				asked.some((u) => u.includes("/branches/")),
+				name,
+			).toBe(true);
+		}
+	});
+
 	it("is asked of the forge by exact name, not by prefix", async () => {
 		// A ref listing answers by prefix, so `heads/mai` would come back holding
 		// `main`'s commit — a name resolving to a neighbour's commit is the whole
