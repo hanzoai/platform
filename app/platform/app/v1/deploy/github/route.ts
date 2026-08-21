@@ -46,7 +46,20 @@ export async function POST(req: Request) {
 		);
 	}
 
-	const githubBody = (await req.json().catch(() => null)) as any;
+	// The bytes GitHub signed, kept whole. The body is parsed from this same
+	// string for the installation id — which only says whose secret to check
+	// against — and the check itself is over what arrived. Re-serializing a
+	// parsed document produces a different string for the same value (key order,
+	// spacing, how a number or a non-ASCII character is spelled), so an HMAC over
+	// it is an HMAC over something nobody signed.
+	const rawBody = await req.text();
+	const githubBody = (() => {
+		try {
+			return JSON.parse(rawBody) as any;
+		} catch {
+			return null;
+		}
+	})();
 
 	if (!githubBody?.installation?.id) {
 		return Response.json(
@@ -76,7 +89,7 @@ export async function POST(req: Request) {
 		secret: githubResult.githubWebhookSecret,
 	});
 
-	const verified = await webhooks.verify(JSON.stringify(githubBody), signature);
+	const verified = await webhooks.verify(rawBody, signature);
 
 	if (!verified) {
 		return Response.json({ message: "Unauthorized" }, { status: 401 });

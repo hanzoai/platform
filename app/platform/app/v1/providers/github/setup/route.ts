@@ -21,6 +21,7 @@
 import { db } from "@hanzo/platform/db";
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import { createGithub } from "@hanzo/platform/services/github";
+import { appHoldsInstallation } from "@hanzo/platform/utils/providers/github";
 import { eq } from "drizzle-orm";
 import { Octokit } from "octokit";
 import { github } from "@/server/db/schema";
@@ -84,6 +85,17 @@ export async function GET(req: Request) {
 		// itself a fact about somebody else's row.
 		if (!row || row.gitProvider?.organizationId !== organizationId) {
 			return Response.json({ error: "No such App" }, { status: 404 });
+		}
+		// Both halves of the binding arrive from the URL, so both are answered by
+		// somebody other than the person who followed the link. The row is the
+		// session's; the installation is GitHub's word about this App. Written
+		// unasked, the id is a number, and the row it lands on is the one every
+		// later delivery bearing that number is authenticated by.
+		if (!(await appHoldsInstallation(row, installationId))) {
+			return Response.json(
+				{ error: `Installation ${installationId} is not on this App` },
+				{ status: 404 },
+			);
 		}
 		await db
 			.update(github)

@@ -12,14 +12,20 @@
  * → the build-watcher → deploy/test/publish — so there is exactly ONE build
  * path, two front doors.
  *
- * Auth: the shared machine-to-machine bearer token PLATFORM_BUILD_CALLBACK_TOKEN
- * (same credential as /v1/build-callback) — this is an infra surface, not a
- * user-facing one, so it does not use the IAM session.
+ * Auth: `validateRequest`, the same identity every other /v1 surface reads —
+ * an IAM access token as `Authorization: Bearer`, or an organization-scoped
+ * `x-api-key`. Both CARRY an organization; that is why they are what this door
+ * takes. A build publishes into a namespace on a credential the cluster mounts,
+ * so the organization it acts as has to come from the caller's identity rather
+ * than from the caller's request — a machine credential that authenticates a
+ * deployment says which deployment, and every organization in it looks alike
+ * from there.
  */
+import { validateRequest } from "@hanzo/platform/lib/auth";
 import { enqueueDirectBuild } from "@hanzo/platform/services/ci";
 import { TRPCError } from "@trpc/server";
 import { buildArgsProblem, repoProblem } from "@/server/v1/build-request";
-import { safeEqual } from "@/server/v1/http";
+import { asIncomingMessage } from "@/server/v1/request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,40 +51,22 @@ interface EnqueueBody {
 	buildArgs?: Record<string, string>;
 	os?: "linux" | "darwin" | "windows";
 	arch?: "amd64" | "arm64";
-	/** The organization this caller acts as. The repository must be one of its. */
-	organizationId?: string;
 }
 
 export async function POST(req: Request) {
-	const expected = process.env.PLATFORM_BUILD_CALLBACK_TOKEN;
-	if (!expected) {
-		return Response.json(
-			{
-				message:
-					"PLATFORM_BUILD_CALLBACK_TOKEN is not configured on the server",
-			},
-			{ status: 500 },
-		);
-	}
-	// Constant-time bearer check (no early-exit on the token — timingSafeEqual).
-	const header = req.headers.get("authorization") ?? "";
-	const provided = header.startsWith("Bearer ")
-		? header.slice("Bearer ".length)
-		: "";
-	if (!provided || !safeEqual(provided, expected)) {
-		return Response.json({ message: "Invalid enqueue token" }, { status: 401 });
+	// Who is asking, and which organization they are. Read off the credential,
+	// which is the only place an answer to the second question can come from
+	// that the caller did not choose.
+	const { session, user } = await validateRequest(asIncomingMessage(req));
+	const organizationId = session?.activeOrganizationId;
+	if (!user || !organizationId) {
+		return Response.json({ message: "Unauthorized" }, { status: 401 });
 	}
 
 	const body = (await req.json().catch(() => ({}))) as EnqueueBody;
-	// `organizationId` is named here with the rest. The bearer above authenticates
-	// a machine and says nothing about which organization that machine is acting
-	// for, so the caller states it and the repository has to bear it out — a claim
-	// nobody has to make is one nobody can get wrong.
-	if (!body?.repo || !body?.ref || !body?.image || !body?.organizationId) {
+	if (!body?.repo || !body?.ref || !body?.image) {
 		return Response.json(
-			{
-				message: "Missing required field(s): repo, ref, image, organizationId",
-			},
+			{ message: "Missing required field(s): repo, ref, image" },
 			{ status: 400 },
 		);
 	}
@@ -104,10 +92,11 @@ export async function POST(req: Request) {
 			buildArgs: body.buildArgs,
 			os: body.os,
 			arch: body.arch,
-			// The org that owns the build is the org that owns the repository, so
-			// the caller does not choose it. Stating one is a claim to be acting
-			// as it, and a claim the repository does not bear out is refused.
-			requireOrganizationId: body.organizationId,
+			// The org that owns the build is the org that owns the repository. The
+			// caller's own organization is what it is checked against, so a caller
+			// reaching a repository outside it is refused — and there is no field
+			// here to state a different one with.
+			requireOrganizationId: organizationId,
 		});
 		return Response.json(
 			{
@@ -121,10 +110,17 @@ export async function POST(req: Request) {
 		);
 	} catch (err) {
 		if (err instanceof TRPCError) {
-			// CONFLICT (no live runner for the pool) → 409, FORBIDDEN (acting as an
-			// org that does not own the repository) → 403; everything else → 400.
+			// CONFLICT (no live runner for the pool) → 409, FORBIDDEN (a repository
+			// outside the caller's organization) → 403, NOT_FOUND (a ref the forge
+			// does not resolve) → 404; everything else → 400.
 			const code =
-				err.code === "CONFLICT" ? 409 : err.code === "FORBIDDEN" ? 403 : 400;
+				err.code === "CONFLICT"
+					? 409
+					: err.code === "FORBIDDEN"
+						? 403
+						: err.code === "NOT_FOUND"
+							? 404
+							: 400;
 			return Response.json({ message: err.message }, { status: code });
 		}
 		return Response.json(

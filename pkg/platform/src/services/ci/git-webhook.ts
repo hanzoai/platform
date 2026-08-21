@@ -241,15 +241,11 @@ export function decodeWebhook(
 		if (/^0+$/.test(after)) {
 			throw new WebhookError("push deletes a ref; nothing to build", 422);
 		}
-		// A push is to a branch or to a tag. The forge sends nothing else, and a
-		// delivery naming something else is not a push we know how to be about.
-		const bad = refProblem(ref);
-		if (bad) throw new WebhookError(bad, 422);
 		return {
 			event: "push",
 			...identity,
 			sha: after,
-			ref,
+			ref: named(ref),
 			commits: commitShas(p.commits),
 		};
 	}
@@ -277,9 +273,26 @@ export function decodeWebhook(
 		event: "pull_request",
 		...identity,
 		sha,
-		ref: `refs/heads/${branch}`,
+		ref: named(`refs/heads/${branch}`),
 		commits: [],
 	};
+}
+
+/**
+ * The ref a delivery is about — a branch or a tag, and nothing else.
+ *
+ * Both events land here. A push carries the ref whole; a pull request carries
+ * the branch short and the ref is spelled from it, which makes it no less a
+ * name somebody chose. Answered where the delivery is READ, so the two events
+ * give one answer: 422, the shape this lane already uses for a delivery that is
+ * well-formed and has nothing to build. Left to the scheduler it came back a
+ * bad request, which this lane renders as a fault, and the forge redelivers a
+ * fault five times over a name that will never resolve.
+ */
+function named(ref: string): string {
+	const bad = refProblem(ref);
+	if (bad) throw new WebhookError(bad, 422);
+	return ref;
 }
 
 /** Provenance fields shared by every event shape — derived once. */

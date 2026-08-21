@@ -388,21 +388,26 @@ function parseStringList(obj: object, key: string, path: string): string[] {
 }
 
 /**
- * A repo-relative path taken from `hanzo.yml`.
+ * A path taken from `hanzo.yml` — under the repository, or under the org in
+ * KMS. Both are a name for something below a root, and neither may leave it.
  *
  * These strings end up inside a GENERATED SHELL SCRIPT in the publish Job —
  * `cargoCrates` is interpolated unquoted into `for c in …` because the loop
- * needs word-splitting. So the safety has to live HERE, at the boundary, not at
- * each use site: an allowlisted charset means no value can ever carry a shell
- * metacharacter (`;`, `|`, `$`, backtick, newline, quote) into that script.
- * Validating once at parse time keeps every consumer safe by construction.
+ * needs word-splitting — and inside a URL, where `kms.path` becomes a path
+ * segment. So the safety has to live HERE, at the boundary, not at each use
+ * site: an allowlisted charset means no value can ever carry a shell
+ * metacharacter (`;`, `|`, `$`, backtick, newline, quote) into that script, and
+ * validating once at parse time keeps every consumer safe by construction.
  *
- * Also rejects upward traversal, so a path cannot escape the checked-out repo.
+ * Also rejects upward traversal. `..` is the one sequence a URL path resolves
+ * away and percent-encoding leaves alone, so it is what a path escapes with —
+ * out of the checked-out repo on one side, and out of the addressed folder on
+ * the other.
  */
 function requireRelativePath(value: string, path: string): string {
 	if (!/^[A-Za-z0-9._][A-Za-z0-9._/-]*$/.test(value)) {
 		throw new PlatformConfigError(
-			`${path} must be a repo-relative path made of [A-Za-z0-9._/-] and may not start with "-" or "/" (got ${JSON.stringify(value)})`,
+			`${path} must be a path made of [A-Za-z0-9._/-] and may not start with "-" or "/" (got ${JSON.stringify(value)})`,
 		);
 	}
 	if (value.split("/").includes("..")) {
@@ -672,7 +677,14 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
 			throw new PlatformConfigError("kms, when present, must be a mapping");
 		}
 		kms = {
-			path: optionalString(raw.kms, "path", "deploy").replace(/^\/+|\/+$/g, ""),
+			// The folder addresses a secret on the platform's own KMS principal,
+			// and it reaches that request as a path segment. Percent-encoding does
+			// not touch a dot, so a folder that traverses upward re-addresses the
+			// read — the same rule, for the same reason, as a path into the repo.
+			path: requireRelativePath(
+				optionalString(raw.kms, "path", "deploy").replace(/^\/+|\/+$/g, ""),
+				"kms.path",
+			),
 			environment: optionalString(raw.kms, "environment", "prod"),
 		};
 	}

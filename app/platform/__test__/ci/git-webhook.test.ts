@@ -492,3 +492,62 @@ describe("decodeWebhook — Hanzo Git", () => {
 		);
 	});
 });
+
+/**
+ * Both events name a ref, so both answer the ref rule here.
+ *
+ * A push carries `ref` whole and is checked on the way through. A pull request
+ * carries the short branch and the ref is ASSEMBLED — and an assembled ref is
+ * still a name somebody chose. Left unasked, it reached the scheduler, which
+ * refuses it as a bad request, which this route has no shape for: the delivery
+ * became a 500 and the forge redelivered it five times over a name that will
+ * never be buildable. One rule, one place, one answer for both events.
+ */
+describe("the ref a delivery names", () => {
+	const repository = { full_name: "hanzoai/kms" };
+
+	function refuses(event: "push" | "pull_request", branch: string) {
+		const body =
+			event === "push"
+				? { ref: `refs/heads/${branch}`, after: "a".repeat(40), repository }
+				: {
+						pull_request: { head: { sha: "a".repeat(40), ref: branch } },
+						repository,
+					};
+		try {
+			decodeWebhook(event, body);
+			return null;
+		} catch (err) {
+			expect(err).toBeInstanceOf(WebhookError);
+			return err as WebhookError;
+		}
+	}
+
+	it("is refused at the door, with the same status, for either event", () => {
+		for (const branch of [
+			"../../../luxfi/node/branches/main",
+			"a b",
+			"a@{1}",
+			"x.lock",
+		]) {
+			for (const event of ["push", "pull_request"] as const) {
+				const err = refuses(event, branch);
+				expect(err, `${event} ${branch}`).not.toBeNull();
+				expect(err?.status, `${event} ${branch}`).toBe(422);
+				expect(err?.message).toMatch(/does not name a branch or a tag/i);
+			}
+		}
+	});
+
+	it("still takes the names git makes, on either event", () => {
+		for (const branch of [
+			"main",
+			"feature/a-b_c.d",
+			"@",
+			`${"a".repeat(200)}/${"b".repeat(200)}`,
+		]) {
+			expect(refuses("push", branch), `push ${branch}`).toBeNull();
+			expect(refuses("pull_request", branch), `pr ${branch}`).toBeNull();
+		}
+	});
+});
