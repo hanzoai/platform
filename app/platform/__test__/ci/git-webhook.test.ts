@@ -496,12 +496,12 @@ describe("decodeWebhook — Hanzo Git", () => {
 /**
  * Both events name a ref, so both answer the ref rule here.
  *
- * A push carries `ref` whole and is checked on the way through. A pull request
- * carries the short branch and the ref is ASSEMBLED — and an assembled ref is
- * still a name somebody chose. Left unasked, it reached the scheduler, which
- * refuses it as a bad request, which this route has no shape for: the delivery
- * became a 500 and the forge redelivered it five times over a name that will
- * never be buildable. One rule, one place, one answer for both events.
+ * A push carries `ref` whole. A pull request carries the short branch and the
+ * ref is ASSEMBLED — and an assembled ref is still a name somebody chose, so it
+ * answers the same rule. Both are asked where the delivery is read, which is
+ * what makes the answer one answer: 422, the shape this lane already uses for a
+ * delivery that is well-formed and has nothing to build. One rule, one place,
+ * one answer for both events.
  */
 describe("the ref a delivery names", () => {
 	const repository = { full_name: "hanzoai/kms" };
