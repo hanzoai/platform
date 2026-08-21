@@ -16,11 +16,13 @@
  * be wrong about, so there is no field, and the answer always comes from the
  * same place.
  */
+
 import {
 	enqueueDirectBuild,
 	scheduleBuilds,
 } from "@hanzo/platform/services/ci/build-scheduler";
 import { promoteBuild } from "@hanzo/platform/services/ci/promote";
+import { commitAt, refProblem } from "@hanzo/platform/services/hanzo-git";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -93,8 +95,18 @@ vi.mock("@hanzo/platform/services/ci/pin", () => ({
 	}),
 }));
 
-/** The GitHub App reader. Present so the github lane can be asked at all. */
-const { githubYaml } = vi.hoisted(() => ({ githubYaml: { value: "" } }));
+/**
+ * The GitHub App reader, and what GitHub says about who holds a repository.
+ *
+ * `held` is the installation GitHub names for whatever repository is asked
+ * about — the answer `/repos/{owner}/{repo}/installation` gives. It defaults to
+ * the installation these tests deliver as, so a test that is about something
+ * else is not also about entitlement.
+ */
+const { githubYaml, held } = vi.hoisted(() => ({
+	githubYaml: { value: "" },
+	held: { by: 1 as number | null, status: 404 },
+}));
 
 vi.mock("@hanzo/platform/utils/providers/github", () => ({
 	authGithub: vi.fn(() => ({
@@ -108,6 +120,16 @@ vi.mock("@hanzo/platform/utils/providers/github", () => ({
 							encoding: "base64",
 						},
 					};
+				}),
+			},
+			apps: {
+				getRepoInstallation: vi.fn(async () => {
+					if (held.by === null) {
+						throw Object.assign(new Error("github said no"), {
+							status: held.status,
+						});
+					}
+					return { data: { id: held.by } };
 				}),
 			},
 		},
@@ -250,6 +272,8 @@ beforeEach(() => {
 	ids.set("hanzo", HANZO);
 	ids.set("lux", LUX);
 	githubYaml.value = "";
+	held.by = 1;
+	held.status = 404;
 	probe.asked.length = 0;
 	probe.reachable = true;
 	process.env.HANZO_GIT_WEBHOOK_SECRET = "s3cret";
@@ -483,6 +507,36 @@ build:
 		).rejects.toThrow(/not a tag token/i);
 		expect(rows).toHaveLength(0);
 	});
+
+	it("refuses a config that spells a constant", async () => {
+		// A pattern with no token resolves to the same name on every push, so it
+		// names no build in particular — `v1.2.3` from `main` and `v1.2.3` from a
+		// side branch are one image and two commits. The name is version-shaped,
+		// so nothing downstream can tell them apart either.
+		const constant = `
+source: forge
+build:
+  matrix:
+    - { os: linux, arch: amd64 }
+  image: ghcr.io/hanzoai/kms
+  tag-pattern: "v1.2.3"
+  push: true
+`;
+		for (const ref of ["refs/heads/main", "refs/heads/wip"]) {
+			forge({ yaml: constant });
+			await expect(
+				scheduleBuilds({
+					source: { forge: "hanzo-git" },
+					repo: "hanzoai/kms",
+					ref,
+					requireOrganizationId: HANZO,
+				}),
+				ref,
+			).rejects.toThrow(/names the same image on every push/i);
+		}
+		expect(rows).toHaveLength(0);
+		expect(launched).toHaveLength(0);
+	});
 });
 
 describe("the organization a build acts as", () => {
@@ -665,5 +719,244 @@ describe("hanzoai/ci owns an image, whichever path publishes it", () => {
 		expect(result).toMatchObject({ declined: "ci-owns" });
 		expect(rows).toHaveLength(0);
 		expect(launched).toHaveLength(0);
+	});
+});
+
+/**
+ * A ref is a NAME, and only the names git makes are names.
+ *
+ * The name is not free text once it leaves here: it becomes a path segment on
+ * the forge, so `..` in it is the one sequence a URL resolves away. Percent-
+ * encoding a segment does not touch a dot, so a ref carrying `..` addressed a
+ * repository the caller never named — `refs/heads/../../../luxfi/node/branches/main`
+ * on `hanzoai/kms` came back holding luxfi/node's HEAD, and the row said kms
+ * over it. `git check-ref-format` already refuses every such name at the moment
+ * a ref is created, so reading the same rule here keeps what we ask the forge
+ * about equal to what the forge can hold.
+ */
+describe("the name a ref carries", () => {
+	const FOREIGN = "9c8b7a6d5e4f30211fedcba9876543210abcdef1";
+	const TRAVERSAL = "refs/heads/../../../luxfi/node/branches/main";
+
+	/**
+	 * Two repositories on one forge, addressed the way a real request addresses
+	 * it: the URL is PARSED before it is answered. A stub matching the raw string
+	 * cannot see this — `fetch` resolves the path, and resolving is the whole
+	 * mechanism.
+	 */
+	function twoRepos(): string[] {
+		const asked: string[] = [];
+		const heads: Record<string, string> = {
+			"/v1/repos/hanzoai/kms/branches/main": MAIN,
+			"/v1/repos/luxfi/node/branches/main": FOREIGN,
+		};
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (url: string) => {
+				const path = new URL(String(url)).pathname;
+				asked.push(path);
+				const sha = heads[path];
+				if (sha) {
+					return new Response(JSON.stringify({ commit: { id: sha } }), {
+						status: 200,
+					});
+				}
+				if (path.endsWith("/contents/hanzo.yml")) {
+					const yaml =
+						'source: forge\nbuild:\n  matrix:\n    - { os: linux, arch: amd64 }\n  image: ghcr.io/hanzoai/kms\n  tag-pattern: "sha-{{git.sha}}"\n';
+					return new Response(
+						JSON.stringify({
+							content: Buffer.from(yaml).toString("base64"),
+							encoding: "base64",
+						}),
+						{ status: 200 },
+					);
+				}
+				if (/^\/v1\/repos\/[^/]+\/[^/]+$/.test(path)) {
+					return new Response(JSON.stringify({ has_actions: true }), {
+						status: 200,
+					});
+				}
+				return new Response("", { status: 404 });
+			}),
+		);
+		return asked;
+	}
+
+	it("cannot re-address the forge to another repository", async () => {
+		const asked = twoRepos();
+		await expect(
+			scheduleBuilds({
+				source: { forge: "hanzo-git" },
+				repo: "hanzoai/kms",
+				ref: TRAVERSAL,
+				requireOrganizationId: HANZO,
+			}),
+		).rejects.toThrow(/does not name a branch or a tag/i);
+		expect(rows).toHaveLength(0);
+		expect(launched).toHaveLength(0);
+		expect(asked.some((p) => p.includes("/luxfi/node"))).toBe(false);
+	});
+
+	it("never leaves the process, so the forge is not asked at all", async () => {
+		const asked = twoRepos();
+		await expect(
+			commitAt({ url: "https://git.hanzo.ai" }, "hanzoai/kms", TRAVERSAL),
+		).resolves.toBeNull();
+		expect(asked).toEqual([]);
+	});
+
+	it("is refused for every name git would not make", async () => {
+		for (const name of [
+			"..",
+			"a..b",
+			".hidden",
+			"nested/.hidden",
+			"x.lock",
+			"nested/x.lock",
+			"a b",
+			"a~1",
+			"a^",
+			"a:b",
+			"a?",
+			"a*",
+			"a[",
+			"a\\b",
+			"a@{1}",
+			"@",
+			"a//b",
+			"a/",
+			"trailing.",
+			"a".repeat(256),
+		]) {
+			expect(refProblem(`refs/heads/${name}`), name).toMatch(
+				/does not name a branch or a tag/i,
+			);
+			expect(refProblem(`refs/tags/${name}`), name).toMatch(
+				/does not name a branch or a tag/i,
+			);
+		}
+	});
+
+	it("still takes every name git does make", async () => {
+		for (const ref of [
+			"refs/heads/main",
+			"refs/heads/feature/a-b_c.d",
+			"refs/heads/release/2026.1",
+			"refs/heads/a.b",
+			"refs/heads/-dash",
+			"refs/heads/UPPER",
+			"refs/tags/v1.2.3",
+			"refs/tags/v1.36.2-rc.1",
+		]) {
+			expect(refProblem(ref), ref).toBeNull();
+		}
+	});
+
+	it("keeps addressing the forge by exact name", async () => {
+		const asked = twoRepos();
+		await scheduleBuilds({
+			source: { forge: "hanzo-git" },
+			repo: "hanzoai/kms",
+			ref: "refs/heads/main",
+			requireOrganizationId: HANZO,
+		});
+		expect(rows[0]?.sha).toBe(MAIN);
+		expect(asked).toContain("/v1/repos/hanzoai/kms/branches/main");
+	});
+});
+
+/**
+ * A delivery is about a repository, and the credential that signed it has to
+ * hold that repository.
+ *
+ * On our own forge the secret is one deployment-level key over one forge we
+ * run, so a delivery it signed is about a repository it serves. A GitHub App
+ * INSTALLATION is a tenant's credential and covers exactly the repositories it
+ * was installed on — while `repository.full_name` is written in the body the
+ * tenant signs. The signature proves who sent it and nothing about whose
+ * repository they named, so GitHub is asked which installation holds it.
+ *
+ * What the installation TOKEN can READ is a different question: an installation
+ * token reads any public repository, so every first-party repository that is
+ * public on github.com answered a config read from an installation holding none
+ * of ours.
+ */
+describe("what a delivery may be about", () => {
+	const delivery = {
+		source: { forge: "github", installationId: "1" },
+		repo: "hanzoai/kms",
+		ref: "refs/heads/main",
+	} as const;
+
+	beforeEach(() => {
+		githubYaml.value = `
+build:
+  matrix:
+    - { os: linux, arch: amd64 }
+  image: ghcr.io/hanzoai/kms
+  tag-pattern: "sha-{{git.sha}}"
+  push: true
+`;
+	});
+
+	it("builds when the installation holds the repository", async () => {
+		forge();
+		held.by = 1;
+		await scheduleBuilds(delivery);
+		expect(rows[0]).toMatchObject({
+			repo: "hanzoai/kms",
+			image: `ghcr.io/hanzoai/kms:sha-${MAIN}`,
+		});
+	});
+
+	it("refuses when GitHub says another installation holds it", async () => {
+		const asked = forge();
+		held.by = 2;
+		await expect(scheduleBuilds(delivery)).rejects.toThrow(
+			/not installed on it/i,
+		);
+		expect(rows).toHaveLength(0);
+		expect(launched).toHaveLength(0);
+		// Asked before the forge is, so a delivery naming a repository it does
+		// not hold cannot use the answer as a commit-existence oracle.
+		expect(asked).toEqual([]);
+	});
+
+	it("refuses when GitHub says no installation holds it", async () => {
+		// A 404 IS the answer: no installation of this App holds that repository.
+		forge();
+		held.by = null;
+		held.status = 404;
+		await expect(scheduleBuilds(delivery)).rejects.toThrow(
+			/not installed on it/i,
+		);
+		expect(rows).toHaveLength(0);
+	});
+
+	it("does not call a credential failure a permission", async () => {
+		// Failing to ASK is a different sentence from being told no, and it points
+		// at a different thing to fix. Nothing is built either way.
+		forge();
+		held.by = null;
+		held.status = 401;
+		await expect(scheduleBuilds(delivery)).rejects.toThrow(/github said no/i);
+		expect(rows).toHaveLength(0);
+		expect(launched).toHaveLength(0);
+	});
+
+	it("asks nothing of GitHub on our own forge, which has one secret", async () => {
+		// The forge lane's credential is deployment-level and covers the forge it
+		// is the secret for. There is no installation to look up and no second
+		// answer to keep in step.
+		forge();
+		held.by = null;
+		await scheduleBuilds({
+			source: { forge: "hanzo-git" },
+			repo: "hanzoai/kms",
+			ref: "refs/heads/main",
+			requireOrganizationId: HANZO,
+		});
+		expect(rows).toHaveLength(1);
 	});
 });
