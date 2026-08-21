@@ -16,6 +16,12 @@
  * Declared as what each organization OWNS and read through the inverse, so an
  * organization states its own names in one place and no name is claimed twice.
  *
+ * The declaration says which JOB each name does, because a name that reads
+ * source and a name that receives images are different powers and only the
+ * second one has a credential behind it. `org` answers whose name this is and
+ * `publisher` answers whether images may be written to it; both read the one
+ * table, and no caller has to decide which half a name came from.
+ *
  * Not the runner pool. `runnerPoolFor` maps an owner to the ARC scale set its
  * builds run ON, which is capacity and can be borrowed — `bootnode` builds on
  * Hanzo's pool without being Hanzo. Sharing a pool is not owning a namespace, so
@@ -27,19 +33,29 @@ import { eq } from "drizzle-orm";
 import { imageHost, imageOrg, parseImageRef } from "./ci/image-ref";
 
 /**
- * The names each organization publishes under.
+ * The names each organization answers to, by what the name is FOR.
  *
- * A forge owner and a registry namespace share this space: `hanzo/kms` and
- * `hanzoai/kms` are two repositories of one organization, and both publish
- * `ghcr.io/hanzoai/kms`. An organization spells itself several ways — `hanzoai`
- * on the registry, `hanzo-apps` and `hanzo-docs` on the forge — and every one of
- * them is the same organization.
+ * An organization spells itself several ways, and the spellings do two
+ * different jobs. `publishes` names the registry namespaces its images are
+ * written INTO. `builds` names the further forge owners its source is read
+ * FROM. Every namespace it publishes into is also a forge owner it builds from,
+ * so those are stated once, under `publishes`.
  *
- * A namespace belongs here when a `push-<namespace>` credential exists for it in
- * `hanzo-build`: that credential is what a build in this namespace is handed, so
- * this table is what decides who may ask for it. A namespace with no credential
- * is left out, and a build that names one is refused for want of a credential
- * rather than admitted and left waiting on a Secret that was never provisioned.
+ * The two are separate because only one of them is a credential. A namespace
+ * belongs under `publishes` when a `push-<namespace>` Secret exists for it in
+ * `hanzo-build`, and that Secret is what a build publishing there is handed —
+ * so `publishes` is the list that decides who may ask for one. Held as a single
+ * list the roles substitute, and being an organization reads as permission to
+ * write to any name it answers to: `ghcr.io/hanzo-inc/x` would derive
+ * `push-hanzo-inc`, and the build would mount a Secret nothing provisions and
+ * wait. Naming the credential from `publishes` is what keeps an unprovisioned
+ * name a refusal rather than a wait.
+ *
+ * `builds` carries the rest, and carries them fully: `hanzo/platform` and
+ * `hanzoai/platform` are one repository pushed to two forge remotes, and both
+ * publish `ghcr.io/hanzoai/platform`. So a forge owner is a principal — it
+ * resolves to an organization, its builds start, its images go to that
+ * organization's namespaces — and it is not a place images may be written.
  *
  * Adding a brand is one line here plus its `push-<namespace>` KMS path plus an
  * `organization` row carrying its slug — the three facts that make an
@@ -47,31 +63,40 @@ import { imageHost, imageOrg, parseImageRef } from "./ci/image-ref";
  * which is loud and says what to do; a name absent from this table belongs to
  * nobody here, which is also a refusal, never a default.
  */
-const OWNS: Readonly<Record<string, readonly string[]>> = {
-	hanzo: [
-		"hanzo",
-		"hanzoai",
-		"hanzo-apps",
-		"hanzo-docs",
-		"hanzo-inc",
-		"hanzoteam",
-	],
-	lux: ["lux", "luxfi"],
-	zoo: ["zoo", "zooai"],
-	pars: ["pars", "parsdao"],
+const OWNS: Readonly<
+	Record<
+		string,
+		{
+			readonly publishes: readonly string[];
+			readonly builds: readonly string[];
+		}
+	>
+> = {
+	hanzo: {
+		publishes: ["hanzoai", "hanzoteam"],
+		builds: ["hanzo", "hanzo-apps", "hanzo-docs", "hanzo-inc"],
+	},
+	lux: { publishes: ["luxfi"], builds: ["lux"] },
+	zoo: { publishes: ["zooai"], builds: ["zoo"] },
+	pars: { publishes: ["parsdao"], builds: ["pars"] },
 };
 
 /**
  * Name → organization: {@link OWNS} inverted once, at load.
  *
+ * Both halves, because both are the organization's names and `org` is asked
+ * about a name without knowing which half it came from.
+ *
  * Null prototype, so a name like `__proto__` is an ordinary entry rather than a
  * reference to something inherited. Two organizations claiming one name is a
  * contradiction in the table itself and stops the process — it cannot be
- * resolved at read time, because both answers are wrong.
+ * resolved at read time, because both answers are wrong. One organization
+ * claiming a name in both halves is the same contradiction: it would say a name
+ * is a namespace and also that it is only a forge owner.
  */
 const OF: Readonly<Record<string, string>> = Object.freeze(
-	Object.entries(OWNS).reduce<Record<string, string>>((of, [owner, names]) => {
-		for (const name of names) {
+	Object.entries(OWNS).reduce<Record<string, string>>((of, [owner, roles]) => {
+		for (const name of [...roles.publishes, ...roles.builds]) {
 			if (name !== name.toLowerCase()) {
 				throw new Error(`services/org: "${name}" must be spelled lowercase`);
 			}
@@ -85,6 +110,26 @@ const OF: Readonly<Record<string, string>> = Object.freeze(
 		}
 		return of;
 	}, Object.create(null)),
+);
+
+/**
+ * Namespace → the organization that publishes into it: the `publishes` half of
+ * {@link OWNS}, inverted the same way and at the same time.
+ *
+ * Narrower than {@link OF} on purpose. This is the half a `push-<namespace>`
+ * Secret exists for, so it is the half that decides which name a credential may
+ * be derived from, and reading it is a different question from reading {@link
+ * OF} — one asks whose name this is, the other asks whether images may be
+ * written to it.
+ */
+const INTO: Readonly<Record<string, string>> = Object.freeze(
+	Object.entries(OWNS).reduce<Record<string, string>>(
+		(into, [owner, roles]) => {
+			for (const name of roles.publishes) into[name] = owner;
+			return into;
+		},
+		Object.create(null),
+	),
 );
 
 /**
@@ -103,6 +148,29 @@ const OF: Readonly<Record<string, string>> = Object.freeze(
  */
 export function org(name: string): string | undefined {
 	return OF[name.toLowerCase()];
+}
+
+/**
+ * The organization that publishes into a registry namespace, or undefined when
+ * no organization here does.
+ *
+ * Undefined has two causes and one meaning: the name belongs to nobody here, or
+ * it belongs to somebody here as a forge owner. Either way no `push-<namespace>`
+ * Secret exists for it, so no credential is derivable and nothing of ours writes
+ * there. Callers do not need to tell the two apart, because a credential follows
+ * from this answer alone.
+ *
+ * Case is folded here for the reason it is folded in {@link org}: a registry
+ * resolves a namespace without regard to case, and the rule and the credential
+ * have to agree about which namespace an image names.
+ */
+export function publisher(ns: string): string | undefined {
+	return INTO[ns.toLowerCase()];
+}
+
+/** The registry namespaces an organization publishes into, for saying so in a refusal. */
+function namespacesOf(owner: string): readonly string[] {
+	return OWNS[owner]?.publishes ?? [];
 }
 
 /**
@@ -198,10 +266,17 @@ const REF = /^[A-Za-z0-9][A-Za-z0-9._/:@-]*$/;
  *
  * The destination is DECLARED — by the repository's own `hanzo.yml`, or by
  * whoever called the direct door — and it is what {@link pushSecret} derives a
- * credential from. So the three are bound: the destination is one image
- * reference, it addresses one of {@link HOSTS}, and the namespace it publishes
- * into belongs to the same organization as the owner of the repository that
- * declared it.
+ * credential from. So the four are bound: the destination is one image
+ * reference, it addresses one of {@link HOSTS}, the namespace it publishes into
+ * belongs to the same organization as the owner of the repository that declared
+ * it, and it is a namespace that organization publishes into rather than one of
+ * its names on the forge.
+ *
+ * The last two are separate questions and each has its own answer, because a
+ * name can pass one and fail the other. `hanzo-inc` belongs to Hanzo, so a
+ * Hanzo repository naming `ghcr.io/hanzo-inc/x` clears the organization
+ * question; it fails the namespace one, because Hanzo publishes into `hanzoai`
+ * and `hanzoteam` and there is no `push-hanzo-inc` for the build to mount.
  *
  * A namespace no organization here owns is not judged. No credential of ours
  * reaches it and nothing of ours publishes there, so it is somebody else's
@@ -228,11 +303,19 @@ export function destinationProblem(repo: string, image: string): string | null {
 	if (registry) {
 		return `${refusing}: ${registry}, and ${owner}'s images are published on ours.`;
 	}
-	if (org(ownerOf(repo)) === owner) return null;
-	return (
-		`${refusing}: the "${ns}" namespace carries ` +
-		`${owner}'s images, and ${repo} is not one of ${owner}'s repositories.`
-	);
+	if (org(ownerOf(repo)) !== owner) {
+		return (
+			`${refusing}: the "${ns}" namespace carries ` +
+			`${owner}'s images, and ${repo} is not one of ${owner}'s repositories.`
+		);
+	}
+	if (publisher(ns) !== owner) {
+		return (
+			`${refusing}: "${ns}" is one of ${owner}'s names on the forge, not a ` +
+			`namespace ${owner} publishes into (${namespacesOf(owner).join(", ")}).`
+		);
+	}
+	return null;
 }
 
 /**
@@ -249,32 +332,34 @@ export function destinationProblem(repo: string, image: string): string | null {
  * only one of those can be asked with a single argument. There is no way to
  * spell the first question here.
  *
- * Named only for a namespace {@link OWNS} claims, so the table decides the
- * credential rather than the image string does. That is what keeps a namespace
- * missing from the table a refusal instead of a grant: an unlisted name yields
- * no secret, even where a `push-<name>` Secret happens to exist in the cluster.
+ * Named only for a namespace {@link OWNS} publishes into, so the table decides
+ * the credential rather than the image string does. That is what keeps a name
+ * with no Secret behind it a refusal instead of a grant, in both directions: an
+ * unlisted name yields no secret even where a `push-<name>` Secret happens to
+ * exist in the cluster, and a name listed only as a forge owner yields none
+ * either, so the name handed to the pod is always one `hanzo-build` holds.
  *
  * Returns undefined when no credential belongs to this build — the caller
  * refuses rather than mounting a token.
  */
 export function pushSecret(repo: string, image: string): string | undefined {
 	const ns = imageOrg(image);
-	if (!ns || !org(ns)) return undefined;
+	if (!ns || !publisher(ns)) return undefined;
 	if (destinationProblem(repo, image)) return undefined;
 	return `push-${ns.toLowerCase()}`;
 }
 
 /**
- * An image in a namespace we publish under.
+ * An image in a namespace we publish into.
  *
  * The tag rule applies to these and to nothing else, and they are exactly the
  * images `pushSecret` hands out a credential for — read through the same
- * `imageOrg` and the same table, so a rule cannot accept a spelling the
- * credential rejects, or the other way round.
+ * `imageOrg` and the same half of the same table, so a rule cannot accept a
+ * spelling the credential rejects, or the other way round.
  */
 export function firstParty(image: string): boolean {
 	const ns = imageOrg(image);
-	return ns !== undefined && org(ns) !== undefined;
+	return ns !== undefined && publisher(ns) !== undefined;
 }
 
 /**
