@@ -62,9 +62,10 @@ export function parseSourceDeclaration(raw: unknown): Canonical | null {
 /** `original_url` as the forge records it, reduced to `owner/name`. */
 export function githubRepoFromOriginalUrl(url: unknown): string | null {
 	if (typeof url !== "string") return null;
-	const m = /^https?:\/\/(?:[^@/]*@)?github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/.exec(
-		url.trim(),
-	);
+	const m =
+		/^https?:\/\/(?:[^@/]*@)?github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/.exec(
+			url.trim(),
+		);
 	return m ? `${m[1]}/${m[2]}` : null;
 }
 
@@ -104,7 +105,6 @@ export interface ForgeRepoFacts {
  * apart. `null` here means "ask GitHub whether a twin exists".
  */
 export function resolveCanonical(
-	forgeRepo: string,
 	declared: unknown,
 	facts: ForgeRepoFacts | null,
 ): Canonical | null | AmbiguousDirection {
@@ -174,7 +174,7 @@ export async function assertBuildableFromCanonicalSource(args: {
 }): Promise<string> {
 	const { forgeRepo, sha, declared, facts, probe } = args;
 
-	const canonical = resolveCanonical(forgeRepo, declared, facts);
+	const canonical = resolveCanonical(declared, facts);
 
 	if (canonical === AMBIGUOUS) {
 		throw new ForgeSourceRefusal(
