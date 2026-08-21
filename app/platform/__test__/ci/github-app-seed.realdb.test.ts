@@ -23,14 +23,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-} from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 // Point the singleton db at a throwaway file BEFORE importing anything that
 // opens it. NODE_ENV != "production" so the module memoizes one connection.
@@ -98,9 +91,7 @@ describe("createGithub (better-sqlite3 synchronous transaction)", () => {
 	it("commits git_provider + github atomically — no TypeError, no FK error", async () => {
 		const { createGithub } = await import("@hanzo/platform/services/github");
 		const { db, eq } = await import("@hanzo/platform/db");
-		const { github, gitProvider } = await import(
-			"@hanzo/platform/db/schema"
-		);
+		const { github, gitProvider } = await import("@hanzo/platform/db/schema");
 
 		const row = await createGithub(
 			{

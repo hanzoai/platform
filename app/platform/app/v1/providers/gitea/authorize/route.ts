@@ -8,7 +8,10 @@ export async function GET(req: Request) {
 		const giteaId = new URL(req.url).searchParams.get("giteaId");
 
 		if (!giteaId) {
-			return Response.json({ error: "Invalid Gitea provider ID" }, { status: 400 });
+			return Response.json(
+				{ error: "Invalid Gitea provider ID" },
+				{ status: 400 },
+			);
 		}
 
 		const gitea = await findGitea(giteaId);

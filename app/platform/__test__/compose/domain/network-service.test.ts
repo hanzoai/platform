@@ -27,7 +27,10 @@ describe("addHanzoPlatformNetworkToService", () => {
 	});
 
 	it("should not duplicate default network when already present", () => {
-		const result = addHanzoPlatformNetworkToService(["default", "platform-network"]);
+		const result = addHanzoPlatformNetworkToService([
+			"default",
+			"platform-network",
+		]);
 		expect(result).toEqual(["default", "platform-network"]);
 	});
 });

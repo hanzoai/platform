@@ -13,8 +13,9 @@
  *
  * Served NATIVELY at /v1/iam/session by the App Router — no rewrite. Never /api/.
  */
-import { getIamServerSession } from "@hanzo/platform/lib/auth";
+
 import type { IncomingMessage } from "node:http";
+import { getIamServerSession } from "@hanzo/platform/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,7 +56,10 @@ export async function POST(req: Request) {
 	};
 	const accessToken = (body?.accessToken ?? "") as string;
 	if (!accessToken || typeof accessToken !== "string") {
-		return Response.json({ message: "accessToken is required" }, { status: 400 });
+		return Response.json(
+			{ message: "accessToken is required" },
+			{ status: 400 },
+		);
 	}
 
 	// Verify the token before trusting it — boundary validation. getServerSession

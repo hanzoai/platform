@@ -15,8 +15,6 @@ import {
 	ClusterRef,
 	DeleteNodePoolParams,
 	Empty,
-	ProvisionParams,
-	UpdateNodePoolParams,
 	newAddNodePoolParams,
 	newAttachClusterParams,
 	newClusterRef,
@@ -24,6 +22,8 @@ import {
 	newEmpty,
 	newProvisionParams,
 	newUpdateNodePoolParams,
+	ProvisionParams,
+	UpdateNodePoolParams,
 } from "@/server/zap/schema/doks_zap";
 
 describe("doks ZAP codec", () => {

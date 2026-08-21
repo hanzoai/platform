@@ -28,13 +28,18 @@ export async function POST(req: Request) {
 	const expected = process.env.PLATFORM_BUILD_CALLBACK_TOKEN;
 	if (!expected) {
 		return Response.json(
-			{ message: "PLATFORM_BUILD_CALLBACK_TOKEN is not configured on the server" },
+			{
+				message:
+					"PLATFORM_BUILD_CALLBACK_TOKEN is not configured on the server",
+			},
 			{ status: 500 },
 		);
 	}
 	// Constant-time bearer check (no early-exit on the token — timingSafeEqual).
 	const header = req.headers.get("authorization") ?? "";
-	const provided = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+	const provided = header.startsWith("Bearer ")
+		? header.slice("Bearer ".length)
+		: "";
 	if (!provided || !safeEqual(provided, expected)) {
 		return Response.json({ message: "Invalid token" }, { status: 401 });
 	}

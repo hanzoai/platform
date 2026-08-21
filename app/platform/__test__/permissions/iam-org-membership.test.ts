@@ -154,13 +154,15 @@ describe("isGlobalAdmin", () => {
 		).toBe(true);
 	});
 	it("true when owned by the reserved admin org (via owner claim)", () => {
-		expect(
-			isGlobalAdmin(session({ claims: { owner: "admin" } as any })),
-		).toBe(true);
+		expect(isGlobalAdmin(session({ claims: { owner: "admin" } as any }))).toBe(
+			true,
+		);
 	});
 	it("false for an org admin (isAdmin is org-scoped, not global)", () => {
 		expect(
-			isGlobalAdmin(session({ claims: { owner: "hanzo", isAdmin: true } as any })),
+			isGlobalAdmin(
+				session({ claims: { owner: "hanzo", isAdmin: true } as any }),
+			),
 		).toBe(false);
 	});
 	it("uses claims.owner over the SDK fallback when sub is a UUID", () => {
@@ -209,7 +211,7 @@ describe("syncIamOrgMembership — ordinary user", () => {
 		expect(members.some((m) => m.organizationId === "org-x")).toBe(false);
 	});
 
-	it("fails closed on an empty owner claim (never keys an org on \"\")", async () => {
+	it('fails closed on an empty owner claim (never keys an org on "")', async () => {
 		await expect(
 			syncIamOrgMembership(
 				session({ owner: "", claims: { sub: "x" } as any }),

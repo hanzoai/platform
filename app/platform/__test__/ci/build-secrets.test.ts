@@ -25,9 +25,9 @@ describe("fetchBuildSecrets", () => {
 	it("returns {} without a login for an empty list", async () => {
 		const fetchMock = vi.fn();
 		vi.stubGlobal("fetch", fetchMock);
-		expect(await fetchBuildSecrets([], { path: "deploy", env: "prod" })).toEqual(
-			{},
-		);
+		expect(
+			await fetchBuildSecrets([], { path: "deploy", env: "prod" }),
+		).toEqual({});
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
