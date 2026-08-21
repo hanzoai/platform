@@ -25,7 +25,7 @@ required.
 
 ```
 GitHub push/PR ─webhook─▶ /v1/github-webhook (HMAC per installation)
-service-token  ─direct──▶ /v1/runner         (Bearer PLATFORM_BUILD_CALLBACK_TOKEN)
+an identity    ─direct──▶ /v1/runner         (IAM access token, or x-api-key)
                               │
                               ▼
                         BuildScheduler              reads hanzo.yml @ sha, validates,
@@ -189,7 +189,7 @@ brand-mapped from the GitHub org (`hanzoai`→`hanzo`).
 | Route | Method | Auth | Purpose |
 |-------|--------|------|---------|
 | `/v1/github-webhook` | POST | HMAC (`X-Hub-Signature-256`) vs per-installation `githubWebhookSecret` | Accept push/PR/ping; schedule builds |
-| `/v1/runner` | POST | `Bearer ${PLATFORM_BUILD_CALLBACK_TOKEN}` | GitHub-free direct build trigger (repo, sha, image) |
+| `/v1/runner` | POST | IAM access token (`Authorization: Bearer`) or org-scoped `x-api-key` | GitHub-free direct build trigger (repo, ref, image). The organization is read off the credential; the repository must be one of its |
 | `/v1/e2e/run` | POST | `Bearer ${PLATFORM_BUILD_CALLBACK_TOKEN}` | Launch a Playwright e2e Job on demand |
 | `/v1/build-callback` | POST | `Bearer ${PLATFORM_BUILD_CALLBACK_TOKEN}` | Optional external-builder completion hook → deploy/test/publish |
 

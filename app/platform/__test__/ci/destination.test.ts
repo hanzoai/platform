@@ -613,9 +613,13 @@ describe("the trigger front door", () => {
 	it("writes no row for a commit the forge will not vouch for", async () => {
 		// A ref that resolves to something that is not an object id is a forge
 		// answering with something other than a commit, and there is nothing here
-		// to check out.
+		// to check out. Nothing to build reads the same as any other nothing to
+		// build, and nothing is written either way.
 		serveForge("ghcr.io/hanzoai/kms", "sha-{{git.sha}}", "abc1234?ref=main");
-		await expect(scheduleBuilds(trigger)).rejects.toThrow(/names no commit/i);
+		await expect(scheduleBuilds(trigger)).resolves.toEqual({
+			declined: "no-commit",
+			why: expect.stringMatching(/names no commit/i),
+		});
 		expect(rows).toHaveLength(0);
 	});
 });

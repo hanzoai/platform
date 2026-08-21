@@ -748,4 +748,33 @@ describe("kms location", () => {
 			environment: "prod",
 		});
 	});
+
+	/**
+	 * The folder becomes a path segment in the KMS request, and a dot is the one
+	 * character percent-encoding leaves alone — so a folder that traverses
+	 * upward re-addresses the read, on the platform's own KMS principal. The
+	 * value is repo-declared, so the rule belongs where the value is read.
+	 */
+	it("refuses a folder that traverses upward", () => {
+		for (const folder of ["..", "../..", "a/../b", "deploy/.."]) {
+			expect(() => built(`${base}kms:\n  path: ${folder}\n`), folder).toThrow(
+				/traverse upward/,
+			);
+		}
+	});
+
+	it("refuses a folder carrying anything but a folder name", () => {
+		for (const folder of ["a b", "a;b", "a$b", "-a", "a\\b", "a?b", "a#b"]) {
+			expect(() => built(`${base}kms:\n  path: "${folder}"\n`), folder).toThrow(
+				/must be a/,
+			);
+		}
+	});
+
+	it("still takes an ordinary nested folder", () => {
+		expect(built(`${base}kms:\n  path: deploy/prod\n`).kms).toEqual({
+			path: "deploy/prod",
+			environment: "prod",
+		});
+	});
 });

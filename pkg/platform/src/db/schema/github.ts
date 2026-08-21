@@ -1,25 +1,47 @@
 import { relations } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+	integer,
+	sqliteTable,
+	text,
+	uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { gitProvider } from "./git-provider";
 
-export const github = sqliteTable("github", {
-	githubId: text("githubId")
-		.notNull()
-		.primaryKey()
-		.$defaultFn(() => nanoid()),
-	githubAppName: text("githubAppName"),
-	githubAppId: integer("githubAppId"),
-	githubClientId: text("githubClientId"),
-	githubClientSecret: text("githubClientSecret"),
-	githubInstallationId: text("githubInstallationId"),
-	githubPrivateKey: text("githubPrivateKey"),
-	githubWebhookSecret: text("githubWebhookSecret"),
-	gitProviderId: text("gitProviderId")
-		.notNull()
-		.references(() => gitProvider.gitProviderId, { onDelete: "cascade" }),
-});
+export const github = sqliteTable(
+	"github",
+	{
+		githubId: text("githubId")
+			.notNull()
+			.primaryKey()
+			.$defaultFn(() => nanoid()),
+		githubAppName: text("githubAppName"),
+		githubAppId: integer("githubAppId"),
+		githubClientId: text("githubClientId"),
+		githubClientSecret: text("githubClientSecret"),
+		githubInstallationId: text("githubInstallationId"),
+		githubPrivateKey: text("githubPrivateKey"),
+		githubWebhookSecret: text("githubWebhookSecret"),
+		gitProviderId: text("gitProviderId")
+			.notNull()
+			.references(() => gitProvider.gitProviderId, { onDelete: "cascade" }),
+	},
+	(table) => [
+		/**
+		 * A delivery names its installation, and that name has to reach one row.
+		 *
+		 * Two readers resolve it independently — the route, for the secret the
+		 * signature is checked against, and the scheduler, for the organization
+		 * and the credential — and each takes the first row an unordered query
+		 * hands back. One id on two rows lets those be different rows.
+		 *
+		 * NULL is exempt, and SQLite counts NULLs as distinct, which is what an
+		 * App needs between being created and being installed.
+		 */
+		uniqueIndex("github_installation_id_idx").on(table.githubInstallationId),
+	],
+);
 
 export const githubProviderRelations = relations(github, ({ one }) => ({
 	gitProvider: one(gitProvider, {

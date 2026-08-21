@@ -201,19 +201,39 @@ function readRef(ref: string): Named | null {
 }
 
 /**
- * The characters and sequences git refuses inside a ref name.
- *
- * A control character or a space, the five its own pattern syntax already
- * spells something with (`~^:?*[`), a backslash, `..`, `@{`, and a trailing
- * dot.
+ * A space, the five characters git's own pattern syntax already spells
+ * something with (`~^:?*[`), a backslash, `..`, `@{`, and a trailing dot.
  */
-const REFUSED = /[\p{Cc} ~^:?*[\\]|\.\.|@\{|\.$/u;
+const REFUSED = /[ ~^:?*[\\]|\.\.|@\{|\.$/;
 
 /**
- * Longest name the forge stores. A loose ref is a file whose path is the name,
- * and a path component tops out here; nothing a person pushes comes near it.
+ * The first thing in `name` that git will not have in a ref, or undefined.
+ *
+ * Two clauses, because git's rule has two: a range of bytes, and a set of
+ * characters and sequences. The range is git's own — everything below `\040`,
+ * plus `\177` — and is read a codepoint at a time rather than as the Unicode
+ * control CATEGORY, which is a wider set: that also holds U+0080–U+009F, whose
+ * UTF-8 encodings begin at `\302` and so contain no byte git looks at.
+ * `refs/heads/a<U+0085>b` is a branch git makes, and a rule that refuses it
+ * refuses a real push.
  */
-const NAME_MAX = 255;
+function refused(name: string): string | undefined {
+	const control = [...name].find((c) => c < "\u0020" || c === "\u007f");
+	return control ?? REFUSED.exec(name)?.[0];
+}
+
+/**
+ * Longest COMPONENT the forge stores, which is a different thing from the
+ * longest name.
+ *
+ * A loose ref is a file at the name's path, written through a sibling
+ * `<name>.lock`, so each `/`-separated part has to fit in one directory entry
+ * with those five bytes to spare — 250 of the 255 a directory entry holds. The
+ * name itself has no such bound: `git branch a…a/b…b` at 401 characters is a
+ * ref git makes, and deep generated names (a monorepo path, a scoped package,
+ * a version) reach that length honestly.
+ */
+const COMPONENT_MAX = 250;
 
 /**
  * What is wrong with the name part of a ref, or null when git would make it.
@@ -227,16 +247,15 @@ const NAME_MAX = 255;
  * about and the name the forge can hold one thing.
  */
 function nameProblem(name: string): string | null {
-	if (name.length > NAME_MAX) return `it is longer than ${NAME_MAX} characters`;
-	if (name === "@") return "git keeps `@` for itself";
-	const refused = REFUSED.exec(name);
-	if (refused) {
-		return `git allows no ${JSON.stringify(refused[0])} in a ref name`;
-	}
+	const bad = refused(name);
+	if (bad) return `git allows no ${JSON.stringify(bad)} in a ref name`;
 	for (const part of name.split("/")) {
 		if (!part) return "it has an empty path component";
 		if (part.startsWith(".")) return `"${part}" begins with a dot`;
 		if (part.endsWith(".lock")) return `"${part}" ends with .lock`;
+		if (part.length > COMPONENT_MAX) {
+			return `one of its parts is longer than ${COMPONENT_MAX} characters`;
+		}
 	}
 	return null;
 }

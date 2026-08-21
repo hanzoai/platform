@@ -70,6 +70,15 @@ export function githubRepoFromOriginalUrl(url: unknown): string | null {
 
 /** What the forge knows about one of its own repos. */
 export interface ForgeRepoFacts {
+	/**
+	 * The branch this repository speaks for itself on.
+	 *
+	 * Where `source:` is read. A declaration decides whether this repository is
+	 * compared against github.com at all, which is a fact about the repository
+	 * and holds for every commit in it — so it is read where the repository
+	 * states things, not where a commit does.
+	 */
+	defaultBranch?: string | null;
 	/** A pull mirror is running; the forge is downstream of `originalUrl`. */
 	mirror: boolean;
 	/** The upstream the repo was created from, mirror or not. */
