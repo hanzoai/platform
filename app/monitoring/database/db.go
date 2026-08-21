@@ -3,15 +3,22 @@ package database
 import (
 	"database/sql"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/hanzoai/sqlite"
 )
 
 type DB struct {
 	*sql.DB
 }
 
+// dbPath is where this service keeps its metrics.
+const dbPath = "./monitoring.db"
+
 func InitDB() (*DB, error) {
-	db, err := sql.Open("sqlite3", "./monitoring.db")
+	// The driver builds the DSN and applies the profile. A bare open takes no
+	// pragmas at all: foreign keys off on either build, and a busy timeout that
+	// depends on which backend is linked — so concurrent writers here would meet
+	// SQLITE_BUSY rather than wait.
+	db, err := sql.Open("sqlite", sqlite.PragmaDSN(dbPath, sqlite.DefaultPragmas))
 	if err != nil {
 		return nil, err
 	}

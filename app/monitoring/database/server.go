@@ -3,7 +3,7 @@ package database
 import (
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/hanzoai/sqlite"
 )
 
 type ServerMetric struct {
