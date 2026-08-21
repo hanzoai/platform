@@ -252,9 +252,10 @@ deploy:
 			// The repo lookup, which `ciOwnsBuild` reads `has_actions` from and
 			// `readForgeRepoFacts` reads the mirror rows from. Neither is recorded.
 			if (/\/v1\/repos\/[^/]+\/[^/]+$/.test(at)) {
-				return new Response(JSON.stringify({ has_actions: true }), {
-					status: 200,
-				});
+				return new Response(
+					JSON.stringify({ has_actions: true, default_branch: "main" }),
+					{ status: 200 },
+				);
 			}
 			return new Response("", { status: 404 });
 		}),
@@ -333,7 +334,11 @@ describe("the commit a build reads", () => {
 		}
 	});
 
-	it("is refused when the ref names nothing on the forge", async () => {
+	it("is nothing to build on the delivery lane, and a refusal at the door that stated it", async () => {
+		// Both doors ask the forge and get the same nothing. They owe their
+		// callers different sentences: a delivery is a healthy push of a branch
+		// that has since gone, and a caller that TYPED the ref asked for
+		// something that is not there.
 		forge();
 		await expect(
 			scheduleBuilds({
@@ -342,7 +347,20 @@ describe("the commit a build reads", () => {
 				ref: "refs/heads/does-not-exist",
 				requireOrganizationId: HANZO,
 			}),
+		).resolves.toEqual({
+			declined: "no-commit",
+			why: expect.stringMatching(/names no commit/i),
+		});
+
+		await expect(
+			enqueueDirectBuild({
+				repo: "hanzoai/kms",
+				ref: "refs/heads/does-not-exist",
+				image: "ghcr.io/hanzoai/kms:sha-abc",
+				requireOrganizationId: HANZO,
+			}),
 		).rejects.toThrow(/names no commit/i);
+
 		expect(rows).toHaveLength(0);
 		expect(launched).toHaveLength(0);
 	});
@@ -823,11 +841,11 @@ describe("the name a ref carries", () => {
 			"a[",
 			"a\\b",
 			"a@{1}",
-			"@",
 			"a//b",
 			"a/",
 			"trailing.",
-			"a".repeat(256),
+			"a".repeat(251),
+			`ok/${"a".repeat(251)}`,
 		]) {
 			expect(refProblem(`refs/heads/${name}`), name).toMatch(
 				/does not name a branch or a tag/i,
@@ -848,6 +866,19 @@ describe("the name a ref carries", () => {
 			"refs/heads/UPPER",
 			"refs/tags/v1.2.3",
 			"refs/tags/v1.36.2-rc.1",
+			// `@` is a whole refname git keeps for itself, and under refs/heads/
+			// the whole refname is never `@` — so it is an ordinary branch name.
+			"refs/heads/@",
+			"refs/tags/@",
+			// The bound is on a component, so a hierarchical name is as long as
+			// its parts allow. A generated branch really does reach this.
+			`refs/heads/${"a".repeat(200)}/${"b".repeat(200)}`,
+			`refs/heads/renovate/${"services-gateway/".repeat(6)}pkg-1.2.3`,
+			// C1 controls are ordinary bytes to git: no byte of their UTF-8 is
+			// below \040.
+			"refs/heads/a\u0085b",
+			"refs/heads/a\u0080b",
+			"refs/heads/a\u009fb",
 		]) {
 			expect(refProblem(ref), ref).toBeNull();
 		}

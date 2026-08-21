@@ -51,8 +51,9 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
 - Triggers — three doors, two functions: `app/platform/app/v1/git-webhook/route.ts`
   (HMAC per installation; `/v1/github-webhook` is a zero-logic alias of it) and
   the tRPC `buildJob.trigger` both call `scheduleBuilds`;
-  `app/platform/app/v1/runner/route.ts` (service-token, GitHub-free direct
-  build) calls `enqueueDirectBuild`. Both settle the repository and the ref
+  `app/platform/app/v1/runner/route.ts` (an IAM identity or an org-scoped
+  `x-api-key`, GitHub-free direct build) calls `enqueueDirectBuild` with the
+  organization read off that credential. Both settle the repository and the ref
   first, and every rule about whether a commit may be built lives INSIDE those
   two — the principal, the destination, the name it publishes under, the
   canonical-source check, and whether hanzoai/ci already owns the repo's

@@ -111,7 +111,7 @@ export interface ScheduleResult {
  * once, where it is known, rather than guessed at each door.
  */
 export interface Declined {
-	declined: "no-image" | "ci-owns";
+	declined: "no-image" | "ci-owns" | "no-commit";
 	why: string;
 }
 
@@ -494,15 +494,15 @@ export interface DirectBuildInput {
 	arch?: BuildArch;
 	/**
 	 * The org the CALLER acts as, checked against the org that owns the
-	 * repository: a caller states which org it is, and stating one it is not is
-	 * refused.
+	 * repository.
 	 *
-	 * Required, unlike {@link ScheduleInput}'s. There the forge authenticates the
-	 * delivery and the principal follows from the installation binding, so there
-	 * is nobody to ask. Here the credential authenticates a MACHINE and says
-	 * nothing about which organization it is acting for, so the caller says it and
-	 * the repository has to bear it out. A caller that need not state one is a
-	 * caller that is never wrong.
+	 * Required, unlike {@link ScheduleInput}'s: a delivery is authenticated by
+	 * the forge and its principal follows from the installation binding, while
+	 * this door is reached by an identity, and an identity is exactly a thing
+	 * that has an organization. So the value is read off the credential the
+	 * caller presented — never out of the request — and the repository has to
+	 * bear it out. A caller that could write this value would only ever write
+	 * the right one.
 	 */
 	requireOrganizationId: string;
 }
@@ -541,8 +541,16 @@ export async function enqueueDirectBuild(
 		});
 	}
 	// The commit the ref names, and then the name this build publishes under —
-	// which is a claim ABOUT that commit, so it cannot be judged before it.
+	// which is a claim ABOUT that commit, so it cannot be judged before it. A
+	// caller that stated a ref the forge does not resolve asked for something
+	// that is not there, and hears so.
 	const sha = await commitOf(repo, ref);
+	if (!sha) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: `Refusing to build ${repo}: "${ref}" names no commit there.`,
+		});
+	}
 	assertName(input.image, sha);
 	const os: BuildOS = input.os ?? "linux";
 	const arch: BuildArch = input.arch ?? "amd64";
@@ -636,7 +644,17 @@ export async function scheduleBuilds(
 				"Refusing to schedule a build for another organization — the build source resolves to an org you are not acting as",
 		});
 	}
+	// A branch deleted between the push and this read names no commit. Nothing
+	// to build, and nothing a redelivery finds either — so it is one of the
+	// ordinary ways a healthy delivery builds nothing, said in the same shape as
+	// the other two.
 	const sha = await commitOf(repo, ref);
+	if (!sha) {
+		return {
+			declined: "no-commit",
+			why: `${repo}: "${ref}" names no commit there`,
+		};
+	}
 	const config = await readConfig(input.source, repo, sha);
 
 	// ONE LANE. A push to the forge starts this scheduler AND the repo's
@@ -685,7 +703,7 @@ export async function scheduleBuilds(
 	// caller could choose not to be judged by. The declaration answers for the
 	// GitHub lane too: a repo whose truth IS github.com passes on its own
 	// reachability, in one call, rather than by not being asked.
-	await assertCanonical(repo, sha, config);
+	await assertCanonical(repo, sha);
 
 	// Publishable `build_secrets:` → --build-args, fetched from KMS ONCE for the
 	// whole config (the same value serves every image). The webhook lane never did
@@ -827,45 +845,43 @@ function refOf(ref: string): string {
  * is keyed by the commit it resolved, so the second delivery finds that row
  * rather than building it twice, and what the row says is what was built.
  *
- * A ref the forge does not resolve is not a build. That is the same refusal as
- * a repository nobody owns: there is nothing here to check out.
+ * Null when the forge resolves the ref to nothing — a name nobody pushed, or a
+ * branch deleted between the push and this read. Null rather than an error,
+ * because the two callers owe their callers different sentences: a delivery
+ * built nothing, and a caller that STATED a ref asked for something that is not
+ * there. An error code cannot say which, and it is shared with every unrelated
+ * thing that raises it.
  */
-async function commitOf(repo: string, ref: string): Promise<string> {
-	const sha = await commitAt(forgeReader(), repo, ref);
-	if (!sha) {
-		throw new TRPCError({
-			code: "NOT_FOUND",
-			message: `Refusing to build ${repo}: "${ref}" names no commit there.`,
-		});
-	}
-	return sha;
+async function commitOf(repo: string, ref: string): Promise<string | null> {
+	return commitAt(forgeReader(), repo, ref);
 }
 
 /**
  * This commit is on the source of truth, or this build does not happen.
  *
- * One call, both front doors. `declared` is the repo's own `source:` when the
- * caller has already read the config; the direct door has not, so it reads it
- * here — at the commit being built, from the repository being built, which is
- * the only place that declaration is meaningful.
+ * One call, both front doors, and one document read for both: the repository's
+ * `hanzo.yml` at its DEFAULT branch, which is where a repository says what it
+ * is. `source:` decides whether this repository is compared against github.com
+ * at all — a property of the repository, true of every commit in it — and the
+ * same reasoning `ciOwnsBuild` is read by. Read at the commit instead, the
+ * commit answers the question asked about it, and one line on a side branch is
+ * a build's own exemption from the comparison.
  */
-async function assertCanonical(
-	repo: string,
-	sha: string,
-	config?: PlatformConfig | null,
-): Promise<void> {
-	// The CONFIG, not the declaration inside it — `source:` is legitimately
-	// absent from most of them, and a caller passing that absence through as
-	// "nothing given" would buy a second read of a file already in hand.
-	const read =
-		config === undefined
-			? await fetchPlatformConfigFromHanzoGit(forgeReader(), repo, sha)
-			: config;
+async function assertCanonical(repo: string, sha: string): Promise<void> {
+	const facts = await readForgeRepoFacts(forgeReader(), repo);
 	const why = await assertBuildableFromCanonicalSource({
 		forgeRepo: repo,
 		sha,
-		declared: read?.source,
-		facts: await readForgeRepoFacts(forgeReader(), repo),
+		declared: facts?.defaultBranch
+			? (
+					await fetchPlatformConfigFromHanzoGit(
+						forgeReader(),
+						repo,
+						facts.defaultBranch,
+					)
+				)?.source
+			: undefined,
+		facts,
 		probe: githubReachability,
 	});
 	console.info(`[build] source check passed: ${why}`);

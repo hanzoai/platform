@@ -302,20 +302,22 @@ describe("POST /v1/github-webhook — the GitHub path is unchanged", () => {
  * The commit a build reads is the forge's answer to the ref, asked when the
  * delivery arrives rather than taken from the body. That is what keeps the two
  * halves from disagreeing, and it opens one window: a branch deleted between
- * the push and this read names no commit. Reported as a server fault, the forge
- * redelivers against it — five times, then keeps the failure in its history —
- * for a push nobody can build.
+ * the push and this read names no commit.
+ *
+ * So the scheduler says so, in the value it already has for "this call built
+ * nothing and here is which of the ordinary reasons it was". A reason carried
+ * as a VALUE is the one the route can render; a reason carried as an error code
+ * is shared with every other thing that raises that code, and this route once
+ * rendered all of them as an acceptance — a provider missing its key, an
+ * installation with no row, a build row that vanished mid-dispatch while
+ * earlier jobs of the same delivery were already running.
  */
 describe("POST /v1/git-webhook — a ref that no longer resolves", () => {
 	it("is an acceptance that built nothing, not a failure to retry", async () => {
-		const { TRPCError } = await import("@trpc/server");
-		scheduleBuilds.mockRejectedValue(
-			new TRPCError({
-				code: "NOT_FOUND",
-				message:
-					'Refusing to build hanzo/kms: "refs/heads/main" names no commit there.',
-			}),
-		);
+		scheduleBuilds.mockResolvedValue({
+			declined: "no-commit",
+			why: 'hanzo/kms: "refs/heads/main" names no commit there',
+		});
 		const res = await post({
 			"x-hanzo-event": "push",
 			"x-hanzo-signature": goodSig,
@@ -334,5 +336,24 @@ describe("POST /v1/git-webhook — a ref that no longer resolves", () => {
 			"x-hanzo-signature": goodSig,
 		});
 		expect(res.status).toBe(500);
+	});
+
+	it("reports a misconfigured provider as a fault, never as an acceptance", async () => {
+		const { TRPCError } = await import("@trpc/server");
+		// Every one of these raises NOT_FOUND, and none of them is a healthy push.
+		for (const message of [
+			"Github Account not configured correctly",
+			"No GitHub provider configured for installation 42",
+			"Build job bj_1 not found",
+		]) {
+			scheduleBuilds.mockRejectedValue(
+				new TRPCError({ code: "NOT_FOUND", message }),
+			);
+			const res = await post({
+				"x-hanzo-event": "push",
+				"x-hanzo-signature": goodSig,
+			});
+			expect(res.status, message).toBe(500);
+		}
 	});
 });

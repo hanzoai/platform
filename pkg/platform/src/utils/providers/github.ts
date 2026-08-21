@@ -17,16 +17,61 @@ export const authGithub = (githubProvider: Github): Octokit => {
 		});
 	}
 
-	const octokit: Octokit = new Octokit({
+	return appOctokit({
+		appId: githubProvider?.githubAppId || 0,
+		privateKey: githubProvider?.githubPrivateKey || "",
+		installationId: githubProvider?.githubInstallationId,
+	});
+};
+
+/**
+ * Octokit acting as one GitHub App installation.
+ *
+ * The ONE place a stored key becomes a credential, which is where it is put in
+ * the encoding the JWT signer accepts — see {@link pkcs8}. A key arrives in
+ * whichever form it was written in: `gh_init` stores GitHub's manifest `pem`,
+ * KMS holds whatever an operator pasted. Normalizing at the two or three places
+ * a key is WRITTEN leaves every already-stored row wrong; normalizing here
+ * covers every path by construction, and there is nowhere else to build one of
+ * these.
+ */
+const appOctokit = (auth: {
+	appId: number;
+	privateKey: string;
+	installationId?: string | number | null;
+}): Octokit =>
+	new Octokit({
 		authStrategy: createAppAuth,
-		auth: {
-			appId: githubProvider?.githubAppId || 0,
-			privateKey: githubProvider?.githubPrivateKey || "",
-			installationId: githubProvider?.githubInstallationId,
-		},
+		auth: { ...auth, privateKey: pkcs8(auth.privateKey) },
 	});
 
-	return octokit;
+/**
+ * Is this one of the App's own installations?
+ *
+ * An installation id is a NAME, not a credential — a number a browser carried
+ * back in a URL. What it names is a fact only GitHub holds, so GitHub is asked,
+ * at the endpoint that answers for one installation of the App making the
+ * request. Asked as the App itself (`/app/…` routes authenticate with the App
+ * JWT), which is what makes "this installation" mean this App's.
+ *
+ * False rather than an exception for a 404: that IS the answer. Anything else
+ * is this side failing to ask, and travels as itself.
+ */
+export const appHoldsInstallation = async (
+	app: { githubAppId?: number | null; githubPrivateKey?: string | null },
+	installationId: string,
+): Promise<boolean> => {
+	if (!app.githubAppId || !app.githubPrivateKey) return false;
+	try {
+		await appOctokit({
+			appId: app.githubAppId,
+			privateKey: app.githubPrivateKey,
+		}).rest.apps.getInstallation({ installation_id: Number(installationId) });
+		return true;
+	} catch (err) {
+		if ((err as { status?: number }).status === 404) return false;
+		throw err;
+	}
 };
 
 export const getGithubToken = async (
@@ -61,16 +106,13 @@ export const getGithubToken = async (
  */
 export const appEnvOctokit = (): Octokit => {
 	const appId = process.env.GITHUB_APP_ID;
-	const privateKey = pkcs8(process.env.GITHUB_APP_PRIVATE_KEY);
+	const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
 	const installationId = process.env.GITHUB_APP_INSTALLATION_ID;
 	if (appId && privateKey && installationId) {
-		return new Octokit({
-			authStrategy: createAppAuth,
-			auth: {
-				appId: Number(appId),
-				privateKey,
-				installationId: Number(installationId),
-			},
+		return appOctokit({
+			appId: Number(appId),
+			privateKey,
+			installationId: Number(installationId),
 		});
 	}
 	const token = process.env.GH_TOKEN;

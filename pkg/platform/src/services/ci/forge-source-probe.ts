@@ -103,6 +103,7 @@ export async function readForgeRepoFacts(
 		);
 		if (!res.ok) return null;
 		const body = (await res.json()) as {
+			default_branch?: string | null;
 			mirror?: boolean;
 			original_url?: string | null;
 		};
@@ -119,6 +120,7 @@ export async function readForgeRepoFacts(
 			pushMirror = Array.isArray(list) && list.length > 0;
 		}
 		return {
+			defaultBranch: body.default_branch ?? null,
 			mirror: body.mirror === true,
 			originalUrl: body.original_url ?? null,
 			pushMirror,

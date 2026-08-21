@@ -169,10 +169,11 @@ spec:
                 secretKeyRef:
                   name: platform-service-token
                   key: token
-            # The bearer that authorises `POST /v1/runner` — the build enqueue.
-            # Present on the live pod and absent from this file until now: a
-            # plain `kubectl apply` of this manifest would have deleted it and
-            # taken the build path down with it.
+            # The machine bearer for the two infra surfaces that have no user
+            # behind them: `POST /v1/build-callback` (an external builder
+            # reporting completion) and `POST /v1/e2e/run`. The build enqueue
+            # `POST /v1/runner` reads an identity instead, so the organization
+            # a build acts as comes off the caller's credential.
             - name: PLATFORM_BUILD_CALLBACK_TOKEN
               valueFrom:
                 secretKeyRef:

@@ -49,7 +49,6 @@ import {
 	hanzoGitConfig,
 	isHanzoGitOrigin,
 } from "@hanzo/platform/services/hanzo-git";
-import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 
 export const runtime = "nodejs";
@@ -228,20 +227,10 @@ export async function POST(req: Request) {
 			{ status: 202 },
 		);
 	} catch (err) {
-		// A ref that resolves to nothing is nothing to build, and nothing a
-		// redelivery will find either. The commit is the forge's answer to the ref,
-		// asked when the delivery arrives rather than taken from the body — which
-		// is what keeps the two halves from disagreeing, and leaves one window: a
-		// branch deleted between the push and this read. Reported as a fault the
-		// forge redelivers against it, five times, for a push nobody can build. So
-		// it is an acceptance that scheduled nothing, in the same shape every other
-		// "scheduled nothing" takes.
-		if (err instanceof TRPCError && err.code === "NOT_FOUND") {
-			return Response.json(
-				{ message: `Accepted; ${err.message}`, scheduled: 0 },
-				{ status: 202 },
-			);
-		}
+		// Every way a healthy delivery builds nothing is a VALUE the scheduler
+		// returns, handled above. What reaches here is this side failing, and it
+		// says so — a fault rendered as an acceptance is a lane that stays broken
+		// because nothing ever reports it.
 		return Response.json(
 			{ message: `Failed to schedule builds: ${(err as Error).message}` },
 			{ status: 500 },
