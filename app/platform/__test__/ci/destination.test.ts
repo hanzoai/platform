@@ -424,6 +424,96 @@ describe("pushSecret — the credential follows from both names", () => {
 	});
 });
 
+/**
+ * Being an organization and being a place its images may be written are two
+ * different facts, and only the second one is a credential.
+ *
+ * An organization answers to several names. Some are forge owners — where its
+ * source is read from — and some are registry namespaces, where its images are
+ * written to. `hanzo-build` holds `push-hanzoai`, `push-hanzoteam`,
+ * `push-luxfi`, `push-zooai` and `push-parsdao`: five namespaces, and every
+ * other name an organization answers to is a forge owner with no credential
+ * behind it.
+ *
+ * Read as one list the two roles substitute, and a forge owner is answered as
+ * though it were a namespace: `ghcr.io/hanzo-inc/x` passes the destination rule
+ * because `hanzo-inc` names an organization, and the credential derived from it
+ * is `push-hanzo-inc` — a Secret nothing provisions. A build handed that name
+ * mounts a Secret that does not exist and waits, which is the one outcome
+ * naming the credential from the table is there to prevent.
+ */
+describe("a destination is a namespace the fabric holds a credential for", () => {
+	/** The five `push-<namespace>` Secrets in `hanzo-build`, and the repositories that ask for them. */
+	const CREDENTIALED = [
+		["hanzoai/kms", "hanzoai"],
+		["hanzo/kms", "hanzoai"],
+		["hanzo-apps/site", "hanzoai"],
+		["hanzo-docs/docs", "hanzoai"],
+		["hanzo-inc/pay", "hanzoai"],
+		["hanzoteam/agents", "hanzoteam"],
+		["luxfi/node", "luxfi"],
+		["zooai/gym", "zooai"],
+		["parsdao/vote", "parsdao"],
+	] as const;
+
+	/** Names an organization answers to on the forge, which no credential is issued for. */
+	const FORGE_ONLY = [
+		"hanzo",
+		"hanzo-apps",
+		"hanzo-docs",
+		"hanzo-inc",
+		"lux",
+		"zoo",
+		"pars",
+	];
+
+	it("names the credential for each namespace one exists for", () => {
+		for (const [repo, ns] of CREDENTIALED) {
+			expect(pushSecret(repo, `ghcr.io/${ns}/thing:v1.0.0`), repo).toBe(
+				`push-${ns}`,
+			);
+		}
+	});
+
+	it("names no credential for an organization's forge owner", () => {
+		for (const ns of FORGE_ONLY) {
+			expect(
+				pushSecret("hanzoai/kms", `ghcr.io/${ns}/kms:v1.0.0`),
+				ns,
+			).toBeUndefined();
+		}
+	});
+
+	it("refuses a destination in one, and says which names are publishable", () => {
+		for (const ns of FORGE_ONLY) {
+			expect(
+				destinationProblem("hanzoai/kms", `ghcr.io/${ns}/kms:v1.0.0`),
+				ns,
+			).toMatch(/refusing/i);
+		}
+	});
+
+	it("refuses it however the namespace was spelled", () => {
+		expect(
+			destinationProblem("hanzoai/kms", "GHCR.IO/Hanzo-Inc/kms:v1.0.0"),
+		).toMatch(/refusing/i);
+		expect(
+			pushSecret("hanzoai/kms", "GHCR.IO/Hanzo-Inc/kms:v1.0.0"),
+		).toBeUndefined();
+	});
+
+	it("still names no credential for a namespace no organization here claims", () => {
+		// Unchanged by the split: a name belonging to nobody here is somebody
+		// else's registry, and stays unjudged rather than becoming a refusal.
+		expect(
+			destinationProblem("hanzoai/kms", "ghcr.io/bootnode/bootnode:v1.0.0"),
+		).toBeNull();
+		expect(
+			pushSecret("hanzoai/kms", "ghcr.io/bootnode/bootnode:v1.0.0"),
+		).toBeUndefined();
+	});
+});
+
 describe("firstParty — which images the tag rules are about", () => {
 	it("recognizes an image in a namespace we publish under", () => {
 		expect(firstParty("ghcr.io/hanzoai/platform:v1.0.0")).toBe(true);
