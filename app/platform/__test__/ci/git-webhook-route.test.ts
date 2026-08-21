@@ -305,12 +305,12 @@ describe("POST /v1/github-webhook — the GitHub path is unchanged", () => {
  * the push and this read names no commit.
  *
  * So the scheduler says so, in the value it already has for "this call built
- * nothing and here is which of the ordinary reasons it was". A reason carried
- * as a VALUE is the one the route can render; a reason carried as an error code
- * is shared with every other thing that raises that code, and this route once
- * rendered all of them as an acceptance — a provider missing its key, an
- * installation with no row, a build row that vanished mid-dispatch while
- * earlier jobs of the same delivery were already running.
+ * nothing, and here is which of the ordinary reasons it was". A reason carried
+ * as a VALUE is what the route renders as an acceptance. An error code is
+ * shared with every unrelated thing that raises it, so what arrives as an
+ * error is this side failing, and the route reports a fault. The three tests
+ * below hold both halves of that, and the last one names the NOT_FOUND raisers
+ * that are not healthy pushes.
  */
 describe("POST /v1/git-webhook — a ref that no longer resolves", () => {
 	it("is an acceptance that built nothing, not a failure to retry", async () => {
