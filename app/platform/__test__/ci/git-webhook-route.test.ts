@@ -295,3 +295,44 @@ describe("POST /v1/github-webhook — the GitHub path is unchanged", () => {
 		expect(scheduleBuilds).not.toHaveBeenCalled();
 	});
 });
+
+/**
+ * A ref that is gone is nothing to build, and nothing a redelivery will find.
+ *
+ * The commit a build reads is the forge's answer to the ref, asked when the
+ * delivery arrives rather than taken from the body. That is what keeps the two
+ * halves from disagreeing, and it opens one window: a branch deleted between
+ * the push and this read names no commit. Reported as a server fault, the forge
+ * redelivers against it — five times, then keeps the failure in its history —
+ * for a push nobody can build.
+ */
+describe("POST /v1/git-webhook — a ref that no longer resolves", () => {
+	it("is an acceptance that built nothing, not a failure to retry", async () => {
+		const { TRPCError } = await import("@trpc/server");
+		scheduleBuilds.mockRejectedValue(
+			new TRPCError({
+				code: "NOT_FOUND",
+				message:
+					'Refusing to build hanzo/kms: "refs/heads/main" names no commit there.',
+			}),
+		);
+		const res = await post({
+			"x-hanzo-event": "push",
+			"x-hanzo-signature": goodSig,
+		});
+		expect(res.status).toBe(202);
+		await expect(res.json()).resolves.toMatchObject({
+			scheduled: 0,
+			message: expect.stringMatching(/names no commit there/),
+		});
+	});
+
+	it("still reports a genuine fault as one", async () => {
+		scheduleBuilds.mockRejectedValue(new Error("kms is unreachable"));
+		const res = await post({
+			"x-hanzo-event": "push",
+			"x-hanzo-signature": goodSig,
+		});
+		expect(res.status).toBe(500);
+	});
+});

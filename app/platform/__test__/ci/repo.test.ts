@@ -73,7 +73,7 @@ build:
   matrix:
     - { os: linux, arch: amd64 }
   image: ghcr.io/hanzoai/kms
-  tag-pattern: "v9.9.9"
+  tag-pattern: "sha-{{git.sha}}"
   push: true
 `;
 

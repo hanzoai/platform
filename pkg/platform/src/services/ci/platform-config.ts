@@ -500,6 +500,13 @@ const TOKENS = ["{{git.sha}}", "{{git.tag}}"] as const;
  * image name — `{{git.branch}}` published an image literally called
  * `-git.branch-` the moment nothing answered for it. Refusing names the
  * available tokens, which is the sentence the author of that line needs.
+ *
+ * A pattern with NO token is refused for the same reason and is the harder half
+ * to see: it is not a template but a constant, and a constant is the same image
+ * name on every push. `tag-pattern: "v1.2.3"` publishes one tag from `main` and
+ * from a side branch alike. Nothing downstream can tell those apart, because
+ * downstream reads the RESOLVED name and a version is exactly what it wants to
+ * see — the moving part is the pattern, and this is where a pattern is read.
  */
 function parseTagPattern(
 	entry: Record<string, unknown>,
@@ -507,12 +514,18 @@ function parseTagPattern(
 	fallback: string,
 ): string {
 	const pattern = optionalString(entry, "tag-pattern", fallback);
-	for (const token of pattern.match(/\{\{[^}]*\}\}/g) ?? []) {
+	const tokens = pattern.match(/\{\{[^}]*\}\}/g) ?? [];
+	for (const token of tokens) {
 		if (!TOKENS.includes(token as (typeof TOKENS)[number])) {
 			throw new PlatformConfigError(
 				`${at}.tag-pattern: ${token} is not a tag token. A tag names one build for good, so it is spelled from ${TOKENS.join(" or ")} — a branch head moves and cannot name one.`,
 			);
 		}
+	}
+	if (tokens.length === 0) {
+		throw new PlatformConfigError(
+			`${at}.tag-pattern: "${pattern}" names the same image on every push. A tag names ONE build, so the pattern spells it from ${TOKENS.join(" or ")}.`,
+		);
 	}
 	return pattern;
 }

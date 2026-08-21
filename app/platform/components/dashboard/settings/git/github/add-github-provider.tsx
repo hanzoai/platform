@@ -30,7 +30,7 @@ export const AddGithubProvider = () => {
 		const url = document.location.origin;
 		const manifest = JSON.stringify(
 			{
-				redirect_url: `${origin}/v1/providers/github/setup?organizationId=${activeOrganization?.id ?? ""}&userId=${session?.user?.id ?? ""}`,
+				redirect_url: `${origin}/v1/providers/github/setup`,
 				name: `Hanzo Platform-${format(new Date(), "yyyy-MM-dd")}-${randomString()}`,
 				url: origin,
 				hook_attributes: {
@@ -95,11 +95,17 @@ export const AddGithubProvider = () => {
 									/>
 								)}
 							</div>
+							{/*
+							 * `state` says which callback this is and nothing else. GitHub
+							 * echoes it back verbatim, so who the App belongs to is read
+							 * from the session at /v1/providers/github/setup rather than
+							 * carried through a third party.
+							 */}
 							<form
 								action={
 									isOrganization
-										? `https://github.com/organizations/${organizationName}/settings/apps/new?state=gh_init:${activeOrganization?.id}:${session?.user?.id ?? ""}`
-										: `https://github.com/settings/apps/new?state=gh_init:${activeOrganization?.id}:${session?.user?.id ?? ""}`
+										? `https://github.com/organizations/${organizationName}/settings/apps/new?state=gh_init`
+										: "https://github.com/settings/apps/new?state=gh_init"
 								}
 								method="post"
 							>
