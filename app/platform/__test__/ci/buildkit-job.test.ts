@@ -265,27 +265,6 @@ describe("buildkitArgs", () => {
 		expect(args.some((a) => a.includes("oci.hanzo.ai"))).toBe(false);
 	});
 
-	it("names the refs in one quoted field however many there are", () => {
-		// The exporter is a comma-separated list of fields and the ref list is a
-		// comma-separated value inside ONE of them, so the field is quoted — the
-		// CSV parser then reads the whole list as the exporter's `name`, and
-		// nothing in a ref can open a second field. One spelling, one ref or two.
-		for (const fleetRegistryHost of [undefined, "oci.hanzo.ai"]) {
-			const args = buildkitArgs({
-				repo: "hanzoai/pricing",
-				commit: COMMIT,
-				image: "ghcr.io/hanzoai/pricing:v1.2.3",
-				fleetRegistryHost,
-				buildJobId: "j1",
-			});
-			const outputs = args.filter((a) => a.startsWith("--output=type=image"));
-			expect(outputs, String(fleetRegistryHost)).toHaveLength(1);
-			expect(outputs[0], String(fleetRegistryHost)).toMatch(
-				/^--output=type=image,"name=[^"]+",push=true$/,
-			);
-		}
-	});
-
 	it("emits ONE output with BOTH refs (quoted) when a fleet registry is set", () => {
 		const args = buildkitArgs({
 			repo: "hanzoai/pricing",
@@ -299,6 +278,13 @@ describe("buildkitArgs", () => {
 		// CSV parser keeps the comma-joined refs as a single value. One build.
 		expect(args).toContain(
 			'--output=type=image,"name=ghcr.io/hanzoai/pricing:v1.2.3,oci.hanzo.ai/hanzoai/pricing:v1.2.3",push=true',
+		);
+		// Exactly one image output — never the bare single-ref form alongside it.
+		expect(args.filter((a) => a.startsWith("--output=type=image")).length).toBe(
+			1,
+		);
+		expect(args).not.toContain(
+			"--output=type=image,name=ghcr.io/hanzoai/pricing:v1.2.3,push=true",
 		);
 	});
 });

@@ -42,10 +42,13 @@ export function parseImageRef(ref: string): [string, string, string] {
 /**
  * A leading segment that names a registry rather than a path component.
  *
- * Docker's own rule, and the one thing every reader of a ref has to agree
- * about: `ghcr.io/hanzoai/x` is three parts of which the first is a host, and
- * `hanzoai/x` is two parts of which none is. Read once here so the host, the
- * namespace and a host swap are all cut at the same place.
+ * `withRegistryHost("ghcr.io/hanzoai/pricing:v1.2.3", "oci.hanzo.ai")`
+ *   -> `"oci.hanzo.ai/hanzoai/pricing:v1.2.3"`
+ *
+ * The first path segment is replaced as a registry host only when it looks like
+ * one (contains `.` or `:`, or is `localhost`); otherwise the ref is host-less
+ * (Docker Hub short form) and the host is prepended. Same
+ * one-canonical-place rule as `parseImageRef` — do not re-derive this elsewhere.
  */
 function isHost(segment: string): boolean {
 	return (
