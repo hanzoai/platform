@@ -285,9 +285,8 @@ export function decodeWebhook(
  * the branch short and the ref is spelled from it, which makes it no less a
  * name somebody chose. Answered where the delivery is READ, so the two events
  * give one answer: 422, the shape this lane already uses for a delivery that is
- * well-formed and has nothing to build. Left to the scheduler it came back a
- * bad request, which this lane renders as a fault, and the forge redelivers a
- * fault five times over a name that will never resolve.
+ * well-formed and has nothing to build. A name that will never resolve is
+ * settled once, here, rather than by anything further down.
  */
 function named(ref: string): string {
 	const bad = refProblem(ref);
