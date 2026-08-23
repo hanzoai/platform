@@ -94,11 +94,15 @@ export interface CreateVolumeInput {
 	machineId?: string;
 }
 
+/** The address of one row: every visor resource is (owner, name). */
+const row = (resource: string, owner: string, name: string) =>
+	`/v1/${resource}/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
+
 async function visorFetch<T>(
 	path: string,
 	token: string,
 	options: {
-		method?: "GET" | "POST";
+		method?: "GET" | "POST" | "PUT" | "DELETE";
 		body?: unknown;
 		params?: Record<string, string>;
 	} = {},
@@ -148,38 +152,38 @@ async function visorFetch<T>(
 }
 
 export const visorListMachines = (owner: string, token: string) =>
-	visorFetch<VisorMachine[]>("/v1/get-machines", token, { params: { owner } });
+	visorFetch<VisorMachine[]>("/v1/machines", token, { params: { owner } });
 
 export const visorGetMachine = (owner: string, name: string, token: string) =>
-	visorFetch<VisorMachine>("/v1/get-machine", token, { params: { id: `${owner}/${name}` } });
+	visorFetch<VisorMachine>(row("machines", owner, name), token);
 
 export const visorCreateMachine = (input: CreateMachineInput, token: string) =>
-	visorFetch<VisorMachine>("/v1/add-machine", token, { method: "POST", body: input });
+	visorFetch<VisorMachine>("/v1/machines", token, { method: "POST", body: input });
 
 export const visorUpdateMachine = (input: UpdateMachineInput, token: string) =>
-	visorFetch<VisorMachine>("/v1/update-machine", token, { method: "POST", body: input });
+	visorFetch<VisorMachine>(row("machines", input.owner, input.name), token, { method: "PUT", body: input });
 
 export const visorDeleteMachine = (owner: string, name: string, token: string) =>
-	visorFetch<{ success: boolean }>("/v1/delete-machine", token, { method: "POST", body: { owner, name } });
+	visorFetch<{ success: boolean }>(row("machines", owner, name), token, { method: "DELETE" });
 
 export const visorListProviders = (owner: string, token: string) =>
-	visorFetch<VisorProvider[]>("/v1/get-providers", token, { params: { owner } });
+	visorFetch<VisorProvider[]>("/v1/providers", token, { params: { owner } });
 
 export const visorListPlans = (token: string) =>
-	visorFetch<VisorPlan[]>("/v1/get-plans", token);
+	visorFetch<VisorPlan[]>("/v1/plans", token);
 
 export const visorListNodePools = (owner: string, token: string) =>
-	visorFetch<VisorNodePool[]>("/v1/get-node-pools", token, { params: { owner } });
+	visorFetch<VisorNodePool[]>("/v1/pools", token, { params: { owner } });
 
 export const visorListVolumes = (owner: string, token: string) =>
-	visorFetch<VisorVolume[]>("/v1/get-volumes", token, { params: { owner } });
+	visorFetch<VisorVolume[]>("/v1/volumes", token, { params: { owner } });
 
 export const visorCreateVolume = (input: CreateVolumeInput, provider: string, token: string) =>
-	visorFetch<VisorVolume>("/v1/create-volume", token, {
+	visorFetch<VisorVolume>("/v1/volumes", token, {
 		method: "POST",
 		params: { provider },
 		body: input,
 	});
 
 export const visorDeleteVolume = (owner: string, name: string, token: string) =>
-	visorFetch<{ success: boolean }>("/v1/delete-volume", token, { method: "POST", body: { owner, name } });
+	visorFetch<{ success: boolean }>(row("volumes", owner, name), token, { method: "DELETE" });
