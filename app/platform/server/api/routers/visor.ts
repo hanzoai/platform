@@ -161,20 +161,18 @@ export const visorRouter = createTRPCRouter({
 	createVolume: protectedProcedure
 		.input(
 			z.object({
+				provider: z.string().min(1),
 				name: z.string().min(1),
-				sizeGb: z.number().int().min(1),
+				size: z.number().int().min(1),
 				region: z.string().min(1),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			const token = extractToken(ctx.req);
-			return visorCreateVolume(
-				{
-					owner: ctx.session.activeOrganizationId,
-					...input,
-				},
-				token,
-			);
+			const { provider, ...spec } = input;
+			// The org comes from the token, so the body is the volume and
+			// nothing else.
+			return visorCreateVolume(spec, provider, token);
 		}),
 
 	deleteVolume: protectedProcedure

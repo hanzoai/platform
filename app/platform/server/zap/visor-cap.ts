@@ -187,18 +187,15 @@ async function dispatch(ctx: VisorCtx, call: Call): Promise<unknown> {
 		}
 
 		case VisorMethod.createVolume: {
-			const input = decodeArgs<{
+			const { provider, ...spec } = decodeArgs<{
+				provider: string;
 				name: string;
-				sizeGb: number;
+				size: number;
 				region: string;
 			}>(call.payload);
-			return visorCreateVolume(
-				{
-					owner: ctx.organizationId,
-					...input,
-				},
-				ctx.token,
-			);
+			// The org comes from the token, so the body is the volume and
+			// nothing else.
+			return visorCreateVolume(spec, provider, ctx.token);
 		}
 
 		case VisorMethod.deleteVolume: {
