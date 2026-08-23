@@ -151,6 +151,9 @@ importers:
       '@faker-js/faker':
         specifier: ^8.4.1
         version: 8.4.1
+      '@hanzo/design':
+        specifier: ^0.5.18
+        version: 0.5.21
       '@hanzo/event':
         specifier: ^0.3.3
         version: 0.3.3(react@18.2.0)
@@ -1353,6 +1356,7 @@ packages:
 
   '@better-auth/cli@1.5.0-beta.13':
     resolution: {integrity: sha512-/Of+Pdsutq4R4R+bpWlaitc3epokj3R1M/6U2ZmZFyNz1YPMsjTQSR3zJBLJr1HnvbUzSeMBSNvOAJM4kyx84w==}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
     hasBin: true
 
   '@better-auth/core@1.5.0-beta.16':
@@ -1563,11 +1567,11 @@ packages:
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild-kit/esm-loader@2.6.5':
     resolution: {integrity: sha512-FxEMIkJKnodyA1OaCUoEvbYRkoZlLZ4d/eXFu9Fh8CbBBgP5EmZxrfTRyN0qpXZ4vOvqnE5YdRdcrmUUXuU+dA==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild/aix-ppc64@0.20.2':
     resolution: {integrity: sha512-D+EBOJHXdNZcLJRBkhENNG8Wji2kgc9AZ9KiPr1JuZjsNtyHzrsfLRrY0tk2H2aoFu6RANO1y1iPPUCDYWkb5g==}
@@ -1788,8 +1792,8 @@ packages:
       '@hanzo/gui': '>=7.2.2'
       react: '>=19'
 
-  '@hanzo/design@0.5.1':
-    resolution: {integrity: sha512-PMbjWSSTFUF6EdDEIm05eq4tEoyhSP6cKYTQRqshsOZC71rqCjb4Raelz+ixL1d15K4L0LsIMpx2aS/EVctzgg==}
+  '@hanzo/design@0.5.21':
+    resolution: {integrity: sha512-E2g6DZCn2IUf2AQKqPMwlVV5fz2wvIpAagFRLx33gIsJfmpyubFnx0LINjFs7UoMI1ajnwSa73k7rPteVSemUw==}
     hasBin: true
 
   '@hanzo/event@0.3.21':
@@ -11776,7 +11780,7 @@ snapshots:
 
   '@hanzo/appearance@0.1.4(react@18.2.0)':
     dependencies:
-      '@hanzo/design': 0.5.1
+      '@hanzo/design': 0.5.21
       react: 18.2.0
 
   '@hanzo/data@1.2.3(@hanzo/gui@8.1.1(react-dom@18.2.0(react@18.2.0))(react-native@0.87.0(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@18.3.5)(react@18.2.0))(react@18.2.0))(react@18.2.0)':
@@ -11784,7 +11788,7 @@ snapshots:
       '@hanzo/gui': 8.1.1(react-dom@18.2.0(react@18.2.0))(react-native@0.87.0(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@18.3.5)(react@18.2.0))(react@18.2.0)
       react: 18.2.0
 
-  '@hanzo/design@0.5.1': {}
+  '@hanzo/design@0.5.21': {}
 
   '@hanzo/event@0.3.21(react@18.2.0)':
     optionalDependencies:
@@ -11934,7 +11938,7 @@ snapshots:
     dependencies:
       '@hanzo/appearance': 0.1.4(react@18.2.0)
       '@hanzo/data': 1.2.3(@hanzo/gui@8.1.1(react-dom@18.2.0(react@18.2.0))(react-native@0.87.0(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@18.3.5)(react@18.2.0))(react@18.2.0))(react@18.2.0)
-      '@hanzo/design': 0.5.1
+      '@hanzo/design': 0.5.21
       '@hanzo/gui': 8.1.1(react-dom@18.2.0(react@18.2.0))(react-native@0.87.0(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@18.3.5)(react@18.2.0))(react@18.2.0)
       '@hanzo/logo': 1.0.17(react@18.2.0)
       '@hanzo/products': 0.2.0(@hanzogui/lucide-icons-2@8.1.1(react-dom@18.2.0(react@18.2.0))(react-native-svg@15.15.5(react-native@0.87.0(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@18.3.5)(react@18.2.0))(react@18.2.0))(react@18.2.0))(react@18.2.0)

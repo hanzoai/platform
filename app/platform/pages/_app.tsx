@@ -17,7 +17,6 @@ import "@/styles/globals.css";
 
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
-import { Geist, Geist_Mono } from "next/font/google";
 import Head from "next/head";
 import { ThemeProvider } from "next-themes";
 import NextTopLoader from "nextjs-toploader";
@@ -28,15 +27,6 @@ import { AnalyticsRoot } from "@/components/providers/analytics";
 import { GuiProvider } from "@/components/providers/gui";
 import { Toaster } from "@/components/ui/sonner";
 import { api } from "@/utils/api";
-
-const geistSans = Geist({
-	subsets: ["latin"],
-	variable: "--font-geist",
-});
-const geistMono = Geist_Mono({
-	subsets: ["latin"],
-	variable: "--font-geist-mono",
-});
 
 export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
 	getLayout?: (page: ReactElement) => ReactNode;
@@ -53,8 +43,10 @@ const MyApp = ({
 }: AppPropsWithLayout) => {
 	const getLayout = Component.getLayout ?? ((page) => page);
 
+	// No font loader. Zen ships inside @hanzo/design and globals.css declares
+	// the faces, so there is no generated family name to bind here.
 	return (
-		<div className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
+		<div className="font-sans">
 			<Head>
 				<title>Hanzo Platform</title>
 			</Head>

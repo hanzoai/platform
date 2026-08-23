@@ -55,6 +55,7 @@
     "@codemirror/legacy-modes": "6.4.0",
     "@codemirror/view": "6.29.0",
     "@faker-js/faker": "^8.4.1",
+    "@hanzo/design": "^0.5.18",
     "@hanzo/event": "^0.3.3",
     "@hanzo/gui": "8.1.1",
     "@hanzo/iam": "^0.13.8",
