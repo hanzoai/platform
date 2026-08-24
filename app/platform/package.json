@@ -61,7 +61,7 @@
     "@hanzo/iam": "^0.13.8",
     "@hanzo/mq": "^5.71.2",
     "@hanzo/platform": "workspace:*",
-    "@hanzo/ui": "8.0.72",
+    "@hanzo/ui": "^8.3.3",
     "@hanzogui/next-theme": "8.1.1",
     "@hookform/resolvers": "^5.4.0",
     "@octokit/auth-app": "^6.1.4",
