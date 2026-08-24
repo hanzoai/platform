@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="https://hanzo.ai">
-    <img src=".github/sponsors/logo.png" alt="Hanzo — the Open AI Cloud." width="100%" />
+    <img src=".github/sponsors/hero.svg" alt="Hanzo — the Open AI Cloud." width="100%" />
   </a>
   <br />
   <br />
