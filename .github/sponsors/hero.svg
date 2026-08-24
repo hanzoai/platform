@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="Hanzo brand assets">
+  <rect width="1280" height="640" fill="#0A0A0A"/>
+  <svg x="120" y="200" width="240" height="240" viewBox="0 0 67 67" xmlns="http://www.w3.org/2000/svg">
+    <path d="M22.21 67V44.6369H0V67H22.21Z" fill="#ffffff"/>
+    <path d="M0 44.6369L22.21 46.8285V44.6369H0Z" fill="#DDDDDD"/>
+    <path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z" fill="#ffffff"/>
+    <path d="M22.21 0H0V22.3184H22.21V0Z" fill="#ffffff"/>
+    <path d="M66.7198 0H44.5098V22.3184H66.7198V0Z" fill="#ffffff"/>
+    <path d="M66.6753 22.3185L44.5098 20.0822V22.3185H66.6753Z" fill="#DDDDDD"/>
+    <path d="M66.7198 67V44.6369H44.5098V67H66.7198Z" fill="#ffffff"/>
+  </svg>
+  <text x="440" y="316" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="94" font-weight="800" letter-spacing="-3" fill="#ffffff">Hanzo</text>
+  <text x="443" y="366" font-family="Inter,system-ui,sans-serif" font-size="27" fill="#ffffff" opacity=".62">Official brand marks — SVG, PNG, ICO, favicons &amp; app icons.</text>
+  <rect x="443" y="390" width="710" height="2" rx="1" fill="#ffffff" opacity=".85"/>
+  <text x="443" y="440" font-family="Inter,system-ui,sans-serif" font-size="23" font-weight="600" fill="#ffffff" opacity=".45">github.com/hanzoai</text>
+  <text x="1160" y="440" text-anchor="end" font-family="Inter,system-ui,sans-serif" font-size="23" font-weight="600" fill="#ffffff" opacity=".45">hanzo.ai</text>
+</svg>
