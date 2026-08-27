@@ -1,6 +1,6 @@
 {
   "name": "@hanzo/platform-mcp",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "MCP Server for Hanzo API",
   "main": "build/index.js",
   "bin": {

@@ -57,7 +57,7 @@ export function isZapAvailable(): boolean {
  */
 export async function zapCall<T = any>(
   name: string,
-  args: Record<string, any> = {},
+  args: Record<string, any> = {}
 ): Promise<ZapResult<T>> {
   const config = getZapConfig();
   if (!config) {
