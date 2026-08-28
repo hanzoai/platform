@@ -2,7 +2,7 @@
  * Zen's two variable faces, self-hosted, plus the role tokens that name them.
  *
  * Here rather than in `_app.tsx` for the same reason the token block below is:
- * `@hanzo/ui/styles.css` states `--font-sans: "Geist"` at an unlayered `:root`
+ * `@hanzo/ui/styles.css` states `--font-sans: "Zen"` at an unlayered `:root`
  * and is imported first, so a peer declaration only holds if it lands after it.
  * This file is that later sheet.
  */
