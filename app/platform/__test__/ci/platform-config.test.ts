@@ -1,6 +1,7 @@
 import {
 	BUILDABLE_ARCHES,
 	isBuildableArch,
+	KINDS,
 	PlatformConfigError,
 	parsePlatformConfig,
 	resolveTag,
@@ -352,6 +353,73 @@ images:
 		expect(cfg.builds).toHaveLength(1);
 		expect(cfg.deploy).toBeUndefined();
 	});
+});
+
+// `kind:` (HIP-0138) names how a project arrives. The whole point is that the
+// three chart kinds deliver something WITHOUT an `images:` block — and an
+// `images:`-less document is exactly what the test-only case above reads as
+// "nothing here for me". Without `kind`, a chart repository and a test-gate
+// repository are the same document, so a declaration would be ignored rather
+// than refused.
+describe("kind", () => {
+	it("is the closed set of five arrivals", () => {
+		expect([...KINDS]).toEqual(["image", "fn", "chart", "compose", "universe"]);
+	});
+
+	it("defaults to image, so every manifest written before it is unchanged", () => {
+		expect(built(MULTI_IMAGE).kind).toBe("image");
+		expect(built(VALID).kind).toBe("image");
+	});
+
+	it("refuses a kind it does not know rather than guessing one", () => {
+		expect(() => parsePlatformConfig("kind: helm\n")).toThrow(
+			/kind must be one of image, fn, chart, compose, universe/,
+		);
+	});
+
+	it.each([
+		["chart", "chart"],
+		["compose", "compose.yml"],
+		["universe", "charts"],
+	])("reads kind: %s as a delivery with nothing to build", (kind, path) => {
+		const cfg = built(`kind: ${kind}\ntest:\n  - { name: t, run: "true" }\n`);
+		expect(cfg.kind).toBe(kind);
+		expect(cfg.path).toBe(path);
+		expect(cfg.builds).toEqual([]);
+	});
+
+	// `fn` differs from `image` only in which BuildKit frontend runs and which CR
+	// receives the result, so it reads the same `images:` block and is silent for
+	// the same reason when there is none.
+	it("reads kind: fn through the image lane", () => {
+		const cfg = built(
+			"kind: fn\nimages:\n  - { name: resize, repo: ghcr.io/hanzoai/resize }\n",
+		);
+		expect(cfg.kind).toBe("fn");
+		expect(cfg.path).toBe(".");
+		expect(cfg.builds[0]!.context).toBe(".");
+	});
+
+	it("still reads a kind-less test-only config as nothing to build", () => {
+		expect(parsePlatformConfig("test:\n  - go test ./...\n")).toBeNull();
+	});
+
+	it("takes an explicit path over the per-kind default", () => {
+		expect(built("kind: chart\npath: deploy/chart\n").path).toBe(
+			"deploy/chart",
+		);
+	});
+
+	// `path` addresses a checkout the same way `kms.path` addresses a folder, so
+	// it carries the same charset and the same refusal to ascend.
+	it.each(["../../etc", "/etc/passwd", "chart; rm -rf /"])(
+		"refuses a path that leaves the repo or carries a shell metacharacter: %s",
+		(path) => {
+			expect(() =>
+				parsePlatformConfig(`kind: chart\npath: ${JSON.stringify(path)}\n`),
+			).toThrow(PlatformConfigError);
+		},
+	);
 });
 
 describe("runnerPoolFor", () => {

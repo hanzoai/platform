@@ -230,9 +230,19 @@ export interface PublishConfig {
 
 export interface PlatformConfig {
 	/**
-	 * One or more images to build. The legacy `build:` block yields a single
-	 * entry; the `images:` list (hanzo.yml) yields one per image. Always
-	 * non-empty.
+	 * How the project arrives (HIP-0138). Absent in the document means `image`,
+	 * which is what every manifest in the fleet declares today.
+	 */
+	kind: Kind;
+	/**
+	 * Where {@link kind} reads its source from, repo-relative, defaulted per kind
+	 * by {@link KIND_PATH}. Unused by `image`, whose per-image `context` says it.
+	 */
+	path: string;
+	/**
+	 * Images to build: the legacy `build:` block yields a single entry, the
+	 * `images:` list (hanzo.yml) one per image. Empty for the chart kinds, whose
+	 * delivery is the chart itself.
 	 */
 	builds: BuildConfig[];
 	deploy?: DeployConfig;
@@ -280,6 +290,34 @@ export const BUILDABLE_ARCHES: readonly BuildArch[] = ["amd64"];
 export function isBuildableArch(arch: BuildArch): boolean {
 	return BUILDABLE_ARCHES.includes(arch);
 }
+
+/**
+ * How a project arrives — one axis, five values (HIP-0138), each exactly one
+ * runtime primitive:
+ *
+ *   image     the repo's Dockerfile, BuildKit `dockerfile.v0` → workload CR
+ *   fn        no Dockerfile: hanzoai/pack detects the ecosystem → Function CR
+ *   chart     a chart directory → one HelmChart (chart bytes + values)
+ *   compose   a compose file → converted to that same HelmChart
+ *   universe  a directory of charts → many charts, one release
+ *
+ * Distinct from `deploy.target.crd`, which names which operator CR a BUILT
+ * IMAGE rolls onto and is meaningful only for `image`.
+ */
+export const KINDS = ["image", "fn", "chart", "compose", "universe"] as const;
+export type Kind = (typeof KINDS)[number];
+
+/** Where each kind reads from when `path:` is absent. */
+const KIND_PATH: Readonly<Record<Kind, string>> = {
+	image: ".",
+	fn: ".",
+	chart: "chart",
+	compose: "compose.yml",
+	universe: "charts",
+};
+
+/** The kinds whose delivery IS the chart: nothing to build, so no `images:`. */
+const CHART_KINDS: readonly Kind[] = ["chart", "compose", "universe"];
 
 const SUPPORTED_OPERATORS = ["hanzo-operator", "hanzo"];
 /**
@@ -617,9 +655,12 @@ function parseImageEntry(entry: unknown, i: number): BuildConfig {
  * Returns a fully-typed `PlatformConfig` or throws `PlatformConfigError`
  * with a path-qualified message identifying the first violation.
  *
- * Two build shapes are accepted, normalized to `builds[]`:
+ * `kind:` says which of the five arrivals this is (HIP-0138) and defaults to
+ * `image`. The image kinds carry one of two build shapes, normalized to
+ * `builds[]`:
  *   - `images:` (hanzo.yml) — a list of { name, repo, context, … }, one per image.
  *   - `build:`  (legacy .platform.yml) — a single image block.
+ * The chart kinds carry neither: `builds` is empty and `path` locates the chart.
  */
 export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
 	// An EMPTY document declares nothing, and `yaml` parses a comments-only file
@@ -633,6 +674,20 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
 			"config must be a YAML mapping at the top level",
 		);
 	}
+
+	// How the project arrives. Absent is `image`, so every manifest written
+	// before this field keeps its meaning exactly.
+	const declared = optionalString(raw, "kind", "image");
+	if (!(KINDS as readonly string[]).includes(declared)) {
+		throw new PlatformConfigError(
+			`kind must be one of ${KINDS.join(", ")} (got ${declared})`,
+		);
+	}
+	const kind = declared as Kind;
+	const path = requireRelativePath(
+		optionalString(raw, "path", KIND_PATH[kind]),
+		"path",
+	);
 
 	let builds: BuildConfig[];
 	if (Array.isArray(raw.images)) {
@@ -649,6 +704,11 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
 		}
 	} else if (isObject(raw.build)) {
 		builds = [parseBuildBlock(raw.build)];
+	} else if (CHART_KINDS.includes(kind)) {
+		// The chart IS the delivery, so there is nothing to build and no `images:`
+		// to read. Its absence here is the DECLARATION, not the silence below that
+		// means "nothing in this file for the build lane".
+		builds = [];
 	} else if (raw.deploy === undefined) {
 		// Declares no image AND nothing to roll out: this file exists for the
 		// OTHER reader. `hanzo.yml` is the estate's ONE CI manifest and it has two
@@ -707,53 +767,50 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
 		// Two deploy shapes: platform-native operator rollout (`target:`) vs the
 		// Deployment-style rollout (`services:`, hanzo.yml) owned by the cicd
 		// runner / GitOps. The platform only performs the operator-CR rollout, so
-		// a `services:`-only deploy is build-only here (deploy left undefined).
-		if (
-			d.target === undefined &&
-			(d.services !== undefined || d.cluster !== undefined)
-		) {
-			return {
-				builds,
-				deploy: undefined,
-				e2e: parseE2e(raw.e2e),
-				publish: parsePublish(raw.publish),
-				kms,
+		// a `services:`-only deploy is build-only here (deploy left undefined) and
+		// falls through to the one return below — every field of the result is
+		// assembled in one place, so none of them can be forgotten on one path.
+		const operatorRollout =
+			d.target !== undefined ||
+			(d.services === undefined && d.cluster === undefined);
+		if (operatorRollout) {
+			if (!isObject(d.target)) {
+				throw new PlatformConfigError(
+					"deploy.target is required when deploy is set",
+				);
+			}
+			const t = d.target;
+			const operator = requireString(t, "operator", "deploy.target");
+			if (!SUPPORTED_OPERATORS.includes(operator)) {
+				throw new PlatformConfigError(
+					`deploy.target.operator must be one of ${SUPPORTED_OPERATORS.join(", ")} (got ${operator})`,
+				);
+			}
+			// `crd` is optional: the overwhelming majority of the fleet is `App`, so
+			// a repo that omits it gets `App` rather than a validation error. Naming
+			// a kind outside the supported set still fails loudly.
+			const crd = optionalString(t, "crd", DEFAULT_WORKLOAD_KIND);
+			if (!SUPPORTED_CRDS.includes(crd)) {
+				throw new PlatformConfigError(
+					`deploy.target.crd must be one of ${SUPPORTED_CRDS.join(", ")} (the operator removed legacy HanzoService — one way only)`,
+				);
+			}
+			deploy = {
+				on: d.on as string[],
+				target: {
+					cluster: requireString(t, "cluster", "deploy.target"),
+					namespace: requireString(t, "namespace", "deploy.target"),
+					operator,
+					crd,
+					name: requireString(t, "name", "deploy.target"),
+				},
 			};
 		}
-		if (!isObject(d.target)) {
-			throw new PlatformConfigError(
-				"deploy.target is required when deploy is set",
-			);
-		}
-		const t = d.target;
-		const operator = requireString(t, "operator", "deploy.target");
-		if (!SUPPORTED_OPERATORS.includes(operator)) {
-			throw new PlatformConfigError(
-				`deploy.target.operator must be one of ${SUPPORTED_OPERATORS.join(", ")} (got ${operator})`,
-			);
-		}
-		// `crd` is optional: the overwhelming majority of the fleet is `App`, so a
-		// repo that omits it gets `App` rather than a validation error. Naming a
-		// kind outside the supported set still fails loudly.
-		const crd = optionalString(t, "crd", DEFAULT_WORKLOAD_KIND);
-		if (!SUPPORTED_CRDS.includes(crd)) {
-			throw new PlatformConfigError(
-				`deploy.target.crd must be one of ${SUPPORTED_CRDS.join(", ")} (the operator removed legacy HanzoService — one way only)`,
-			);
-		}
-		deploy = {
-			on: d.on as string[],
-			target: {
-				cluster: requireString(t, "cluster", "deploy.target"),
-				namespace: requireString(t, "namespace", "deploy.target"),
-				operator,
-				crd,
-				name: requireString(t, "name", "deploy.target"),
-			},
-		};
 	}
 
 	return {
+		kind,
+		path,
 		builds,
 		deploy,
 		e2e: parseE2e(raw.e2e),
