@@ -1,38 +1,38 @@
 {
-	"name": "@hanzo/schedules",
-	"type": "module",
-	"scripts": {
-		"dev": "PORT=4001 tsx watch src/index.ts",
-		"build": "rimraf dist && tsc --project tsconfig.build.json",
-		"start": "node dist/index.js",
-		"typecheck": "tsc --noEmit"
-	},
-	"dependencies": {
-		"@hanzo/platform": "workspace:*",
-		"@hono/node-server": "^1.19.14",
-		"@hono/zod-validator": "0.7.6",
-		"@hanzo/mq": "^5.71.2",
-		"dotenv": "^16.6.1",
-		"drizzle-orm": "0.45.1",
-		"hono": "^4.12.26",
-		"@hanzo/kv": "^0.4.1",
-		"pino": "9.4.0",
-		"pino-pretty": "11.2.2",
-		"react": "18.2.0",
-		"react-dom": "18.2.0",
-		"zod": "^4.4.3"
-	},
-	"devDependencies": {
-		"@types/node": "^24.13.2",
-		"@types/react": "18.3.5",
-		"@types/react-dom": "18.3.0",
-		"rimraf": "6.1.3",
-		"tsx": "^4.22.4",
-		"typescript": "^5.9.3"
-	},
-	"packageManager": "pnpm@10.22.0",
-	"engines": {
-		"node": "^24.4.0",
-		"pnpm": ">=10.22.0"
-	}
+  "name": "@hanzo/schedules",
+  "type": "module",
+  "scripts": {
+    "dev": "PORT=4001 tsx watch src/index.ts",
+    "build": "rimraf dist && tsc --project tsconfig.build.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hanzo/platform": "workspace:*",
+    "@hono/node-server": "catalog:",
+    "@hono/zod-validator": "catalog:",
+    "@hanzo/mq": "catalog:",
+    "dotenv": "catalog:",
+    "drizzle-orm": "catalog:",
+    "hono": "catalog:",
+    "@hanzo/kv": "catalog:",
+    "pino": "catalog:",
+    "pino-pretty": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "rimraf": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  },
+  "packageManager": "pnpm@10.22.0",
+  "engines": {
+    "node": "^24.4.0",
+    "pnpm": ">=10.22.0"
+  }
 }

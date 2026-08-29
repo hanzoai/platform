@@ -1,38 +1,38 @@
 {
-	"name": "@hanzo/api",
-	"version": "0.0.1",
-	"type": "module",
-	"scripts": {
-		"dev": "PORT=4000 tsx watch src/index.ts",
-		"build": "rimraf dist && tsc --project tsconfig.json",
-		"start": "node dist/index.js",
-		"typecheck": "tsc --noEmit"
-	},
-	"dependencies": {
-		"@hanzo/platform": "workspace:*",
-		"@hono/node-server": "^1.19.14",
-		"@hono/zod-validator": "0.7.6",
-		"dotenv": "^16.6.1",
-		"hono": "^4.12.26",
-		"inngest": "3.40.1",
-		"pino": "9.4.0",
-		"pino-pretty": "11.2.2",
-		"react": "18.2.0",
-		"react-dom": "18.2.0",
-		"redis": "4.7.0",
-		"zod": "^4.4.3"
-	},
-	"devDependencies": {
-		"@types/node": "^24.13.2",
-		"@types/react": "18.3.5",
-		"@types/react-dom": "18.3.0",
-		"rimraf": "6.1.3",
-		"tsx": "^4.22.4",
-		"typescript": "^5.9.3"
-	},
-	"packageManager": "pnpm@10.22.0",
-	"engines": {
-		"node": "^24.4.0",
-		"pnpm": ">=10.22.0"
-	}
+  "name": "@hanzo/api",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "PORT=4000 tsx watch src/index.ts",
+    "build": "rimraf dist && tsc --project tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hanzo/platform": "workspace:*",
+    "@hono/node-server": "catalog:",
+    "@hono/zod-validator": "catalog:",
+    "dotenv": "catalog:",
+    "hono": "catalog:",
+    "inngest": "catalog:",
+    "pino": "catalog:",
+    "pino-pretty": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "redis": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "rimraf": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  },
+  "packageManager": "pnpm@10.22.0",
+  "engines": {
+    "node": "^24.4.0",
+    "pnpm": ">=10.22.0"
+  }
 }

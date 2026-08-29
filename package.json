@@ -22,12 +22,12 @@
     "generate:openapi": "pnpm --filter=@hanzo/platform-app run generate:openapi"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.1.1",
-    "@types/node": "^24.13.2",
-    "dotenv": "16.4.5",
-    "esbuild": "0.20.2",
-    "lint-staged": "^15.5.2",
-    "tsx": "4.16.2"
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "dotenv": "catalog:",
+    "esbuild": "catalog:",
+    "lint-staged": "catalog:",
+    "tsx": "catalog:"
   },
   "packageManager": "pnpm@10.22.0",
   "engines": {
@@ -40,49 +40,7 @@
     ]
   },
   "resolutions": {
-    "@types/react": "18.3.5",
-    "@types/react-dom": "18.3.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "esbuild": "0.20.2",
-      "next": "16.1.6",
-      "nan": "2.27.0",
-      "react-hook-form": "7.71.2",
-      "better-auth": "1.5.0-beta.16",
-      "@better-auth/core": "1.5.0-beta.16",
-      "@better-auth/telemetry": "1.5.0-beta.16",
-      "@better-auth/drizzle-adapter": "1.5.0-beta.16",
-      "@better-auth/kysely-adapter": "1.5.0-beta.16",
-      "@better-auth/memory-adapter": "1.5.0-beta.16",
-      "@better-auth/mongo-adapter": "1.5.0-beta.16",
-      "@better-auth/prisma-adapter": "1.5.0-beta.16"
-    },
-    "peerDependencyRules": {
-      "ignoreMissing": [
-        "prisma",
-        "@prisma/client",
-        "@prisma/engines",
-        "@electric-sql/pglite",
-        "typescript",
-        "drizzle-kit"
-      ]
-    },
-    "onlyBuiltDependencies": [
-      "@scarf/scarf",
-      "@tree-sitter-grammars/tree-sitter-yaml",
-      "bcrypt",
-      "better-sqlite3",
-      "core-js-pure",
-      "cpu-features",
-      "esbuild",
-      "msgpackr-extract",
-      "node-pty",
-      "protobufjs",
-      "sharp",
-      "ssh2",
-      "tree-sitter",
-      "tree-sitter-json"
-    ]
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5"
   }
 }
