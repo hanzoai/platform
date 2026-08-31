@@ -108,9 +108,7 @@ path (an in-cluster BuildKit Job), ONE heartbeat (the build-watcher). No GHA, no
   `https://git.hanzo.ai/<repo>.git#<commit>` → `--output=type=image,…,push=true` to
   GHCR, privileged, on `runner-pool-32g` + `dedicated=ci-runner` (git auth from
   `console-git-token` via `GIT_AUTH_TOKEN`, GHCR push cred from `kaniko-ghcr` at
-  `/root/.docker`). The RETIRED long-poll/`workflow_dispatch` external-runner
-  surface (build-queue, arcd-runner, `/v1/arcd/poll`+`/complete`) was removed —
-  it pointed at offline GitHub runners and silently no-op'd.
+  `/root/.docker`).
 - PROVEN LIVE (v4.4.4): `POST /v1/runner` for `hanzoai/pricing` created a
   `build_job` row → platform launched the BuildKit Job (`build-pricing-*`,
   `managed-by=platform`) → pushed `ghcr.io/hanzoai/pricing:v1.1.2` → the
@@ -678,7 +676,7 @@ under-reported itself by three releases. "The SAME string" is checkable — if t
 tag and the file disagree, the file is wrong. Repaired at `v4.4.17`.
 
 ## Build resilience — runners cannot reach Docker Hub
-The arcd runners resolve DNS via 8.8.8.8 and intermittently time out on
+The runners resolve DNS via 8.8.8.8 and intermittently time out on
 `registry-1.docker.io`; `ghcr.io` is always reachable. Two consequences, both
 fixed and load-bearing — do not revert:
 - `.github/buildkitd.toml` mirrors `docker.io` → `mirror.gcr.io`; every
@@ -794,29 +792,12 @@ becomes a running pod, WHERE that path forks, and the ONE native path we collaps
    github.com/hanzoai`. So GitHub is source-of-truth today; git.hanzo.ai is
    downstream. (Target flips this — see §4.)
 
-2. **CI / build — THREE overlapping systems (the complecting):**
-   - **GitHub Actions on ARC self-hosted runners** — `arc-system` ns:
-     `hanzo-build-linux-amd64` + `hanzo-deploy-linux-amd64` scale sets,
-     `arc-gha-rs-controller`. LOAD-BEARING: every image this session was built
-     here → `ghcr.io/hanzoai/*` (4 runners were mid-build during diagnosis).
-   - **Platform-native BuildKit (`arcd`)** — the `paas` pod conducts an in-cluster
-     BuildKit Job (see "Platform-native CI/CD (GHA escape)" above); the real build
-     fleet is `arcbuild*` on spark/evo/dbc (healthy). This is the intended
-     GHA-escape and matches the "NO GITHUB BUILDERS" directive.
-     *(A stray `arcd-control` Deployment was crash-looping `TypeError: Cannot
-     redefine property: query` — it ran a stale image `platform:0c009a0-arcd`
-     built from a commit not in the repo, was NOT in git, had no CR owner, and
-     served the RETIRED long-poll arcd-runner surface. **Retired 2026-07-05**:
-     deleted the Deployment + Service; the conductor is the `paas` pod, the
-     workers are `arcbuild*` — one build path, no dead component.)*
-     BuildKit Job (see "Platform-native CI/CD (GHA escape)" above); worker pods
-     `arcbuild*` + `arcd-control` in `hanzo` (build fleet on spark/evo/dbc). This
-     is the intended GHA-escape and matches the "NO GITHUB BUILDERS" directive.
-     `arcd-control` is currently **crash-looping** (`TypeError: Cannot redefine
-     property: query`) — the native path is deployed but degraded.
-   - **Gitea Actions** — the TARGET native CI (GitHub-workflow-compatible, runs
-     `.github/workflows`). **NOT enabled**: no `act_runner` pods anywhere, no
-     `[actions]` block in Gitea `app.ini`. This is the keystone gap.
+2. **CI / build — Hanzo Git Actions.** `git.hanzo.ai` runs each repo's
+   `.hanzo/workflows/*` on `act_runner`; images land on `ghcr.io/hanzoai/*`.
+   The platform's own build door (`POST /v1/runner`) launches an in-cluster
+   BuildKit Job for a caller that wants the fabric to build rather than the
+   runner — see "Platform-native CI/CD" above. Runner labels:
+   `hanzoai/.github/RUNNERS.md`.
 
 3. **Registry — `ghcr.io/hanzoai/*` (single, canonical).** No fork here.
 
@@ -939,63 +920,11 @@ above, surfaced through the operator-managed CR tree — not the orphan warning.
 ### 3. The complecting, named (one way to do a thing)
 
 - **Source hosting ×2:** GitHub (canonical) + git.hanzo.ai (mirror) — two homes.
-- **CI ×3:** GHA/ARC (real) + platform BuildKit/`arcd` (real, control crash-looping)
-  + Gitea Actions (target, off).
 - **Deploy ×3–4:** ArgoCD (CR GitOps) + operator (CR→workload) + PaaS (CR patch)
   + direct kustomize/universe `kubectl apply`.
 
-Three "how do I ship" answers and two "where's the code" answers. Each is a place
-a deploy silently stalls: auto-sync off, `arcd-control` crashing, operator wedged.
-
-### 4. The decomplected ONE native way (target)
-
-One line, source→run, no forks:
-
-> **git.hanzo.ai (Hanzo Git, canonical) → Gitea Actions native CI (runs the SAME
-> `.github/workflows`) → ghcr.io/hanzoai → hanzo-operator reconcile (the ONE k8s
-> deployer) → console.hanzo.ai (unified management: repos · PRs · Actions runs ·
-> apps/drift).**
-
-- **GitHub → OSS mirror only.** Flip the mirror: push OUT to GitHub for public
-  repos; GitHub stops being an input to CI/CD.
-- **ArgoCD keeps its ONE job** (Hanzo-Git commit on `infra/k8s/**` → applied CRs)
-  **with auto-sync ON** — OR fold that job into the operator watching Hanzo Git
-  directly. Pick one; delete the other. Never both, never manual.
-- **operator = the ONLY workload deployer.** PaaS "drive" stays a thin UI/REST
-  over the operator CR patch (already true). Retire direct kustomize/universe
-  `kubectl apply` (fold code-exec/grafana/livekit/metrics into operator CRs).
-- **CI = Gitea Actions**, with the platform BuildKit/`arcd` path as the runner
-  backend (same BuildKit muscle) — one build path, GH-workflow-compatible so
-  GitHub users on-ramp to our PaaS for free.
-
-### 5. Migration (keystone first)
-
-1. **Enable Gitea Actions** — nothing native ships until this exists.
-   - Gitea `app.ini`: add `[actions]` `ENABLED = true` (+ `DEFAULT_ACTIONS_URL =
-     github` so upstream `uses:` still resolves). On the deployed pod this is the
-     `gitea` ConfigMap/CR in `hanzo`; roll the pod.
-   - Deploy a `gitea/act_runner` Deployment (labels `linux/amd64`; use the
-     platform BuildKit backend for image builds, not DinD-in-prod).
-   - Register: get a token at `git.hanzo.ai/-/admin/actions/runners` →
-     `act_runner register --instance https://git.hanzo.ai --token <TOKEN>`. Store
-     the token via **KMSSecret**, never plaintext.
-   - Verify: push a repo with `.github/workflows/ci.yml` → run shows in the repo
-     Actions tab → image pushed to ghcr.
-2. **Flip source-of-truth to git.hanzo.ai** — make Gitea hold canonical `universe`
-   (GitHub becomes a push-mirror target). In the same change, point ArgoCD (or the
-   operator) at `git.hanzo.ai/hanzoai/universe` and turn **auto-sync ON**
-   (fixes Break 1).
-3. **Wire console.hanzo.ai to Hanzo Git** — surface repos/PRs/Actions-runs.
-   Leverage the existing PaaS Gitea provider
-   `packages/server/src/utils/providers/gitea.ts`
-   (`getGiteaRepositories`/`getGiteaBranches`/`testGiteaConnection`/
-   `refreshGiteaToken`) so console is the one management pane.
-4. **PaaS build-from-Hanzo-Git = default** — the dokploy Gitea provider is the
-   bridge; default new apps' git source to git.hanzo.ai.
-5. **Retire GHA/ARC** (`arc-system` scale sets) once Gitea Actions carries load;
-   fix or fold `arcd-control` into the act_runner backend.
-6. **One-time: clear the operator selector wedge** (Break 2 runbook) so every app
-   reconciles cleanly on the new one-way path.
+Two "where's the code" answers and several "how do I ship" answers. Each fork is
+a place a deploy silently stalls: auto-sync off, operator wedged.
 
 ## Execution model — Goja vs Node vs Go-native (VERIFIED, evidence-based)
 
