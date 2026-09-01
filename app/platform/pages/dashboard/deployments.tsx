@@ -1,5 +1,6 @@
 import { validateRequest } from "@hanzo/platform/lib/auth";
 import { hasPermission } from "@hanzo/platform/services/permission";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hanzo/ui";
 import { Rocket } from "lucide-react";
 import type { GetServerSidePropsContext } from "next";
 import { useRouter } from "next/router";
@@ -13,7 +14,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const TAB_VALUES = ["deployments", "queue"] as const;
 type TabValue = (typeof TAB_VALUES)[number];

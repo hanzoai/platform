@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import {
 	Ban,
 	CheckCircle2,
@@ -13,7 +14,6 @@ import { ShowProviderForm } from "@/components/dashboard/application/general/gen
 import { DialogAction } from "@/components/shared/dialog-action";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import {
 	Tooltip,
 	TooltipContent,
@@ -92,12 +92,11 @@ export const ShowGeneralApplication = ({ applicationId }: Props) => {
 												Deploy
 											</div>
 										</TooltipTrigger>
-											<TooltipContent sideOffset={5} className="z-[60]">
-												<p>
-													Downloads the source code and performs a complete
-													build
-												</p>
-											</TooltipContent>
+										<TooltipContent sideOffset={5} className="z-[60]">
+											<p>
+												Downloads the source code and performs a complete build
+											</p>
+										</TooltipContent>
 									</Tooltip>
 								</Button>
 							</DialogAction>
@@ -133,9 +132,9 @@ export const ShowGeneralApplication = ({ applicationId }: Props) => {
 												Reload
 											</div>
 										</TooltipTrigger>
-											<TooltipContent sideOffset={5} className="z-[60]">
-												<p>Reload the application without rebuilding it</p>
-											</TooltipContent>
+										<TooltipContent sideOffset={5} className="z-[60]">
+											<p>Reload the application without rebuilding it</p>
+										</TooltipContent>
 									</Tooltip>
 								</Button>
 							</DialogAction>
@@ -170,12 +169,12 @@ export const ShowGeneralApplication = ({ applicationId }: Props) => {
 												Rebuild
 											</div>
 										</TooltipTrigger>
-											<TooltipContent sideOffset={5} className="z-[60]">
-												<p>
-													Only rebuilds the application without downloading new
-													code
-												</p>
-											</TooltipContent>
+										<TooltipContent sideOffset={5} className="z-[60]">
+											<p>
+												Only rebuilds the application without downloading new
+												code
+											</p>
+										</TooltipContent>
 									</Tooltip>
 								</Button>
 							</DialogAction>
@@ -211,12 +210,12 @@ export const ShowGeneralApplication = ({ applicationId }: Props) => {
 												Start
 											</div>
 										</TooltipTrigger>
-											<TooltipContent sideOffset={5} className="z-[60]">
-												<p>
-													Start the application (requires a previous successful
-													build)
-												</p>
-											</TooltipContent>
+										<TooltipContent sideOffset={5} className="z-[60]">
+											<p>
+												Start the application (requires a previous successful
+												build)
+											</p>
+										</TooltipContent>
 									</Tooltip>
 								</Button>
 							</DialogAction>
@@ -249,9 +248,9 @@ export const ShowGeneralApplication = ({ applicationId }: Props) => {
 												Stop
 											</div>
 										</TooltipTrigger>
-											<TooltipContent sideOffset={5} className="z-[60]">
-												<p>Stop the currently running application</p>
-											</TooltipContent>
+										<TooltipContent sideOffset={5} className="z-[60]">
+											<p>Stop the currently running application</p>
+										</TooltipContent>
 									</Tooltip>
 								</Button>
 							</DialogAction>

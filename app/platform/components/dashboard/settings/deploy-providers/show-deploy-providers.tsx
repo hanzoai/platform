@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
 	CheckCircle,
@@ -51,7 +52,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
 
 const PROVIDER_TYPES = [
@@ -63,28 +63,79 @@ const PROVIDER_TYPES = [
 	{ value: "custom", label: "Custom", icon: "🔧" },
 ] as const;
 
-const PROVIDER_FIELDS: Record<string, Array<{ key: string; label: string; placeholder: string; sensitive?: boolean }>> = {
+const PROVIDER_FIELDS: Record<
+	string,
+	Array<{
+		key: string;
+		label: string;
+		placeholder: string;
+		sensitive?: boolean;
+	}>
+> = {
 	"cloudflare-pages": [
-		{ key: "apiToken", label: "API Token", placeholder: "CF API token with Pages permissions", sensitive: true },
-		{ key: "accountId", label: "Account ID", placeholder: "Cloudflare account ID" },
+		{
+			key: "apiToken",
+			label: "API Token",
+			placeholder: "CF API token with Pages permissions",
+			sensitive: true,
+		},
+		{
+			key: "accountId",
+			label: "Account ID",
+			placeholder: "Cloudflare account ID",
+		},
 	],
 	vercel: [
-		{ key: "apiToken", label: "API Token", placeholder: "Vercel personal access token", sensitive: true },
+		{
+			key: "apiToken",
+			label: "API Token",
+			placeholder: "Vercel personal access token",
+			sensitive: true,
+		},
 		{ key: "accountId", label: "Team ID (optional)", placeholder: "team_..." },
 	],
 	netlify: [
-		{ key: "apiToken", label: "Personal Access Token", placeholder: "Netlify PAT", sensitive: true },
+		{
+			key: "apiToken",
+			label: "Personal Access Token",
+			placeholder: "Netlify PAT",
+			sensitive: true,
+		},
 	],
 	"aws-amplify": [
-		{ key: "apiToken", label: "Access Key ID", placeholder: "AKIA...", sensitive: true },
-		{ key: "accountId", label: "Secret Access Key", placeholder: "Secret key", sensitive: true },
+		{
+			key: "apiToken",
+			label: "Access Key ID",
+			placeholder: "AKIA...",
+			sensitive: true,
+		},
+		{
+			key: "accountId",
+			label: "Secret Access Key",
+			placeholder: "Secret key",
+			sensitive: true,
+		},
 	],
 	"github-pages": [
-		{ key: "apiToken", label: "GitHub Token", placeholder: "ghp_...", sensitive: true },
+		{
+			key: "apiToken",
+			label: "GitHub Token",
+			placeholder: "ghp_...",
+			sensitive: true,
+		},
 	],
 	custom: [
-		{ key: "apiToken", label: "API Token", placeholder: "Provider API token", sensitive: true },
-		{ key: "accountId", label: "Account/Team ID", placeholder: "Optional identifier" },
+		{
+			key: "apiToken",
+			label: "API Token",
+			placeholder: "Provider API token",
+			sensitive: true,
+		},
+		{
+			key: "accountId",
+			label: "Account/Team ID",
+			placeholder: "Optional identifier",
+		},
 	],
 };
 
@@ -172,10 +223,7 @@ function CreateProviderDialog({ onSuccess }: { onSuccess: () => void }) {
 								<FormItem>
 									<FormLabel>Name</FormLabel>
 									<FormControl>
-										<Input
-											placeholder="My Cloudflare Account"
-											{...field}
-										/>
+										<Input placeholder="My Cloudflare Account" {...field} />
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -332,9 +380,7 @@ function ProviderCard({
 						</div>
 					</div>
 					<div className="flex items-center gap-2">
-						{provider.isDefault && (
-							<Badge variant="green">Default</Badge>
-						)}
+						{provider.isDefault && <Badge variant="green">Default</Badge>}
 					</div>
 				</div>
 			</CardHeader>
@@ -445,9 +491,8 @@ export function ShowDeployProviders() {
 						No deploy providers configured
 					</span>
 					<p className="text-sm text-muted-foreground text-center max-w-md">
-						Add a provider to deploy static sites to Cloudflare Pages,
-						Vercel, Netlify, or other hosting platforms directly from this
-						dashboard.
+						Add a provider to deploy static sites to Cloudflare Pages, Vercel,
+						Netlify, or other hosting platforms directly from this dashboard.
 					</p>
 					<CreateProviderDialog onSuccess={() => refetch()} />
 				</div>

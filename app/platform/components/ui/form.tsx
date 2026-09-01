@@ -10,6 +10,8 @@
  *
  * The API is unchanged, so the ~100 call sites are untouched.
  */
+
+import { Label } from "@hanzo/ui";
 import type {
 	ComponentPropsWithoutRef,
 	ElementRef,
@@ -33,8 +35,6 @@ import {
 	useFormContext,
 	useFormState,
 } from "react-hook-form";
-
-import { Label } from "@/components/ui/label";
 
 import "./form.css";
 
@@ -88,11 +88,7 @@ const FormItem = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
 		const id = useId();
 		return (
 			<FormItemContext.Provider value={{ id }}>
-				<div
-					ref={ref}
-					className={join("hz-form-item", className)}
-					{...props}
-				/>
+				<div ref={ref} className={join("hz-form-item", className)} {...props} />
 			</FormItemContext.Provider>
 		);
 	},

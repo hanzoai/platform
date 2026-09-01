@@ -1,11 +1,10 @@
+import { Separator } from "@hanzo/ui";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 import * as React from "react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -213,7 +212,9 @@ const Sidebar = React.forwardRef<
 						}
 						side={side}
 					>
-						<div className="flex h-full w-full flex-col overflow-hidden">{children}</div>
+						<div className="flex h-full w-full flex-col overflow-hidden">
+							{children}
+						</div>
 					</SheetContent>
 				</Sheet>
 			);

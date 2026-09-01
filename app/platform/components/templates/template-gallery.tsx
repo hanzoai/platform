@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollArea } from "@hanzo/ui";
 import {
 	Bookmark,
 	BookText,
@@ -31,7 +32,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 

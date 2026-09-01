@@ -1,5 +1,6 @@
 "use client";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@hanzo/ui";
 import copy from "copy-to-clipboard";
 import { format } from "date-fns";
 import {
@@ -20,7 +21,6 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Logo } from "@/components/shared/logo";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

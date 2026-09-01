@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { DatabaseZap, PenBoxIcon, PlusCircle, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -31,7 +32,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import {
 	Tooltip,
 	TooltipContent,
@@ -473,14 +473,16 @@ export const HandleVolumeBackups = ({
 														</SelectTrigger>
 													</FormControl>
 													<SelectContent>
-														{mountsByService?.map((volume: { Name: string }) => (
-															<SelectItem
-																key={volume.Name}
-																value={volume.Name || ""}
-															>
-																{volume.Name}
-															</SelectItem>
-														))}
+														{mountsByService?.map(
+															(volume: { Name: string }) => (
+																<SelectItem
+																	key={volume.Name}
+																	value={volume.Name || ""}
+																>
+																	{volume.Name}
+																</SelectItem>
+															),
+														)}
 													</SelectContent>
 												</Select>
 												<FormDescription>

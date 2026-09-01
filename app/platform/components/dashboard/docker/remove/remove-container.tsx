@@ -1,4 +1,3 @@
-import { toast } from "sonner";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -9,7 +8,8 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@hanzo/ui";
+import { toast } from "sonner";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { api } from "@/utils/api";
 

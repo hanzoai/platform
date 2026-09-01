@@ -1,3 +1,4 @@
+import { Label } from "@hanzo/ui";
 import { Loader2, PcCase, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { AlertBlock } from "@/components/shared/alert-block";
@@ -9,7 +10,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,

@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { Key, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -6,7 +7,6 @@ import { DialogAction } from "@/components/shared/dialog-action";
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
 
 export function LicenseKeySettings() {

@@ -1,3 +1,4 @@
+import { ScrollArea } from "@hanzo/ui";
 import { PuzzleIcon } from "lucide-react";
 import { useState } from "react";
 import { TemplateDeployDialog } from "@/components/templates/template-deploy-dialog";
@@ -15,7 +16,6 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/utils/api";
 
 interface Props {

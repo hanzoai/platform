@@ -1,3 +1,4 @@
+import { Label, RadioGroup, RadioGroupItem } from "@hanzo/ui";
 import copy from "copy-to-clipboard";
 import { CopyIcon, ExternalLinkIcon, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -5,8 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CodeEditor } from "@/components/shared/code-editor";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { api } from "@/utils/api";
 
 export const CreateSSHKey = () => {

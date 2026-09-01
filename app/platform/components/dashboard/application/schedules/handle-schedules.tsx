@@ -1,3 +1,4 @@
+import { ScrollArea, Switch } from "@hanzo/ui";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
 	CheckIcon,
@@ -46,7 +47,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	Select,
 	SelectContent,
@@ -54,7 +54,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import {
 	Tooltip,
 	TooltipContent,
@@ -338,7 +337,8 @@ export const HandleSchedules = ({ id, scheduleId, scheduleType }: Props) => {
 			</DialogTrigger>
 			<DialogContent
 				className={cn(
-					scheduleTypeForm === "platform-server" || scheduleTypeForm === "server"
+					scheduleTypeForm === "platform-server" ||
+						scheduleTypeForm === "server"
 						? "sm:max-w-2xl"
 						: "sm:max-w-lg",
 				)}

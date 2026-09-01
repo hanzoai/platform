@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { formatDate } from "date-fns";
 import {
 	ExternalLinkIcon,
@@ -25,7 +26,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import {
 	Tooltip,
 	TooltipContent,
