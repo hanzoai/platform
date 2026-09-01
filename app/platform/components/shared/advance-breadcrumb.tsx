@@ -1,4 +1,5 @@
 import type { ServiceType } from "@hanzo/platform/db/schema";
+import { ScrollArea, Separator } from "@hanzo/ui";
 import {
 	Check,
 	ChevronDown,
@@ -32,8 +33,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { api, type RouterOutputs } from "@/utils/api";
 

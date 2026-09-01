@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { Loader2, Pencil, PlusIcon, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -25,7 +26,6 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
 	Table,
 	TableBody,
@@ -252,12 +252,16 @@ const RoutingDialog = ({
 										<FormLabel>Priority</FormLabel>
 										<FormControl>
 											<Input
-											type="number"
-											min={0}
-											{...field}
-											value={field.value ?? ""}
-											onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
-										/>
+												type="number"
+												min={0}
+												{...field}
+												value={field.value ?? ""}
+												onChange={(e) =>
+													field.onChange(
+														e.target.value === "" ? 0 : Number(e.target.value),
+													)
+												}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -270,7 +274,10 @@ const RoutingDialog = ({
 								render={({
 									field,
 								}: {
-									field: ControllerRenderProps<RoutingFormValues, "middlewares">;
+									field: ControllerRenderProps<
+										RoutingFormValues,
+										"middlewares"
+									>;
 								}) => (
 									<FormItem>
 										<FormLabel>Middlewares</FormLabel>

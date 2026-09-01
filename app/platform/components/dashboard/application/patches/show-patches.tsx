@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { File, FilePlus2, Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,7 +11,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import {
 	Table,
 	TableBody,

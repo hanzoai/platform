@@ -1,3 +1,4 @@
+import { Label } from "@hanzo/ui";
 import { FilePlus } from "lucide-react";
 import { useState } from "react";
 import { CodeEditor } from "@/components/shared/code-editor";
@@ -13,7 +14,6 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 interface Props {
 	folderPath: string;

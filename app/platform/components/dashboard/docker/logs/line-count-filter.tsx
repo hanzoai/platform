@@ -1,3 +1,4 @@
+import { Separator } from "@hanzo/ui";
 import { Command as CommandPrimitive } from "cmdk";
 import debounce from "lodash/debounce";
 import { CheckIcon, Hash } from "lucide-react";
@@ -9,7 +10,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 const lineCountOptions = [

@@ -1,3 +1,4 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hanzo/ui";
 import copy from "copy-to-clipboard";
 import { CopyIcon, ExternalLinkIcon, ServerIcon, Settings } from "lucide-react";
 import Link from "next/link";
@@ -22,7 +23,6 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 import { ShowDeployment } from "../../application/deployments/show-deployment";

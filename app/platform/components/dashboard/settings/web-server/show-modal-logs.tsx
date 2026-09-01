@@ -1,3 +1,4 @@
+import { Label } from "@hanzo/ui";
 import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type React from "react";
@@ -11,7 +12,6 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,

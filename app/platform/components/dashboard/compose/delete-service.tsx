@@ -1,4 +1,5 @@
 import type { ServiceType } from "@hanzo/platform/db/schema";
+import { Checkbox } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import copy from "copy-to-clipboard";
 import { Copy, Trash2 } from "lucide-react";
@@ -10,7 +11,6 @@ import { z } from "zod";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,

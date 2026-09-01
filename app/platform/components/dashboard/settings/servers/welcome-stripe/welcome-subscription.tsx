@@ -1,3 +1,4 @@
+import { Separator } from "@hanzo/ui";
 import { defineStepper } from "@stepperize/react";
 import {
 	BookIcon,
@@ -24,7 +25,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { CreateServer } from "./create-server";
 import { CreateSSHKey } from "./create-ssh-key";
 import { Setup } from "./setup";

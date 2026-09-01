@@ -1,9 +1,9 @@
+import { Switch } from "@hanzo/ui";
 import { Ban, CheckCircle2, RefreshCcw, Rocket, Terminal } from "lucide-react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { DialogAction } from "@/components/shared/dialog-action";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
 	Tooltip,
 	TooltipContent,
@@ -70,11 +70,9 @@ export const ComposeActions = ({ composeId }: Props) => {
 										Deploy
 									</div>
 								</TooltipTrigger>
-									<TooltipContent sideOffset={5} className="z-[60]">
-										<p>
-											Downloads the source code and performs a complete build
-										</p>
-									</TooltipContent>
+								<TooltipContent sideOffset={5} className="z-[60]">
+									<p>Downloads the source code and performs a complete build</p>
+								</TooltipContent>
 							</Tooltip>
 						</Button>
 					</DialogAction>
@@ -109,9 +107,9 @@ export const ComposeActions = ({ composeId }: Props) => {
 										Reload
 									</div>
 								</TooltipTrigger>
-									<TooltipContent sideOffset={5} className="z-[60]">
-										<p>Reload the compose without rebuilding it</p>
-									</TooltipContent>
+								<TooltipContent sideOffset={5} className="z-[60]">
+									<p>Reload the compose without rebuilding it</p>
+								</TooltipContent>
 							</Tooltip>
 						</Button>
 					</DialogAction>
@@ -148,11 +146,11 @@ export const ComposeActions = ({ composeId }: Props) => {
 											Start
 										</div>
 									</TooltipTrigger>
-										<TooltipContent sideOffset={5} className="z-[60]">
-											<p>
-												Start the compose (requires a previous successful build)
-											</p>
-										</TooltipContent>
+									<TooltipContent sideOffset={5} className="z-[60]">
+										<p>
+											Start the compose (requires a previous successful build)
+										</p>
+									</TooltipContent>
 								</Tooltip>
 							</Button>
 						</DialogAction>
@@ -185,9 +183,9 @@ export const ComposeActions = ({ composeId }: Props) => {
 											Stop
 										</div>
 									</TooltipTrigger>
-										<TooltipContent sideOffset={5} className="z-[60]">
-											<p>Stop the currently running compose</p>
-										</TooltipContent>
+									<TooltipContent sideOffset={5} className="z-[60]">
+										<p>Stop the currently running compose</p>
+									</TooltipContent>
 								</Tooltip>
 							</Button>
 						</DialogAction>

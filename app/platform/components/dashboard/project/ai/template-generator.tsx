@@ -1,3 +1,4 @@
+import { Separator } from "@hanzo/ui";
 import { defineStepper } from "@stepperize/react";
 import { Bot } from "lucide-react";
 import Link from "next/link";
@@ -22,7 +23,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { api } from "@/utils/api";
 import { ai } from "@/utils/zap-ai";
 import { StepOne } from "./step-one";

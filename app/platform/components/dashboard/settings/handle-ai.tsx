@@ -1,4 +1,5 @@
 "use client";
+import { Switch } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import {
 	Check,
@@ -51,7 +52,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { ai } from "@/utils/zap-ai";
 
@@ -341,9 +341,7 @@ export const HandleAi = ({ aiId }: Props) => {
 								);
 								const filteredModels = ((models ?? []) as AiModel[]).filter(
 									(model: AiModel) =>
-										model.id
-											.toLowerCase()
-											.includes(modelSearch.toLowerCase()),
+										model.id.toLowerCase().includes(modelSearch.toLowerCase()),
 								);
 
 								const displayModels =

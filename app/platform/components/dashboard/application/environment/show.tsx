@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -14,7 +15,6 @@ import {
 	FormLabel,
 } from "@/components/ui/form";
 import { Secrets } from "@/components/ui/secrets";
-import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
 
 const addEnvironmentSchema = z.object({

@@ -1,20 +1,21 @@
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+	Label,
+	RadioGroup,
+	RadioGroupItem,
+	ScrollArea,
+} from "@hanzo/ui";
 import { Bot, PlusCircle, Trash2 } from "lucide-react";
 import { useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { CodeEditor } from "@/components/shared/code-editor";
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ai } from "@/utils/zap-ai";
 import type { TemplateInfo } from "./template-generator";
 
@@ -28,8 +29,7 @@ export const StepTwo = ({ templateInfo, setTemplateInfo }: StepProps) => {
 	const suggestions = templateInfo.suggestions || [];
 	const selectedVariant = templateInfo.details;
 
-	const { mutateAsync, isPending, error, isError } =
-		ai.suggest.useMutation();
+	const { mutateAsync, isPending, error, isError } = ai.suggest.useMutation();
 
 	useEffect(() => {
 		if (suggestions?.length > 0) {

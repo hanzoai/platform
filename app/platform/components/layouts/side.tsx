@@ -1,4 +1,10 @@
 "use client";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+	Separator,
+} from "@hanzo/ui";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
 	Activity,
@@ -53,11 +59,6 @@ import {
 	BreadcrumbList,
 } from "@/components/ui/breadcrumb";
 import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -65,7 +66,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 import {
 	SIDEBAR_COOKIE_NAME,
 	Sidebar,

@@ -1,3 +1,4 @@
+import { Label } from "@hanzo/ui";
 import { format } from "date-fns";
 import {
 	AlertCircle,
@@ -20,7 +21,6 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
 	Popover,
 	PopoverContent,

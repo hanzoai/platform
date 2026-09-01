@@ -1,3 +1,4 @@
+import { Checkbox, Switch } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -6,7 +7,6 @@ import { z } from "zod";
 import { EnterpriseFeatureLocked } from "@/components/enterprise/enterprise-feature-gate";
 import { AlertBlock } from "@/components/shared/alert-block";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -26,7 +26,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { Switch } from "@/components/ui/switch";
 import { api, type RouterOutputs } from "@/utils/api";
 import { project as projectClient } from "@/utils/zap-project";
 

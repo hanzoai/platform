@@ -1,9 +1,9 @@
+import { Checkbox } from "@hanzo/ui";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import * as React from "react";
 import { HandleTag } from "@/components/dashboard/settings/tags/handle-tag";
 import { TagBadge } from "@/components/shared/tag-badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Command,
 	CommandEmpty,

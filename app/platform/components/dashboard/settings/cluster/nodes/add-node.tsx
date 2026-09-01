@@ -1,3 +1,4 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hanzo/ui";
 import { ExternalLink, PlusIcon } from "lucide-react";
 import Link from "next/link";
 import { AlertBlock } from "@/components/shared/alert-block";
@@ -10,7 +11,6 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddManager } from "./manager/add-manager";
 import { AddWorker } from "./workers/add-worker";
 

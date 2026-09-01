@@ -5,13 +5,34 @@
  * Validates API token on save and displays current provider status.
  */
 
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+	Switch,
+} from "@hanzo/ui";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
+import {
+	CheckCircle,
+	Cloud,
+	Eye,
+	EyeOff,
+	Loader2,
+	Trash2,
+	XCircle,
+} from "lucide-react";
 import { useState } from "react";
 import { type ControllerRenderProps, useForm } from "react-hook-form";
-import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
-import { z } from "zod";
-import { Cloud, CheckCircle, XCircle, Loader2, Eye, EyeOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-
+import { z } from "zod";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -28,6 +49,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -35,21 +57,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { digitalocean } from "@/utils/zap-digitalocean";
 
 // ============================================================================
@@ -62,7 +69,10 @@ const configureProviderSchema = z.object({
 		.string()
 		.min(1, "Slug is required")
 		.max(100)
-		.regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
+		.regex(
+			/^[a-z0-9-]+$/,
+			"Slug must contain only lowercase letters, numbers, and hyphens",
+		),
 	apiToken: z.string().min(1, "API token is required"),
 	defaultRegion: z.string().min(1, "Region is required"),
 });
@@ -86,22 +96,26 @@ interface CloudProviderSettingsProps {
 	onSuccess?: () => void;
 }
 
-export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSettingsProps) {
+export function CloudProviderSettings({
+	providerId,
+	onSuccess,
+}: CloudProviderSettingsProps) {
 	const [showToken, setShowToken] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const utils = digitalocean.useUtils();
 
 	// Fetch existing provider if editing
-	const { data: provider, isLoading: isLoadingProvider } = digitalocean.getProvider.useQuery(
-		{ providerId: providerId! },
-		{ enabled: !!providerId }
-	);
+	const { data: provider, isLoading: isLoadingProvider } =
+		digitalocean.getProvider.useQuery(
+			{ providerId: providerId! },
+			{ enabled: !!providerId },
+		);
 
 	// Fetch available regions
 	const { data: regions } = digitalocean.listRegions.useQuery(
 		{ providerId: providerId! },
-		{ enabled: !!providerId }
+		{ enabled: !!providerId },
 	);
 
 	// Configure mutation
@@ -267,7 +281,10 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 							render={({
 								field,
 							}: {
-								field: ControllerRenderProps<ConfigureProviderInput, "apiToken">;
+								field: ControllerRenderProps<
+									ConfigureProviderInput,
+									"apiToken"
+								>;
 							}) => (
 								<FormItem>
 									<FormLabel>
@@ -277,7 +294,11 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 										<div className="relative">
 											<Input
 												type={showToken ? "text" : "password"}
-												placeholder={providerId ? "Enter new token to update" : "dop_v1_..."}
+												placeholder={
+													providerId
+														? "Enter new token to update"
+														: "dop_v1_..."
+												}
 												{...field}
 											/>
 											<Button
@@ -317,23 +338,35 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 							render={({
 								field,
 							}: {
-								field: ControllerRenderProps<ConfigureProviderInput, "defaultRegion">;
+								field: ControllerRenderProps<
+									ConfigureProviderInput,
+									"defaultRegion"
+								>;
 							}) => (
 								<FormItem>
 									<FormLabel>Default Region</FormLabel>
-									<Select onValueChange={field.onChange} defaultValue={field.value}>
+									<Select
+										onValueChange={field.onChange}
+										defaultValue={field.value}
+									>
 										<FormControl>
 											<SelectTrigger>
 												<SelectValue placeholder="Select a region" />
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent>
-											{((regions || DEFAULT_REGIONS) as Array<
-											string | { slug: string; name: string }
-										>).map((region) => (
+											{(
+												(regions || DEFAULT_REGIONS) as Array<
+													string | { slug: string; name: string }
+												>
+											).map((region) => (
 												<SelectItem
-													key={typeof region === "string" ? region : region.slug}
-													value={typeof region === "string" ? region : region.slug}
+													key={
+														typeof region === "string" ? region : region.slug
+													}
+													value={
+														typeof region === "string" ? region : region.slug
+													}
 												>
 													{typeof region === "string"
 														? region
@@ -362,11 +395,14 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 										</AlertDialogTrigger>
 										<AlertDialogContent>
 											<AlertDialogHeader>
-												<AlertDialogTitle>Delete Cloud Provider?</AlertDialogTitle>
+												<AlertDialogTitle>
+													Delete Cloud Provider?
+												</AlertDialogTitle>
 												<AlertDialogDescription>
-													This will remove the provider configuration. Any existing
-													instances will not be deleted from the cloud provider, but you
-													will not be able to manage them from Platform.
+													This will remove the provider configuration. Any
+													existing instances will not be deleted from the cloud
+													provider, but you will not be able to manage them from
+													Platform.
 												</AlertDialogDescription>
 											</AlertDialogHeader>
 											<AlertDialogFooter>
@@ -384,7 +420,9 @@ export function CloudProviderSettings({ providerId, onSuccess }: CloudProviderSe
 							</div>
 
 							<Button type="submit" disabled={isSubmitting}>
-								{isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+								{isSubmitting && (
+									<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+								)}
 								{providerId ? "Update Provider" : "Configure Provider"}
 							</Button>
 						</div>

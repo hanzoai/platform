@@ -1,13 +1,13 @@
-import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
-import { Settings } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import {
 	Accordion,
 	AccordionContent,
 	AccordionItem,
 	AccordionTrigger,
-} from "@/components/ui/accordion";
+} from "@hanzo/ui";
+import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
+import { Settings } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
 	Form,
