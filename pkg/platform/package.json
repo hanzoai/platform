@@ -39,7 +39,7 @@
     "@better-auth/sso": "1.5.0-beta.16",
     "@better-auth/utils": "0.3.1",
     "@faker-js/faker": "^8.4.1",
-    "@hanzo/iam": "^0.13.1",
+    "@hanzo/iam": "^0.21.18",
     "@kubernetes/client-node": "^1.4.0",
     "@octokit/auth-app": "^6.1.4",
     "@octokit/rest": "^20.1.2",
