@@ -1,10 +1,10 @@
+import { Checkbox } from "@hanzo/ui";
 import copy from "copy-to-clipboard";
 import { Check, Copy, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AnalyzeLogs } from "@/components/dashboard/docker/logs/analyze-logs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,

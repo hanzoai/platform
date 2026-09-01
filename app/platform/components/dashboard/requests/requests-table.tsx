@@ -1,3 +1,4 @@
+import { ScrollArea } from "@hanzo/ui";
 import {
 	type ColumnFiltersState,
 	flexRender,
@@ -31,7 +32,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	Sheet,
 	SheetContent,
@@ -339,27 +339,29 @@ export const RequestsTable = ({ dateRange }: RequestsTableProps) => {
 						<div className="border rounded-md">
 							<Table>
 								<TableBody>
-									{Object.entries(selectedRow || {}).map(([key, value]: [string, unknown]) => (
-										<TableRow key={key}>
-											<TableCell className="font-medium">{key}</TableCell>
-											<TableCell className="truncate break-words break-before-all whitespace-pre-wrap">
-												{key === "RequestAddr" ? (
-													<div className="flex items-center gap-2 bg-muted p-1 rounded">
-														<span>{String(value)}</span>
-														<Copy
-															onClick={() => {
-																copy(String(value));
-																toast.success("Copied to clipboard");
-															}}
-															className="h-4 w-4 text-muted-foreground cursor-pointer"
-														/>
-													</div>
-												) : (
-													formatValue(key, value)
-												)}
-											</TableCell>
-										</TableRow>
-									))}
+									{Object.entries(selectedRow || {}).map(
+										([key, value]: [string, unknown]) => (
+											<TableRow key={key}>
+												<TableCell className="font-medium">{key}</TableCell>
+												<TableCell className="truncate break-words break-before-all whitespace-pre-wrap">
+													{key === "RequestAddr" ? (
+														<div className="flex items-center gap-2 bg-muted p-1 rounded">
+															<span>{String(value)}</span>
+															<Copy
+																onClick={() => {
+																	copy(String(value));
+																	toast.success("Copied to clipboard");
+																}}
+																className="h-4 w-4 text-muted-foreground cursor-pointer"
+															/>
+														</div>
+													) : (
+														formatValue(key, value)
+													)}
+												</TableCell>
+											</TableRow>
+										),
+									)}
 								</TableBody>
 							</Table>
 						</div>

@@ -1,3 +1,4 @@
+import { Label, RadioGroup, RadioGroupItem, Switch } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import {
 	AlertTriangle,
@@ -42,9 +43,6 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
 import { notification as notificationRpc } from "@/utils/zap-notification";
 

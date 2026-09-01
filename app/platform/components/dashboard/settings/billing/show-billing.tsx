@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/card";
 import { NumberInput } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@hanzo/ui";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 

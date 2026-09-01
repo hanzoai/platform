@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { DatabaseZap, Dices, RefreshCw, X } from "lucide-react";
 import Link from "next/link";
@@ -34,7 +35,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import {
 	Tooltip,
 	TooltipContent,

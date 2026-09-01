@@ -1,3 +1,4 @@
+import { ScrollArea, Separator } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { Code2, Globe2, HardDrive } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -29,8 +30,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/utils/api";
 

@@ -1,3 +1,4 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hanzo/ui";
 import { Network } from "lucide-react";
 import {
 	Card,
@@ -6,7 +7,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GatewayStatus } from "./gateway-status";
 import { RateLimitTable } from "./rate-limit-table";
 import { RoutingTable } from "./routing-table";

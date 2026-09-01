@@ -1,7 +1,7 @@
 "use client";
 
+import { Label } from "@hanzo/ui";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,

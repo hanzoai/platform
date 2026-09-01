@@ -1,3 +1,4 @@
+import { Label } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -23,7 +24,6 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { api } from "@/utils/api";
 
 const DockerProviderSchema = z.object({

@@ -1,3 +1,4 @@
+import { Separator } from "@hanzo/ui";
 import { CheckIcon } from "lucide-react";
 import type React from "react";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 interface StatusLogsFilterProps {

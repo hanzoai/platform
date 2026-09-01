@@ -1,3 +1,4 @@
+import { ScrollArea } from "@hanzo/ui";
 import {
 	ArrowLeft,
 	ChevronRight,
@@ -18,7 +19,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/utils/api";
 import { CreateFileDialog } from "./create-file-dialog";
 

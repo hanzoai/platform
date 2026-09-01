@@ -1,4 +1,15 @@
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@hanzo/ui";
+import {
 	AlertTriangle,
 	ArrowUpDown,
 	BookIcon,
@@ -17,17 +28,6 @@ import { toast } from "sonner";
 import { BreadcrumbSidebar } from "@/components/shared/breadcrumb-sidebar";
 import { DateTooltip } from "@/components/shared/date-tooltip";
 import { FocusShortcutInput } from "@/components/shared/focus-shortcut-input";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,8 +67,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
-import { project as projectClient } from "@/utils/zap-project";
 import { useDebounce } from "@/utils/hooks/use-debounce";
+import { project as projectClient } from "@/utils/zap-project";
 import { HandleProject } from "./handle-project";
 import { ProjectEnvironment } from "./project-environment";
 
@@ -100,13 +100,7 @@ type ProjectRow = {
 	projectTags?: ProjectTag[];
 };
 
-const TagBadge = ({
-	name,
-	color,
-}: {
-	name: string;
-	color?: string | null;
-}) => (
+const TagBadge = ({ name, color }: { name: string; color?: string | null }) => (
 	<Badge
 		variant="outline"
 		className="gap-1"
@@ -313,18 +307,20 @@ export const ShowProjects = () => {
 					);
 					const bTotalServices = b.environments.reduce(
 						(total: number, env: ProjectEnv) => {
-						return (
-							total +
-							(env.applications?.length || 0) +
-							(env.libsql?.length || 0) +
-							(env.mariadb?.length || 0) +
-							(env.mongo?.length || 0) +
-							(env.mysql?.length || 0) +
-							(env.postgres?.length || 0) +
-							(env.redis?.length || 0) +
-							(env.compose?.length || 0)
-						);
-					}, 0);
+							return (
+								total +
+								(env.applications?.length || 0) +
+								(env.libsql?.length || 0) +
+								(env.mariadb?.length || 0) +
+								(env.mongo?.length || 0) +
+								(env.mysql?.length || 0) +
+								(env.postgres?.length || 0) +
+								(env.redis?.length || 0) +
+								(env.compose?.length || 0)
+							);
+						},
+						0,
+					);
 					comparison = aTotalServices - bTotalServices;
 					break;
 				}

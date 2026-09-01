@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -29,8 +30,6 @@ import {
 	FormItem,
 	FormLabel,
 } from "@/components/ui/form";
-
-import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
 
 interface Props {

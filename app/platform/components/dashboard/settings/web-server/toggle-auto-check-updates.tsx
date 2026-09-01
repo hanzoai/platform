@@ -1,6 +1,5 @@
+import { Label, Switch } from "@hanzo/ui";
 import { useState } from "react";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 
 export const ToggleAutoCheckUpdates = ({ disabled }: { disabled: boolean }) => {
 	const [enabled, setEnabled] = useState<boolean>(

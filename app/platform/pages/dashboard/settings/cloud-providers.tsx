@@ -6,27 +6,38 @@
  * compute pools with scaling controls.
  */
 
-import { useState } from "react";
-import type { GetServerSidePropsContext } from "next";
-import type { ReactElement } from "react";
-import { createServerSideHelpers } from "@trpc/react-query/server";
-import superjson from "superjson";
+import { IS_CLOUD, validateRequest } from "@hanzo/platform";
 import {
-	Cloud,
-	Plus,
-	Settings2,
-	Server,
-	Layers,
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+	Tabs,
+	TabsContent,
+	TabsList,
+	TabsTrigger,
+} from "@hanzo/ui";
+import { createServerSideHelpers } from "@trpc/react-query/server";
+import {
 	AlertCircle,
 	CheckCircle,
+	Cloud,
+	Layers,
 	Loader2,
+	Plus,
+	Server,
+	Settings2,
 } from "lucide-react";
-import { IS_CLOUD, validateRequest } from "@hanzo/platform";
-
-import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import type { GetServerSidePropsContext } from "next";
+import type { ReactElement } from "react";
+import { useState } from "react";
+import superjson from "superjson";
 import { CloudProviderSettings } from "@/components/dashboard/cloud-provider/CloudProviderSettings";
 import { ComputePoolCard } from "@/components/dashboard/cloud-provider/ComputePoolCard";
 import { NodeStatusMonitor } from "@/components/dashboard/cloud-provider/NodeStatusMonitor";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -34,9 +45,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	Sheet,
 	SheetContent,
@@ -45,16 +53,10 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from "@/components/ui/accordion";
 import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
-import { digitalocean } from "@/utils/zap-digitalocean";
 import { getLocale, serverSideTranslations } from "@/utils/i18n";
+import { digitalocean } from "@/utils/zap-digitalocean";
 
 // ============================================================================
 // Page Component
@@ -77,17 +79,17 @@ interface CloudProvider {
 
 const CloudProvidersPage = () => {
 	const [configSheetOpen, setConfigSheetOpen] = useState(false);
-	const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
+	const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
+		null,
+	);
 	const [activePoolId, setActivePoolId] = useState<string | null>(null);
 
 	// Fetch providers
-	const {
-		data: providers,
-		isLoading: isLoadingProviders,
-	} = digitalocean.listProviders.useQuery() as {
-		data: CloudProvider[] | undefined;
-		isLoading: boolean;
-	};
+	const { data: providers, isLoading: isLoadingProviders } =
+		digitalocean.listProviders.useQuery() as {
+			data: CloudProvider[] | undefined;
+			isLoading: boolean;
+		};
 
 	// Determine if we have any providers
 	const hasProviders = providers && providers.length > 0;
@@ -161,8 +163,8 @@ const CloudProvidersPage = () => {
 							</div>
 							<h3 className="text-lg font-semibold">No Cloud Providers</h3>
 							<p className="text-muted-foreground mt-1 max-w-sm">
-								Connect a cloud provider to enable automatic provisioning and scaling
-								of compute nodes.
+								Connect a cloud provider to enable automatic provisioning and
+								scaling of compute nodes.
 							</p>
 							<Button onClick={handleAddProvider} className="mt-4">
 								<Plus className="h-4 w-4 mr-2" />
@@ -176,7 +178,10 @@ const CloudProvidersPage = () => {
 				{!isLoadingProviders && hasProviders && (
 					<Tabs defaultValue="providers" className="w-full">
 						<TabsList>
-							<TabsTrigger value="providers" className="flex items-center gap-2">
+							<TabsTrigger
+								value="providers"
+								className="flex items-center gap-2"
+							>
 								<Settings2 className="h-4 w-4" />
 								Providers
 							</TabsTrigger>
@@ -217,7 +222,8 @@ const CloudProvidersPage = () => {
 									<CardContent className="py-8 text-center">
 										<AlertCircle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
 										<p className="text-muted-foreground">
-											No active provider. Enable a provider to manage compute pools.
+											No active provider. Enable a provider to manage compute
+											pools.
 										</p>
 									</CardContent>
 								</Card>

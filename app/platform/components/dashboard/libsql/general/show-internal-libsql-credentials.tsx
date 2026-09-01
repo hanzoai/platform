@@ -1,7 +1,7 @@
+import { Label } from "@hanzo/ui";
 import { ToggleVisibilityInput } from "@/components/shared/toggle-visibility-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
