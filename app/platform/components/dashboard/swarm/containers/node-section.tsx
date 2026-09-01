@@ -1,11 +1,7 @@
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@hanzo/ui";
 import { ChevronDown, ChevronRight, Server } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
 	Table,
 	TableBody,

@@ -1,3 +1,4 @@
+import { Separator, Switch } from "@hanzo/ui";
 import { CheckIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 export type TimeFilter = "all" | "1h" | "6h" | "24h" | "168h" | "720h";

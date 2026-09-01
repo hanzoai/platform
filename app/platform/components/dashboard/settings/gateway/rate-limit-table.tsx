@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { Loader2, Pencil, PlusIcon, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -31,7 +32,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import {
 	Table,
 	TableBody,
@@ -188,10 +188,7 @@ const RateLimitDialog = ({
 							}) => (
 								<FormItem>
 									<FormLabel>Scope</FormLabel>
-									<Select
-										onValueChange={field.onChange}
-										value={field.value}
-									>
+									<Select onValueChange={field.onChange} value={field.value}>
 										<FormControl>
 											<SelectTrigger>
 												<SelectValue placeholder="Select scope" />
@@ -253,7 +250,11 @@ const RateLimitDialog = ({
 												min={1}
 												{...field}
 												value={field.value ?? ""}
-												onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+												onChange={(e) =>
+													field.onChange(
+														e.target.value === "" ? 0 : Number(e.target.value),
+													)
+												}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -267,7 +268,10 @@ const RateLimitDialog = ({
 								render={({
 									field,
 								}: {
-									field: ControllerRenderProps<RateLimitFormValues, "burstSize">;
+									field: ControllerRenderProps<
+										RateLimitFormValues,
+										"burstSize"
+									>;
 								}) => (
 									<FormItem>
 										<FormLabel>Burst Size</FormLabel>
@@ -277,7 +281,11 @@ const RateLimitDialog = ({
 												min={1}
 												{...field}
 												value={field.value ?? ""}
-												onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+												onChange={(e) =>
+													field.onChange(
+														e.target.value === "" ? 0 : Number(e.target.value),
+													)
+												}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -328,8 +336,7 @@ export const RateLimitTable = () => {
 		(RateLimitFormValues & { rateLimitRuleId: string }) | undefined
 	>(undefined);
 
-	const { data: rateLimits, isLoading } =
-		gateway.listRateLimits.useQuery();
+	const { data: rateLimits, isLoading } = gateway.listRateLimits.useQuery();
 	const utils = gateway.useUtils();
 
 	const { mutateAsync: deleteMutation, isPending: isDeleting } =

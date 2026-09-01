@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { GlobeIcon } from "lucide-react";
 import { useEffect } from "react";
@@ -30,7 +31,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { api } from "@/utils/api";
 
 const addServerDomain = z
@@ -131,9 +131,9 @@ export const WebDomain = () => {
 								<div className="space-y-2">
 									<p className="font-medium">⚠️ Important: URL Change Impact</p>
 									<p>
-										If you change the Hanzo Platform Server URL make sure to update
-										your Github Apps to keep the auto-deploy working and preview
-										deployments working.
+										If you change the Hanzo Platform Server URL make sure to
+										update your Github Apps to keep the auto-deploy working and
+										preview deployments working.
 									</p>
 								</div>
 							</AlertBlock>

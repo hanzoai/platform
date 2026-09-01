@@ -1,5 +1,6 @@
 import { IS_CLOUD } from "@hanzo/platform/constants";
 import { validateRequest } from "@hanzo/platform/lib/auth";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@hanzo/ui";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import type { GetServerSidePropsContext } from "next";
 import type { ReactElement } from "react";
@@ -8,7 +9,6 @@ import { ShowSwarmContainers } from "@/components/dashboard/swarm/containers/sho
 import SwarmMonitorCard from "@/components/dashboard/swarm/monitoring-card";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { appRouter } from "@/server/api/root";
 
 const Dashboard = () => {

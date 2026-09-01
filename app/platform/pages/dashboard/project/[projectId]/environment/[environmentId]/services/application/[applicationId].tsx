@@ -1,4 +1,5 @@
 import { validateRequest } from "@hanzo/platform/lib/auth";
+import { Label, Tabs, TabsContent, TabsList, TabsTrigger } from "@hanzo/ui";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import copy from "copy-to-clipboard";
 import { HelpCircle, ServerOff } from "lucide-react";
@@ -46,8 +47,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	Tooltip,
 	TooltipContent,

@@ -1,3 +1,4 @@
+import { ScrollArea } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import copy from "copy-to-clipboard";
 import debounce from "lodash/debounce";
@@ -40,7 +41,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 import { destination } from "@/utils/zap-destination";

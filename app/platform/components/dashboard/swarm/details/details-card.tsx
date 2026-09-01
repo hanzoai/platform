@@ -1,7 +1,7 @@
+import { Separator } from "@hanzo/ui";
 import { Box, Cpu, Database, HardDrive, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { api } from "@/utils/api";
 import { ShowNodeApplications } from "../applications/show-applications";
 import { ShowNodeConfig } from "./show-node-config";

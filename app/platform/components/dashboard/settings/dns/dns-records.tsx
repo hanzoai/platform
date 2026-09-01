@@ -1,3 +1,4 @@
+import { Switch } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import {
 	Check,
@@ -43,7 +44,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import {
 	Table,
 	TableBody,
@@ -229,12 +229,16 @@ function AddRecordDialog({
 									<FormLabel>TTL (1 = auto)</FormLabel>
 									<FormControl>
 										<Input
-										type="number"
-										min={1}
-										{...field}
-										value={field.value ?? ""}
-										onChange={(e) => field.onChange(e.target.value === "" ? 1 : Number(e.target.value))}
-									/>
+											type="number"
+											min={1}
+											{...field}
+											value={field.value ?? ""}
+											onChange={(e) =>
+												field.onChange(
+													e.target.value === "" ? 1 : Number(e.target.value),
+												)
+											}
+										/>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -306,7 +310,11 @@ function EditRecordDialog({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button variant="ghost" size="icon" className="group hover:bg-blue-500/10 h-11 w-11">
+				<Button
+					variant="ghost"
+					size="icon"
+					className="group hover:bg-blue-500/10 h-11 w-11"
+				>
 					<Edit2 className="size-4 text-primary group-hover:text-blue-500" />
 				</Button>
 			</DialogTrigger>
@@ -400,12 +408,16 @@ function EditRecordDialog({
 									<FormLabel>TTL (1 = auto)</FormLabel>
 									<FormControl>
 										<Input
-										type="number"
-										min={1}
-										{...field}
-										value={field.value ?? ""}
-										onChange={(e) => field.onChange(e.target.value === "" ? 1 : Number(e.target.value))}
-									/>
+											type="number"
+											min={1}
+											{...field}
+											value={field.value ?? ""}
+											onChange={(e) =>
+												field.onChange(
+													e.target.value === "" ? 1 : Number(e.target.value),
+												)
+											}
+										/>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -488,26 +500,25 @@ export function DnsRecords() {
 		<div className="space-y-4">
 			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<div className="w-full sm:w-64">
-					<Select
-						value={selectedZoneId}
-						onValueChange={setSelectedZoneId}
-					>
+					<Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
 						<SelectTrigger>
 							<SelectValue placeholder="Select a zone" />
 						</SelectTrigger>
 						<SelectContent>
-							{zones?.map((zone: { id: string; name: string; status: string }) => (
-								<SelectItem key={zone.id} value={zone.id}>
-									<span className="flex items-center gap-2">
-										<span>{zone.name}</span>
-										<Badge
-											variant={zone.status === "active" ? "green" : "yellow"}
-										>
-											{zone.status}
-										</Badge>
-									</span>
-								</SelectItem>
-							))}
+							{zones?.map(
+								(zone: { id: string; name: string; status: string }) => (
+									<SelectItem key={zone.id} value={zone.id}>
+										<span className="flex items-center gap-2">
+											<span>{zone.name}</span>
+											<Badge
+												variant={zone.status === "active" ? "green" : "yellow"}
+											>
+												{zone.status}
+											</Badge>
+										</span>
+									</SelectItem>
+								),
+							)}
 						</SelectContent>
 					</Select>
 				</div>
@@ -532,16 +543,15 @@ export function DnsRecords() {
 					<Loader2 className="animate-spin size-4" />
 				</div>
 			) : recordsError ? (
-					<div className="flex flex-col items-center gap-3 min-h-[25vh] justify-center">
-						<AlertBlock type="error">
-							{recordsErr?.message ||
-								"Failed to load DNS records for this zone."}
-						</AlertBlock>
-						<Button variant="outline" onClick={() => refetchRecords()}>
-							<RefreshCw className="size-4" /> Retry
-						</Button>
-					</div>
-				) : !records || records.length === 0 ? (
+				<div className="flex flex-col items-center gap-3 min-h-[25vh] justify-center">
+					<AlertBlock type="error">
+						{recordsErr?.message || "Failed to load DNS records for this zone."}
+					</AlertBlock>
+					<Button variant="outline" onClick={() => refetchRecords()}>
+						<RefreshCw className="size-4" /> Retry
+					</Button>
+				</div>
+			) : !records || records.length === 0 ? (
 				<div className="flex flex-col items-center gap-3 min-h-[25vh] justify-center">
 					<Shield className="size-8 text-muted-foreground" />
 					<span className="text-base text-muted-foreground text-center">

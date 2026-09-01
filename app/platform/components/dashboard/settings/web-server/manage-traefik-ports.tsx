@@ -1,3 +1,4 @@
+import { ScrollArea } from "@hanzo/ui";
 import { standardSchemaResolver as zodResolver } from "@hookform/resolvers/standard-schema";
 import { ArrowRightLeft, Plus, Trash2 } from "lucide-react";
 import type React from "react";
@@ -25,7 +26,6 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	Select,
 	SelectContent,

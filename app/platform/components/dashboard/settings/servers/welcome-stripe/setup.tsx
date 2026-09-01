@@ -1,3 +1,4 @@
+import { Label } from "@hanzo/ui";
 import { useState } from "react";
 import {
 	type LogLine,
@@ -13,7 +14,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,

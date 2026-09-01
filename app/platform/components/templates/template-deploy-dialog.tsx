@@ -1,5 +1,6 @@
 "use client";
 
+import { Label } from "@hanzo/ui";
 import { HelpCircle } from "lucide-react";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
@@ -15,7 +16,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,

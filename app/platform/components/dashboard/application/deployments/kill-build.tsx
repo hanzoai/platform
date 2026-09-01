@@ -1,5 +1,3 @@
-import { Scissors } from "lucide-react";
-import { toast } from "sonner";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -10,7 +8,9 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@hanzo/ui";
+import { Scissors } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { api } from "@/utils/api";
 

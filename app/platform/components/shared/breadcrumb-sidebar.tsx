@@ -1,3 +1,4 @@
+import { Separator } from "@hanzo/ui";
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { Fragment } from "react";
@@ -15,7 +16,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { TimeBadge } from "@/components/ui/time-badge";
 import { api } from "@/utils/api";

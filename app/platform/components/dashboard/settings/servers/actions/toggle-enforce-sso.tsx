@@ -1,7 +1,6 @@
+import { Label, Switch } from "@hanzo/ui";
 import { HelpCircle } from "lucide-react";
 import { toast } from "sonner";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
 	Tooltip,
 	TooltipContent,
