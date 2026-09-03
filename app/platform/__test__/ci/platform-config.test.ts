@@ -420,6 +420,35 @@ describe("kind", () => {
 			).toThrow(PlatformConfigError);
 		},
 	);
+
+	it("refuses kind: chart declaring images or build", () => {
+		expect(() =>
+			parsePlatformConfig(
+				"kind: chart\nimages:\n  - { name: x, repo: ghcr.io/hanzoai/x }\n",
+			),
+		).toThrow(/delivers a chart, not a container image/);
+		expect(() =>
+			parsePlatformConfig(
+				"kind: compose\nbuild:\n  image: ghcr.io/hanzoai/x\n",
+			),
+		).toThrow(/delivers a chart, not a container image/);
+	});
+
+	it("refuses kind: chart with an operator deploy.target", () => {
+		expect(() =>
+			parsePlatformConfig(`
+kind: chart
+deploy:
+  on: [main]
+  target:
+    cluster: hanzo-k8s
+    namespace: hanzo
+    operator: hanzo-operator
+    crd: App
+    name: chart-app
+`),
+		).toThrow(/cannot declare an operator `deploy\.target`/);
+	});
 });
 
 describe("runnerPoolFor", () => {
