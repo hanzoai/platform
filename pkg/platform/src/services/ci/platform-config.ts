@@ -690,7 +690,14 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
 	);
 
 	let builds: BuildConfig[];
-	if (Array.isArray(raw.images)) {
+	if (CHART_KINDS.includes(kind)) {
+		if (raw.images !== undefined || raw.build !== undefined) {
+			throw new PlatformConfigError(
+				`kind: ${kind} delivers a chart, not a container image — \`images:\` and \`build:\` are invalid`,
+			);
+		}
+		builds = [];
+	} else if (Array.isArray(raw.images)) {
 		if (raw.images.length === 0) {
 			throw new PlatformConfigError("`images` must be a non-empty list");
 		}
@@ -704,11 +711,6 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
 		}
 	} else if (isObject(raw.build)) {
 		builds = [parseBuildBlock(raw.build)];
-	} else if (CHART_KINDS.includes(kind)) {
-		// The chart IS the delivery, so there is nothing to build and no `images:`
-		// to read. Its absence here is the DECLARATION, not the silence below that
-		// means "nothing in this file for the build lane".
-		builds = [];
 	} else if (raw.deploy === undefined) {
 		// Declares no image AND nothing to roll out: this file exists for the
 		// OTHER reader. `hanzo.yml` is the estate's ONE CI manifest and it has two
@@ -774,6 +776,11 @@ export function validatePlatformConfig(raw: unknown): PlatformConfig | null {
 			d.target !== undefined ||
 			(d.services === undefined && d.cluster === undefined);
 		if (operatorRollout) {
+			if (CHART_KINDS.includes(kind)) {
+				throw new PlatformConfigError(
+					`kind: ${kind} cannot declare an operator \`deploy.target\` — a chart delivers a HelmChart, not a container image rollout onto a workload CR`,
+				);
+			}
 			if (!isObject(d.target)) {
 				throw new PlatformConfigError(
 					"deploy.target is required when deploy is set",
