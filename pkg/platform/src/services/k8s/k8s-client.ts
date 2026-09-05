@@ -29,7 +29,7 @@ export interface K8sClients {
 	autoscaling: k8s.AutoscalingV2Api;
 	/** RbacAuthorizationV1Api -- roles, rolebindings, clusterroles */
 	rbac: k8s.RbacAuthorizationV1Api;
-	/** CustomObjectsApi -- Tekton CRDs, cert-manager, etc. */
+	/** CustomObjectsApi -- operator CRs, cert-manager, etc. */
 	custom: k8s.CustomObjectsApi;
 	/** The underlying KubeConfig for advanced use */
 	kc: k8s.KubeConfig;
