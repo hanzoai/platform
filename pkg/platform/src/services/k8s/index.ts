@@ -14,5 +14,4 @@ export * from "./k8s-service";
 export * from "./k8s-pvc";
 export * from "./k8s-hpa";
 export * from "./k8s-ingress";
-export * from "./tekton";
 export * from "./k8s";
