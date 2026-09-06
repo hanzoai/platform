@@ -22,6 +22,15 @@
 # sha-only publishing, platform could be rolled forward only by writing a pin
 # the fleet's own gate rejects. Publishing the version and pinning the digest
 # makes the pin both immutable and legible, which is what the gate is for.
+#
+# TWO ARCHITECTURES, JOINED AT THE REGISTRY. The lab runs amd64 and arm64, so a
+# name that resolves to only one of them deploys on half the fleet, and which
+# half is decided by whichever pool happened to build it. Each architecture is
+# built on its own native pool under a `<name>-<arch>` tag; the merge job joins
+# the two into the manifest list the fleet pins, and is the only job that writes
+# the release name. Splitting the build is not a preference: the stage check
+# below reads the image out of the local daemon, and a manifest list cannot be
+# loaded into one.
 name: deploy
 
 on:
@@ -31,7 +40,18 @@ on:
 
 jobs:
   build:
-    runs-on: [hanzo-build-linux-amd64]
+    strategy:
+      # Not fail-fast: a failed arm64 leg must not cancel a healthy amd64 one
+      # mid-push. Either way merge never runs, so no release name is written
+      # from half a build.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            pool: hanzo-build-linux-amd64
+          - arch: arm64
+            pool: hanzo-build-linux-arm64
+    runs-on: ['${{ matrix.pool }}']
     steps:
       - uses: actions/checkout@v4
 
@@ -115,7 +135,11 @@ jobs:
               echo "version ${REF} is unpublished (registry answered ${CODE}) — building it"
               ;;
           esac
-          IMAGE="ghcr.io/hanzoai/platform:${REF}"
+          # A per-arch name, never the release name — that one is a manifest
+          # list and only the merge job writes it. A version that resolves to
+          # one architecture is worse than a version that does not exist yet,
+          # because it pulls successfully on that arch and fails everywhere else.
+          IMAGE="ghcr.io/hanzoai/platform:${REF}-${{ matrix.arch }}"
           # Build-time by necessity: Next inlines NEXT_PUBLIC_* into the client
           # bundle, so a key set on the pod arrives too late to reach a browser.
           # The Dockerfile's build-platform stage gates on this and fails closed.
@@ -142,6 +166,39 @@ jobs:
 
           docker push "$IMAGE"
           echo "built $IMAGE"
+
+  merge:
+    needs: build
+    # Registry-side only: imagetools reads the two per-arch manifests and writes
+    # a list that points at both. No build and no platform of its own, so which
+    # pool runs this does not matter.
+    runs-on: [hanzo-build-linux-amd64]
+    steps:
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+
+      - name: Join both architectures under the release name
+        run: |
+          set -euo pipefail
+          case "${GITHUB_REF:-}" in
+            refs/tags/*) REF="${GITHUB_REF#refs/tags/}" ;;
+            *)           REF="${GITHUB_SHA}" ;;
+          esac
+          IMAGE="ghcr.io/hanzoai/platform:${REF}"
+          docker buildx imagetools create -t "$IMAGE" "${IMAGE}-amd64" "${IMAGE}-arm64"
+
+          # A manifest list with one entry pulls fine on the arch that built it
+          # and fails everywhere else, which is exactly the state this replaces.
+          # Counting the platforms is what makes "both" a fact rather than an
+          # intention.
+          got=$(docker buildx imagetools inspect "$IMAGE" --format '{{range .Manifest.Manifests}}{{.Platform.OS}}/{{.Platform.Architecture}} {{end}}')
+          echo "$IMAGE -> ${got}"
+          for want in linux/amd64 linux/arm64; do
+            case " $got " in
+              *" $want "*) ;;
+              *) echo "::error::$IMAGE does not carry $want"; exit 1 ;;
+            esac
+          done
 
       # ⚠️ THIS STEP TELLS THE CLUSTER NOTHING. It writes image.txt onto an
       # ephemeral runner filesystem that is discarded when the job ends, and it
