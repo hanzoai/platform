@@ -48,9 +48,9 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            pool: hanzo-build-linux-amd64
+            pool: linux-amd64
           - arch: arm64
-            pool: hanzo-build-linux-arm64
+            pool: linux-arm64
     runs-on: ['${{ matrix.pool }}']
     steps:
       - uses: actions/checkout@v4
@@ -172,7 +172,7 @@ jobs:
     # Registry-side only: imagetools reads the two per-arch manifests and writes
     # a list that points at both. No build and no platform of its own, so which
     # pool runs this does not matter.
-    runs-on: [hanzo-build-linux-amd64]
+    runs-on: [linux-amd64]
     steps:
       - name: Log in to GHCR
         run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
