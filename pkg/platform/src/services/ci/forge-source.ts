@@ -2,8 +2,8 @@
  * Does the commit we are about to build exist on the source of truth?
  *
  * The build path reads git.hanzo.ai. Humans merge on github.com. Nothing in
- * Gitea's mirroring closes that loop by itself: a repo whose mirror row is
- * gone — Gitea's "convert to regular repo" drops it, and the drop is
+ * the forge's mirroring closes that loop by itself: a repo whose mirror row
+ * is gone — the forge's "convert to regular repo" drops it, and the drop is
  * irreversible — keeps serving whatever it last held, forever. A build off a
  * frozen forge repo is byte-for-byte indistinguishable from a build off a
  * current one: same webhook, same green job, same image. `hanzo-docs/docs`
@@ -101,7 +101,7 @@ export interface ForgeRepoFacts {
  * the database is the thing that drifted. Inference is the fallback, not the
  * rule — and when inference finds nothing, we do NOT conclude "forge-native".
  * That conclusion is exactly the bug: an unlinked repo and a genuinely
- * forge-only repo are the same row in Gitea, and only GitHub can tell them
+ * forge-only repo are the same row in the forge, and only GitHub can tell them
  * apart. `null` here means "ask GitHub whether a twin exists".
  */
 export function resolveCanonical(

@@ -143,7 +143,7 @@ const PARENT = "1111111111111111111111111111111111111111";
 
 /**
  * A real Hanzo Git `push` payload, shaped from the forge's own structs
- * (hanzoai/git `modules/structs/hook.go` PushPayload / PayloadCommit,
+ * (hanzoai/forge `modules/structs/hook.go` PushPayload / PayloadCommit,
  * `modules/structs/repo.go` Repository). Note what differs from GitHub:
  * `compare_url` not `compare`, a `total_commits` count, and `pusher` as a
  * full API User rather than GitHub's `{name,email}` git identity. No
@@ -221,7 +221,7 @@ const githubPush = {
 };
 
 describe("detectForge", () => {
-	// Load-bearing: Hanzo Git's addDefaultHeaders (hanzoai/git
+	// Load-bearing: Hanzo Git's addDefaultHeaders (hanzoai/forge
 	// services/webhook/deliver.go) stamps X-GitHub-Event on EVERY delivery for
 	// GitHub-receiver compat, so checking GitHub first would misclassify every
 	// forge push.

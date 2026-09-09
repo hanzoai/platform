@@ -71,7 +71,7 @@ export class WebhookError extends Error {
  *
  * `X-Hanzo-Event` is the name to grow into; today the forge emits the
  * compatibility name, so that is the one actually matched on the wire
- * (hanzoai/git `services/webhook/deliver.go`, `addDefaultHeaders`). Listing
+ * (hanzoai/forge `services/webhook/deliver.go`, `addDefaultHeaders`). Listing
  * both here means the eventual forge-side rename needs no platform change.
  */
 const HANZO_GIT_EVENT_HEADERS = ["x-hanzo-event", "x-gitea-event"] as const;
@@ -144,7 +144,7 @@ const HEX_SHA256 = /^[0-9a-f]{64}$/;
  * Verify a Hanzo Git signature against the raw request body.
  *
  * Differs from GitHub in encoding only: the forge emits the bare lowercase
- * hex digest with NO `sha256=` prefix (hanzoai/git `services/webhook/
+ * hex digest with NO `sha256=` prefix (hanzoai/forge `services/webhook/
  * deliver.go`). The shape check runs first so both operands are a fixed 64
  * bytes and `timingSafeEqual` cannot throw on a length mismatch.
  */
