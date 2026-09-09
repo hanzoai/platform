@@ -1,7 +1,7 @@
 /**
  * Hanzo Git — the canonical Hanzo forge at git.hanzo.ai.
  *
- * Hanzo Git is Hanzo's own forge (source: hanzoai/git, image
+ * Hanzo Git is Hanzo's own forge (source: hanzoai/forge, image
  * ghcr.io/hanzoai/git), not a third-party integration. It is therefore
  * configured the way platform's other first-class credentials are — from the
  * environment, synced by the `platform-app-kms-sync` KMSSecret out of KMS

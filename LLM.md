@@ -785,12 +785,12 @@ becomes a running pod, WHERE that path forks, and the ONE native path we collaps
 ### 1. Today's lifecycle, traced end to end (verified)
 
 1. **Source — canonical TODAY = GitHub (`github.com/hanzoai/*`).** `git.hanzo.ai`
-   (the `hanzoai/git` Gitea fork, rebranded "Hanzo", **1.24.7**) is a **read-only
-   pull-mirror**: 29/30 repos report `mirror=true`, pulled FROM GitHub; nothing
-   writes to it. Both deploy inputs point at GitHub, not Gitea — ArgoCD
-   `spec.source.repoURL = github.com/hanzoai/universe`, ARC `githubConfigUrl =
-   github.com/hanzoai`. So GitHub is source-of-truth today; git.hanzo.ai is
-   downstream. (Target flips this — see §4.)
+   (the `hanzoai/forge` Gitea fork, rebranded "Hanzo Forge", **1.24.7**) is a
+   **read-only pull-mirror**: 29/30 repos report `mirror=true`, pulled FROM
+   GitHub; nothing writes to it. Both deploy inputs point at GitHub, not the
+   forge — ArgoCD `spec.source.repoURL = github.com/hanzoai/universe`, ARC
+   `githubConfigUrl = github.com/hanzoai`. So GitHub is source-of-truth today;
+   git.hanzo.ai is downstream. (Target flips this — see §4.)
 
 2. **CI / build — Hanzo Git Actions.** `git.hanzo.ai` runs each repo's
    `.hanzo/workflows/*` on `act_runner`; images land on `ghcr.io/hanzoai/*`.
