@@ -951,7 +951,7 @@ Go backend.
 
 Base ships two goja engines; neither runs the PaaS orchestration:
 
-- **`plugins/jsvm`** — PocketBase-style hooks. Loads `*.base.js` / `*.base.ts`
+- **`plugins/jsvm`** — JS hooks. Loads `*.base.js` / `*.base.ts`
   from `HooksDir = <DataDir>/../hooks` (`jsvm.go:129`) into a **pool of per-execution
   `goja.Runtime` instances** (`jsvm.go:312` `newPool(...)`, each `goja.New()`).
   Per-goroutine VM isolation is correct — `goja.Runtime` is not concurrency-safe.
@@ -1022,7 +1022,7 @@ done**: `cloud/clients/platform` (goa design + `k8s.io/client-go`, ~4.6k LOC:
 drives operator Service CRs natively. That is the correct home for the
 Docker/k8s/fs/exec work. The production split is already the right one: **Base (Go)
 for data/auth/org, cloud (Go/goa/client-go) for k8s orchestration, Node for the
-dokploy PaaS TS.** Goja is for synchronous PocketBase-style hooks only.
+dokploy PaaS TS.** Goja is for synchronous Base hooks only.
 
 ### TS validity (typecheck) — now green
 

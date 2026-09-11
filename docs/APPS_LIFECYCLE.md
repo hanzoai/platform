@@ -177,7 +177,6 @@ jobs:
           # repo-local regression rules — examples
           ! grep -rE "from ['\"]antd|from ['\"]@ant-design" src/   # iam: no antd
           ! grep -r "ava-labs/avalanchego" go.mod                  # lux: no upstream
-          ! grep -r "PocketBase" .                                 # hanzo/base: rebranded
 ```
 
 Each repo carries its own ruleset at `.github/upstream-rules.txt`; the action
