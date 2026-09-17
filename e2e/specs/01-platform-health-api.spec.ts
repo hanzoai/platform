@@ -136,7 +136,7 @@ test.describe("Customer Self-Service REST Endpoints (Authenticated)", () => {
     expect(domainsRes.status()).toBe(200);
 
     // Billing & Pricing
-    const pricingRes = await request.get(`${baseURL}/v1/pricing`, { headers });
+    const pricingRes = await request.get(`${baseURL}/v1/pricing/enablement`, { headers });
     expect(pricingRes.status()).toBe(200);
   });
 });
