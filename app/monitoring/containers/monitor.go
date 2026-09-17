@@ -111,7 +111,7 @@ func (cm *ContainerMonitor) collectMetrics() {
 	}
 
 	seenServices := make(map[string]bool)
-	for _, line := range strings.Split(lines, "\n") {
+	for line := range strings.SplitSeq(lines, "\n") {
 		if line == "" {
 			continue
 		}

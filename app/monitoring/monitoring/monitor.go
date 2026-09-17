@@ -58,14 +58,14 @@ func getRealOS() string {
 		lines := strings.Split(string(content), "\n")
 		var id, name, version string
 		for _, line := range lines {
-			if strings.HasPrefix(line, "PRETTY_NAME=") {
-				return strings.Trim(strings.TrimPrefix(line, "PRETTY_NAME="), "\"")
-			} else if strings.HasPrefix(line, "NAME=") {
-				name = strings.Trim(strings.TrimPrefix(line, "NAME="), "\"")
-			} else if strings.HasPrefix(line, "VERSION=") {
-				version = strings.Trim(strings.TrimPrefix(line, "VERSION="), "\"")
-			} else if strings.HasPrefix(line, "ID=") {
-				id = strings.Trim(strings.TrimPrefix(line, "ID="), "\"")
+			if after, ok := strings.CutPrefix(line, "PRETTY_NAME="); ok {
+				return strings.Trim(after, "\"")
+			} else if after, ok := strings.CutPrefix(line, "NAME="); ok {
+				name = strings.Trim(after, "\"")
+			} else if after, ok := strings.CutPrefix(line, "VERSION="); ok {
+				version = strings.Trim(after, "\"")
+			} else if after, ok := strings.CutPrefix(line, "ID="); ok {
+				id = strings.Trim(after, "\"")
 			}
 		}
 		if name != "" && version != "" {
@@ -238,7 +238,7 @@ func sendAlert(callbackURL string, payload AlertPayload) error {
 	if callbackURL == "" {
 		return fmt.Errorf("callback URL is not set")
 	}
-	wrappedPayload := map[string]interface{}{
+	wrappedPayload := map[string]any{
 		"json": payload,
 	}
 
