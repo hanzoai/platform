@@ -19,7 +19,8 @@
     "format-and-lint": "biome check .",
     "check": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true",
     "format-and-lint:fix": "biome check . --write",
-    "generate:openapi": "pnpm --filter=@hanzo/platform-app run generate:openapi"
+    "generate:openapi": "pnpm --filter=@hanzo/platform-app run generate:openapi",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
