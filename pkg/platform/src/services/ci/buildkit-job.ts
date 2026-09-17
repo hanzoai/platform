@@ -579,6 +579,22 @@ export function buildBuildkitJob(input: BuildJobLaunchInput) {
 									},
 								},
 								{ name: "DOCKER_CONFIG", value: "/root/.docker" },
+								// HOW LONG buildctl-daemonless.sh WILL WAIT FOR buildkitd.
+								//
+								// Its default is 10 trials on a (100 + try*20)ms backoff, which is
+								// 1.9 SECONDS in total. buildkitd starts fine; on a node under load
+								// it simply cannot finish inside two seconds, and the wrapper then
+								// exits with "could not connect to ...buildkitd.sock after 10 trials"
+								// and dumps a daemon log that shows nothing wrong. Every cloud build
+								// on this fleet failed that way while the node carried an unrelated
+								// LLM evaluation, and it reads as a broken image rather than a
+								// timeout, which is what made it cost a day.
+								//
+								// 120 trials is about two and a half minutes of patience. It costs
+								// nothing on an idle node — the loop exits the moment the socket
+								// answers — and it is the difference between a build that waits and
+								// a build that lies.
+								{ name: "BUILDCTL_CONNECT_RETRIES_MAX", value: "120" },
 							],
 							resources,
 							volumeMounts: auth.volumeMounts,
