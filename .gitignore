@@ -58,3 +58,8 @@ app/platform/data/
 # .env for a stack is a second source that drifts from the first.
 .env.hanzo-*
 test-results/
+
+# Local symlinks to LLM.md
+CLAUDE.md
+AGENTS.md
+GEMINI.md
